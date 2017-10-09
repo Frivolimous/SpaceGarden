@@ -28,14 +28,26 @@ var plantM={
 
 //== Initialize Game Elements==\\
 function game_init(){
+	gameM.gameBounds.bot=Math.max(gameM.gameBounds.bot,stageBorders.bot);
+	gameM.gameBounds.right=Math.max(gameM.gameBounds.right,stageBorders.right);
+
+	gameM.paralax=makeStarfield(Config.GRID_SIZE*gameM.PARALAX_RATIO,Math.max(gameM.gameBounds.right*gameM.PARALAX_RATIO,stageBorders.right),Math.max(gameM.gameBounds.bot*gameM.PARALAX_RATIO,stageBorders.bot),0x999999);
+
+
+	gameM.paralax2=makeStarfield(Config.GRID_SIZE*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,Math.max(gameM.gameBounds.right*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,stageBorders.right),Math.max(gameM.gameBounds.bot*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,stageBorders.bot),0x666666,GameColors.BACKGROUND);
+	gameM.gameStage.addChild(gameM.background);
+	app.stage.addChild(gameM.paralax2);
+	app.stage.addChild(gameM.paralax);
+	app.stage.addChild(gameM.gameStage);
+
+
+
 	plantM.reset();
 
 	inputM.dragFunction=game_onMouseDown;
 	inputM.gameCanvas=gameM.gameStage;
 	//let _justBlack=makeStarfield(Config.GRID_SIZE,gameM.gameBounds.right,gameM.gameBounds.bot,0x999999/*,GameColors.BACKGROUND*/);
-	gameM.paralax2=makeStarfield(Config.GRID_SIZE*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,gameM.gameBounds.right*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,gameM.gameBounds.bot*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,0x666666,GameColors.BACKGROUND);
-	gameM.paralax=makeStarfield(Config.GRID_SIZE*gameM.PARALAX_RATIO,gameM.gameBounds.right*gameM.PARALAX_RATIO,gameM.gameBounds.bot*gameM.PARALAX_RATIO,0x999999);
-
+	
 	/*let _justBlack=makePrecisionGrid(Config.GRID_SIZE,gameM.gameBounds.right,gameM.gameBounds.bot,GameColors.GRID/*,GameColors.BACKGROUND);
 	gameM.paralax=makePrecisionGrid(Config.GRID_SIZE*gameM.PARALAX_RATIO,gameM.gameBounds.right*gameM.PARALAX_RATIO,gameM.gameBounds.bot*gameM.PARALAX_RATIO,GameColors.GRID-0x111111,GameColors.BACKGROUND);
 	*/
@@ -43,12 +55,7 @@ function game_init(){
 	/*_justBlack.beginFill(0);
 	_justBlack.drawRect(0,0,gameM.gameBounds.right,gameM.gameBounds.bot);*/
 	//gameM.gameStage.addChild(_justBlack);
-	gameM.gameStage.addChild(gameM.background);
 	
-	app.stage.addChild(gameM.paralax2);
-	app.stage.addChild(gameM.paralax);
-
-	app.stage.addChild(gameM.gameStage);
 	gameM.forces=new fdg_ForceContainer({canvas:gameM.gameStage,bgCanvas:gameM.background,borders:gameM.gameBounds});
 	gameM.crawlers=new crawl_CrawlerManager({canvas:gameM.gameStage});
 

@@ -1,12 +1,22 @@
 
 //== Main Initialization ==\\
 var interactionMode="desktop";
-
+var _Resolution=1;
 try{
 	document.createEvent("TouchEvent");
 	interactionMode="mobile";
+	/*console.log(STAGE_WIDTH+" "+STAGE_HEIGHT+" "+window.innerWidth+" "+window.innerHeight);
+	let _ratio=Math.max(window.innerWidth/STAGE_WIDTH,window.innerHeight/STAGE_HEIGHT);*/
 	STAGE_WIDTH=window.innerWidth;
 	STAGE_HEIGHT=window.innerHeight;
+	/*console.log(_ratio,_Resolution);
+	while(_ratio>2){
+		_ratio/=2;
+		_Resolution+=1;
+		STAGE_WIDTH/=2;
+		STAGE_HEIGHT/=2;
+	}*/
+
 }catch(e){
 	//interactionMode="desktop";
 }
@@ -14,7 +24,7 @@ try{
 var app = new PIXI.Application(STAGE_WIDTH,STAGE_HEIGHT,{
 	backgroundColor:0xff0000,
 	antialias:true,
-	resolution:1,
+	resolution:_Resolution,
 	roundPixels:true,
 });
 
