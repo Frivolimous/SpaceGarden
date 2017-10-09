@@ -150,8 +150,8 @@ function game_onTick(e){
 	
 	let _num=stageBorders.right-gameM.gameBounds.right*gameM.scale;
 	if (gameM.gameStage.x<_num) gameM.gameStage.x=_num;
-	gameM.paralax.x=gameM.gameStage.x/_num*(stageBorders.right-gameM.paralax.width*gameM.scale);
-	gameM.paralax2.x=gameM.gameStage.x/_num*(stageBorders.right-gameM.paralax2.width*gameM.scale);
+	gameM.paralax.x=gameM.gameStage.x/_num*(stageBorders.right-gameM.paralax.width*gameM.scale) || 0;
+	gameM.paralax2.x=gameM.gameStage.x/_num*(stageBorders.right-gameM.paralax2.width*gameM.scale) || 0;
 
 
 	_num=stageBorders.bot-gameM.gameBounds.bot*gameM.scale;
