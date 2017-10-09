@@ -35,6 +35,7 @@ function game_init(){
 
 
 	gameM.paralax2=makeStarfield(Config.GRID_SIZE*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,Math.max(gameM.gameBounds.right*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,stageBorders.right),Math.max(gameM.gameBounds.bot*gameM.PARALAX_RATIO*gameM.PARALAX_RATIO,stageBorders.bot),0x666666,GameColors.BACKGROUND);
+	console.log(gameM.paralax2);
 	gameM.gameStage.addChild(gameM.background);
 	app.stage.addChild(gameM.paralax2);
 	app.stage.addChild(gameM.paralax);
@@ -155,8 +156,9 @@ function game_onTick(e){
 
 	_num=stageBorders.bot-gameM.gameBounds.bot*gameM.scale;
 	if (gameM.gameStage.y<_num) gameM.gameStage.y=_num;
-	gameM.paralax.y=gameM.gameStage.y/_num*(stageBorders.bot-gameM.paralax.height*gameM.scale);
-	gameM.paralax2.y=gameM.gameStage.y/_num*(stageBorders.bot-gameM.paralax2.height*gameM.scale);
+	gameM.paralax.y=gameM.gameStage.y/_num*(stageBorders.bot-gameM.paralax.height*gameM.scale) || 0;
+	gameM.paralax2.y=gameM.gameStage.y/_num*(stageBorders.bot-gameM.paralax2.height*gameM.scale)|| 0;
+	console.log(_num);
 	//let _backLeftMax=
 	
 	//gameM.paralax.y=gameM.gameStage.y/gameM.gameStage.height*gameM.paralax.height;
