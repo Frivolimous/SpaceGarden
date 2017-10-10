@@ -26,14 +26,14 @@ function input_init(){
 function onMouseDown(e){
 	let _mouseObject=input_findMouseObject(e.pointerId);
 	if (_mouseObject==null){
-		inputM.mouseObjects.push(new input_MouseObject({
+		/*inputM.mouseObjects.push(new input_MouseObject({
 			x:(e.x-stageBorders.left)/gameM.scale-inputM.gameCanvas.x/gameM.scale,
 			y:(e.y-stageBorders.top)/gameM.scale-inputM.gameCanvas.y/gameM.scale,
 			down:true,
 			id:100,
 			mode:inputM.defaultMode,
 			data:e.data
-		}));
+		}));*/
 		_mouseObject=new input_MouseObject({
 			x:(e.x-stageBorders.left)/gameM.scale-inputM.gameCanvas.x/gameM.scale,
 			y:(e.y-stageBorders.top)/gameM.scale-inputM.gameCanvas.y/gameM.scale,
