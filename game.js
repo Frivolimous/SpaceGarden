@@ -158,7 +158,7 @@ function game_onTick(e){
 	if (gameM.gameStage.y<_num) gameM.gameStage.y=_num;
 	gameM.paralax.y=gameM.gameStage.y/_num*(stageBorders.bot-gameM.paralax.height*gameM.scale) || 0;
 	gameM.paralax2.y=gameM.gameStage.y/_num*(stageBorders.bot-gameM.paralax2.height*gameM.scale)|| 0;
-	console.log(_num);
+	//console.log(_num);
 	//let _backLeftMax=
 	
 	//gameM.paralax.y=gameM.gameStage.y/gameM.gameStage.height*gameM.paralax.height;
@@ -167,6 +167,15 @@ function game_onTick(e){
 
 function game_zoom(n){
 	gameM.scale*=n;
+	if (gameM.scale>3) gameM.scale=3;
+	var _boundRatio=Math.min(stageBorders.right/gameM.gameBounds.right,stageBorders.bot/gameM.gameBounds.bot);
+	if (gameM.scale<_boundRatio) gameM.scale=_boundRatio;
+	gameM.scale=Math.max(0.3,Math.min(3,gameM.scale));
+	gameM.gameStage.scale.x=gameM.gameStage.scale.y=gameM.scale;
+}
+
+function game_zoomTo(n){
+	gameM.scale=n;
 	if (gameM.scale>3) gameM.scale=3;
 	var _boundRatio=Math.min(stageBorders.right/gameM.gameBounds.right,stageBorders.bot/gameM.gameBounds.bot);
 	if (gameM.scale<_boundRatio) gameM.scale=_boundRatio;
