@@ -2,7 +2,8 @@ const inputM={
 	mouseObjects:new Array,
 	defaultMode:0,
 	dragFunction:null,
-	gameCanvas:{x:0,y:0}
+	gameCanvas:{x:0,y:0},
+	TIME_DIFFERENCE:1000,
 }
 
 var mouse={x:0,y:0,down:false};
@@ -25,6 +26,14 @@ function input_init(){
 function onMouseDown(e){
 	let _mouseObject=input_findMouseObject(e.pointerId);
 	if (_mouseObject==null){
+		inputM.mouseObjects.push(new input_MouseObject({
+			x:(e.x-stageBorders.left)/gameM.scale-inputM.gameCanvas.x/gameM.scale,
+			y:(e.y-stageBorders.top)/gameM.scale-inputM.gameCanvas.y/gameM.scale,
+			down:true,
+			id:100,
+			mode:inputM.defaultMode,
+			data:e.data
+		}));
 		_mouseObject=new input_MouseObject({
 			x:(e.x-stageBorders.left)/gameM.scale-inputM.gameCanvas.x/gameM.scale,
 			y:(e.y-stageBorders.top)/gameM.scale-inputM.gameCanvas.y/gameM.scale,
@@ -33,9 +42,23 @@ function onMouseDown(e){
 			mode:inputM.defaultMode,
 			data:e.data
 		});
+		for (var i=0;i<inputM.mouseObjects.length;i+=1){
+			if (Math.abs(_mouseObject.time-inputM.mouseObjects[i].time)<inputM.TIME_DIFFERENCE){ 
+				inputM.mouseObjects[i].gesturePair=_mouseObject;
+				_mouseObject.gesturePair=inputM.mouseObjects[i];
+				inputM.mouseObjects[i].drag=null;
+				gameM.forces.removePull(inputM.mouseObjects[i]);
 
+				let dx=inputM.mouseObjects[i].x-(e.x-stageBorders.left+_mouseObject.dragOffX-inputM.gameCanvas.x)/gameM.scale;
+				let dy=inputM.mouseObjects[i].y-(e.y-stageBorders.top+_mouseObject.dragOffY-inputM.gameCanvas.y)/gameM.scale;
+				_mouseObject.gestureDist=Math.sqrt(dx*dx+dy*dy);// / gameM.scale;
+				_mouseObject.gestureStartZoom=gameM.scale;
+				inputM.mouseObjects[i].gestureDist=_mouseObject.gestureDist;
+				inputM.mouseObjects[i].gestureStartZoom=_mouseObject.gestureStartZoom;
+			}
+		}
 		
-		if (inputM.dragFunction!=null){
+		if (inputM.dragFunction!=null && _mouseObject.gesturePair==null){
 			e.gameX=_mouseObject.x;
 			e.gameY=_mouseObject.y;
 			let _drag=inputM.dragFunction(e);
@@ -76,11 +99,27 @@ function onMouseUp(e){
 
 function onMouseMove(e){
 	let _mouseObject=input_findMouseObject(e.pointerId);
-	if (_mouseObject!=null && _mouseObject.drag!=null){
+	if (_mouseObject!=null){
 		_mouseObject.x=(e.x-stageBorders.left+_mouseObject.dragOffX-inputM.gameCanvas.x)/gameM.scale;
 		_mouseObject.y=(e.y-stageBorders.top+_mouseObject.dragOffY-inputM.gameCanvas.y)/gameM.scale;
+		if (_mouseObject.gesturePair!=null){
+			let _dX=_mouseObject.gesturePair.x-_mouseObject.x;
+			let _dY=_mouseObject.gesturePair.y-_mouseObject.y;
+			let _distance=Math.abs(Math.sqrt(_dX*_dX+_dY*_dY)-_mouseObject.gestureDist);
+			console.log(_distance+" "+gameM.scale);
+			game_zoomTo(_distance*0.005+_mouseObject.gestureStartZoom);
+			/*if (Math.abs(_distance)>1){
+				game_zoom(_distance*0.001);
+			}*/
+			//console.log(gameM.scale);
+		}
 	}
 }
+
+// zoom = dist/oldDist*CONST;
+
+// 1 = 250 / 250 * 1 ;
+// 2 = 500 / 250 * 1 ;
 
 function input_findMouseObject(_id){
 	for (var i=0;i<inputM.mouseObjects.length;i+=1){
@@ -102,6 +141,10 @@ function input_MouseObject(par){
 	this.id=par.id || 0;
 	this.mode=par.mode || 0;
 	this.data=par.data || {};
+	this.time=new Date;
+	this.gesturePair=null;
+	this.gestureDist=0;
+	this.gestureStartZoom=0;
 }
 
 function onKeyDown(e){
