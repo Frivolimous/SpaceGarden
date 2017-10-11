@@ -63,13 +63,16 @@ function EventManager_init(){
 
 function EventManager_onTick(){
 	while(EventManager.activeEvents.length>0){
-		while(EventManager.activeEvents[0].events.length>0){
-			for (var i=0;i<EventManager.activeEvents[0].listeners.length;i+=1){
-				EventManager.activeEvents[0].listeners[i](EventManager.activeEvents[0].events[0]);
+		let _eventType=EventManager.activeEvents[0];
+
+		while(_eventType.events.length>0){
+			let _cEvent=_eventType.events[0];
+			for (var i=0;i<_eventType.listeners.length;i+=1){
+				_eventType.listeners[i](_cEvent);
 			}
-			EventManager.activeEvents[0].events.shift();
+			_eventType.events.shift();
 		}
-		EventManager.activeEvents[0].active=false;
+		_eventType.active=false;
 		EventManager.activeEvents.shift();
 	}
 }

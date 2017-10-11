@@ -3,7 +3,7 @@ const inputM={
 	defaultMode:0,
 	dragFunction:null,
 	gameCanvas:{x:0,y:0},
-	TIME_DIFFERENCE:1000,
+	TIME_DIFFERENCE:200,
 }
 
 var mouse={x:0,y:0,down:false};
@@ -15,8 +15,8 @@ var temp_forcedShape=0;
 var temp_forcedSize=2;
 
 function input_init(){
-	window.addEventListener("keydown",onKeyDown)
-	window.addEventListener("keyup",onKeyUp)
+	window.addEventListener("keydown",onKeyDown);
+	window.addEventListener("keyup",onKeyUp);
 	window.addEventListener("pointerdown",onMouseDown);
 	window.addEventListener("pointerup",onMouseUp);
 	window.addEventListener("pointermove",onMouseMove);
@@ -24,16 +24,10 @@ function input_init(){
 }
 
 function onMouseDown(e){
+	//console.log(e);
+	//console.log(app.renderer.plugins.interaction.activeInteractionData);
 	let _mouseObject=input_findMouseObject(e.pointerId);
 	if (_mouseObject==null){
-		/*inputM.mouseObjects.push(new input_MouseObject({
-			x:(e.x-stageBorders.left)/gameM.scale-inputM.gameCanvas.x/gameM.scale,
-			y:(e.y-stageBorders.top)/gameM.scale-inputM.gameCanvas.y/gameM.scale,
-			down:true,
-			id:100,
-			mode:inputM.defaultMode,
-			data:e.data
-		}));*/
 		_mouseObject=new input_MouseObject({
 			stageX:e.x-stageBorders.left,
 			stageY:e.y-stageBorders.top,
@@ -42,14 +36,14 @@ function onMouseDown(e){
 			down:true,
 			id:e.pointerId,
 			mode:inputM.defaultMode,
-			data:e.data
 		});
+
 		for (var i=0;i<inputM.mouseObjects.length;i+=1){
-			if (Math.abs(_mouseObject.time-inputM.mouseObjects[i].time)<inputM.TIME_DIFFERENCE){ 
+			if (inputM.mouseObjects[i].bubbling){
+				_mouseObject.bubbling=false;
 				inputM.mouseObjects[i].gesturePair=_mouseObject;
 				_mouseObject.gesturePair=inputM.mouseObjects[i];
 				inputM.mouseObjects[i].drag=null;
-				gameM.forces.removePull(inputM.mouseObjects[i]);
 
 				let dx=inputM.mouseObjects[i].x-(e.x-stageBorders.left);
 				let dy=inputM.mouseObjects[i].y-(e.y-stageBorders.top);
@@ -57,22 +51,20 @@ function onMouseDown(e){
 				_mouseObject.gestureStartZoom=gameM.scale;
 				inputM.mouseObjects[i].gestureDist=_mouseObject.gestureDist;
 				inputM.mouseObjects[i].gestureStartZoom=_mouseObject.gestureStartZoom;
+				break;
 			}
 		}
 		
 		if (inputM.dragFunction!=null && _mouseObject.gesturePair==null){
-			e.gameX=_mouseObject.x;
-			e.gameY=_mouseObject.y;
-			let _drag=inputM.dragFunction(e);
+			let _drag=inputM.dragFunction(_mouseObject);
 			if (_drag!=null){
 				_mouseObject.drag=_drag;
-				gameM.forces.addPull(_mouseObject);
-				//_drag.active=false; //NOT GENERAL
-				//_drag.target=_mouseObject;
-				//_mouseObject.dragOffX=-_drag.radius;
-				//_mouseObject.dragOffY=-_drag.radius;
-				_mouseObject.x+=_mouseObject.dragOffX/gameM.scale;
-				_mouseObject.y+=_mouseObject.dragOffY/gameM.scale;
+				setTimeout(function(){
+					_mouseObject.bubbling=false;
+					if (_mouseObject.drag!=null){
+						EventManager.registerEvent(EventManagerTypes.DRAG_EVENT,new EventManager_DragEvent(_mouseObject,true));
+					}
+				},inputM.TIME_DIFFERENCE);
 			}
 		}
 
@@ -87,10 +79,12 @@ function onMouseUp(e){
 		if (e.pointerId==inputM.mouseObjects[i].id){
 			if (inputM.mouseObjects[i].mode==0){
 				if (inputM.mouseObjects[i].drag!=null){
-					//inputM.mouseObjects[i].drag.active=true; //NOT GENERAL
-					//inputM.mouseObjects[i].drag.target=null;
-					gameM.forces.removePull(inputM.mouseObjects[i]);
+					inputM.mouseObjects[i].drag=null;
+					if (!inputM.mouseObjects[i].bubbling){
+						EventManager.registerEvent(EventManagerTypes.DRAG_EVENT,new EventManager_DragEvent(inputM.mouseObjects[i],false));
+					}
 				}
+				inputM.mouseObjects[i].down=false;
 				inputM.mouseObjects.splice(i,1);
 			}
 
@@ -104,31 +98,18 @@ function onMouseMove(e){
 	if (_mouseObject!=null){
 		_mouseObject.stageX=e.x-stageBorders.left;
 		_mouseObject.stageY=e.y-stageBorders.top;
-		_mouseObject.x=(e.x-stageBorders.left+_mouseObject.dragOffX-inputM.gameCanvas.x)/gameM.scale;
-		_mouseObject.y=(e.y-stageBorders.top+_mouseObject.dragOffY-inputM.gameCanvas.y)/gameM.scale;
+		_mouseObject.x=(_mouseObject.stageX-inputM.gameCanvas.x)/gameM.scale;
+		_mouseObject.y=(_mouseObject.stageY-inputM.gameCanvas.y)/gameM.scale;
 		if (_mouseObject.gesturePair!=null){
 			let _dX=_mouseObject.gesturePair.x-_mouseObject.stageX;
 			let _dY=_mouseObject.gesturePair.y-_mouseObject.stageY;
-			//let _distance=Math.abs(Math.sqrt(_dX*_dX+_dY*_dY)-_mouseObject.gestureDist);
-			let _distance0=Math.sqrt(_dX*_dX+_dY*_dY);
-			let _distance=_distance0-_mouseObject.gestureDist;
+			let _distance=Math.sqrt(_dX*_dX+_dY*_dY);
 
-			let _zoom= _mouseObject.gestureStartZoom/_mouseObject.gestureDist*_distance0;
+			let _zoom= _mouseObject.gestureStartZoom/_mouseObject.gestureDist*_distance;
 			game_zoomTo(_zoom);
-			//console.log(_distance0+" "+_mouseObject.gestureDist+" "+gameM.scale);
-
-			/*if (Math.abs(_distance)>1){
-				game_zoom(_distance*0.001);
-			}*/
-			//console.log(gameM.scale);
 		}
 	}
 }
-
-// zoom = dist/oldDist*CONST;
-
-// 1 = 250 / 250 * 1 ;
-// 2 = 500 / 250 * 1 ;
 
 function input_findMouseObject(_id){
 	for (var i=0;i<inputM.mouseObjects.length;i+=1){
@@ -147,15 +128,12 @@ function input_MouseObject(par){
 	this.stageY=par.stageY || 0;
 	this.down=par.down || false;
 	this.drag=par.drag || null;
-	this.dragOffX=par.dragOffX || 0;
-	this.dragOffY=par.dragOffY || 0;
 	this.id=par.id || 0;
 	this.mode=par.mode || 0;
-	this.data=par.data || {};
-	this.time=new Date;
 	this.gesturePair=null;
 	this.gestureDist=0;
 	this.gestureStartZoom=0;
+	this.bubbling=true;
 }
 
 function onKeyDown(e){
@@ -188,8 +166,8 @@ function onKeyDown(e){
 
 		case " ": running=!running; break;
 		case "z": game_addRandomCrawler(); break;
-		case "=": case "+": game_zoom(1.2); break;
-		case "-": case "_": game_zoom(1/1.2); break;
+		case "=": case "+": game_zoomBy(1.2); break;
+		case "-": case "_": game_zoomBy(1/1.2); break;
 		case "]": gameM.gameRate+=1; break;
 		case "[": gameM.gameRate=Math.max(gameM.gameRate-1,1); break;
 	}

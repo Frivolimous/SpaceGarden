@@ -209,26 +209,6 @@ function fdg_ForceContainer(par){
 			if (_node.y<this.borders.top) _node.vY+=this.bounce*(-_node.y+this.borders.top);
 			if (_node.x>this.borders.right) _node.vX+=this.bounce*(-_node.x+this.borders.right);
 			if (_node.y>this.borders.bot) _node.vY+=this.bounce*(-_node.y+this.borders.bot);
-			/*
-			//Deactivated - increase friction.  Deactivated usually means mouse drag
-			if (!this.nodes[i].active){
-				this.nodes[i].vX*=0.7;
-				this.nodes[i].vY*=0.7;
-			}
-			//Has a target, move towards target.  Usually means mouse location
-			if (this.nodes[i].target!=null){
-				let _node=this.nodes[i];
-				let _dX=(_node.x-_node.target.x);
-				let _dY=(_node.y-_node.target.y);
-				let _dist2=_dX*_dX+_dY*_dY;
-
-				if (_dist2>this.TARGET_MIN){
-					let _mult=-this.TARGET_RATIO;
-					//
-					_node.vX+=_mult*_dX;
-					_node.vY+=_mult*_dY;
-				}
-			}*/
 
 			_node.onTickMain(); //Calls the node's main ticker function
 			if (_andSprite) _node.updateSprite();
