@@ -113,7 +113,7 @@ function onMouseMove(e){
 			let _distance0=Math.sqrt(_dX*_dX+_dY*_dY);
 			let _distance=_distance0-_mouseObject.gestureDist;
 
-			let _zoom= _mouseObject.gestureStartZoom*_mouseObject.gestureDist/_distance0;
+			let _zoom= _mouseObject.gestureStartZoom/_mouseObject.gestureDist*_distance0;
 			game_zoomTo(_zoom);
 			//console.log(_distance0+" "+_mouseObject.gestureDist+" "+gameM.scale);
 
