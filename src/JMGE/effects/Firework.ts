@@ -65,7 +65,7 @@ export class Firework {
       if (Firework.particles[i].display.alpha < 0.1) {
         Firework.particles[i].display.destroy();
         Firework.particles.splice(i, 1);
-        i -= 1;
+        i--;
       }
     }
     // if (this.particles.length>0) console.log(this.particles[0].x+" "+this.particles[0].y);

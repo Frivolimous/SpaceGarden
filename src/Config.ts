@@ -20,5 +20,14 @@ export const Config = {
     MAX_GRAB: 30,
     DAMP: 0.98,
     MIN_V: 0.0001,
+    NEW_MIND: 40,
+    NEW_FORCE: 0.2,
   },
+
+  NODE: {
+    FRUIT_THRESHOLD: 0.6,
+    POWER_THRESHOLD: 0.25,
+    GEN_FADE: 30,
+    FRUIT_APPLY: 0.2,
+  }
 };

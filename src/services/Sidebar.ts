@@ -21,7 +21,7 @@ export class Sidebar {
   addNodeElement = (view: FDGNode) => {
     if (view.config.type !== 'fruit') {
       let node = view.data
-      let id = this.addElement(node.toString(), view.config.name === 'seedling');
+      let id = this.addElement(node.toString(), view.config.slug === 'seedling');
       this.nodeMap.push({ id, node });
     }
   }

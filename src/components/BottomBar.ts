@@ -27,7 +27,7 @@ export class BottomBar extends PIXI.Container {
       .drawRect(0, 0, barWidth, barHeight);
 
     configs.forEach(config => {
-      let button = new NodeButton({label: config.name, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => this.onCreateButton.publish({config, e})});
+      let button = new NodeButton({label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => this.onCreateButton.publish({config, e})});
       this.addChild(button);
       this.buttons.push(button);
     });
@@ -70,7 +70,7 @@ export class BottomBar extends PIXI.Container {
   }
 
   public nodeAdded = (node: FDGNode) => {
-    let button = this.buttons.find(b => b.getLabel() === node.config.name);
+    let button = this.buttons.find(b => b.getLabel() === node.config.slug);
 
     if (button && button.maxNodes > 0) {
       button.count++;
@@ -80,13 +80,13 @@ export class BottomBar extends PIXI.Container {
       }
     }
 
-    if (node.config.name === 'seedling') {
+    if (node.config.slug === 'seedling') {
       this.updateSeedling(node);
     }
   }
 
   public nodeRemoved = (node: FDGNode) => {
-    let button = this.buttons.find(b => b.getLabel() === node.config.name);
+    let button = this.buttons.find(b => b.getLabel() === node.config.slug);
 
     if (button && button.maxNodes > 0) {
       button.count--;
@@ -94,7 +94,7 @@ export class BottomBar extends PIXI.Container {
       button.disabled = false;
     }
 
-    if (node.config.name === 'seedling') {
+    if (node.config.slug === 'seedling') {
       this.updateSeedling(null);
     }
   }
@@ -104,7 +104,7 @@ export class BottomBar extends PIXI.Container {
       this.proceedButton.visible = true;
       let percent = node.data.powerPercent;
       this.proceedButton.addLabel(`Launch Seedling (${Math.floor(percent * 100)}%)`);
-      this.proceedButton.disabled = percent <= 1 ;
+      this.proceedButton.disabled = percent < 1 ;
     } else {
       this.proceedButton.visible = false;
     }

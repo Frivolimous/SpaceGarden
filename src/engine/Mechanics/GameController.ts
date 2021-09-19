@@ -1,11 +1,13 @@
 import * as _ from 'lodash';
+import { Config } from '../../Config';
+import { Colors } from '../../data/Colors';
 import { NodeConfig } from '../../data/NodeData';
 import { NodeManager } from '../../services/NodeManager';
 import { TextureCache } from '../../services/TextureCache';
 import { FDGContainer } from '../FDG/FDGContainer';
 import { FDGLink } from '../FDG/FDGLink';
 import { FDGNode } from '../FDG/FDGNode';
-import { GameNode, NodeSave } from './Parts/GameNode';
+import { GameNode, NodeSave, TransferBlock } from './Parts/GameNode';
 
 export class GameController {
 
@@ -17,6 +19,7 @@ export class GameController {
 
   public addNewNode(config: NodeConfig): FDGNode {
     let node: FDGNode = new FDGNode(TextureCache.getNodeGraphicTexture(config.shape,config.radius), config);
+    
     this.container.addNode(node);
     this.addNode(node);
 
@@ -25,7 +28,7 @@ export class GameController {
 
   public addNode = (view: FDGNode) => {
     let node = new GameNode(view, view.config, this.transferPower);
-    console.log('node', node.uid, node.config.name);
+    console.log('node', node.uid, node.config.slug);
     this.nodes.push(node);
   }
 
@@ -42,13 +45,10 @@ export class GameController {
     this.nodes.forEach(node => {
       node.onTick();
       if (node.fruitSpawn > 1 && node.fruits.length < node.maxFruits) {
-        node.fruitSpawn -= 1;
+        node.fruitSpawn--;
         let fruitConfig = NodeManager.getNodeConfig(node.fruitType);
-
+        
         let fruit = this.addNewNode(fruitConfig);
-        fruit.data.fruitType = fruit.data.fruitType || node.fruitType;
-        fruit.data.fruitChain = node.fruitChain - 1;
-        fruit.data.maxFruits = fruit.data.maxFruits || node.maxFruits;
 
         this.container.linkNodes(node.view, fruit);
         fruit.position.set(node.view.x, node.view.y);
@@ -61,13 +61,14 @@ export class GameController {
   }
 
   public saveNodes (): NodeSave[] {
-    let saves = this.nodes.map(node => {
+    let saves: NodeSave[] = this.nodes.map(node => {
       let outlets: number[] = this.container.links.filter(l => l.origin === node.view).map(l => l.target.data.uid);
 
       return {
         uid: node.uid,
-        slug: node.config.name,
+        slug: node.config.slug,
         powerCurrent: Math.round(node.powerCurrent),
+        researchCurrent: node.config.slug === 'seedling' ? node.researchCurrent : 0,
         outlets,
         x: Math.round(node.view.x),
         y: Math.round(node.view.y),
@@ -91,15 +92,53 @@ export class GameController {
     });
   } 
 
-  public transferPower = (origin: GameNode, target: GameNode, amount: number, andRemove = false) => {
-    target.powerCurrent += amount;
+  public transferPower = (origin: GameNode, target: GameNode, block: TransferBlock) => {
+    if (block.type === 'grow') {
+      target.powerCurrent += block.amount;
 
-    if (andRemove) {
-      this.container.removeNode(origin.view);
-    } else {
+      if (block.removeOrigin) {
+        this.container.removeNode(origin.view);
+      } else {
+        let link = this.container.getLink(origin.view, target.view);
+        if (link) {
+          link.flash();
+        }
+      }
+    } else if (block.type === 'research') {
       let link = this.container.getLink(origin.view, target.view);
       if (link) {
-        link.flash();
+        link.zip(origin.view, Colors.Node.purple, block.fade, () => {
+          if (target.config.slug === 'seedling') {
+            target.receiveResearch(block.amount);
+            // add research
+          } else {
+            block.fade--;
+            if (block.fade <= 0) return;
+            let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+            if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
+            if (target2) {
+              this.transferPower(target, target2, block);
+            }
+          }
+        });
+      }
+    } else if (block.type === 'fruit') {
+      let link = this.container.getLink(origin.view, target.view);
+      if (link) {
+        link.zip(origin.view, Colors.Node.orange, block.fade, () => {
+          if (target.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
+            target.receiveFruitPower(block.amount, Colors.Node.orange);
+            // add research
+          } else {
+            block.fade--;
+            if (block.fade <= 0) return;
+            let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+            if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
+            if (target2) {
+              this.transferPower(target, target2, block);
+            }
+          }
+        });
       }
     }
   }

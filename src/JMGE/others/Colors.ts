@@ -214,9 +214,9 @@ export class ColorObject {
 
   private hue2rgb(p: number, q: number, t: number) {
     if (t < 0) {
-      t += 1;
+      t++;
     } else if (t > 1) {
-      t -= 1;
+      t--;
     }
 
     if (t < 1 / 6) {

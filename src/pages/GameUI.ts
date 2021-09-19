@@ -17,6 +17,8 @@ import { NodeConfig } from '../data/NodeData';
 import { FDGNode } from '../engine/FDG/FDGNode';
 import { IExtrinsicModel } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
+import { Config } from '../Config';
+import { InfoPopup } from '../components/InfoPopup';
 
 export class GameUI extends BaseUI {
   private canvas: ScrollingContainer;
@@ -80,7 +82,6 @@ export class GameUI extends BaseUI {
       {key: '-', altKey: '_', function: () => this.canvas.zoomBy(1/1.2), noHold: true},
       {key: '[', function: () => this.gameSpeed = Math.max(this.gameSpeed - 1, 1)},
       {key: ']', function: () => this.gameSpeed++},
-      {key: 'v', function: () => this.sidebar.addElement("testing!!!", false)},
     ],
     [
       {key: 'ArrowLeft', altKey: 'a', function: () => this.canvas.endPan(Direction.LEFT)},
@@ -121,7 +122,7 @@ export class GameUI extends BaseUI {
 
   public saveGameTimeout = () => {
     if (!this.exists) return;
-    console.log('GAME SAVED!');
+    new InfoPopup("Game Saved!");
 
     this.saveGame();
     window.setTimeout(this.saveGameTimeout, 30000);
@@ -162,7 +163,7 @@ export class GameUI extends BaseUI {
     this.container.onTick(this.gameSpeed);
     this.sidebar.updateNodes();
 
-    let seedling = this.gameC.nodes.find(node => node.config.name === 'seedling');
+    let seedling = this.gameC.nodes.find(node => node.config.slug === 'seedling');
 
     if (seedling) {
       this.bottomBar.updateSeedling(seedling.view);
@@ -194,7 +195,7 @@ export class GameUI extends BaseUI {
 
     this.container.showConnectionCount();
     
-    this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: 40, force: 0.2, node, 
+    this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node, 
       onRelease: () => {
         this.container.showConnectionCount(false);
         if (node.data.outlets.length > 0) {

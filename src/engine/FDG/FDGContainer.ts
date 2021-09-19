@@ -106,7 +106,7 @@ export class FDGContainer extends PIXI.Graphics {
 
       if (config.maxLinks && node.data.outlets.length >= node.config.maxLinks) continue;
       if (config.filter && config.filter === node) continue;
-      if (config.notType && node.config.name === config.notType) continue;
+      if (config.notType && node.config.slug === config.notType) continue;
       if (config.notFruit && node.config.type === 'fruit') continue;
       // if (par.hasTag!=null && par.hasTag!==this.nodes[i].tag) continue;
       // if (par.notHasTag!=null && par.notHasTag===this.nodes[i].tag) continue;
@@ -139,9 +139,7 @@ export class FDGContainer extends PIXI.Graphics {
   public drawLinks = () => {
     this.clear();
     this.links.forEach(link => {
-      this.lineStyle(link.lineStyle, link.getColor())
-        .moveTo(link.origin.x, link.origin.y)
-        .lineTo(link.target.x, link.target.y);
+      link.drawTo(this);
     });
   }
 

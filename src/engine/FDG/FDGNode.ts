@@ -6,6 +6,7 @@ import { Fonts } from '../../data/Fonts';
 import { GameNode } from '../Mechanics/Parts/GameNode';
 import { colorLuminance } from "../../JMGE/others/Colors";
 import { Config } from '../../Config';
+import { JMTween } from '../../JMGE/JMTween';
 
 
 export class FDGNode extends PIXI.Container {
@@ -28,7 +29,7 @@ export class FDGNode extends PIXI.Container {
     _.defaults(config, dFDGNode);
 
     this.sprite = new PIXI.Sprite(texture);
-    this.sprite.anchor.set(0.5, 0.5);
+    this.sprite.anchor.set(0.5);
 
     this.text.anchor.set(0.5);
     this.text.visible = false;
@@ -104,7 +105,7 @@ export class FDGNode extends PIXI.Container {
   }
 
   isConnectedToCore(): boolean {
-    return this.data.checkConnections(node => node.config.name === 'core');
+    return this.data.checkConnections(node => node.config.slug === 'core');
   }
 
   rotate() {
@@ -115,6 +116,18 @@ export class FDGNode extends PIXI.Container {
 
   tick = () => {
     this.moveBody();
+  }
+
+  pulse(color: number) {
+    let pulseCircle = new PIXI.Graphics();
+    pulseCircle.beginFill(color);
+    pulseCircle.drawCircle(0, 0, this.config.radius * this.sprite.scale.x * 1.2);
+    pulseCircle.alpha = 0;
+    this.addChildAt(pulseCircle, 0);
+
+    new JMTween(pulseCircle, 100).to({alpha: 0.5}).start().chain(pulseCircle, 300).to({alpha: 0}).onComplete(() => {
+      pulseCircle.destroy();
+    })
   }
 }
 
