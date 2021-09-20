@@ -1,5 +1,4 @@
 import * as _ from 'lodash';
-import { RandomSeed } from './RandomSeed';
 
 export const Formula = {
   COMBAT_DISTANCE: 4,

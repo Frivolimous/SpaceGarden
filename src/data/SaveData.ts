@@ -1,3 +1,5 @@
+import { NodeSlug } from "./NodeData";
+
 export type CurrencySlug = 'gold' | 'tokens' | 'refresh' | 'suns' | 'souls';
 
 export interface IExtrinsicModel {
@@ -8,13 +10,15 @@ export interface IExtrinsicModel {
   currency: {[key in CurrencySlug]?: number};
 
   stageState?: string;
-  skillsCurrent?: ISkillSave[];
-  skillsNext?: ISkillSave[];
+  skillsCurrent: number[];
+  skillsNext: number[];
 
   firstVersion?: number;
   logins?: number;
 
   skillTrees?: number[];
+
+  nodes: NodeSlug[];
 
   options: {
     autoFill: boolean;
@@ -36,7 +40,19 @@ export const dExtrinsicModel: IExtrinsicModel = {
     souls: 0,
   },
 
+  nodes: [
+    'stem',
+    'grove',
+    'lab',
+    'generator',
+    'seedling',
+  ],
+
   options: {
     autoFill: false,
   },
+
+  skillsCurrent: [],
+  skillsNext: [],
 };
+

@@ -11,19 +11,21 @@ import { BottomBar } from '../components/BottomBar';
 import { NodeManager } from '../services/NodeManager';
 import { FDGLink } from '../engine/FDG/FDGLink';
 import { GameController } from '../engine/Mechanics/GameController';
-import { Sidebar } from '../services/Sidebar';
+import { Sidebar } from '../components/domui/Sidebar';
 import { GameNode, NodeSave } from '../engine/Mechanics/Parts/GameNode';
-import { NodeConfig } from '../data/NodeData';
+import { NodeConfig, NodeData } from '../data/NodeData';
 import { FDGNode } from '../engine/FDG/FDGNode';
 import { IExtrinsicModel } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
 import { Config } from '../Config';
-import { InfoPopup } from '../components/InfoPopup';
+import { InfoPopup } from '../components/domui/InfoPopup';
+import { SkillData } from '../data/SkillData';
 
 export class GameUI extends BaseUI {
   private canvas: ScrollingContainer;
   private container: FDGContainer;
   public gameC: GameController;
+  private nodeManager: NodeManager;
   private sidebar: Sidebar;
   private bottomBar: BottomBar;
   
@@ -42,20 +44,19 @@ export class GameUI extends BaseUI {
 
     this.extrinsic = SaveManager.getExtrinsic();
 
+    this.nodeManager = new NodeManager(NodeData.Nodes, SkillData.skills);
+
+    if (this.extrinsic.skillsCurrent) {
+      let skills = this.extrinsic.skillsCurrent.map(i => this.nodeManager.skills[i]);
+      this.nodeManager.applySkills(skills);
+    }
     this.canvas = new ScrollingContainer();
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
-    this.gameC = new GameController(this.container);
-    this.sidebar = new Sidebar();
+    this.gameC = new GameController(this.container, this.nodeManager);
+    this.sidebar = new Sidebar(this.nodeManager.skills, this.extrinsic.skillsNext, this.extrinsic.skillsCurrent);
     this.keymapper = new KeyMapper();
-    this.bottomBar = new BottomBar(100, 100, [
-      NodeManager.getNodeConfig('stem'),
-      NodeManager.getNodeConfig('home'),
-      NodeManager.getNodeConfig('grove'),
-      NodeManager.getNodeConfig('lab'),
-      NodeManager.getNodeConfig('generator'),
-      NodeManager.getNodeConfig('seedling'),
-    ]);
+    this.bottomBar = new BottomBar(100, 100, this.extrinsic.nodes.map(slug => this.nodeManager.getNodeConfig(slug)));
 
     this.canvas.addChild(this.container);
     this.addChild(this.canvas);
@@ -140,7 +141,7 @@ export class GameUI extends BaseUI {
   }
 
   public newGame() {
-    let node = this.gameC.addNewNode(NodeManager.getNodeConfig('core'));
+    let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
     node.position.set(600, 300);
     node.data.powerPercent = 0.5;
   }
@@ -151,6 +152,8 @@ export class GameUI extends BaseUI {
   }
 
   public nextStage = () => {
+    this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
+    this.extrinsic.skillsNext = [];
     this.resetGame();
   }
 

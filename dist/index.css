@@ -49,6 +49,9 @@ body {
     color: #fff;
     width: 250px;
     min-height: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .info-popup {
@@ -64,4 +67,149 @@ body {
     background: #6666ff;
     text-align: center;
     font-weight: bold;
+}
+
+.skill-button {
+    width: 50px;
+    color: #fff;
+    background: #000;
+    border: 3px auto #777;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.notification {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: #e30;
+    border-radius: 5px;
+    right: 16px;
+    top: 84px;
+}
+
+.skill-button:hover {
+    background: #009;
+}
+
+.skill-panel {
+    position: absolute;
+    top: 10vh;
+    left: 10vw;
+    width: 80vw;
+    height: 80vh;
+    background: #f1f1f1;
+    border: 3px auto #777;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.skill-panel .skill-title {
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.skill-panel .skill-subtitle {
+    font-style: italic;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.skill-panel .close-button {
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f1f1f1;
+    border-radius: 25px;
+    background: #000;
+    color: #fff;
+    font-size: 30px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.skill-panel .close-button:hover {
+    background: #c00;
+}
+
+.skill-panel .skill-content {
+    display: flex;
+    flex-flow: wrap;
+    gap: 20px;
+    justify-content: flex-start;
+    margin: 20px;
+}
+
+.skill-block {
+    padding: 10px;
+    padding-bottom: 0px;
+    border-radius: 10px;
+    width: 200px;
+    border: 3px solid #333;
+    color: #333;
+    cursor: pointer;
+}
+
+.skill-block:hover {
+    border-color: #06a;
+    color: #06a;
+}
+
+.skill-block:disabled {
+    background-color: #333;
+    color: #fff;
+    cursor: default;
+}
+
+.greyed {
+    border-color: #aaa;
+    color: #aaa;
+    cursor: default;
+}
+
+.greyed:disabled {
+    color: #aaa;
+}
+
+.greyed:hover {
+    border-color: #aaa;
+    color: #aaa;
+}
+
+.skill-block .skill-block-title {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.skill-block .skill-block-content {
+    font-size: 16px;
+}
+
+.skill-block .skill-block-cost {
+    font-size: 10px;
+    font-style: italic;
+    margin-top: 8px;
+}
+
+.skill-panel .skill-skillpoint {
+    position: absolute;
+    bottom: 0%;
+    left: 40%;
+    font-style: italic;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 50px;
+}
+
+.skillbar {
+    position: absolute;
+    bottom: 0%;
+    left: 40%;
+    font-style: italic;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
 }

@@ -28,8 +28,6 @@ export class GameNode {
   public outlets: GameNode[] = [];
   public fruits: GameNode[] = [];
 
-  type: 'normal' | 'fruit' = 'normal';
-
   active = true;
 
   fruitType: NodeSlug;
@@ -39,6 +37,7 @@ export class GameNode {
   powerCurrent: number = 0;
   fruitCurrent: number = 0;
   researchCurrent: number = 0;
+  powerGen: number = 0;
   
   powerTick: number = 0;
   fruitSpawn: number = 0;
@@ -51,10 +50,12 @@ export class GameNode {
     this.fruitType = config.fruitType;
     this.fruitChain = config.fruitChain;
     this.maxFruits = config.maxFruits;
+
+    this.powerGen = config.powerGen;
   }
 
   public get powerPercent(): number {
-    return this.powerCurrent / this.config.powerMax;
+    return Math.min(this.powerCurrent / this.config.powerMax, 1);
   }
 
   public set powerPercent(n: number) {
@@ -123,14 +124,26 @@ export class GameNode {
       target.maxFruits = target.maxFruits || this.maxFruits;
     } else {
       this.outlets.push(target);
+
+      if (target.config.type !== 'fruit' && this.config.outletEffects) {
+        this.config.outletEffects.forEach(effect => {
+          console.log('effect', effect, this, target);
+          if (effect.type === 'additive') {
+            console.log('additive', effect.amount, this.config.slug, target.config.slug);
+            (target as any)[effect.stat] += effect.amount;
+          } else {
+            (target as any)[effect.stat] *= effect.amount;
+          }
+        });
+      }
     }
   }
 
   public getPowerGen() {
-    if (this.config.powerGen > 0) {
-      return this.config.powerGen * this.powerPercent;
+    if (this.powerGen > 0) {
+      return this.powerGen * this.powerPercent;
     } else {
-      return this.config.powerGen * this.powerPercent;
+      return this.powerGen * this.powerPercent;
     }
   }
   
@@ -146,9 +159,9 @@ export class GameNode {
     if (!this.active) return;
 
     if (this.config.powerDelay > -1) {
-      if (this.config.powerGen > 0) {
+      if (this.powerGen > 0) {
         if (this.powerCurrent < this.config.powerMax) {
-          // console.log(this.config.powerMax, this.config.powerGen, this.powerCurrent)
+          // console.log(this.config.powerMax, this.powerGen, this.powerCurrent)
           this.powerCurrent += this.getPowerGen();
         }
       } else {
@@ -234,6 +247,7 @@ export class GameNode {
 
       if (target && this.powerWeight > target.powerWeight) {
         let clump = Math.min(this.powerCurrent, this.config.powerClump);
+        // console.log('min', this.powerCurrent, this.config.powerClump, this.powerCurrent - target.powerCurrent);
         this.transferPower(this, target, {type: 'grow', amount: clump});
         this.powerCurrent -= clump;
       }
@@ -277,7 +291,7 @@ export class GameNode {
     }
     if (this.getPowerGen() > 0) {
       m += `<br>Gen: ${this.getPowerGen().toFixed(2)} (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)})`;
-    } else if (this.getPowerGen() < 0) {
+    } else {
       m += `<br>Drain: ${-this.getPowerGen().toFixed(2)} (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)})`;
     }
     if (this.getResearchGen() > 0) {
@@ -292,23 +306,6 @@ export class GameNode {
     if (this.maxFruits > 0) {
       m += `<br>Fruits: ${this.fruits.length} / ${this.maxFruits}`;
     }
-    return m;
-  }
-
-  public static importSave(save: NodeSave, transferPower: TransferPowerFunction): GameNode {
-    let config = NodeManager.getNodeConfig(save.slug);
-
-    let texture = TextureCache.getNodeGraphicTexture(config.shape, config.radius);
-
-    let m = new GameNode(new FDGNode(texture, config), config, transferPower);
-    m.powerCurrent = save.powerCurrent;
-    m.researchCurrent = save.researchCurrent;
-    
-    m.uid = save.uid;
-    
-    m.view.position.set(save.x, save.y);
-
-    GameNode.addUid(save.uid);
     return m;
   }
 }

@@ -10,10 +10,9 @@ import { FDGNode } from '../FDG/FDGNode';
 import { GameNode, NodeSave, TransferBlock } from './Parts/GameNode';
 
 export class GameController {
-
   nodes: GameNode[] = [];
 
-  constructor(private container: FDGContainer) {
+  constructor(private container: FDGContainer, private nodeManager: NodeManager) {
     
   }
 
@@ -46,7 +45,7 @@ export class GameController {
       node.onTick();
       if (node.fruitSpawn > 1 && node.fruits.length < node.maxFruits) {
         node.fruitSpawn--;
-        let fruitConfig = NodeManager.getNodeConfig(node.fruitType);
+        let fruitConfig = this.nodeManager.getNodeConfig(node.fruitType);
         
         let fruit = this.addNewNode(fruitConfig);
 
@@ -79,7 +78,7 @@ export class GameController {
   }
 
   public loadSaves (saves: NodeSave[]) {
-    let nodes = saves.map(save => GameNode.importSave(save, this.transferPower));
+    let nodes = saves.map(save => this.importSave(save));
     this.nodes = nodes;
     console.log('LOAD_SAVE', saves.map(save => save.slug));
 
@@ -90,7 +89,24 @@ export class GameController {
         this.container.linkNodes(node.view, nodes.find(node2 => node2.uid === uid).view);
       });
     });
-  } 
+  }
+
+  public importSave(save: NodeSave): GameNode {
+    let config = this.nodeManager.getNodeConfig(save.slug);
+
+    let texture = TextureCache.getNodeGraphicTexture(config.shape, config.radius);
+
+    let m = new GameNode(new FDGNode(texture, config), config, this.transferPower);
+    m.powerCurrent = save.powerCurrent;
+    m.researchCurrent = save.researchCurrent;
+    
+    m.uid = save.uid;
+    
+    m.view.position.set(save.x, save.y);
+
+    GameNode.addUid(save.uid);
+    return m;
+  }
 
   public transferPower = (origin: GameNode, target: GameNode, block: TransferBlock) => {
     if (block.type === 'grow') {
