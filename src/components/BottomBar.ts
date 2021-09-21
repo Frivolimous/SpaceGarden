@@ -8,7 +8,7 @@ import { Button } from './ui/Button';
 import { NodeButton } from './ui/NodeButton';
 import { ToggleButton } from './ui/ToggleButton';
 
-const TURBO = false;
+const TURBO = true;
 
 export class BottomBar extends PIXI.Container {
   public onCreateButton = new JMEventListener<{ config: NodeConfig, e: PIXI.interaction.InteractionEvent }>();

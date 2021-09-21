@@ -68,10 +68,40 @@ export const SkillData: ISkillData = {
       ]
     }
   ],
+
+  skillExchange: [
+    10,
+    50,
+    100,
+    200,
+    400,
+    600,
+    900,
+    1200,
+    1600,
+    2000,
+    2500,
+    3000, // all 6 skills 1 + 1 + 2 + 2 + 3 + 3 = 12
+    4000,
+    5000,
+    6500, //end game
+    8000,
+    10000,
+    12000,
+    15000,
+    20000,
+    30000,
+    40000,
+    50000,
+    65000,
+    80000,
+    100000,
+  ],
 }
 
 interface ISkillData {
-  skills: SkillConfig[]
+  skills: SkillConfig[],
+  skillExchange: number[],
 }
 
 export interface SkillConfig {

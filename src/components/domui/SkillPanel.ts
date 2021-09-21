@@ -1,5 +1,5 @@
 import { Config } from "../../Config";
-import { SkillConfig } from "../../data/SkillData";
+import { SkillConfig, SkillData } from "../../data/SkillData";
 import { JMEventListener } from "../../JMGE/events/JMEventListener";
 import { SkillBar } from "./SkillBar";
 
@@ -76,8 +76,8 @@ export class SkillPanel {
   public updateSkillpoints = (skillpoints: number) => {
     if (this.disabled) return;
     let oldpoints = this.skillpoints;
-    this.skillLevels = Config.SKILL_COST.findIndex(cost => cost > skillpoints);
-    let nextCost = Config.SKILL_COST[this.skillLevels];
+    this.skillLevels = SkillData.skillExchange.findIndex(cost => cost > skillpoints);
+    let nextCost = SkillData.skillExchange[this.skillLevels];
     this.skillbar.updateText(skillpoints, nextCost);
     this.skillpointElement.innerHTML = `${Math.round(this.skillpoints)} Skillpoints`;
     if (oldpoints !== this.skillpoints) {
