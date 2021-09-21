@@ -1,5 +1,6 @@
 import { Config } from "../../Config";
 import { SkillConfig } from "../../data/SkillData";
+import { JMEventListener } from "../../JMGE/events/JMEventListener";
 import { SkillBar } from "./SkillBar";
 
 export class SkillPanel {
@@ -7,9 +8,10 @@ export class SkillPanel {
   private contentElement: HTMLDivElement;
   private skillbar: SkillBar;
   private skillpointElement: HTMLDivElement;
+  private skillMap: { element: HTMLButtonElement, skill: SkillConfig }[] = [];
 
   private skillLevels: number = 0;
-  private skillsSpent: number = 0;
+  public skillsSpent: number = 0;
 
   constructor(private skills: SkillConfig[], private leveled: number[], private disabled?: boolean) {
     this.element = document.createElement('div');
@@ -65,12 +67,33 @@ export class SkillPanel {
     document.body.removeChild(this.element);
   }
 
+  public clear() {
+    while (this.leveled.length > 0) this.leveled.shift();
+    this.skillsSpent = 0;
+    this.skillMap.forEach(data => data.element.disabled = false);
+  }
+
   public updateSkillpoints = (skillpoints: number) => {
     if (this.disabled) return;
+    let oldpoints = this.skillpoints;
     this.skillLevels = Config.SKILL_COST.findIndex(cost => cost > skillpoints);
     let nextCost = Config.SKILL_COST[this.skillLevels];
     this.skillbar.updateText(skillpoints, nextCost);
     this.skillpointElement.innerHTML = `${Math.round(this.skillpoints)} Skillpoints`;
+    if (oldpoints !== this.skillpoints) {
+      this.updateHighlights();
+    }
+  }
+
+  private updateHighlights() {
+    let sp = this.skillpoints;
+    this.skillMap.forEach((data, i) => {
+      if (data.skill.cost <= sp && !data.element.disabled) {
+        data.element.classList.add('highlight');
+      } else {
+        data.element.classList.remove('highlight');
+      }
+    });
   }
 
   private createSkillBlock(skill: SkillConfig, i: number): HTMLElement {
@@ -93,9 +116,11 @@ export class SkillPanel {
           this.skillsSpent += skill.cost;
           this.leveled.push(i);
           element.disabled = true;
+          this.updateHighlights();
         } 
       });
     }
+    this.skillMap.push({element, skill});
     return element;
   }
 }

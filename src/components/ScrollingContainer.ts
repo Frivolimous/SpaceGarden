@@ -26,8 +26,11 @@ export class ScrollingContainer extends PIXI.Container {
     [Direction.DOWN]: false,
   }
 
-  constructor() {
+  constructor(width: number, height: number) {
     super();
+
+    this.innerBounds.width = width;
+    this.innerBounds.height = height;
 
     this.background = new Starfield(this.innerBounds.width, this.innerBounds.height, this.numStars);
     this.background.interactive = true;
@@ -138,6 +141,9 @@ export class ScrollingContainer extends PIXI.Container {
 
   zoomBy(n: number) {
     let amount = this.scale.x * n;
+    let maxZoom = Math.max(this.outerBounds.width / this.innerBounds.width, this.outerBounds.height / this.innerBounds.height);
+    amount = Math.max(amount, maxZoom);
+
     let x: number = this.x * n;
     let y: number = this.y * n;
 

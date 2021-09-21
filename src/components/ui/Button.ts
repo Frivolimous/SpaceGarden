@@ -63,14 +63,17 @@ export class Button extends PIXI.Container {
     this.buttonMode = true;
 
     this.addListener('mouseover', () => {
+      if (this._Disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1 + this.config.hoverScale);
     });
     this.addListener('mouseout', () => {
+      if (this._Disabled) return;
       this.background.tint = this.color;
       this.inner.scale.set(1);
     });
     this.addListener('mouseup', (e) => {
+      if (this._Disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1);
       if (e.target === this) {
@@ -79,6 +82,7 @@ export class Button extends PIXI.Container {
     });
 
     this.addListener('touchend', (e) => {
+      if (this._Disabled) return;
       this.background.tint = this.color;
       this.inner.scale.set(1);
       if (e.target === this) {
@@ -87,6 +91,7 @@ export class Button extends PIXI.Container {
     });
 
     this.addListener('pointerdown', () => {
+      if (this._Disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1 - this.config.hoverScale);
       // SoundData.playSound(SoundIndex.CLICK);
@@ -95,7 +100,7 @@ export class Button extends PIXI.Container {
 
   public set disabled(b: boolean) {
     this._Disabled = b;
-    this.interactive = !b;
+    // this.interactive = !b;
     this.buttonMode = !b;
     if (b) {
       this.color = this.disabledColor;

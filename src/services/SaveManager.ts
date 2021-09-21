@@ -1,8 +1,7 @@
 import * as _ from 'lodash';
-import { IExtrinsicModel, dExtrinsicModel } from '../data/SaveData';
+import { IExtrinsicModel, dExtrinsicModel, CURRENT_VERSION } from '../data/SaveData';
 
-const CURRENT_VERSION = 17;
-const SAVE_LOC: 'virtual' | 'local' | 'online' = 'local';
+var SAVE_LOC: 'virtual' | 'local' | 'online' = 'local';
 const DOC_NAME = 'SG-Extrinsic';
 const VER_NAME = 'SG-Version';
 
@@ -23,6 +22,13 @@ function versionControl(version: number, extrinsic: any): IExtrinsicModel {
 export class SaveManager {
   public static async init(): Promise<null> {
     console.log('init!');
+    if (SAVE_LOC === 'local') {
+      try {
+        let extrinsicStr = window.localStorage.getItem(DOC_NAME);
+      } catch (e) {
+        SAVE_LOC = 'virtual';
+      }
+    }
     return new Promise<null>((resolve) => {
       SaveManager.loadExtrinsic().then(extrinsic => {
         console.log('ext!', extrinsic);

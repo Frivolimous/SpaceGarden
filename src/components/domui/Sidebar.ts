@@ -11,20 +11,38 @@ export class Sidebar {
     return `id-${Sidebar.aid}`;
   }
 
-  nodeMap: { element: HTMLDivElement, node: GameNode, }[] = [];
+  nodeMap: { element: HTMLDivElement, node: GameNode }[] = [];
+  currentHighlight: HTMLDivElement;
 
   container: HTMLDivElement;
   currentSkillPanel: SkillPanel;
   nextSkillPanel: SkillPanel;
   notification: HTMLElement;
 
-  constructor(private skills: SkillConfig[], private leveled: number[], private current: number[]) {
+  _AreStemsHidden: boolean;
+
+  constructor(private skills: SkillConfig[], private nextSkillLevels: number[], private currentSkillLevels: number[]) {
     this.container = document.getElementById('node-container') as HTMLDivElement;
     this.container.innerHTML = '';
-    this.currentSkillPanel = new SkillPanel(this.skills, this.current, true);
+    this.currentSkillPanel = new SkillPanel(this.skills, this.currentSkillLevels, true);
     this.currentSkillPanel.hidden = true;
-    this.nextSkillPanel = new SkillPanel(this.skills, this.leveled);
+    this.nextSkillPanel = new SkillPanel(this.skills, this.nextSkillLevels);
     this.nextSkillPanel.hidden = true;
+    let hideStemButton = document.createElement('button');
+    hideStemButton.classList.add('skill-button');
+    hideStemButton.innerHTML = 'Hide Stems';
+    hideStemButton.style.position = 'absolute';
+    hideStemButton.style.right = '5px';
+    hideStemButton.style.top = '0px';
+    hideStemButton.addEventListener('click', () => {
+      this.areStemsHidden = !this.areStemsHidden;
+      if (this.areStemsHidden) {
+        hideStemButton.innerHTML = 'Show Stems';
+      } else {
+        hideStemButton.innerHTML = 'Hide Stems';
+      }
+    });
+    this.container.appendChild(hideStemButton);
   }
 
   addNodeElement = (view: FDGNode) => {
@@ -48,7 +66,7 @@ export class Sidebar {
         this.notification.hidden = true;
       }
 
-      if (view.config.slug === 'core' && this.current && this.current.length > 0) {
+      if (view.config.slug === 'core' && this.currentSkillLevels && this.currentSkillLevels.length > 0) {
         let button = document.createElement('button');
         button.classList.add('skill-button');
         button.innerHTML = 'Current Skills';
@@ -62,6 +80,9 @@ export class Sidebar {
 
   removeNodeElement = (view: FDGNode) => {
     if (view.config.type !== 'fruit') {
+      if (view.config.slug === 'seedling') {
+        this.nextSkillPanel.clear();
+      }
       let node = view.data;
       let index = this.nodeMap.findIndex(map => map.node === node);
       this.container.removeChild(this.nodeMap[index].element);
@@ -80,12 +101,30 @@ export class Sidebar {
     });
   }
 
+  get areStemsHidden(): boolean {
+    return this._AreStemsHidden;
+  }
+
+  set areStemsHidden(b: boolean) {
+    this._AreStemsHidden = b;
+    if (b) {
+      this.nodeMap.forEach(data => {
+        if (data.node.config.slug === 'stem') {
+          data.element.style.display = 'none';
+        }
+      });
+    } else {
+      this.nodeMap.forEach(data => {
+        data.element.style.display = 'flex';
+      });
+    }
+  }
+
   addElement(content: string, start: boolean): HTMLDivElement {
     let element = document.createElement("div");
     element.innerHTML = `<div class="node-content">${content}</div>`;
     element.classList.add('node-block');
     element.id = Sidebar.genAid();
-    console.log(element.id);
     if (start) {
       this.container.prepend(element);
     } else {
@@ -96,5 +135,17 @@ export class Sidebar {
 
   destroy() {
     this.container.innerHTML = '';
+  }
+
+  highlightNode(node: FDGNode) {
+    if (this.currentHighlight) {
+      this.currentHighlight.classList.remove('highlight');
+      this.currentHighlight = null;
+    }
+    if (node) {
+      let map = this.nodeMap.find(data => data.node.view === node);
+      map.element.classList.add('highlight');
+      this.currentHighlight = map.element;
+    }
   }
 }

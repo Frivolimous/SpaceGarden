@@ -54,6 +54,10 @@ body {
     align-items: center;
 }
 
+.node-block.highlight {
+    background: #660;
+}
+
 .info-popup {
     position: absolute;
     top: 0;
@@ -110,10 +114,10 @@ body {
 }
 
 .skill-panel .skill-subtitle {
-    font-style: italic;
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 20px;
+    color: #600;
 }
 
 .skill-panel .close-button {
@@ -164,6 +168,10 @@ body {
     cursor: default;
 }
 
+.skill-block.highlight {
+    background-color:#ff7;
+}
+
 .greyed {
     border-color: #aaa;
     color: #aaa;
@@ -207,7 +215,7 @@ body {
 .skillbar {
     position: absolute;
     bottom: 0%;
-    left: 40%;
+    left: 35%;
     font-style: italic;
     font-size: 18px;
     font-weight: bold;

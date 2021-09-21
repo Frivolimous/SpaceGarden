@@ -20,14 +20,16 @@ export class TooltipReader {
   private static instance: TooltipReader;
 
   private currentTarget: any;
-
   private currentTooltip: TooltipPopup;
+  private isMouseDown: boolean;
 
   constructor(private stage: PIXI.Container, private borders: PIXI.Rectangle, private tooltipConfig: ITooltipPopup) {
     if (TooltipReader.instance) {
       throw(new Error('There is already an instance of a Tooltip Reader!'));
     }
     stage.addListener('pointermove', this.mouseMove);
+    stage.addListener('pointerdown', this.mouseDown);
+    window.addEventListener('pointerup', this.mouseUp);
     stage.interactive = true;
     TooltipReader.instance = this;
   }
@@ -45,9 +47,25 @@ export class TooltipReader {
     }
   }
 
+  private mouseDown = () => {
+    this.isMouseDown = true;
+    if (this.currentTarget) {
+      this.currentTooltip.destroy();
+      this.currentTooltip = null;
+      this.currentTarget = null;
+    }
+  }
+
+  private mouseUp = () => {
+    this.isMouseDown = false;
+  }
+
   private mouseMove = (e: PIXI.interaction.InteractionEvent) => {
+    if (this.isMouseDown) return;
+
     let target: any = e.target;
     if (!target) return;
+
     if (this.currentTarget && this.currentTarget.dragging) {
       this.currentTooltip.destroy();
       this.currentTooltip = null;

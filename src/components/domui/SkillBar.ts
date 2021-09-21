@@ -13,6 +13,6 @@ export class SkillBar {
   updateText(current: number, next: number) {
     this.current = current;
     this.nextLevel = next;
-    this.element.innerHTML = `${Math.round(current)} / ${next}`
+    this.element.innerHTML = `Research: ${Math.round(current)} / ${next}`;
   }
 }

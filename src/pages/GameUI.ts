@@ -1,3 +1,4 @@
+import * as _ from 'lodash';
 import * as PIXI from 'pixi.js';
 import { BaseUI } from './_BaseUI';
 import { Fonts } from '../data/Fonts';
@@ -19,7 +20,7 @@ import { IExtrinsicModel } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
 import { Config } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
-import { SkillData } from '../data/SkillData';
+import { SkillConfig, SkillData } from '../data/SkillData';
 
 export class GameUI extends BaseUI {
   private canvas: ScrollingContainer;
@@ -46,15 +47,14 @@ export class GameUI extends BaseUI {
 
     this.nodeManager = new NodeManager(NodeData.Nodes, SkillData.skills);
 
-    if (this.extrinsic.skillsCurrent) {
-      let skills = this.extrinsic.skillsCurrent.map(i => this.nodeManager.skills[i]);
-      this.nodeManager.applySkills(skills);
-    }
-    this.canvas = new ScrollingContainer();
+    let currentSkills = this.extrinsic.skillsCurrent.concat(this.extrinsic.skillsAlways);
+    this.extrinsic.skillsCurrent.map(i => this.nodeManager.skills[i]).forEach(this.applySkill);
+
+    this.canvas = new ScrollingContainer(1500, 1000);
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
     this.gameC = new GameController(this.container, this.nodeManager);
-    this.sidebar = new Sidebar(this.nodeManager.skills, this.extrinsic.skillsNext, this.extrinsic.skillsCurrent);
+    this.sidebar = new Sidebar(this.nodeManager.skills, this.extrinsic.skillsNext.concat(this.extrinsic.skillsAlways), currentSkills);
     this.keymapper = new KeyMapper();
     this.bottomBar = new BottomBar(100, 100, this.extrinsic.nodes.map(slug => this.nodeManager.getNodeConfig(slug)));
 
@@ -62,6 +62,7 @@ export class GameUI extends BaseUI {
     this.addChild(this.canvas);
     this.addChild(this.bottomBar);
 
+    this.mouseC.onMove.addListener(this.onMouseMove);
     this.container.onNodeAdded.addListener(this.sidebar.addNodeElement);
     this.container.onNodeAdded.addListener(this.bottomBar.nodeAdded);
     this.container.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
@@ -181,16 +182,49 @@ export class GameUI extends BaseUI {
     this.bottomBar.position.set(e.outerBounds.x, e.outerBounds.bottom - this.bottomBar.barHeight)
   }
 
+  public applySkill = (skill: SkillConfig) => {
+    skill.effects.forEach(effect => {
+      if (effect.effectType === 'node') {
+        let node = this.nodeManager.data.find(block => block.slug === effect.slug);
+        if (effect.key === 'outletEffect') {
+          if (effect.valueType === 'additive') {
+            node.outletEffects = node.outletEffects || [];
+            node.outletEffects.push(_.clone(effect.value));
+          } else if (effect.valueType === 'replace') {
+            node.outletEffects = [_.clone(effect.value)];
+          }
+        }
+        if (effect.valueType === 'additive') {
+          (node as any)[effect.key] += effect.value;
+        } else if (effect.valueType === 'multiplicative') {
+          (node as any)[effect.key] *= effect.value;
+        } else if (effect.valueType === 'replace') {
+          (node as any)[effect.key] = effect.value;
+        }
+      } else if (effect.effectType === 'tier') {
+        if (effect.valueType === 'additive') {
+          this.extrinsic.skillTier += effect.value;
+        }
+      } else if (effect.effectType === 'perma-unlock') {
+        this.extrinsic.skillsAlways = this.extrinsic.skillsAlways.concat(effect.value);
+      }
+    });
+  }
+
   public toggleTurboMode = (b: boolean) => {
     console.log('turbo', b);
     this.gameSpeed = b ? this.turboSpeed : 1;
+  }
+
+  public onMouseMove = (position: {x: number, y: number}) => {
+    let node = this.container.getClosestObject({x: position.x, y: position.y, notFruit: true});
+    this.sidebar.highlightNode(node);
   }
 
   public createNewNode = (e: {config: NodeConfig, e: PIXI.interaction.InteractionEvent}) => {
     let position = e.e.data.getLocalPosition(this.container);
     let node = this.gameC.addNewNode(e.config);
     let link: FDGLink;
-    let nearest: FDGNode;
 
     node.ghostMode = true;
     node.data.active = false;

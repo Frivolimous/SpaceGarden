@@ -44,7 +44,7 @@ export class FDGNode extends PIXI.Container {
   }
 
   set intensity(n: number) {
-    n = 0.3 + 0.7 * n;
+    n = Math.min(0.3 + 0.7 * n, 1);
     this.sprite.tint = colorLuminance(this.config.color, n);
     this.sprite.scale.set(n);
   }

@@ -2,9 +2,13 @@ import * as PIXI from 'pixi.js';
 import { NodeConfig } from '../data/NodeData';
 import { FDGNode } from '../engine/FDG/FDGNode';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
+import { StringManager } from '../services/StringManager';
+import { TooltipReader } from './tooltip/TooltipReader';
 import { Button } from './ui/Button';
 import { NodeButton } from './ui/NodeButton';
 import { ToggleButton } from './ui/ToggleButton';
+
+const TURBO = false;
 
 export class BottomBar extends PIXI.Container {
   public onCreateButton = new JMEventListener<{ config: NodeConfig, e: PIXI.interaction.InteractionEvent }>();
@@ -28,6 +32,7 @@ export class BottomBar extends PIXI.Container {
 
     configs.forEach(config => {
       let button = new NodeButton({label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => this.onCreateButton.publish({config, e})});
+      TooltipReader.addTooltip(button, {title: (StringManager.data.NODE_TOOLTIPS as any)[config.slug].TITLE, description: (StringManager.data.NODE_TOOLTIPS as any)[config.slug].DESCRIPTION})
       this.addChild(button);
       this.buttons.push(button);
     });
@@ -45,8 +50,12 @@ export class BottomBar extends PIXI.Container {
         }
       }
     });
+    TooltipReader.addTooltip(this.deleteButton, {title: 'Delete Node', description: 'Select a single node and it will be instantly removed from the network.'});
     this.turboButton = new ToggleButton({ label: 'Turbo', width: 100, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: this.onTurboButton.publish });
+    TooltipReader.addTooltip(this.turboButton, {title: 'Dev Feature', description: 'You should not see this!  If you do, it\'s because the dev forgot to disable it before publishing.  Please report this!'});
+    this.turboButton.visible = TURBO;
     this.proceedButton = new Button({ label: 'Launch Seedling', onClick: this.onProceedButton.publish });
+    TooltipReader.addTooltip(this.proceedButton, {title: 'Launch Seedling', description: 'Launch your seedling with all of its research, starting over to grow your next plant network.'});
     this.proceedButton.visible = false;
     
     this.addChild(this.deleteButton);

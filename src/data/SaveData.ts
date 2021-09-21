@@ -2,6 +2,8 @@ import { NodeSlug } from "./NodeData";
 
 export type CurrencySlug = 'gold' | 'tokens' | 'refresh' | 'suns' | 'souls';
 
+export const CURRENT_VERSION = 18;
+
 export interface IExtrinsicModel {
   achievements: boolean[];
   // flags: boolean[];
@@ -12,6 +14,8 @@ export interface IExtrinsicModel {
   stageState?: string;
   skillsCurrent: number[];
   skillsNext: number[];
+  skillsAlways: number[];
+  skillTier: number;
 
   firstVersion?: number;
   logins?: number;
@@ -41,10 +45,11 @@ export const dExtrinsicModel: IExtrinsicModel = {
   },
 
   nodes: [
+    'core',
     'stem',
+    'generator',
     'grove',
     'lab',
-    'generator',
     'seedling',
   ],
 
@@ -54,5 +59,7 @@ export const dExtrinsicModel: IExtrinsicModel = {
 
   skillsCurrent: [],
   skillsNext: [],
+  skillsAlways: [],
+  skillTier: 0,
 };
 

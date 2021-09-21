@@ -8,6 +8,7 @@ export class MouseController {
   // objects: IPull[] = [];
 
   public onDelete: JMEventListener = new JMEventListener<FDGNode>();
+  public onMove: JMEventListener = new JMEventListener<{x: number, y: number}>();
   public deleteNext = false;
 
   public currentPull: IPull;
@@ -78,15 +79,16 @@ export class MouseController {
   }
 
   public onMouseMove = (e: PIXI.interaction.InteractionEvent) => {
+    let position = e.data.getLocalPosition(this.container);
     if (this.currentPull) {
-      let position = e.data.getLocalPosition(this.container);
       this.currentPull.x = position.x;
       this.currentPull.y = position.y;
       this.currentPull.onMove && this.currentPull.onMove(position);
     } else if (this.canvas.diff) {
-      let position = e.data.getLocalPosition(this.container);
       this.canvas.diff.tX = position.x;
       this.canvas.diff.tY = position.y;
+    } else {
+      this.onMove.publish(position);
     }
   }
 

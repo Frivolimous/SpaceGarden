@@ -72,24 +72,29 @@ export class NodeButton extends PIXI.Container {
     this.buttonMode = true;
 
     this.addListener('mouseover', () => {
+      if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1 + this.config.hoverScale);
     });
     this.addListener('mouseout', () => {
+      if (this.disabled) return;
       this.background.tint = this.color;
       this.inner.scale.set(1);
     });
     this.addListener('mouseup', (e) => {
+      if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1);
     });
 
     this.addListener('touchend', (e) => {
+      if (this.disabled) return;
       this.background.tint = this.color;
       this.inner.scale.set(1);
     });
 
     this.addListener('pointerdown', e => {
+      if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1 - this.config.hoverScale);
       config.onDown(e);
@@ -103,7 +108,7 @@ export class NodeButton extends PIXI.Container {
 
   public set disabled(b: boolean) {
     this._Disabled = b;
-    this.interactive = !b;
+    // this.interactive = !b;
     this.buttonMode = !b;
     if (b) {
       this.color = this.disabledColor;

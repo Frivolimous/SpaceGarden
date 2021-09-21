@@ -6,26 +6,28 @@ export interface ITooltipPopup {
 }
 
 type metaTags = 'b' | 'n' | 'h' | 'g' | 't' | 'line' | 'tab' | '/tab';
-const fontStyles: Partial<{[key in metaTags]: PIXI.TextStyleOptions}> = {
-  b: { fontSize: 13, fontFamily: Fonts.UI, fill: 0xEADF78, wordWrap: true, wordWrapWidth: 195},
-  t: { fontSize: 16, fontFamily: Fonts.UI, fill: 0xFFFFA8, wordWrap: true, wordWrapWidth: 195},
-  n: { fontSize: 13, fontFamily: Fonts.UI, fill: 0xb1875b, wordWrap: true, wordWrapWidth: 195},
-  h: { fontSize: 13, fontFamily: Fonts.UI, fill: 0x43CBFF, wordWrap: true, wordWrapWidth: 195},
-  g: { fontSize: 13, fontFamily: Fonts.UI, fill: 0x44CC5E, wordWrap: true, wordWrapWidth: 195},
-};
+
 const circleStyle = { fontSize: 25, fontFamily: Fonts.UI, fill: 0xEADF78, wordWrap: true, wordWrapWidth: 195};
 
 const dimensions = {
-  width: 200,
-  padding: 5,
+  width: 250,
+  padding: 10,
   tab: 5,
 };
 
 const colors = {
-  BACK: 0x412315,
+  BACK: 0x112233,
   BORDER: 0xb1875b,
   INNER_LINE: 0xb1875b,
   SHADOW: 0x412315,
+};
+
+const fontStyles: Partial<{[key in metaTags]: PIXI.TextStyleOptions}> = {
+  b: { fontSize: 18, fontFamily: Fonts.UI, fill: 0xfAeF88, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
+  t: { fontSize: 20, fontFamily: Fonts.UI, fill: 0xFFFFA8, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
+  n: { fontSize: 18, fontFamily: Fonts.UI, fill: 0xeadf78, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
+  h: { fontSize: 18, fontFamily: Fonts.UI, fill: 0x43CBFF, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
+  g: { fontSize: 18, fontFamily: Fonts.UI, fill: 0x44CC5E, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
 };
 
 export class TooltipPopup extends PIXI.Container {

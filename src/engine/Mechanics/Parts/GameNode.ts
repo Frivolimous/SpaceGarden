@@ -52,6 +52,7 @@ export class GameNode {
     this.maxFruits = config.maxFruits;
 
     this.powerGen = config.powerGen;
+    this.powerTick = config.powerDelay;
   }
 
   public get powerPercent(): number {
@@ -63,8 +64,7 @@ export class GameNode {
   }
 
   public get powerWeight(): number {
-    return this.powerCurrent / this.config.powerMax;
-    // return 1 - (1 - this.powerCurrent / this.config.powerMax) * this.config.powerWeight;
+    return this.powerCurrent / this.config.powerMax * this.config.powerWeight;
   }
 
   public removeNode(node: GameNode) {
@@ -158,30 +158,28 @@ export class GameNode {
   public onTick = () => {
     if (!this.active) return;
 
-    if (this.config.powerDelay > -1) {
-      if (this.powerGen > 0) {
-        if (this.powerCurrent < this.config.powerMax) {
-          // console.log(this.config.powerMax, this.powerGen, this.powerCurrent)
-          this.powerCurrent += this.getPowerGen();
-        }
-      } else {
-        if (this.powerCurrent > 0) {
-          this.powerCurrent += this.getPowerGen();
-        }
+    if (this.powerGen > 0) {
+      if (this.powerCurrent < this.config.powerMax) {
+        // console.log(this.config.powerMax, this.powerGen, this.powerCurrent)
+        this.powerCurrent += this.getPowerGen();
       }
-
-      this.powerTick++;
-      if (this.powerTick >= this.config.powerDelay) {
-        this.powerTick = 0;
-
-        this.generateSpecial();
-        this.powerFruits();
-        // this.spawnFruits();
-        this.attemptTransferPower();
+    } else {
+      if (this.powerCurrent > 0) {
+        this.powerCurrent += this.getPowerGen();
       }
     }
 
-    if (this.view) this.view.intensity = Math.min(1, this.powerPercent);
+    this.powerTick--;
+    if (this.powerTick <= 0) {
+      this.powerTick = this.config.powerDelay + (-3 + 6 * Math.random());
+
+      this.generateSpecial();
+      this.powerFruits();
+      // this.spawnFruits();
+      this.attemptTransferPower();
+    }
+
+    if (this.view) this.view.intensity = this.powerPercent;
     this.onUpdate.publish(this);
   }
 
@@ -238,16 +236,16 @@ export class GameNode {
     if (this.config.powerClump > 0 && this.outlets.length > 0 && this.powerPercent > Config.NODE.POWER_THRESHOLD) {
       let target: GameNode;
 
-      for (let i = 0; i < this.outlets.length; i++) {
-        if (!this.outlets[i].active) continue;
-        if (!target || this.outlets[i].powerPercent < target.powerPercent) {
-          target = this.outlets[i];
+      this.outlets.forEach(outlet => {
+        if (outlet.active) {
+          if (outlet.powerPercent < this.powerPercent && (!target || outlet.powerWeight < target.powerWeight)) {
+            target = outlet;
+          }
         }
-      }
+      });
 
-      if (target && this.powerWeight > target.powerWeight) {
+      if (target) {
         let clump = Math.min(this.powerCurrent, this.config.powerClump);
-        // console.log('min', this.powerCurrent, this.config.powerClump, this.powerCurrent - target.powerCurrent);
         this.transferPower(this, target, {type: 'grow', amount: clump});
         this.powerCurrent -= clump;
       }
@@ -286,25 +284,29 @@ export class GameNode {
   public toString(): string {
     let m = `<div class="node-title">${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
         Power: ${Math.round(this.powerCurrent)} / ${this.config.powerMax}`;
-    if (this.config.slug === 'seedling') {
-      m += `<br>Research Points: ${Math.round(this.researchCurrent)}`;
-    }
-    if (this.getPowerGen() > 0) {
-      m += `<br>Gen: ${this.getPowerGen().toFixed(2)} (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)})`;
+    if (!this.active) {
+      m += `<p style="color: #eedd33;">[ Drag to your network in order to connect the new node ]</p>`
     } else {
-      m += `<br>Drain: ${-this.getPowerGen().toFixed(2)} (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)})`;
-    }
-    if (this.getResearchGen() > 0) {
-      m += `<br>Research: ${this.getResearchGen().toFixed(2)}`;
-    }
-    if (this.getFruitGen() > 0) {
-      m += `<br>Fruit: ${this.getFruitGen().toFixed(2)}`;
-    }
-    if (this.config.maxLinks > 1) {
-      m += `<br>Connections: ${this.outlets.length} / ${this.config.maxLinks}`;
-    }
-    if (this.maxFruits > 0) {
-      m += `<br>Fruits: ${this.fruits.length} / ${this.maxFruits}`;
+      if (this.config.slug === 'seedling') {
+        m += `<br>Research Points: ${Math.round(this.researchCurrent)}`;
+      }
+      if (this.getPowerGen() > 0) {
+        m += `<br>Power Gen: ${this.getPowerGen().toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+      } else {
+        m += `<br>Power Drain: ${-this.getPowerGen().toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+      }
+      if (this.getResearchGen() > 0) {
+        m += `<br>Research Gen: ${this.getResearchGen().toFixed(2)}`;
+      }
+      if (this.getFruitGen() > 0) {
+        m += `<br>Fruit Gen: ${this.getFruitGen().toFixed(2)}`;
+      }
+      if (this.config.maxLinks > 1) {
+        m += `<br>Connections: ${this.outlets.length} / ${this.config.maxLinks}`;
+      }
+      // if (this.maxFruits > 0) {
+      //   m += `<br>Fruits: ${this.fruits.length} / ${this.maxFruits}`;
+      // }
     }
     return m;
   }

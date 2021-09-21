@@ -1,5 +1,41 @@
 export const EnglishStringData = {
   GAME_TITLE: 'Space Garden',
+
+  NODE_TOOLTIPS: {
+    home: {
+      TITLE: 'Crawler Home',
+      DESCRIPTION: 'Produces fruits that are required to sustain and breed Crawlers.\n\nFruits are harvested by crawlers to sustain them.',
+    },
+    lab: {
+      TITLE: 'Evolution Lab',
+      // DESCRIPTION: 'Creates Research Particles that will be absorbed by a seedling if present.\n\nFruits are harvested by crawlers to enhance research.',
+      DESCRIPTION: 'Creates Research Particles that will be absorbed by a seedling if present.',
+    },
+    generator: {
+      TITLE: 'Growth Generator',
+      DESCRIPTION: 'Powers up your network.  Power generation is increased based on its own power level.  Keep your power level high to maintain your network.',
+      // DESCRIPTION: 'Powers up your network.  Power generation is increased based on its own power level.  Keep your power level high to maintain your network.\n\nFruits are harvested by crawlers to cause explosions.',
+    },
+    grove: {
+      TITLE: 'Fruit Grove',
+      DESCRIPTION: 'Produces Fruit Particles that grow fruits on any node in your network.\n\nRemoving this node will not remove fruits from other nodes.',
+      // DESCRIPTION: 'Produces Fruit Particles that grow fruits on any node in your network.\n\nFruits are harvested by crawlers to be used as building materials.',
+    },
+    stem: {
+      TITLE: 'Stem Connector',
+      DESCRIPTION: 'Connects the nodes in your network and transfers power between them.\n\nPower attempts to be distributed evenly across your entire plant, based on a percent of each node\'s capacity.',
+      // DESCRIPTION: 'Connects the nodes in your network and transfers power between them.\n\nPower attempts to be distributed evenly across your entire plant, based on a percent of each node\'s capacity.\n\nFruits are harvested by crawlers to be used as building material.',
+    },
+    core: {
+      TITLE: 'Core Root',
+      DESCRIPTION: 'The central core of your plant, retaining the memories and evolutions of your previous plant.\n\nFruits produce a small amount of energy when powered.',
+    },
+    seedling: {
+      TITLE: 'Seedling',
+      DESCRIPTION: 'WARNING: Drains a huge amount of power from your network.\n\nPower this up fully to spawn a new plant.\n\nEnhance the seedling with Research to make your next plant stronger!',
+    }
+  },
+
   BUTTON: {
     MENU: 'Menu',
     HOME: 'Home',
@@ -19,7 +55,7 @@ export const EnglishStringData = {
     CANCEL: 'Cancel',
     BACK: 'Back',
     FIGHT: 'Fight!',
-    ADVENTURE: 'Adventure',
+    ADVENTURE: 'Start Game!',
     CREDITS: 'Credits',
     LANGUAGE: 'Language',
     STATS_TAB: 'Stats',
