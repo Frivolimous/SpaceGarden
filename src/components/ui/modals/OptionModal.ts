@@ -5,7 +5,7 @@ import { JMTween, JMEasing } from '../../../JMGE/JMTween';
 import { Fonts } from '../../../data/Fonts';
 
 const COLOR_BACK = 0x333333;
-const COLOR_FRONT = 0x666666;
+const COLOR_FRONT = 0xdddddd;
 const HEIGHT = 300;
 const WIDTH = 400;
 
@@ -18,7 +18,7 @@ export class OptionModal extends BaseModal {
     this.pivot.set(WIDTH / 2, HEIGHT / 2);
 
     let shadow = new PIXI.Graphics();
-    shadow.beginFill(0, 0.4).drawRoundedRect(5, 5, WIDTH + 10, HEIGHT + 10, 10);
+    shadow.beginFill(0, 0.4).drawRoundedRect(3, 3, WIDTH + 6, HEIGHT + 6, 10);
     this.addChild(shadow);
     let background = new PIXI.Graphics();
     background.lineStyle(3, COLOR_FRONT).beginFill(COLOR_BACK).drawRoundedRect(0, 0, WIDTH, HEIGHT, 10);

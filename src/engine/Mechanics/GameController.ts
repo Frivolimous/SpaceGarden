@@ -27,7 +27,6 @@ export class GameController {
 
   public addNode = (view: FDGNode) => {
     let node = new GameNode(view, view.config, this.transferPower);
-    console.log('node', node.uid, node.config.slug);
     this.nodes.push(node);
   }
 

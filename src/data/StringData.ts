@@ -56,6 +56,7 @@ export const EnglishStringData = {
     BACK: 'Back',
     FIGHT: 'Fight!',
     ADVENTURE: 'Start Game!',
+    RESET: 'Full Reset',
     CREDITS: 'Credits',
     LANGUAGE: 'Language',
     STATS_TAB: 'Stats',

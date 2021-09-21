@@ -23,14 +23,14 @@ export const NodeDataBase: INodeData = {
     {
       slug: 'seedling', type: 'normal', color: Colors.Node.darkgreen, shape: 'hexagon',
       radius: 30, mass: 30, force: 30, maxLinks: 1, maxCount: 1,
-      powerMax: NodeBase.powerMax * 100, powerGen: 0, powerWeight: 2,
+      powerMax: NodeBase.powerMax * 50, powerGen: 0, powerWeight: 2,
       powerDelay: NodeBase.powerDelay, powerClump: 0,
       fruitChain: 0,
     },
     {
       slug: 'stem', type: 'normal', color: Colors.Node.green, shape: 'circle',
       radius: 10, mass: 1, force: 1, maxLinks: 3, maxCount: 4,
-      powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain, powerWeight: 1.2,
+      powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain, powerWeight: 1.1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump,
       fruitType: 'leaf', fruitChain: 1, maxFruits: 2, fruitClump: NodeBase.fruitClump,
     },

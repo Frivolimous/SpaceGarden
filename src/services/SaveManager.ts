@@ -56,7 +56,7 @@ export class SaveManager {
     });
   }
 
-  public static resetData(): () => void {
+  public static resetData = (): () => void => {
     // returns the confirmation function
     return SaveManager.confirmReset;
   }
@@ -113,6 +113,8 @@ export class SaveManager {
 
   private static confirmReset = () => {
     SaveManager.extrinsic = _.cloneDeep(dExtrinsicModel);
+    SaveManager.saveExtrinsic();
+    console.log("reset!");
   }
 
   private static async loadExtrinsic(): Promise<IExtrinsicModel> {

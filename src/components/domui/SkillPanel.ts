@@ -1,10 +1,9 @@
-import { Config } from "../../Config";
 import { SkillConfig, SkillData } from "../../data/SkillData";
-import { JMEventListener } from "../../JMGE/events/JMEventListener";
 import { SkillBar } from "./SkillBar";
 
 export class SkillPanel {
   private element: HTMLDivElement;
+  private tierContainer: HTMLDivElement;
   private contentElement: HTMLDivElement;
   private skillbar: SkillBar;
   private skillpointElement: HTMLDivElement;
@@ -13,7 +12,7 @@ export class SkillPanel {
   private skillLevels: number = 0;
   public skillsSpent: number = 0;
 
-  constructor(private skills: SkillConfig[], private leveled: number[], private disabled?: boolean) {
+  constructor(skills: SkillConfig[], private leveled: string[], private always: string[], tier: number, private disabled?: boolean) {
     this.element = document.createElement('div');
     this.element.classList.add('skill-panel');
     document.body.appendChild(this.element);
@@ -26,11 +25,17 @@ export class SkillPanel {
       <div class="skill-title">Skill Tree</div>
       <div class="skill-subtitle">Your skills will be applied only on the next plant</div>`;
     }
+    if (tier > 0) {
+      this.tierContainer = document.createElement('div');
+      this.tierContainer.classList.add('tier-content');
+      this.element.appendChild(this.tierContainer);
+    }
+
     this.contentElement = document.createElement('div');
     this.contentElement.classList.add('skill-content');
     this.element.appendChild(this.contentElement);
-    skills.forEach((skill, i) => {
-      let block = this.createSkillBlock(skill, i);
+    skills.forEach((skill) => {
+      let block = this.createSkillBlock(skill);
       this.contentElement.appendChild(block);
     })
 
@@ -49,6 +54,28 @@ export class SkillPanel {
       this.skillbar = new SkillBar;
       this.element.appendChild(this.skillbar.element);
     }
+
+    this.hidden = true;
+
+    let buttons: HTMLButtonElement[] = [];
+    if (tier > 0) {
+      for (let i = 1; i <= tier + 1; i++) {
+        let j = i;
+        let button = document.createElement('button');
+        button.classList.add('tier-button');
+        button.innerHTML = `Tier ${i}`;
+        buttons.push(button);
+        this.tierContainer.appendChild(button);
+        button.addEventListener('click', () => {
+          buttons.forEach(b => b.disabled = b === button);
+          this.openTierPage(j);
+        });
+      }
+      buttons[tier].disabled = true;
+      this.openTierPage(tier + 1);
+    } else {
+      this.openTierPage(1);
+    }
   }
 
   public get skillpoints(): number {
@@ -56,15 +83,26 @@ export class SkillPanel {
   }
 
   public get hidden(): boolean {
-    return this.element.hidden;
+    return this.element.style.display === 'none';
   }
 
   public set hidden(b: boolean) {
-    this.element.hidden = b;
+    this.element.style.display = b ? 'none' : 'flex';
   }
 
   public destroy = () => {
     document.body.removeChild(this.element);
+  }
+
+  public openTierPage = (pageIndex: number) => {
+    let tierList = SkillData.skillTiers[pageIndex];
+    this.skillMap.forEach(data => {
+      if (tierList.includes(data.skill.slug)) {
+        data.element.hidden = false;
+      } else {
+        data.element.hidden = true;
+      }
+    })
   }
 
   public clear() {
@@ -88,7 +126,7 @@ export class SkillPanel {
   private updateHighlights() {
     let sp = this.skillpoints;
     this.skillMap.forEach((data, i) => {
-      if (data.skill.cost <= sp && !data.element.disabled) {
+      if (data.skill.cost <= sp && !data.element.disabled && !data.element.classList.contains('greyed')) {
         data.element.classList.add('highlight');
       } else {
         data.element.classList.remove('highlight');
@@ -96,31 +134,58 @@ export class SkillPanel {
     });
   }
 
-  private createSkillBlock(skill: SkillConfig, i: number): HTMLElement {
+  private createSkillBlock(skill: SkillConfig): HTMLElement {
     let element = document.createElement('button');
     element.classList.add('skill-block');
     element.innerHTML = `<div class="skill-block-title">${skill.title}</div>
     <div class="skill-block-content">${skill.description}</div>
     <div class="skill-block-cost">${skill.cost} Point${skill.cost === 1 ? '' : 's'}</div>`;
-    if (this.leveled.includes(i)) {
+
+    if (this.always.includes(skill.slug)) {
+      element.disabled = true;
+    }
+
+    if (this.leveled.includes(skill.slug)) {
       element.disabled = true;
       this.skillsSpent += skill.cost;
-    }
+    } 
 
     if (this.disabled) {
       element.classList.add('greyed');
     } else {
       element.addEventListener('click', () => {
-        console.log('click', skill.cost, this.skillLevels, this.skillsSpent);
-        if (skill.cost <= this.skillpoints) {
+        if (skill.cost <= this.skillpoints && !element.classList.contains('greyed')) {
           this.skillsSpent += skill.cost;
-          this.leveled.push(i);
+          this.leveled.push(skill.slug);
           element.disabled = true;
           this.updateHighlights();
+          this.skillMap.forEach(this.checkRequirements);
         } 
       });
+      this.checkRequirements({element, skill});
     }
+    
     this.skillMap.push({element, skill});
+
     return element;
+  }
+
+  checkRequirements = (data: { element: HTMLButtonElement, skill: SkillConfig }) => {
+    if (data.skill.skillRequirements) {
+      let allGood = true;
+      data.skill.skillRequirements.forEach(req => {
+        if (!this.leveled.includes(req) && !this.always.includes(req)) {
+          allGood = false;
+        }
+      });
+
+      if (allGood) {
+        if (data.element.classList.contains('greyed')) {
+          data.element.classList.remove('greyed');
+        }
+      } else {
+        data.element.classList.add('greyed');
+      }
+    }
   }
 }

@@ -105,7 +105,9 @@ body {
     background: #f1f1f1;
     border: 3px auto #777;
     border-radius: 10px;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .skill-panel .skill-title {
@@ -116,8 +118,35 @@ body {
 .skill-panel .skill-subtitle {
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 20px;
     color: #600;
+}
+
+.skill-panel .tier-content {
+    display: flex;
+    gap: 5px;
+    margin-top: 15px;
+}
+
+.skill-panel .tier-button {
+    width: 50px;
+    height: 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    background: none;
+    border: 1px solid #000;
+    color: #000;
+}
+
+.skill-panel .tier-button:hover {
+    border-color: #06a;
+    color: #06a;
+}
+
+.skill-panel .tier-button:disabled {
+    color: #ccc;
+    background: #333;
+    border: none;
+    cursor: default;
 }
 
 .skill-panel .close-button {
@@ -143,8 +172,11 @@ body {
     display: flex;
     flex-flow: wrap;
     gap: 20px;
+    max-width: 650px;
     justify-content: flex-start;
     margin: 20px;
+    height: 65%;
+    align-content: flex-start;
 }
 
 .skill-block {
@@ -203,21 +235,14 @@ body {
 }
 
 .skill-panel .skill-skillpoint {
-    position: absolute;
-    bottom: 0%;
-    left: 40%;
     font-style: italic;
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 50px;
+    margin-bottom: 10px;
 }
 
 .skillbar {
-    position: absolute;
-    bottom: 0%;
-    left: 35%;
     font-style: italic;
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 20px;
 }

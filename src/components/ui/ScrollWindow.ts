@@ -90,7 +90,6 @@ export class ScrollWindow extends PIXI.Container {
     this.innerHeight += this.paddingTB * 2;
     this.innerHeight = this.innerHeight || 0;
     this.scrollbar && this.scrollbar.drawMover(this.outerHeight / this.innerHeight);
-    console.log('draw!', this.outerHeight, this.innerHeight);
   }
 
   public addObject = (_object: PIXI.Container) => {

@@ -64,7 +64,7 @@ export class GameNode {
   }
 
   public get powerWeight(): number {
-    return this.powerCurrent / this.config.powerMax * this.config.powerWeight;
+    return this.powerCurrent / this.config.powerMax / this.config.powerWeight;
   }
 
   public removeNode(node: GameNode) {
@@ -127,9 +127,7 @@ export class GameNode {
 
       if (target.config.type !== 'fruit' && this.config.outletEffects) {
         this.config.outletEffects.forEach(effect => {
-          console.log('effect', effect, this, target);
           if (effect.type === 'additive') {
-            console.log('additive', effect.amount, this.config.slug, target.config.slug);
             (target as any)[effect.stat] += effect.amount;
           } else {
             (target as any)[effect.stat] *= effect.amount;
@@ -160,7 +158,6 @@ export class GameNode {
 
     if (this.powerGen > 0) {
       if (this.powerCurrent < this.config.powerMax) {
-        // console.log(this.config.powerMax, this.powerGen, this.powerCurrent)
         this.powerCurrent += this.getPowerGen();
       }
     } else {
@@ -238,6 +235,9 @@ export class GameNode {
 
       this.outlets.forEach(outlet => {
         if (outlet.active) {
+          if (outlet.config.slug === 'seedling') {
+            // console.log(this.powerPercent, outlet.powerPercent, outlet.powerWeight, target ? target.powerWeight : 'no target');
+          }
           if (outlet.powerPercent < this.powerPercent && (!target || outlet.powerWeight < target.powerWeight)) {
             target = outlet;
           }
@@ -264,7 +264,6 @@ export class GameNode {
   }
   
   public receiveFruitPower = (amount: number, color: number) => {
-    console.log("RECEIVED!", this.config.slug, this.canSpawnFruit(), this.fruits.length, this.config.maxFruits)
     if (this.fruits.length < this.config.maxFruits) {
       this.fruitSpawn += amount;
       this.view.pulse(color);
@@ -295,6 +294,8 @@ export class GameNode {
       } else {
         m += `<br>Power Drain: ${-this.getPowerGen().toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
       }
+      // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
+
       if (this.getResearchGen() > 0) {
         m += `<br>Research Gen: ${this.getResearchGen().toFixed(2)}`;
       }

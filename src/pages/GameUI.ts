@@ -2,7 +2,7 @@ import * as _ from 'lodash';
 import * as PIXI from 'pixi.js';
 import { BaseUI } from './_BaseUI';
 import { Fonts } from '../data/Fonts';
-import { IResizeEvent } from '../services/GameEvents';
+import { GameEvents, IResizeEvent } from '../services/GameEvents';
 import { Direction, ScrollingContainer } from '../components/ScrollingContainer';
 import { KeyMapper } from '../services/KeyMapper';
 import { JMTicker } from '../JMGE/events/JMTicker';
@@ -21,18 +21,20 @@ import { SaveManager } from '../services/SaveManager';
 import { Config } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
 import { SkillConfig, SkillData } from '../data/SkillData';
+import { SkillPanel } from '../components/domui/SkillPanel';
 
 export class GameUI extends BaseUI {
+  public gameC: GameController;
+
   private canvas: ScrollingContainer;
   private container: FDGContainer;
-  public gameC: GameController;
   private nodeManager: NodeManager;
   private sidebar: Sidebar;
   private bottomBar: BottomBar;
-  
+
   private keymapper: KeyMapper;
   private mouseC: MouseController;
-  
+
   private gameSpeed: number = 1;
   private turboSpeed: number = 3;
   private running = true;
@@ -47,14 +49,28 @@ export class GameUI extends BaseUI {
 
     this.nodeManager = new NodeManager(NodeData.Nodes, SkillData.skills);
 
-    let currentSkills = this.extrinsic.skillsCurrent.concat(this.extrinsic.skillsAlways);
-    this.extrinsic.skillsCurrent.map(i => this.nodeManager.skills[i]).forEach(this.applySkill);
+    let skills = this.nodeManager.getSkillsBySlugs(this.extrinsic.skillsCurrent);
+    skills.filter(skill => skill.effects.find(effect => effect.effectType === 'tier')).forEach(this.applySkillTier);
+
+    console.log('s', skills);
+    let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
+    let allSkills = _.uniq(skills.concat(this.nodeManager.getSkillsBySlugs(always)));
+    allSkills.forEach(this.applySkill);
+    console.log(allSkills);
 
     this.canvas = new ScrollingContainer(1500, 1000);
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
     this.gameC = new GameController(this.container, this.nodeManager);
-    this.sidebar = new Sidebar(this.nodeManager.skills, this.extrinsic.skillsNext.concat(this.extrinsic.skillsAlways), currentSkills);
+
+    let nextSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
+    let currentSkillPanel: SkillPanel;
+
+    if (this.extrinsic.skillsCurrent.length + always.length > 0) {
+      currentSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsCurrent, always, this.extrinsic.skillTier, true);
+    }
+
+    this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel);
     this.keymapper = new KeyMapper();
     this.bottomBar = new BottomBar(100, 100, this.extrinsic.nodes.map(slug => this.nodeManager.getNodeConfig(slug)));
 
@@ -81,7 +97,7 @@ export class GameUI extends BaseUI {
       {key: 'ArrowDown', altKey: 's', function: () => this.canvas.startPan(Direction.DOWN)},
       {key: ' ', function: () => this.running = !this.running},
       {key: '=', altKey: '+', function: () => this.canvas.zoomBy(1.2), noHold: true},
-      {key: '-', altKey: '_', function: () => this.canvas.zoomBy(1/1.2), noHold: true},
+      {key: '-', altKey: '_', function: () => this.canvas.zoomBy(1 / 1.2), noHold: true},
       {key: '[', function: () => this.gameSpeed = Math.max(this.gameSpeed - 1, 1)},
       {key: ']', function: () => this.gameSpeed++},
     ],
@@ -111,10 +127,14 @@ export class GameUI extends BaseUI {
 
     this.canvas.destroy();
     this.container.destroy();
-    this.mouseC.destroy();
-    this.keymapper.destroy();
     this.gameC.destroy();
+    this.nodeManager.destroy();
+    this.sidebar.destroy();
     this.bottomBar.destroy();
+    this.keymapper.destroy();
+    this.mouseC.destroy();
+
+    GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME INSTANCE DESTROYED'});
   }
 
   public navIn = () => {
@@ -122,9 +142,15 @@ export class GameUI extends BaseUI {
     this.keymapper.enabled = true;
   }
 
+  public navOut = () => {
+    JMTicker.remove(this.onTick);
+    this.keymapper.enabled = false;
+    GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME NAV OUT'});
+  }
+
   public saveGameTimeout = () => {
     if (!this.exists) return;
-    new InfoPopup("Game Saved!");
+    new InfoPopup('Game Saved!');
 
     this.saveGame();
     window.setTimeout(this.saveGameTimeout, 30000);
@@ -134,11 +160,6 @@ export class GameUI extends BaseUI {
     let state = JSON.stringify(this.gameC.saveNodes());
     this.extrinsic.stageState = state;
     SaveManager.saveExtrinsic();
-  }
-
-  public navOut = () => {
-    JMTicker.remove(this.onTick);
-    this.keymapper.enabled = false;
   }
 
   public newGame() {
@@ -179,7 +200,19 @@ export class GameUI extends BaseUI {
     this.canvas.outerBounds = e.outerBounds;
 
     this.bottomBar.resize(e.outerBounds.width);
-    this.bottomBar.position.set(e.outerBounds.x, e.outerBounds.bottom - this.bottomBar.barHeight)
+    this.bottomBar.position.set(e.outerBounds.x, e.outerBounds.bottom - this.bottomBar.barHeight);
+  }
+
+  public applySkillTier = (skill: SkillConfig) => {
+    skill.effects.forEach(effect => {
+      if (effect.effectType === 'tier') {
+        if (effect.valueType === 'additive') {
+          this.extrinsic.skillTier += effect.value;
+        } else if (effect.valueType === 'replace') {
+          this.extrinsic.skillTier = Math.max(this.extrinsic.skillTier, effect.value);
+        }
+      }
+    });
   }
 
   public applySkill = (skill: SkillConfig) => {
@@ -201,18 +234,11 @@ export class GameUI extends BaseUI {
         } else if (effect.valueType === 'replace') {
           (node as any)[effect.key] = effect.value;
         }
-      } else if (effect.effectType === 'tier') {
-        if (effect.valueType === 'additive') {
-          this.extrinsic.skillTier += effect.value;
-        }
-      } else if (effect.effectType === 'perma-unlock') {
-        this.extrinsic.skillsAlways = this.extrinsic.skillsAlways.concat(effect.value);
       }
     });
   }
 
   public toggleTurboMode = (b: boolean) => {
-    console.log('turbo', b);
     this.gameSpeed = b ? this.turboSpeed : 1;
   }
 

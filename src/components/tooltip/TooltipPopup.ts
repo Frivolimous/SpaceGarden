@@ -61,7 +61,6 @@ export class TooltipPopup extends PIXI.Container {
     let lines = text.split('\n').map(str => str.split(/[<>]/).filter(v => v !== ''));
     let tabs = 0;
 
-    console.log('lines', lines);
     let y = titleHeight + dimensions.padding * 3;
     let font: PIXI.TextStyleOptions = fontStyles.n;
     let last: PIXI.Text;

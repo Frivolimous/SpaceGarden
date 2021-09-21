@@ -1,4 +1,3 @@
-import { SkillConfig } from "../../data/SkillData";
 import { FDGNode } from "../../engine/FDG/FDGNode";
 import { GameNode } from "../../engine/Mechanics/Parts/GameNode";
 import { SkillPanel } from "./SkillPanel";
@@ -15,19 +14,15 @@ export class Sidebar {
   currentHighlight: HTMLDivElement;
 
   container: HTMLDivElement;
-  currentSkillPanel: SkillPanel;
-  nextSkillPanel: SkillPanel;
+  // currentSkillPanel: SkillPanel;
+  // nextSkillPanel: SkillPanel;
   notification: HTMLElement;
 
   _AreStemsHidden: boolean;
 
-  constructor(private skills: SkillConfig[], private nextSkillLevels: number[], private currentSkillLevels: number[]) {
+  constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel) {
     this.container = document.getElementById('node-container') as HTMLDivElement;
     this.container.innerHTML = '';
-    this.currentSkillPanel = new SkillPanel(this.skills, this.currentSkillLevels, true);
-    this.currentSkillPanel.hidden = true;
-    this.nextSkillPanel = new SkillPanel(this.skills, this.nextSkillLevels);
-    this.nextSkillPanel.hidden = true;
     let hideStemButton = document.createElement('button');
     hideStemButton.classList.add('skill-button');
     hideStemButton.innerHTML = 'Hide Stems';
@@ -54,7 +49,7 @@ export class Sidebar {
       if (view.config.slug === 'seedling') {
         let button = document.createElement('button');
         button.classList.add('skill-button');
-        button.innerHTML = 'Skill Tree';
+        button.innerHTML = 'Next Plant';
         button.addEventListener('click', () => {
           this.nextSkillPanel.hidden = false;
         });
@@ -64,9 +59,13 @@ export class Sidebar {
         this.notification.classList.add('notification');
         element.appendChild(this.notification);
         this.notification.hidden = true;
+      } else if (view.config.slug === 'stem') {
+        if (this.areStemsHidden) {
+          element.style.display = 'none';
+        }
       }
 
-      if (view.config.slug === 'core' && this.currentSkillLevels && this.currentSkillLevels.length > 0) {
+      if (view.config.slug === 'core' && this.currentSkillPanel) {
         let button = document.createElement('button');
         button.classList.add('skill-button');
         button.innerHTML = 'Current Skills';
@@ -115,7 +114,7 @@ export class Sidebar {
       });
     } else {
       this.nodeMap.forEach(data => {
-        data.element.style.display = 'flex';
+        data.element.style.removeProperty('display');
       });
     }
   }
@@ -135,6 +134,8 @@ export class Sidebar {
 
   destroy() {
     this.container.innerHTML = '';
+    this.currentSkillPanel.destroy();
+    this.nextSkillPanel.destroy();
   }
 
   highlightNode(node: FDGNode) {

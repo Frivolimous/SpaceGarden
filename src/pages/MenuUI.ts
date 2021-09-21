@@ -7,6 +7,7 @@ import { Fonts } from '../data/Fonts';
 import { IResizeEvent } from '../services/GameEvents';
 import { GameUI } from './GameUI';
 import { StringManager } from '../services/StringManager';
+import { OptionModal } from '../components/ui/modals/OptionModal';
 
 export class MenuUI extends BaseUI {
   public muter: MuterOverlay;
@@ -14,6 +15,7 @@ export class MenuUI extends BaseUI {
   private title: PIXI.Text;
 
   private startB: Button;
+  private resetB: Button;
   private langB: Button;
 
   constructor() {
@@ -24,6 +26,9 @@ export class MenuUI extends BaseUI {
     this.startB = new Button({ width: 100, height: 30, label: StringManager.data.BUTTON.ADVENTURE, onClick: this.startGame });
     this.startB.position.set(150, 200);
     this.addChild(this.startB);
+    this.resetB = new Button({ width: 100, height: 30, label: StringManager.data.BUTTON.RESET, onClick: this.resetGame, color: 0xff3333 });
+    this.resetB.position.set(150, 400);
+    this.addChild(this.resetB);
     this.langB = new Button({ width: 100, height: 30, label: StringManager.data.BUTTON.LANGUAGE, onClick: this.changeLanguage });
     this.langB.position.set(150, 380);
     this.addChild(this.startB, this.langB);
@@ -51,6 +56,11 @@ export class MenuUI extends BaseUI {
 
   private startGame = () => {
     this.navForward(new GameUI());
+  }
+
+  private resetGame = () => {
+    let dialogue = new OptionModal("Are you sure you want to delete all your data and start over?", [{label: "Yes", color: 0x00ff00, onClick: SaveManager.resetData()}, {label: "No", color: 0xff0000}])
+    this.addDialogueWindow(dialogue);
   }
 
   private changeLanguage = () => {

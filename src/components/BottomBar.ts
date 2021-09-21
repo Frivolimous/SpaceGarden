@@ -110,12 +110,25 @@ export class BottomBar extends PIXI.Container {
 
   public updateSeedling(node?: FDGNode) {
     if (node) {
-      this.proceedButton.visible = true;
+      if (this.proceedButton.visible === false) {
+        this.proceedButton.visible = true;
+        this.proceedButton.highlight(true, 2.5);
+      }
       let percent = node.data.powerPercent;
       this.proceedButton.addLabel(`Launch Seedling (${Math.floor(percent * 100)}%)`);
-      this.proceedButton.disabled = percent < 1 ;
+      if (this.proceedButton.disabled) {
+        if (percent >= 1) {
+          this.proceedButton.disabled = false;
+          this.proceedButton.highlight(true, 2.5);
+        }
+      } else {
+        if (percent < 1) {
+          this.proceedButton.disabled = true;
+        }
+      }
     } else {
       this.proceedButton.visible = false;
+      this.proceedButton.disabled = true;
     }
   }
 }

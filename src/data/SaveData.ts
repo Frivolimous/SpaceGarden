@@ -2,7 +2,7 @@ import { NodeSlug } from "./NodeData";
 
 export type CurrencySlug = 'gold' | 'tokens' | 'refresh' | 'suns' | 'souls';
 
-export const CURRENT_VERSION = 18;
+export const CURRENT_VERSION = 22;
 
 export interface IExtrinsicModel {
   achievements: boolean[];
@@ -12,9 +12,8 @@ export interface IExtrinsicModel {
   currency: {[key in CurrencySlug]?: number};
 
   stageState?: string;
-  skillsCurrent: number[];
-  skillsNext: number[];
-  skillsAlways: number[];
+  skillsCurrent: string[];
+  skillsNext: string[];
   skillTier: number;
 
   firstVersion?: number;
@@ -59,7 +58,6 @@ export const dExtrinsicModel: IExtrinsicModel = {
 
   skillsCurrent: [],
   skillsNext: [],
-  skillsAlways: [],
   skillTier: 0,
 };
 
