@@ -7,7 +7,7 @@ export interface IInputText {
   width?: number;
   height?: number;
   color?: number;
-  options?: PIXI.TextStyleOptions;
+  options?: Partial<PIXI.ITextStyle>;
   maxChars?: number;
 }
 

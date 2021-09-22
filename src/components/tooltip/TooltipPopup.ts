@@ -22,7 +22,7 @@ const colors = {
   SHADOW: 0x412315,
 };
 
-const fontStyles: Partial<{[key in metaTags]: PIXI.TextStyleOptions}> = {
+const fontStyles: Partial<{[key in metaTags]: Partial<PIXI.ITextStyle>}> = {
   b: { fontSize: 18, fontFamily: Fonts.UI, fill: 0xfAeF88, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
   t: { fontSize: 20, fontFamily: Fonts.UI, fill: 0xFFFFA8, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
   n: { fontSize: 18, fontFamily: Fonts.UI, fill: 0xeadf78, wordWrap: true, wordWrapWidth: dimensions.width - dimensions.padding * 2},
@@ -62,7 +62,7 @@ export class TooltipPopup extends PIXI.Container {
     let tabs = 0;
 
     let y = titleHeight + dimensions.padding * 3;
-    let font: PIXI.TextStyleOptions = fontStyles.n;
+    let font: Partial<PIXI.ITextStyle> = fontStyles.n;
     let last: PIXI.Text;
 
     lines.forEach(line => {

@@ -143,9 +143,7 @@ export let Facade = new class FacadeInner {
     // resize event
     let viewWidth = this.element.offsetWidth;
     let viewHeight = this.element.offsetHeight;
-    this.app.view.width = viewWidth;
-    this.app.view.height = viewHeight;
-
+    this.app.renderer.resize(viewWidth, viewHeight);
     let innerWidth = Config.STAGE.SCREEN_WIDTH;
     let innerHeight = Config.STAGE.SCREEN_HEIGHT;
     let scale = Math.min(viewWidth / innerWidth, viewHeight / innerHeight);

@@ -7,7 +7,7 @@ import { JMTween } from '../../JMGE/JMTween';
 
 const defaultConfig: Partial<IDownButton> = { width: 200, height: 50, rounding: 8, color: 0x77ccff, hoverScale: 0.1 };
 
-const defaultLabelStyle: PIXI.TextStyleOptions = { fill: 0, fontFamily: Fonts.UI };
+const defaultLabelStyle: Partial<PIXI.ITextStyle> = { fill: 0, fontFamily: Fonts.UI };
 
 export interface IDownButton {
   color?: number;
@@ -16,7 +16,7 @@ export interface IDownButton {
   rounding?: number;
   label?: string;
   labelStyle?: any;
-  onDown: (e: PIXI.interaction.InteractionEvent) => void;
+  onDown: (e: PIXI.InteractionEvent) => void;
   hoverScale?: number;
 }
 

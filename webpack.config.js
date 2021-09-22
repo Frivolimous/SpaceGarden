@@ -6,7 +6,7 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
+        use: ['ts-loader'],
         exclude: /node_modules/
       }
     ]
@@ -18,6 +18,7 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist')
   },
+  devtool: "source-map",
   watch: true,
   devServer: {
     contentBase: './dist',

@@ -7,7 +7,7 @@ import { JMTween } from '../../JMGE/JMTween';
 
 const defaultConfig: Partial<IStateButton> = { width: 60, height: 20, rounding: 1 };
 
-const defaultLabelStyle: PIXI.TextStyleOptions = { fill: 0, fontFamily: Fonts.UI, fontSize: 12 };
+const defaultLabelStyle: Partial<PIXI.ITextStyle> = { fill: 0, fontFamily: Fonts.UI, fontSize: 12 };
 
 export const neverStateList: IState[] = [{slug: 'Never', color: 0xf1f1aa}];
 
@@ -17,7 +17,7 @@ export interface IStateButton {
   width?: number;
   height?: number;
   rounding?: number;
-  labelStyle?: PIXI.TextStyleOptions;
+  labelStyle?: Partial<PIXI.ITextStyle>;
   onToggle: (slug: string) => void;
 }
 

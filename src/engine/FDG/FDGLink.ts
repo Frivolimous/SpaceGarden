@@ -1,3 +1,4 @@
+import * as PIXI from 'pixi.js';
 import * as _ from 'lodash';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { JMTween } from '../../JMGE/JMTween';

@@ -11,7 +11,7 @@ import { ToggleButton } from './ui/ToggleButton';
 const TURBO = true;
 
 export class BottomBar extends PIXI.Container {
-  public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.interaction.InteractionEvent }>();
+  public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent }>();
   public onDeleteButton = new JMEventListener<{ onComplete: () => void }>();
   public onProceedButton = new JMEventListener<null>();
   public onTurboButton = new JMEventListener<boolean>();

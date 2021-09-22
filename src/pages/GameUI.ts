@@ -247,7 +247,7 @@ export class GameUI extends BaseUI {
     this.sidebar.highlightNode(node);
   }
 
-  public createNewNode = (e: {config: INodeConfig, e: PIXI.interaction.InteractionEvent}) => {
+  public createNewNode = (e: {config: INodeConfig, e: PIXI.InteractionEvent}) => {
     let position = e.e.data.getLocalPosition(this.container);
     let node = this.gameC.addNewNode(e.config);
     let link: FDGLink;

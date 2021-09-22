@@ -7,7 +7,7 @@ import { JMTween } from '../../JMGE/JMTween';
 
 const defaultConfig: Partial<IButton> = { width: 200, height: 50, rounding: 8, color: 0x77ccff, hoverScale: 0.1 };
 
-const defaultLabelStyle: PIXI.TextStyleOptions = { fill: 0, fontFamily: Fonts.UI };
+const defaultLabelStyle: Partial<PIXI.ITextStyle> = { fill: 0, fontFamily: Fonts.UI };
 
 export interface IButton {
   color?: number;

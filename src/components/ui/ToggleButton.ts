@@ -6,7 +6,7 @@ import { Fonts } from '../../data/Fonts';
 
 const defaultConfig: Partial<IToggleButton> = { width: 30, height: 30, rounding: 8, hoverScale: 0.1 };
 
-const defaultLabelStyle: PIXI.TextStyleOptions = { fill: 0, fontFamily: Fonts.UI };
+const defaultLabelStyle: Partial<PIXI.ITextStyle> = { fill: 0, fontFamily: Fonts.UI };
 
 export interface IToggleButton {
   label?: string;

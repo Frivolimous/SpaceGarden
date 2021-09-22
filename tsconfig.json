@@ -3,8 +3,16 @@
         "outDir": "./dist/",
         "noImplicitAny": true,
         "module": "esnext",
-        "target": "esnext",
+        "target": "es2020",
         "jsx": "react",
         "allowJs": true,
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "paths": {
+            "mini-signals": [
+                "node_modules/resource-loader/typings/mini-signals.d.ts"
+            ]
+        },
+        "baseUrl": "./",
     }
 }

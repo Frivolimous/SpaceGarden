@@ -27,7 +27,7 @@ export class MouseController {
     this.canvas.background.removeListener('pointermove', this.onMouseMove);
   }
 
-  public onMouseDown = (e: PIXI.interaction.InteractionEvent) => {
+  public onMouseDown = (e: PIXI.InteractionEvent) => {
     let position = e.data.getLocalPosition(this.container);
     if (this.deleteNext) {
 
@@ -76,7 +76,7 @@ export class MouseController {
     this.down = false;
   }
 
-  public onMouseMove = (e: PIXI.interaction.InteractionEvent) => {
+  public onMouseMove = (e: PIXI.InteractionEvent) => {
     let position = e.data.getLocalPosition(this.container);
     if (this.currentPull) {
       this.currentPull.x = position.x;

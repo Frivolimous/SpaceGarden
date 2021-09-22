@@ -4,7 +4,7 @@ import * as PIXI from 'pixi.js';
 export interface IClearButton {
   width: number;
   height: number;
-  onClick: (e?: PIXI.interaction.InteractionEvent) => void;
+  onClick: (e?: PIXI.InteractionEvent) => void;
 }
 
 export class ClearButton extends PIXI.Container {
