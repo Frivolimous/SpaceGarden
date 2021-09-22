@@ -59,7 +59,7 @@ export class MenuUI extends BaseUI {
   }
 
   private resetGame = () => {
-    let dialogue = new OptionModal("Are you sure you want to delete all your data and start over?", [{label: "Yes", color: 0x00ff00, onClick: SaveManager.resetData()}, {label: "No", color: 0xff0000}])
+    let dialogue = new OptionModal('Are you sure you want to delete all your data and start over?', [{label: 'Yes', color: 0x00ff00, onClick: SaveManager.resetData()}, {label: 'No', color: 0xff0000}]);
     this.addDialogueWindow(dialogue);
   }
 
