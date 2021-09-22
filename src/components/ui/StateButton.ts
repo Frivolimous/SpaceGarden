@@ -88,6 +88,16 @@ export class StateButton extends PIXI.Container {
     this.setToggle(0);
   }
 
+  public set disabled(b: boolean) {
+    this._Disabled = b;
+    this.interactive = !b;
+    this.buttonMode = !b;
+  }
+
+  public get disabled() {
+    return this._Disabled;
+  }
+
   public setStateList(list: IState[]) {
     this.stateList = list;
     if (this.currentState) {
@@ -142,16 +152,6 @@ export class StateButton extends PIXI.Container {
   }
 
   public getLabel() { return this.label.text; }
-
-  public set disabled(b: boolean) {
-    this._Disabled = b;
-    this.interactive = !b;
-    this.buttonMode = !b;
-  }
-
-  public get disabled() {
-    return this._Disabled;
-  }
 
   public getWidth(withScale = true) {
     return this.config.width * (withScale ? this.scale.x : 1);

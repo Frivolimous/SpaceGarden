@@ -27,7 +27,7 @@ export const EnglishStringManager = {
   getCurrentLanguage: (): langType => {
     return cLanguage;
   },
-}
+};
 
 export const GibberishStringManager = _.cloneDeep(EnglishStringManager);
 

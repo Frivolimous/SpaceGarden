@@ -1,24 +1,24 @@
 import * as _ from 'lodash';
 import { Config } from '../../Config';
 import { Colors } from '../../data/Colors';
-import { NodeConfig } from '../../data/NodeData';
+import { INodeConfig } from '../../data/NodeData';
 import { NodeManager } from '../../services/NodeManager';
 import { TextureCache } from '../../services/TextureCache';
 import { FDGContainer } from '../FDG/FDGContainer';
 import { FDGLink } from '../FDG/FDGLink';
 import { FDGNode } from '../FDG/FDGNode';
-import { GameNode, NodeSave, TransferBlock } from './Parts/GameNode';
+import { GameNode, INodeSave, ITransferBlock } from './Parts/GameNode';
 
 export class GameController {
-  nodes: GameNode[] = [];
+  public nodes: GameNode[] = [];
 
   constructor(private container: FDGContainer, private nodeManager: NodeManager) {
-    
+
   }
 
-  public addNewNode(config: NodeConfig): FDGNode {
-    let node: FDGNode = new FDGNode(TextureCache.getNodeGraphicTexture(config.shape,config.radius), config);
-    
+  public addNewNode(config: INodeConfig): FDGNode {
+    let node: FDGNode = new FDGNode(TextureCache.getNodeGraphicTexture(config.shape, config.radius), config);
+
     this.container.addNode(node);
     this.addNode(node);
 
@@ -45,7 +45,7 @@ export class GameController {
       if (node.fruitSpawn > 1 && node.fruits.length < node.maxFruits) {
         node.fruitSpawn--;
         let fruitConfig = this.nodeManager.getNodeConfig(node.fruitType);
-        
+
         let fruit = this.addNewNode(fruitConfig);
 
         this.container.linkNodes(node.view, fruit);
@@ -58,8 +58,8 @@ export class GameController {
     }
   }
 
-  public saveNodes (): NodeSave[] {
-    let saves: NodeSave[] = this.nodes.map(node => {
+  public saveNodes(): INodeSave[] {
+    let saves: INodeSave[] = this.nodes.map(node => {
       let outlets: number[] = this.container.links.filter(l => l.origin === node.view).map(l => l.target.data.uid);
 
       return {
@@ -76,7 +76,7 @@ export class GameController {
     return saves;
   }
 
-  public loadSaves (saves: NodeSave[]) {
+  public loadSaves(saves: INodeSave[]) {
     let nodes = saves.map(save => this.importSave(save));
     this.nodes = nodes;
     console.log('LOAD_SAVE', saves.map(save => save.slug));
@@ -90,7 +90,7 @@ export class GameController {
     });
   }
 
-  public importSave(save: NodeSave): GameNode {
+  public importSave(save: INodeSave): GameNode {
     let config = this.nodeManager.getNodeConfig(save.slug);
 
     let texture = TextureCache.getNodeGraphicTexture(config.shape, config.radius);
@@ -98,16 +98,16 @@ export class GameController {
     let m = new GameNode(new FDGNode(texture, config), config, this.transferPower);
     m.powerCurrent = save.powerCurrent;
     m.researchCurrent = save.researchCurrent;
-    
+
     m.uid = save.uid;
-    
+
     m.view.position.set(save.x, save.y);
 
     GameNode.addUid(save.uid);
     return m;
   }
 
-  public transferPower = (origin: GameNode, target: GameNode, block: TransferBlock) => {
+  public transferPower = (origin: GameNode, target: GameNode, block: ITransferBlock) => {
     if (block.type === 'grow') {
       target.powerCurrent += block.amount;
 

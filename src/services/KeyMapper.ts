@@ -2,7 +2,7 @@ export class KeyMapper {
   public enabled = true;
   public holding: string[] = [];
 
-  constructor(private keysDown?: KeyMap[], private keysUp?: KeyMap[]) {
+  constructor(private keysDown?: IKeyMap[], private keysUp?: IKeyMap[]) {
     if (keysDown) this.makeLower(keysDown);
     if (keysUp) this.makeLower(keysUp);
 
@@ -15,7 +15,7 @@ export class KeyMapper {
     window.removeEventListener('keyup', this.onKeyUp);
   }
 
-  public setKeys(keysDown: KeyMap[], keysUp?: KeyMap[]) {
+  public setKeys(keysDown: IKeyMap[], keysUp?: IKeyMap[]) {
     this.makeLower(keysDown);
     if (keysUp) this.makeLower(keysUp);
 
@@ -23,7 +23,7 @@ export class KeyMapper {
     this.keysUp = keysUp || this.keysUp;
   }
 
-  private makeLower(map: KeyMap[]) {
+  private makeLower(map: IKeyMap[]) {
     map.forEach(data => {
       data.key = data.key.toLowerCase();
       if (data.altKey) data.altKey = data.altKey.toLowerCase();
@@ -70,9 +70,9 @@ export class KeyMapper {
   }
 }
 
-export type KeyMap = {
-  key: string,
-  altKey?: string,
-  noHold?: boolean,
+export interface IKeyMap {
+  key: string;
+  altKey?: string;
+  noHold?: boolean;
   function: () => void;
 }

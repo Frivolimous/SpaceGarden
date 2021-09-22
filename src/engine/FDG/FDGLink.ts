@@ -1,10 +1,8 @@
-import * as _ from "lodash";
-import { Colors } from "../../data/Colors";
-import { JMEventListener } from "../../JMGE/events/JMEventListener";
-import { JMTween } from "../../JMGE/JMTween";
-import { colorLuminance } from "../../JMGE/others/Colors";
-import { FDGContainer } from "./FDGContainer";
-import { FDGNode } from "./FDGNode";
+import * as _ from 'lodash';
+import { JMEventListener } from '../../JMGE/events/JMEventListener';
+import { JMTween } from '../../JMGE/JMTween';
+import { colorLuminance } from '../../JMGE/others/Colors';
+import { FDGNode } from './FDGNode';
 
 interface IBlob {
   x: number;
@@ -52,7 +50,7 @@ export class FDGLink {
 
   public flash(): JMTween {
     this.intensity = 1;
-    return new JMTween(<FDGLink>this, 300).to({ intensity: 0 }).start();
+    return new JMTween((this as FDGLink), 300).to({ intensity: 0 }).start();
   }
 
   public zip(origin: FDGNode, color: number, fade: number, onComplete: () => void): JMTween {

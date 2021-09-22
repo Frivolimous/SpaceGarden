@@ -33,7 +33,7 @@ export const EnglishStringData = {
     seedling: {
       TITLE: 'Seedling',
       DESCRIPTION: 'WARNING: Drains a huge amount of power from your network.\n\nPower this up fully to spawn a new plant.\n\nEnhance the seedling with Research to make your next plant stronger!',
-    }
+    },
   },
 
   BUTTON: {

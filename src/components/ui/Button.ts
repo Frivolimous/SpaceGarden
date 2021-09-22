@@ -172,7 +172,7 @@ export class Button extends PIXI.Container {
       this._Highlight = new PIXI.Graphics();
       this._Highlight.lineStyle(3, 0xffff00);
       this._Highlight.drawRoundedRect(0, 0, this.getWidth(), this.getHeight(), this.config.rounding);
-      this._HighlightTween = new JMTween(this._Highlight, 500).to({alpha: 0}).yoyo(true, repeat).start().onComplete(()=> this.highlight(false));
+      this._HighlightTween = new JMTween(this._Highlight, 500).to({alpha: 0}).yoyo(true, repeat).start().onComplete(() => this.highlight(false));
       this.inner.addChild(this._Highlight);
     } else {
       if (this._HighlightTween) {

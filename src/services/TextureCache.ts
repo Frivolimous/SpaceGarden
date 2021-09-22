@@ -94,9 +94,9 @@ export class TextureCache {
 
 function createGraphicTextures() {
     let graphic = new PIXI.Graphics();
-    for (let i = 5; i <= 30; i+=5) {
+    for (let i = 5; i <= 30; i += 5) {
       graphic.clear()
-        .lineStyle(2,0xffffff)
+        .lineStyle(2, 0xffffff)
         .beginFill(0x333333);
       graphic.drawCircle(0, 0, i);
       TextureCache.addTextureFromNodeGraphic('circle', i, graphic);
@@ -112,18 +112,18 @@ function createGraphicTextures() {
     ];
 
     let polygons = [
-      [-1, -1,-1, 1,1, 1,1, -1],
-      [-1, 0.75,0, -1,1, 0.75],
-      [-1, -0.3,-1, 0.3,1, 0.3,1, -0.3],
-      [-1, -0.7,-1, 0.7,1, 0.7,1, -0.7],
-      [1, 0,(Math.sqrt(5)-1)/4, -Math.sqrt(10+2*Math.sqrt(5))/4,-(Math.sqrt(5)+1)/4, -Math.sqrt(10-2*Math.sqrt(5))/4,-(Math.sqrt(5)+1)/4, Math.sqrt(10-2*Math.sqrt(5))/4,(Math.sqrt(5)-1)/4, Math.sqrt(10+2*Math.sqrt(5))/4],
-      [1, 0,1/2, Math.sqrt(3)/2,-1/2, Math.sqrt(3)/2,-1, 0,-1/2, -Math.sqrt(3)/2,1/2, -Math.sqrt(3)/2]
+      [-1, -1, -1, 1, 1, 1, 1, -1],
+      [-1, 0.75, 0, -1, 1, 0.75],
+      [-1, -0.3, -1, 0.3, 1, 0.3, 1, -0.3],
+      [-1, -0.7, -1, 0.7, 1, 0.7, 1, -0.7],
+      [1, 0, (Math.sqrt(5) - 1) / 4, -Math.sqrt(10 + 2 * Math.sqrt(5)) / 4, -(Math.sqrt(5) + 1) / 4, -Math.sqrt(10 - 2 * Math.sqrt(5)) / 4, -(Math.sqrt(5) + 1) / 4, Math.sqrt(10 - 2 * Math.sqrt(5)) / 4, (Math.sqrt(5) - 1) / 4, Math.sqrt(10 + 2 * Math.sqrt(5)) / 4],
+      [1, 0, 1 / 2, Math.sqrt(3) / 2, -1 / 2, Math.sqrt(3) / 2, -1, 0, -1 / 2, -Math.sqrt(3) / 2, 1 / 2, -Math.sqrt(3) / 2],
     ];
 
     for (let i = 0; i < polygons.length; i++) {
       for (let j = 5; j <= 30; j += 5) {
         graphic.clear()
-        .lineStyle(2,0xffffff)
+        .lineStyle(2, 0xffffff)
         .beginFill(0x333333);
 
         graphic.drawPolygon(transformPolygon(polygons[i], j));
@@ -140,31 +140,31 @@ function createGraphicTextures() {
     // graphic.clear()
     //   .lineStyle(20,0xffffff)
     //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100,75,0,-100,100,75]);
+    // graphic.drawPolygon([-100,75,0, -100,100,75]);
     // TextureCache.addTextureFromGraphic('triangle', graphic);
 
     // graphic.clear()
     //   .lineStyle(20,0xffffff)
     //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100,-30,-100,30,100,30,100,-30]);
+    // graphic.drawPolygon([-100, -30, -100,30,100,30,100, -30]);
     // TextureCache.addTextureFromGraphic('thin-rect', graphic);
-    
+
     // graphic.clear()
     //   .lineStyle(20,0xffffff)
     //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100,-70,-100,70,100,70,100,-70]);
+    // graphic.drawPolygon([-100, -70, -100,70,100,70,100, -70]);
     // TextureCache.addTextureFromGraphic('fat-rect', graphic);
-    
+
     // graphic.clear()
     //   .lineStyle(20,0xffffff)
     //   .beginFill(0x333333);
-    // graphic.drawPolygon([100,0,100*(Math.sqrt(5)-1)/4,-100*Math.sqrt(10+2*Math.sqrt(5))/4,-100*(Math.sqrt(5)+1)/4,-100*Math.sqrt(10-2*Math.sqrt(5))/4,-100*(Math.sqrt(5)+1)/4,100*Math.sqrt(10-2*Math.sqrt(5))/4,100*(Math.sqrt(5)-1)/4,100*Math.sqrt(10+2*Math.sqrt(5))/4]);
+    // graphic.drawPolygon([100,0,100*(Math.sqrt(5)-1)/4, -100*Math.sqrt(10+2*Math.sqrt(5))/4, -100*(Math.sqrt(5)+1)/4, -100*Math.sqrt(10-2*Math.sqrt(5))/4, -100*(Math.sqrt(5)+1)/4,100*Math.sqrt(10-2*Math.sqrt(5))/4,100*(Math.sqrt(5)-1)/4,100*Math.sqrt(10+2*Math.sqrt(5))/4]);
     // TextureCache.addTextureFromGraphic('pentagon', graphic);
-    
+
     // graphic.clear()
     //   .lineStyle(20,0xffffff)
     //   .beginFill(0x333333);
-    // graphic.drawPolygon([100,0,50,100*Math.sqrt(3)/2,-50,100*Math.sqrt(3)/2,-100,0,-50,-100*Math.sqrt(3)/2,50,-100*Math.sqrt(3)/2]);
+    // graphic.drawPolygon([100,0,50,100*Math.sqrt(3)/ 2, -50,100*Math.sqrt(3)/ 2, -100,0, -50, -100*Math.sqrt(3)/ 2,50, -100*Math.sqrt(3)/ 2]);
     // TextureCache.addTextureFromGraphic('hexagon', graphic);
 
     graphic = new PIXI.Graphics();
@@ -174,7 +174,7 @@ function createGraphicTextures() {
 }
 
 function transformPolygon(poly: number[], scale: number) {
-  poly = poly.map(v => v*scale);
+  poly = poly.map(v => v * scale);
   poly.push(poly[0]);
   poly.push(poly[1]);
 

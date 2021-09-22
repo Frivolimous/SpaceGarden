@@ -1,21 +1,21 @@
 import * as _ from 'lodash';
-import { NodeConfig, NodeData, NodeSlug } from "../data/NodeData";
-import { SkillConfig, SkillData } from '../data/SkillData';
+import { INodeConfig, NodeData, NodeSlug } from '../data/NodeData';
+import { ISkillConfig, SkillData } from '../data/SkillData';
 
 export class NodeManager {
-  public data: NodeConfig[];
-  public skills: SkillConfig[];
+  public data: INodeConfig[];
+  public skills: ISkillConfig[];
 
-  constructor(data: NodeConfig[], skills: SkillConfig[]) {
+  constructor(data: INodeConfig[], skills: ISkillConfig[]) {
     this.data = _.cloneDeep(data);
     this.skills = _.cloneDeep(skills);
   }
 
-  destroy() {
-    
+  public destroy() {
+
   }
 
-  public getNodeConfig(slug: NodeSlug): NodeConfig {
+  public getNodeConfig(slug: NodeSlug): INodeConfig {
     let raw = this.data.find(config => config.slug === slug);
 
     return raw;
@@ -30,7 +30,7 @@ export class NodeManager {
     return m;
   }
 
-  public getSkillsBySlugs(slugs: string[]): SkillConfig[] {
+  public getSkillsBySlugs(slugs: string[]): ISkillConfig[] {
     return slugs.map(slug => this.skills.find(skill => skill.slug === slug));
   }
 }

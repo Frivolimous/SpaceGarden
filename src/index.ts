@@ -15,9 +15,7 @@ import { GameEvents, IResizeEvent } from './services/GameEvents';
 import { Debug } from './services/_Debug';
 import { BaseUI, IFadeTiming, dFadeTiming } from './pages/_BaseUI';
 import { ScreenCover } from './JMGE/effects/ScreenCover';
-import { Navbar } from './pages/_Navbar';
 import { DEBUG_MODE } from './services/_Debug';
-import { TextureData } from './data/TextureData';
 import { FontLoader } from './services/FontLoader';
 
 export let interactionMode: 'desktop'|'mobile' = 'desktop';

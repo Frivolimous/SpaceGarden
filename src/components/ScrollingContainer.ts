@@ -4,17 +4,18 @@ import { JMRect } from '../JMGE/others/JMRect';
 import { Starfield } from './Starfield';
 
 export class ScrollingContainer extends PIXI.Container {
-  private keyV = 1;
-
   public innerBounds: JMRect = new JMRect(0, 0, 2000, 1000);
   public outerBounds: JMRect = new JMRect(0, 0, 2000, 1000);
   public background: PIXI.Container;
+
+  public diff: { oX: number, oY: number, tX: number, tY: number };
+
+  private keyV = 1;
 
   private numStars = 300;
   private v = { x: 0, y: 0 };
   private a = { x: 0, y: 0 };
 
-  public diff: { oX: number, oY: number, tX: number, tY: number };
   private friction = 0.9;
 
   private zoomTween: JMTween;
@@ -24,7 +25,7 @@ export class ScrollingContainer extends PIXI.Container {
     [Direction.RIGHT]: false,
     [Direction.UP]: false,
     [Direction.DOWN]: false,
-  }
+  };
 
   constructor(width: number, height: number) {
     super();
@@ -37,7 +38,15 @@ export class ScrollingContainer extends PIXI.Container {
     this.addChild(this.background);
   }
 
-  onTick = () => {
+  get innerWidth(): number {
+    return this.innerBounds.width * this.scale.x;
+  }
+
+  get innerHeight(): number {
+    return this.innerBounds.height * this.scale.y;
+  }
+
+  public onTick = () => {
     // if (this.diff) {
     //     this.x = this.diff.tX - this.diff.oX;
     //     this.y = this.diff.tY - this.diff.oY;
@@ -79,7 +88,7 @@ export class ScrollingContainer extends PIXI.Container {
     }
   }
 
-  checkBounds() {
+  public checkBounds() {
     if (this.innerWidth <= this.outerBounds.width) {
       this.x = this.outerBounds.x + (this.outerBounds.width - this.innerWidth) / 2;
     }
@@ -89,57 +98,65 @@ export class ScrollingContainer extends PIXI.Container {
     }
   }
 
-  startPan(direction: Direction) {
+  public startPan(direction: Direction) {
     switch (direction) {
-      case Direction.LEFT: if (!this.scrolling[Direction.LEFT]) {
-        this.scrolling[Direction.LEFT] = true;
-        this.a.x += this.keyV;
-      }
+      case Direction.LEFT:
+        if (!this.scrolling[Direction.LEFT]) {
+          this.scrolling[Direction.LEFT] = true;
+          this.a.x += this.keyV;
+        }
         break;
-      case Direction.RIGHT: if (!this.scrolling[Direction.RIGHT]) {
-        this.scrolling[Direction.RIGHT] = true;
-        this.a.x -= this.keyV;
-      }
+      case Direction.RIGHT:
+        if (!this.scrolling[Direction.RIGHT]) {
+          this.scrolling[Direction.RIGHT] = true;
+          this.a.x -= this.keyV;
+        }
         break;
-      case Direction.UP: if (!this.scrolling[Direction.UP]) {
-        this.scrolling[Direction.UP] = true;
-        this.a.y += this.keyV;
-      }
+      case Direction.UP:
+        if (!this.scrolling[Direction.UP]) {
+          this.scrolling[Direction.UP] = true;
+          this.a.y += this.keyV;
+        }
         break;
-      case Direction.DOWN: if (!this.scrolling[Direction.DOWN]) {
-        this.scrolling[Direction.DOWN] = true;
-        this.a.y -= this.keyV;
-      }
+      case Direction.DOWN:
+        if (!this.scrolling[Direction.DOWN]) {
+          this.scrolling[Direction.DOWN] = true;
+          this.a.y -= this.keyV;
+        }
         break;
     }
   }
 
-  endPan(direction: Direction) {
+  public endPan(direction: Direction) {
     switch (direction) {
-      case Direction.LEFT: if (this.scrolling[Direction.LEFT]) {
-        this.scrolling[Direction.LEFT] = false;
-        this.a.x -= this.keyV;
-      }
+      case Direction.LEFT:
+        if (this.scrolling[Direction.LEFT]) {
+          this.scrolling[Direction.LEFT] = false;
+          this.a.x -= this.keyV;
+        }
         break;
-      case Direction.RIGHT: if (this.scrolling[Direction.RIGHT]) {
-        this.scrolling[Direction.RIGHT] = false;
-        this.a.x += this.keyV;
-      }
+      case Direction.RIGHT:
+        if (this.scrolling[Direction.RIGHT]) {
+          this.scrolling[Direction.RIGHT] = false;
+          this.a.x += this.keyV;
+        }
         break;
-      case Direction.UP: if (this.scrolling[Direction.UP]) {
-        this.scrolling[Direction.UP] = false;
-        this.a.y -= this.keyV;
-      }
+      case Direction.UP:
+        if (this.scrolling[Direction.UP]) {
+          this.scrolling[Direction.UP] = false;
+          this.a.y -= this.keyV;
+        }
         break;
-      case Direction.DOWN: if (this.scrolling[Direction.DOWN]) {
-        this.scrolling[Direction.DOWN] = false;
-        this.a.y += this.keyV;
-      }
+      case Direction.DOWN:
+        if (this.scrolling[Direction.DOWN]) {
+          this.scrolling[Direction.DOWN] = false;
+          this.a.y += this.keyV;
+        }
         break;
     }
   }
 
-  zoomBy(n: number) {
+  public zoomBy(n: number) {
     let amount = this.scale.x * n;
     let maxZoom = Math.max(this.outerBounds.width / this.innerBounds.width, this.outerBounds.height / this.innerBounds.height);
     amount = Math.max(amount, maxZoom);
@@ -151,14 +168,6 @@ export class ScrollingContainer extends PIXI.Container {
     this.zoomTween = new JMTween(this.scale, 500).to({ x: amount, y: amount }).easing(JMEasing.Quadratic.Out).start().onUpdate(() => this.checkBounds());
     new JMTween(this.position, 500).to({ x, y }).easing(JMEasing.Quadratic.Out).start();
     this.checkBounds();
-  }
-
-  get innerWidth(): number {
-    return this.innerBounds.width * this.scale.x;
-  }
-
-  get innerHeight(): number {
-    return this.innerBounds.height * this.scale.y;
   }
 }
 

@@ -12,8 +12,8 @@ export class FDGContainer extends PIXI.Graphics {
   public onNodeAdded = new JMEventListener<FDGNode>();
   public onNodeRemoved = new JMEventListener<FDGNode>();
 
-  private nodes: FDGNode[] = [];
   public links: FDGLink[] = [];
+  private nodes: FDGNode[] = [];
   private pulls: IPull[] = [];
 
   constructor(private borders: JMRect) {
@@ -66,7 +66,7 @@ export class FDGContainer extends PIXI.Graphics {
         this.links[i].target.removeNode(this.links[i].origin);
         this.links.splice(i, 1);
       }
-    };
+    }
   }
 
   public getLink(origin: FDGNode, target: FDGNode): FDGLink {
@@ -94,7 +94,6 @@ export class FDGContainer extends PIXI.Graphics {
       }
     }
   }
-
 
   public getClosestObject(config: { x: number, y: number, distance?: number, maxLinks?: boolean, filter?: FDGNode, notType?: NodeSlug, notFruit?: boolean }) {
     let m: FDGNode;

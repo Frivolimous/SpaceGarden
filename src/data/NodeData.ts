@@ -1,4 +1,4 @@
-import { Colors } from "./Colors";
+import { Colors } from './Colors';
 
 export const NodeBase = {
   powerMax: 100,
@@ -9,7 +9,7 @@ export const NodeBase = {
   powerClump: 10,
   powerClumpSub: 5,
   fruitClump: 5,
-}
+};
 
 export const NodeDataBase: INodeData = {
   Nodes: [
@@ -107,8 +107,8 @@ export const NodeDataBase: INodeData = {
       powerDelay: NodeBase.powerDelay, powerClump: 0,
       fruitClump: NodeBase.fruitClump,
     },
-  ]
-}
+  ],
+};
 
 export const NodeDataTop: INodeData = {
   Nodes: [
@@ -177,7 +177,7 @@ export const NodeDataTop: INodeData = {
       powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1 / 2,
       powerDelay: NodeBase.powerDelay, powerClump: 0,
       fruitClump: NodeBase.fruitClump,
-      outletEffects: [{stat: 'powerGen', type: 'additive', amount: -NodeBase.powerDrain / 2}]
+      outletEffects: [{stat: 'powerGen', type: 'additive', amount: -NodeBase.powerDrain / 2}],
     },
     {
       slug: 'food', type: 'fruit', color: Colors.Node.orange, shape: 'square',
@@ -207,8 +207,8 @@ export const NodeDataTop: INodeData = {
       powerDelay: NodeBase.powerDelay, powerClump: 0,
       fruitClump: NodeBase.fruitClump,
     },
-  ]
-}
+  ],
+};
 
 export const NodeData = NodeDataBase;
 
@@ -218,10 +218,10 @@ export type NodeColor = 'blue' | 'purple' | 'yellow' | 'orange' | 'green' | 'yel
 export type NodeShape = 'circle' | 'square' | 'triangle' | 'pentagon' | 'hexagon' | 'thin-rect' | 'fat-rect';
 
 interface INodeData {
-  Nodes: NodeConfig[];
+  Nodes: INodeConfig[];
 }
 
-export interface NodeConfig {
+export interface INodeConfig {
   slug: NodeSlug;
   type: 'normal' | 'fruit';
   color: number;

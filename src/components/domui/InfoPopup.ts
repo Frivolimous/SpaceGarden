@@ -9,7 +9,7 @@ export class InfoPopup {
     window.setTimeout(this.destroy, 1500);
   }
 
-  destroy = () => {
+  public destroy = () => {
     document.body.removeChild(this.element);
   }
 }

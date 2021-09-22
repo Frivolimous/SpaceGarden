@@ -1,18 +1,19 @@
-import { SkillConfig, SkillData } from "../../data/SkillData";
-import { SkillBar } from "./SkillBar";
+import { ISkillConfig, SkillData } from '../../data/SkillData';
+import { SkillBar } from './SkillBar';
 
 export class SkillPanel {
+  public skillsSpent: number = 0;
+
   private element: HTMLDivElement;
   private tierContainer: HTMLDivElement;
   private contentElement: HTMLDivElement;
   private skillbar: SkillBar;
   private skillpointElement: HTMLDivElement;
-  private skillMap: { element: HTMLButtonElement, skill: SkillConfig }[] = [];
+  private skillMap: { element: HTMLButtonElement, skill: ISkillConfig }[] = [];
 
   private skillLevels: number = 0;
-  public skillsSpent: number = 0;
 
-  constructor(skills: SkillConfig[], private leveled: string[], private always: string[], tier: number, private disabled?: boolean) {
+  constructor(skills: ISkillConfig[], private leveled: string[], private always: string[], tier: number, private disabled?: boolean) {
     this.element = document.createElement('div');
     this.element.classList.add('skill-panel');
     document.body.appendChild(this.element);
@@ -37,7 +38,7 @@ export class SkillPanel {
     skills.forEach((skill) => {
       let block = this.createSkillBlock(skill);
       this.contentElement.appendChild(block);
-    })
+    });
 
     let button = document.createElement('button');
     button.classList.add('close-button');
@@ -50,8 +51,8 @@ export class SkillPanel {
       this.skillpointElement.classList.add('skill-skillpoint');
       this.element.appendChild(this.skillpointElement);
       this.skillpointElement.innerHTML = `5 Skillpoints`;
-  
-      this.skillbar = new SkillBar;
+
+      this.skillbar = new SkillBar();
       this.element.appendChild(this.skillbar.element);
     }
 
@@ -61,13 +62,13 @@ export class SkillPanel {
     if (tier > 0) {
       for (let i = 1; i <= tier + 1; i++) {
         let j = i;
-        let button = document.createElement('button');
-        button.classList.add('tier-button');
-        button.innerHTML = `Tier ${i}`;
-        buttons.push(button);
-        this.tierContainer.appendChild(button);
-        button.addEventListener('click', () => {
-          buttons.forEach(b => b.disabled = b === button);
+        let tierButton = document.createElement('button');
+        tierButton.classList.add('tier-button');
+        tierButton.innerHTML = `Tier ${i}`;
+        buttons.push(tierButton);
+        this.tierContainer.appendChild(tierButton);
+        tierButton.addEventListener('click', () => {
+          buttons.forEach(b => b.disabled = b === tierButton);
           this.openTierPage(j);
         });
       }
@@ -102,7 +103,7 @@ export class SkillPanel {
       } else {
         data.element.hidden = true;
       }
-    })
+    });
   }
 
   public clear() {
@@ -134,7 +135,7 @@ export class SkillPanel {
     });
   }
 
-  private createSkillBlock(skill: SkillConfig): HTMLElement {
+  private createSkillBlock(skill: ISkillConfig): HTMLElement {
     let element = document.createElement('button');
     element.classList.add('skill-block');
     element.innerHTML = `<div class="skill-block-title">${skill.title}</div>
@@ -148,7 +149,7 @@ export class SkillPanel {
     if (this.leveled.includes(skill.slug)) {
       element.disabled = true;
       this.skillsSpent += skill.cost;
-    } 
+    }
 
     if (this.disabled) {
       element.classList.add('greyed');
@@ -160,17 +161,17 @@ export class SkillPanel {
           element.disabled = true;
           this.updateHighlights();
           this.skillMap.forEach(this.checkRequirements);
-        } 
+        }
       });
       this.checkRequirements({element, skill});
     }
-    
+
     this.skillMap.push({element, skill});
 
     return element;
   }
 
-  checkRequirements = (data: { element: HTMLButtonElement, skill: SkillConfig }) => {
+  private checkRequirements = (data: { element: HTMLButtonElement, skill: ISkillConfig }) => {
     if (data.skill.skillRequirements) {
       let allGood = true;
       data.skill.skillRequirements.forEach(req => {

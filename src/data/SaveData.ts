@@ -1,4 +1,4 @@
-import { NodeSlug } from "./NodeData";
+import { NodeSlug } from './NodeData';
 
 export type CurrencySlug = 'gold' | 'tokens' | 'refresh' | 'suns' | 'souls';
 
@@ -29,8 +29,8 @@ export interface IExtrinsicModel {
 }
 
 export interface ISkillSave {
-  skillId: string,
-  level: number,
+  skillId: string;
+  level: number;
 }
 
 export const dExtrinsicModel: IExtrinsicModel = {
@@ -60,4 +60,3 @@ export const dExtrinsicModel: IExtrinsicModel = {
   skillsNext: [],
   skillTier: 0,
 };
-

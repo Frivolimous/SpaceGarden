@@ -1,14 +1,13 @@
 import * as _ from 'lodash';
 import { Config } from '../../../Config';
 import { Colors } from '../../../data/Colors';
-import { NodeConfig, NodeSlug } from "../../../data/NodeData";
-import { JMEventListener } from "../../../JMGE/events/JMEventListener";
-import { NodeManager } from "../../../services/NodeManager";
-import { TextureCache } from "../../../services/TextureCache";
-import { FDGNode } from "../../FDG/FDGNode";
+import { INodeConfig, NodeSlug } from '../../../data/NodeData';
+import { JMEventListener } from '../../../JMGE/events/JMEventListener';
+import { NodeManager } from '../../../services/NodeManager';
+import { TextureCache } from '../../../services/TextureCache';
+import { FDGNode } from '../../FDG/FDGNode';
 
 export class GameNode {
-  private static cUid: number = 0;
   public static generateUid() {
     GameNode.cUid++;
 
@@ -23,26 +22,28 @@ export class GameNode {
     GameNode.cUid = 0;
   }
 
+  private static cUid: number = 0;
+
   public uid: number;
   public onUpdate = new JMEventListener<GameNode>();
   public outlets: GameNode[] = [];
   public fruits: GameNode[] = [];
 
-  active = true;
+  public active = true;
 
-  fruitType: NodeSlug;
-  fruitChain: number = 0;
-  maxFruits: number = 0;
+  public fruitType: NodeSlug;
+  public fruitChain: number = 0;
+  public maxFruits: number = 0;
 
-  powerCurrent: number = 0;
-  fruitCurrent: number = 0;
-  researchCurrent: number = 0;
-  powerGen: number = 0;
-  
-  powerTick: number = 0;
-  fruitSpawn: number = 0;
+  public powerCurrent: number = 0;
+  public fruitCurrent: number = 0;
+  public researchCurrent: number = 0;
+  public powerGen: number = 0;
 
-  constructor(public view: FDGNode, public config: NodeConfig, private transferPower: TransferPowerFunction) {
+  public powerTick: number = 0;
+  public fruitSpawn: number = 0;
+
+  constructor(public view: FDGNode, public config: INodeConfig, private transferPower: TransferPowerFunction) {
     this.uid = GameNode.generateUid();
     view.data = this;
     view.intensity = 1;
@@ -91,7 +92,7 @@ export class GameNode {
     });
     this.fruits.forEach(fruit => {
       fruit.removeNode(this);
-    })
+    });
     this.outlets = [];
     this.fruits = [];
   }
@@ -144,7 +145,7 @@ export class GameNode {
       return this.powerGen * this.powerPercent;
     }
   }
-  
+
   public getFruitGen() {
     return (this.config.fruitGen || 0) * this.powerPercent;
   }
@@ -199,7 +200,7 @@ export class GameNode {
 
       if (target) {
         this.fruitCurrent += this.getFruitGen();
-        if (this.fruitCurrent > Math.max(this.config.fruitGen * 10, 1)) {          
+        if (this.fruitCurrent > Math.max(this.config.fruitGen * 10, 1)) {
           if (this.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
             this.receiveFruitPower(this.fruitCurrent, Colors.Node.orange);
           } else {
@@ -262,13 +263,13 @@ export class GameNode {
 
     return false;
   }
-  
+
   public receiveFruitPower = (amount: number, color: number) => {
     if (this.fruits.length < this.config.maxFruits) {
       this.fruitSpawn += amount;
       this.view.pulse(color);
     } else {
-      let fruit = this.fruits.find(fruit => fruit.canSpawnFruit());
+      let fruit = this.fruits.find(fruit2 => fruit2.canSpawnFruit());
       if (fruit) {
         fruit.receiveFruitPower(amount, color);
       }
@@ -281,10 +282,10 @@ export class GameNode {
   }
 
   public toString(): string {
-    let m = `<div class="node-title">${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
+    let m = `<div class='node-title'>${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
         Power: ${Math.round(this.powerCurrent)} / ${this.config.powerMax}`;
     if (!this.active) {
-      m += `<p style="color: #eedd33;">[ Drag to your network in order to connect the new node ]</p>`
+      m += `<p style='color: #eedd33;'>[ Drag to your network in order to connect the new node ]</p>`;
     } else {
       if (this.config.slug === 'seedling') {
         m += `<br>Research Points: ${Math.round(this.researchCurrent)}`;
@@ -313,19 +314,19 @@ export class GameNode {
   }
 }
 
-export type TransferPowerFunction = (origin: GameNode, target: GameNode, block: TransferBlock) => void;
+export type TransferPowerFunction = (origin: GameNode, target: GameNode, block: ITransferBlock) => void;
 
-export interface NodeSave {
+export interface INodeSave {
   uid: number;
   slug: NodeSlug;
   powerCurrent: number;
   researchCurrent: number;
   outlets: number[];
-  x: number,
-  y: number,
+  x: number;
+  y: number;
 }
 
-export interface TransferBlock {
+export interface ITransferBlock {
   type: 'grow' | 'fruit' | 'research';
   amount: number;
   fade?: number;

@@ -45,18 +45,18 @@ export class InputText extends PIXI.Container {
     this.flashCaret();
   }
 
-  public destroy() {
-    super.destroy();
-    window.removeEventListener('keydown', this.onKeyDown);
-    this.endCaret();
-  }
-
   public get text() {
     return this.textField.text;
   }
 
   public set text(s: string) {
     this.textField.text = s;
+  }
+
+  public destroy() {
+    super.destroy();
+    window.removeEventListener('keydown', this.onKeyDown);
+    this.endCaret();
   }
 
   private flashCaret = () => {

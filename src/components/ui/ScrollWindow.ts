@@ -10,7 +10,7 @@ interface IScrollWindow {
 export class ScrollWindow extends PIXI.Container {
   public paddingTB = 50;
   public container: PIXI.Container;
-  public mask: PIXI.Graphics;
+  declare public mask: PIXI.Graphics;
   public back: PIXI.Graphics;
 
   private vY: number = 0;

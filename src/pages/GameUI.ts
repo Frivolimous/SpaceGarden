@@ -13,14 +13,14 @@ import { NodeManager } from '../services/NodeManager';
 import { FDGLink } from '../engine/FDG/FDGLink';
 import { GameController } from '../engine/Mechanics/GameController';
 import { Sidebar } from '../components/domui/Sidebar';
-import { GameNode, NodeSave } from '../engine/Mechanics/Parts/GameNode';
-import { NodeConfig, NodeData } from '../data/NodeData';
+import { GameNode } from '../engine/Mechanics/Parts/GameNode';
+import { INodeConfig, NodeData } from '../data/NodeData';
 import { FDGNode } from '../engine/FDG/FDGNode';
 import { IExtrinsicModel } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
 import { Config } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
-import { SkillConfig, SkillData } from '../data/SkillData';
+import { ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
 
 export class GameUI extends BaseUI {
@@ -203,7 +203,7 @@ export class GameUI extends BaseUI {
     this.bottomBar.position.set(e.outerBounds.x, e.outerBounds.bottom - this.bottomBar.barHeight);
   }
 
-  public applySkillTier = (skill: SkillConfig) => {
+  public applySkillTier = (skill: ISkillConfig) => {
     skill.effects.forEach(effect => {
       if (effect.effectType === 'tier') {
         if (effect.valueType === 'additive') {
@@ -215,7 +215,7 @@ export class GameUI extends BaseUI {
     });
   }
 
-  public applySkill = (skill: SkillConfig) => {
+  public applySkill = (skill: ISkillConfig) => {
     skill.effects.forEach(effect => {
       if (effect.effectType === 'node') {
         let node = this.nodeManager.data.find(block => block.slug === effect.slug);
@@ -247,7 +247,7 @@ export class GameUI extends BaseUI {
     this.sidebar.highlightNode(node);
   }
 
-  public createNewNode = (e: {config: NodeConfig, e: PIXI.interaction.InteractionEvent}) => {
+  public createNewNode = (e: {config: INodeConfig, e: PIXI.interaction.InteractionEvent}) => {
     let position = e.e.data.getLocalPosition(this.container);
     let node = this.gameC.addNewNode(e.config);
     let link: FDGLink;
@@ -257,8 +257,8 @@ export class GameUI extends BaseUI {
     node.position.set(position.x, position.y);
 
     this.container.showConnectionCount();
-    
-    this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node, 
+
+    this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
       onRelease: () => {
         this.container.showConnectionCount(false);
         if (node.data.outlets.length > 0) {
@@ -269,10 +269,10 @@ export class GameUI extends BaseUI {
           this.container.removeNode(node);
         }
       },
-      onMove: (position: {x: number, y: number}) => {
+      onMove: (position2: {x: number, y: number}) => {
         this.container.removeAllLinksFor(node, true);
         node.ghostMode = true;
-        let nearest = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
+        let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
         if (nearest) {
           node.ghostMode = false;
           link = this.container.linkNodes(nearest, node);
@@ -299,7 +299,7 @@ export class GameUI extends BaseUI {
         //     nearest = null;
         //   }
         // }
-      }
+      },
     });
   }
 }

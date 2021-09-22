@@ -1,4 +1,4 @@
-import { NodeBase, NodeSlug } from "./NodeData";
+import { NodeBase, NodeSlug } from './NodeData';
 
 export const SkillData: ISkillData = {
   skills: [
@@ -20,7 +20,7 @@ export const SkillData: ISkillData = {
       cost: 1,
       effects: [
         { effectType: 'node', slug: 'core', key: 'maxLinks', valueType: 'additive', value: 1},
-      ]
+      ],
     },
     {
       slug: 'skill-3',
@@ -31,7 +31,7 @@ export const SkillData: ISkillData = {
       effects: [
         { effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: 4},
         { effectType: 'node', slug: 'stem', key: 'powerClump', valueType: 'multiplicative', value: 3},
-      ]
+      ],
     },
     {
       slug: 'skill-6',
@@ -41,7 +41,7 @@ export const SkillData: ISkillData = {
       cost: 2,
       effects: [
         { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: {stat: 'powerGen', type: 'additive', amount: -NodeBase.powerDrain / 2}},
-      ]
+      ],
     },
     {
       slug: 'skill-4',
@@ -52,7 +52,7 @@ export const SkillData: ISkillData = {
       effects: [
         { effectType: 'node', slug: 'lab', key: 'researchGen', valueType: 'multiplicative', value: 5},
         { effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'multiplicative', value: 2},
-      ]
+      ],
     },
     {
       slug: 'skill-5',
@@ -62,7 +62,7 @@ export const SkillData: ISkillData = {
       cost: 3,
       effects: [
         { effectType: 'node', slug: 'generator', key: 'maxCount', valueType: 'additive', value: 2},
-      ]
+      ],
     },
     {
       slug: 'skill-tier-1',
@@ -73,7 +73,7 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 1},
         {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'multiplicative', value: 10},
-      ]
+      ],
     },
     {
       slug: 'skill-2-1',
@@ -152,7 +152,7 @@ export const SkillData: ISkillData = {
     3000, // all 6 skills 1 + 1 + 2 + 2 + 3 + 3 = 12
     4000,
     5000,
-    6500, //end game
+    6500, // end game
     8000,
     10000,
     12000,
@@ -171,27 +171,27 @@ export const SkillData: ISkillData = {
     ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6', 'skill-tier-1'],
     ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6', 'skill-2-7', 'skill-tier-2'],
   ],
-}
+};
 
 interface ISkillData {
-  skills: SkillConfig[],
-  skillExchange: number[],
-  skillTiers: string[][],
+  skills: ISkillConfig[];
+  skillExchange: number[];
+  skillTiers: string[][];
 }
 
-export interface SkillConfig {
-  slug: string,
-  title: string,
-  description: string,
-  cost: number,
-  effects: SkillEffect[],
-  skillRequirements?: string[],
+export interface ISkillConfig {
+  slug: string;
+  title: string;
+  description: string;
+  cost: number;
+  effects: ISkillEffect[];
+  skillRequirements?: string[];
 }
 
-export interface SkillEffect {
-  effectType: 'node' | 'tier',
-  slug?: NodeSlug,
-  key?: string,
-  valueType: 'additive' | 'multiplicative' | 'replace',
-  value: any,
+export interface ISkillEffect {
+  effectType: 'node' | 'tier';
+  slug?: NodeSlug;
+  key?: string;
+  valueType: 'additive' | 'multiplicative' | 'replace';
+  value: any;
 }

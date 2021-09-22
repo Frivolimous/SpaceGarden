@@ -17,7 +17,7 @@ export interface IToggleButton {
   onToggle: (b: boolean) => void;
   hoverScale?: number;
   color?: number;
-  selectedColor?: number
+  selectedColor?: number;
 }
 
 export class ToggleButton extends PIXI.Container {
@@ -54,7 +54,7 @@ export class ToggleButton extends PIXI.Container {
       let style = _.defaults(config.labelStyle, defaultLabelStyle);
       this.label = new PIXI.Text(config.label, style);
       this.addLabel();
-      this.inner.addChild(this.label);  
+      this.inner.addChild(this.label);
     }
 
     this.interactive = true;
@@ -91,11 +91,6 @@ export class ToggleButton extends PIXI.Container {
     });
   }
 
-  public setColor(color: number) {
-    this.color = color;
-    this.background.tint = color;
-  }
-
   public set selected(b: boolean) {
     if (this._Selected === b) return;
 
@@ -112,6 +107,11 @@ export class ToggleButton extends PIXI.Container {
 
   public get selected(): boolean {
     return this._Selected;
+  }
+
+  public setColor(color: number) {
+    this.color = color;
+    this.background.tint = color;
   }
 
   public addLabel(s?: string) {

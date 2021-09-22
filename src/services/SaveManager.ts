@@ -1,7 +1,7 @@
 import * as _ from 'lodash';
 import { IExtrinsicModel, dExtrinsicModel, CURRENT_VERSION } from '../data/SaveData';
 
-var SAVE_LOC: 'virtual' | 'local' | 'online' = 'local';
+let SAVE_LOC: 'virtual' | 'local' | 'online' = 'local';
 const DOC_NAME = 'SG-Extrinsic';
 const VER_NAME = 'SG-Version';
 
@@ -114,7 +114,7 @@ export class SaveManager {
   private static confirmReset = () => {
     SaveManager.extrinsic = _.cloneDeep(dExtrinsicModel);
     SaveManager.saveExtrinsic();
-    console.log("reset!");
+    console.log('reset!');
   }
 
   private static async loadExtrinsic(): Promise<IExtrinsicModel> {

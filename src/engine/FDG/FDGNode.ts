@@ -1,13 +1,12 @@
 import * as PIXI from 'pixi.js';
 import * as _ from 'lodash';
 
-import { NodeConfig } from '../../data/NodeData';
+import { INodeConfig } from '../../data/NodeData';
 import { Fonts } from '../../data/Fonts';
 import { GameNode } from '../Mechanics/Parts/GameNode';
-import { colorLuminance } from "../../JMGE/others/Colors";
+import { colorLuminance } from '../../JMGE/others/Colors';
 import { Config } from '../../Config';
 import { JMTween } from '../../JMGE/JMTween';
-
 
 export class FDGNode extends PIXI.Container {
   public data: GameNode;
@@ -24,7 +23,7 @@ export class FDGNode extends PIXI.Container {
   public sprite: PIXI.Sprite;
   public text = new PIXI.Text('2/2', { fontSize: 12, fontFamily: Fonts.FLYING, stroke: 0, strokeThickness: 1, fill: 0xffffff });
 
-  constructor(texture: PIXI.Texture, public config: NodeConfig) {
+  constructor(texture: PIXI.Texture, public config: INodeConfig) {
     super();
     _.defaults(config, dFDGNode);
 
@@ -59,19 +58,19 @@ export class FDGNode extends PIXI.Container {
     }
   }
 
-  linkNode(target: FDGNode, forceOutlet = false) {
+  public linkNode(target: FDGNode, forceOutlet = false) {
     this.data.linkNode(target.data, forceOutlet);
   }
 
-  removeNode(node: FDGNode) {
+  public removeNode(node: FDGNode) {
     this.data.removeNode(node.data);
   }
 
-  removeAllNodes() {
+  public removeAllNodes() {
     this.data.removeAllNodes();
   }
 
-  moveBody = () => {
+  public moveBody = () => {
     this.rotate();
 
     if (this.fixed) return;
@@ -87,7 +86,7 @@ export class FDGNode extends PIXI.Container {
     }
   }
 
-  showConnectionCount(show: boolean) {
+  public showConnectionCount(show: boolean) {
     if (show) {
       this.text.text = `${this.data.outlets.length}/${this.config.maxLinks}`;
       let remaining = this.config.maxLinks - this.data.outlets.length;
@@ -104,21 +103,21 @@ export class FDGNode extends PIXI.Container {
     }
   }
 
-  isConnectedToCore(): boolean {
+  public isConnectedToCore(): boolean {
     return this.data.checkConnections(node => node.config.slug === 'core');
   }
 
-  rotate() {
+  public rotate() {
     this.sprite.rotation += this.vR;
     if (this.sprite.rotation > Math.PI) this.sprite.rotation -= Math.PI * 2;
     if (this.sprite.rotation < -Math.PI) this.sprite.rotation += Math.PI * 2;
   }
 
-  tick = () => {
+  public tick = () => {
     this.moveBody();
   }
 
-  pulse(color: number) {
+  public pulse(color: number) {
     let pulseCircle = new PIXI.Graphics();
     pulseCircle.beginFill(color);
     pulseCircle.drawCircle(0, 0, this.config.radius * this.sprite.scale.x * 1.2);
@@ -127,7 +126,7 @@ export class FDGNode extends PIXI.Container {
 
     new JMTween(pulseCircle, 100).to({alpha: 0.5}).start().chain(pulseCircle, 300).to({alpha: 0}).onComplete(() => {
       pulseCircle.destroy();
-    })
+    });
   }
 }
 
@@ -136,9 +135,9 @@ export interface INodeData {
   view: FDGNode;
 }
 
-const dFDGNode: Partial<NodeConfig> = {
+const dFDGNode: Partial<INodeConfig> = {
   color: 0xffffff,
   radius: 10,
   mass: 1,
   force: 1,
-}
+};

@@ -28,23 +28,21 @@ export class MouseController {
   }
 
   public onMouseDown = (e: PIXI.interaction.InteractionEvent) => {
+    let position = e.data.getLocalPosition(this.container);
     if (this.deleteNext) {
-      let position = e.data.getLocalPosition(this.container);
 
-      let node = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
-      if (node) {
-        this.container.removeNode(node);
+      let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
+      if (nodeToDelete) {
+        this.container.removeNode(nodeToDelete);
       }
 
       this.deleteNext = false;
-      this.onDelete.publish(node);
+      this.onDelete.publish(nodeToDelete);
 
       return;
     }
     if (this.down) return;
     this.down = true;
-
-    let position = e.data.getLocalPosition(this.container);
 
     let node = this.container.getClosestObject({ x: position.x, y: position.y, notFruit: true });
 

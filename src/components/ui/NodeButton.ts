@@ -137,6 +137,19 @@ export class NodeButton extends PIXI.Container {
     return this._Selected;
   }
 
+  public set count(n: number) {
+    this._Count = n;
+    this.numberText.text = `${n}/${this.config.maxNodes}`;
+    this.numberText.width = this.config.width / 3;
+    this.numberText.scale.y = this.numberText.scale.x;
+    this.numberText.x = this.config.width * 2 / 3 - 2;
+    this.numberText.y = this.config.height - this.numberText.height - 2;
+  }
+
+  public get count(): number {
+    return this._Count;
+  }
+
   public startCustomDraw(clear: boolean = true) {
     if (clear) {
       this.background.clear();
@@ -165,19 +178,6 @@ export class NodeButton extends PIXI.Container {
   }
 
   public getLabel() { return this.label.text; }
-
-  public set count(n: number) {
-    this._Count = n;
-    this.numberText.text = `${n}/${this.config.maxNodes}`;
-    this.numberText.width = this.config.width / 3;
-    this.numberText.scale.y = this.numberText.scale.x;
-    this.numberText.x = this.config.width * 2 / 3 - 2;
-    this.numberText.y = this.config.height - this.numberText.height - 2;
-  }
-
-  public get count(): number {
-    return this._Count;
-  }
 
   public getWidth(withScale = true) {
     return this.config.width * (withScale ? this.scale.x : 1);
