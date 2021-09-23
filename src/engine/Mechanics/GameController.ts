@@ -130,6 +130,7 @@ export class GameController {
             block.fade--;
             if (block.fade <= 0) return;
             let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+            // let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling'))));
             if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
             if (target2) {
               this.transferPower(target, target2, block);

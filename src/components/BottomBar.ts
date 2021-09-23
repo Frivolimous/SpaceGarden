@@ -32,13 +32,13 @@ export class BottomBar extends PIXI.Container {
 
     configs.forEach(config => {
       let button = new NodeButton({label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => this.onCreateButton.publish({config, e})});
-      TooltipReader.addTooltip(button, {title: (StringManager.data.NODE_TOOLTIPS as any)[config.slug].TITLE, description: (StringManager.data.NODE_TOOLTIPS as any)[config.slug].DESCRIPTION});
+      TooltipReader.addTooltip(button, {title: (StringManager.data as any)[`TOOLTIP_${config.slug}_TITLE`], description: (StringManager.data as any)[`TOOLTIP_${config.slug}_DESC`]});
       this.addChild(button);
       this.buttons.push(button);
     });
 
     this.deleteButton = new ToggleButton({
-      label: 'Delete', width: 50, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: (b: boolean) => {
+      label: StringManager.data.BUTTON_DELETE, width: 50, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: (b: boolean) => {
         if (b) {
           this.onDeleteButton.publish({
             onComplete: () => {
@@ -50,12 +50,12 @@ export class BottomBar extends PIXI.Container {
         }
       },
     });
-    TooltipReader.addTooltip(this.deleteButton, {title: 'Delete Node', description: 'Select a single node and it will be instantly removed from the network.'});
-    this.turboButton = new ToggleButton({ label: 'Turbo', width: 100, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: this.onTurboButton.publish });
-    TooltipReader.addTooltip(this.turboButton, {title: 'Dev Feature', description: 'You should not see this!  If you do, it\'s because the dev forgot to disable it before publishing.  Please report this!'});
+    TooltipReader.addTooltip(this.deleteButton, {title: StringManager.data.TOOLTIP_DELETE_TITLE, description: StringManager.data.TOOLTIP_DELETE_DESC});
+    this.turboButton = new ToggleButton({ label: StringManager.data.BUTTON_TURBO, width: 100, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: this.onTurboButton.publish });
+    TooltipReader.addTooltip(this.turboButton, {title: StringManager.data.TOOLTIP_TURBO_TITLE, description: StringManager.data.TOOLTIP_TURBO_DESC});
     this.turboButton.visible = TURBO;
-    this.proceedButton = new Button({ label: 'Launch Seedling', onClick: this.onProceedButton.publish });
-    TooltipReader.addTooltip(this.proceedButton, {title: 'Launch Seedling', description: 'Launch your seedling with all of its research, starting over to grow your next plant network.'});
+    this.proceedButton = new Button({ label: StringManager.data.BUTTON_PROCEED, onClick: this.onProceedButton.publish });
+    TooltipReader.addTooltip(this.proceedButton, {title: StringManager.data.TOOLTIP_PROCEED_TITLE, description: StringManager.data.TOOLTIP_PROCEED_DESC});
     this.proceedButton.visible = false;
 
     this.addChild(this.deleteButton);
@@ -115,7 +115,7 @@ export class BottomBar extends PIXI.Container {
         this.proceedButton.highlight(true, 2.5);
       }
       let percent = node.data.powerPercent;
-      this.proceedButton.addLabel(`Launch Seedling (${Math.floor(percent * 100)}%)`);
+      this.proceedButton.addLabel(`${StringManager.data.BUTTON_PROCEED} (${Math.floor(percent * 100)}%)`);
       if (this.proceedButton.disabled) {
         if (percent >= 1) {
           this.proceedButton.disabled = false;

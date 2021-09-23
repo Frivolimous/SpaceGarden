@@ -1,3 +1,5 @@
+import { StringManager } from '../../services/StringManager';
+
 export class SkillBar {
   public element: HTMLDivElement;
 
@@ -13,6 +15,6 @@ export class SkillBar {
   public updateText(current: number, next: number) {
     this.current = current;
     this.nextLevel = next;
-    this.element.innerHTML = `Research: ${Math.round(current)} / ${next}`;
+    this.element.innerHTML = `${StringManager.data.UI_SKILLTREE_RESEARCH}: ${Math.round(current)} / ${next}`;
   }
 }

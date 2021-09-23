@@ -67,12 +67,12 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-tier-1',
       title: 'Tier 2',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 1 skills to unlock</p> Permanently unlock all Tier 1 skills and increases Seedling Max Power by x10',
+      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 1 skills to unlock</p> Permanently unlock all Tier 1 skills but increases Seedling Power Drain to 0.4/s',
       cost: 3,
       skillRequirements: ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6'],
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 1},
-        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'multiplicative', value: 10},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.4},
       ],
     },
     {
@@ -127,12 +127,12 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-tier-2',
       title: 'Tier 3',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 2 skills to unlock</p> Permanently unlock all Tier 2 skills but increases Seedling Power Drain to 0.5/s',
+      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 2 skills to unlock</p> Permanently unlock all Tier 2 skills and increases Seedling Max Power by x10',
       skillRequirements: ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6'],
       cost: 99,
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 1},
-        {effectType: 'node', slug: 'seedling', key: 'powerDrain', valueType: 'additive', value: -0.1},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'multiplicative', value: 10},
       ],
     },
   ],

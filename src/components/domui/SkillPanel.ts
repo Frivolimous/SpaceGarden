@@ -1,3 +1,4 @@
+import { StringManager } from '../../services/StringManager';
 import { ISkillConfig, SkillData } from '../../data/SkillData';
 import { SkillBar } from './SkillBar';
 
@@ -19,12 +20,12 @@ export class SkillPanel {
     document.body.appendChild(this.element);
     if (disabled) {
       this.element.innerHTML = `
-      <div class="skill-title">Skill Tree</div>
-      <div class="skill-subtitle">Currently active skills</div>`;
+      <div class="skill-title">${StringManager.data.UI_SKILLTREE_TITLE}</div>
+      <div class="skill-subtitle">${StringManager.data.UI_SKILLTREE_SUBTITLE_INACTIVE}</div>`;
     } else {
       this.element.innerHTML = `
-      <div class="skill-title">Skill Tree</div>
-      <div class="skill-subtitle">Your skills will be applied only on the next plant</div>`;
+      <div class="skill-title">${StringManager.data.UI_SKILLTREE_TITLE}</div>
+      <div class="skill-subtitle">${StringManager.data.UI_SKILLTREE_SUBTITLE_ACTIVE}</div>`;
     }
     if (tier > 0) {
       this.tierContainer = document.createElement('div');
@@ -64,7 +65,7 @@ export class SkillPanel {
         let j = i;
         let tierButton = document.createElement('button');
         tierButton.classList.add('tier-button');
-        tierButton.innerHTML = `Tier ${i}`;
+        tierButton.innerHTML = `${StringManager.data.UI_SKILLTREE_TIER} ${i}`;
         buttons.push(tierButton);
         this.tierContainer.appendChild(tierButton);
         tierButton.addEventListener('click', () => {
@@ -118,7 +119,7 @@ export class SkillPanel {
     this.skillLevels = SkillData.skillExchange.findIndex(cost => cost > skillpoints);
     let nextCost = SkillData.skillExchange[this.skillLevels];
     this.skillbar.updateText(skillpoints, nextCost);
-    this.skillpointElement.innerHTML = `${Math.round(this.skillpoints)} Skillpoints`;
+    this.skillpointElement.innerHTML = `${Math.round(this.skillpoints)} ${StringManager.data.UI_SKILLTREE_SKILLPOINTS}`;
     if (oldpoints !== this.skillpoints) {
       this.updateHighlights();
     }

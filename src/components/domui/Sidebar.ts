@@ -1,3 +1,4 @@
+import { StringManager } from '../../services/StringManager';
 import { FDGNode } from '../../engine/FDG/FDGNode';
 import { GameNode } from '../../engine/Mechanics/Parts/GameNode';
 import { SkillPanel } from './SkillPanel';
@@ -11,8 +12,9 @@ export class Sidebar {
 
   private static aid: number = 0;
 
-  public nodeMap: { element: HTMLDivElement, node: GameNode }[] = [];
+  public nodeMap: { element: HTMLDivElement, node: GameNode, atStart?: boolean }[] = [];
   public currentHighlight: HTMLDivElement;
+  public hideStemButton: HTMLButtonElement;
 
   public container: HTMLDivElement;
   // currentSkillPanel: SkillPanel;
@@ -23,22 +25,20 @@ export class Sidebar {
 
   constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel) {
     this.container = document.getElementById('node-container') as HTMLDivElement;
-    this.container.innerHTML = '';
-    let hideStemButton = document.createElement('button');
-    hideStemButton.classList.add('skill-button');
-    hideStemButton.innerHTML = 'Hide Stems';
-    hideStemButton.style.position = 'absolute';
-    hideStemButton.style.right = '5px';
-    hideStemButton.style.top = '0px';
-    hideStemButton.addEventListener('click', () => {
+    this.hideStemButton = document.createElement('button');
+    this.hideStemButton.classList.add('skill-button');
+    this.hideStemButton.innerHTML = StringManager.data.UI_SIDEBAR_HIDE_STEMS;
+    this.hideStemButton.style.position = 'absolute';
+    this.hideStemButton.style.right = '5px';
+    this.hideStemButton.style.top = '0px';
+    this.hideStemButton.addEventListener('click', () => {
       this.areStemsHidden = !this.areStemsHidden;
       if (this.areStemsHidden) {
-        hideStemButton.innerHTML = 'Show Stems';
+        this.hideStemButton.innerHTML = StringManager.data.UI_SIDEBAR_SHOW_STEMS;
       } else {
-        hideStemButton.innerHTML = 'Hide Stems';
+        this.hideStemButton.innerHTML = StringManager.data.UI_SIDEBAR_HIDE_STEMS;
       }
     });
-    this.container.appendChild(hideStemButton);
   }
 
   public get areStemsHidden(): boolean {
@@ -60,16 +60,38 @@ export class Sidebar {
     }
   }
 
+  public destroy() {
+    this.currentSkillPanel && this.currentSkillPanel.destroy();
+    this.nextSkillPanel.destroy();
+  }
+
+  public navIn() {
+    this.container.innerHTML = '';
+    this.container.appendChild(this.hideStemButton);
+    this.nodeMap.forEach(data => {
+      if (data.atStart) {
+        this.container.prepend(data.element);
+      } else {
+        this.container.appendChild(data.element);
+      }
+    });
+  }
+
+  public navOut() {
+    this.container.innerHTML = '';
+  }
+
   public addNodeElement = (view: FDGNode) => {
     if (view.config.type !== 'fruit') {
       let node = view.data;
-      let element = this.addElement(node.toString(), view.config.slug === 'seedling');
-      this.nodeMap.push({ element, node });
+      let atStart = view.config.slug === 'seedling';
+      let element = this.addElement(node.toString(), atStart);
+      this.nodeMap.push({ element, node, atStart });
 
       if (view.config.slug === 'seedling') {
         let button = document.createElement('button');
         button.classList.add('skill-button');
-        button.innerHTML = 'Next Plant';
+        button.innerHTML = StringManager.data.UI_SIDEBAR_SKILLTREE_NEXT;
         button.addEventListener('click', () => {
           this.nextSkillPanel.hidden = false;
         });
@@ -88,7 +110,7 @@ export class Sidebar {
       if (view.config.slug === 'core' && this.currentSkillPanel) {
         let button = document.createElement('button');
         button.classList.add('skill-button');
-        button.innerHTML = 'Current Skills';
+        button.innerHTML = StringManager.data.UI_SIDEBAR_SKILLTREE_CURRENT;
         button.addEventListener('click', () => {
           this.currentSkillPanel.hidden = false;
         });
@@ -131,12 +153,6 @@ export class Sidebar {
       this.container.appendChild(element);
     }
     return element;
-  }
-
-  public destroy() {
-    this.container.innerHTML = '';
-    this.currentSkillPanel.destroy();
-    this.nextSkillPanel.destroy();
   }
 
   public highlightNode(node: FDGNode) {

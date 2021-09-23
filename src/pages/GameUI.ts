@@ -22,6 +22,7 @@ import { Config } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
 import { ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
+import { StringManager } from '../services/StringManager';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -120,10 +121,12 @@ export class GameUI extends BaseUI {
     } else this.newGame();
 
     this.saveGameTimeout();
+    GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME INSTANCE CREATED'});
   }
 
   public destroy() {
     super.destroy();
+    this.exists = false;
 
     this.canvas.destroy();
     this.container.destroy();
@@ -140,17 +143,22 @@ export class GameUI extends BaseUI {
   public navIn = () => {
     JMTicker.add(this.onTick);
     this.keymapper.enabled = true;
+    this.sidebar.navIn();
+    GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME NAV IN'});
+
   }
 
   public navOut = () => {
     JMTicker.remove(this.onTick);
+    this.exists = false;
     this.keymapper.enabled = false;
+    this.sidebar.navOut();
     GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME NAV OUT'});
   }
 
   public saveGameTimeout = () => {
     if (!this.exists) return;
-    new InfoPopup('Game Saved!');
+    new InfoPopup(StringManager.data.UI_SAVE);
 
     this.saveGame();
     window.setTimeout(this.saveGameTimeout, 30000);

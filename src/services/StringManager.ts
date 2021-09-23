@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 
-import { EnglishStringData, GibberishStringData } from '../data/StringData';
+import { EnglishStringData } from '../data/StringData';
 
 type langType = 'English' | 'Gibberish';
 let languages: langType[] = ['English', 'Gibberish'];
