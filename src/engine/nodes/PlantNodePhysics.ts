@@ -16,6 +16,10 @@ export class PlantNodePhysics {
     this._iMass = 1 / config.mass;
   }
 
+  get force(): number {
+    return this.config.force;
+  }
+
   get iMass(): number {
     return this.hasMass ? this._iMass : 5;
   }

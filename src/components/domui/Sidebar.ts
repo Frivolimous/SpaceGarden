@@ -1,6 +1,5 @@
+import { PlantNode } from '../../engine/nodes/PlantNode';
 import { StringManager } from '../../services/StringManager';
-import { FDGNode } from '../../engine/FDG/FDGNode';
-import { GameNode } from '../../engine/Mechanics/Parts/GameNode';
 import { SkillPanel } from './SkillPanel';
 
 export class Sidebar {
@@ -12,8 +11,8 @@ export class Sidebar {
 
   private static aid: number = 0;
 
-  public nodeMap: { element: HTMLDivElement, node: GameNode, atStart?: boolean }[] = [];
-  public currentHighlight: { element: HTMLDivElement, node: GameNode};
+  public nodeMap: { element: HTMLDivElement, node: PlantNode, atStart?: boolean }[] = [];
+  public currentHighlight: { element: HTMLDivElement, node: PlantNode};
   public hideStemButton: HTMLButtonElement;
 
   public container: HTMLDivElement;
@@ -49,7 +48,7 @@ export class Sidebar {
     this._AreStemsHidden = b;
     if (b) {
       this.nodeMap.forEach(data => {
-        if (data.node.config.slug === 'stem') {
+        if (data.node.slug === 'stem') {
           data.element.style.display = 'none';
         }
       });
@@ -81,13 +80,12 @@ export class Sidebar {
     this.container.innerHTML = '';
   }
 
-  public addNodeElement = (view: FDGNode) => {
-    if (!view.data.isFruit()) {
-      let node = view.data;
-      let atStart = view.config.slug === 'seedling';
+  public addNodeElement = (node: PlantNode) => {
+    if (!node.isFruit()) {
+      let atStart = node.slug === 'seedling';
       let element = this.addElement(node.toString(), atStart);
       element.addEventListener('pointerover', () => {
-        this.highlightNode(view, true);
+        this.highlightNode(node, true);
       });
 
       element.addEventListener('pointerout', () => {
@@ -96,7 +94,7 @@ export class Sidebar {
 
       this.nodeMap.push({ element, node, atStart });
 
-      if (view.config.slug === 'seedling') {
+      if (node.slug === 'seedling') {
         let button = document.createElement('button');
         button.classList.add('skill-button');
         button.innerHTML = StringManager.data.UI_SIDEBAR_SKILLTREE_NEXT;
@@ -109,13 +107,13 @@ export class Sidebar {
         this.notification.classList.add('notification');
         element.appendChild(this.notification);
         this.notification.hidden = true;
-      } else if (view.config.slug === 'stem') {
+      } else if (node.slug === 'stem') {
         if (this.areStemsHidden) {
           element.style.display = 'none';
         }
       }
 
-      if (view.config.slug === 'core' && this.currentSkillPanel) {
+      if (node.slug === 'core' && this.currentSkillPanel) {
         let button = document.createElement('button');
         button.classList.add('skill-button');
         button.innerHTML = StringManager.data.UI_SIDEBAR_SKILLTREE_CURRENT;
@@ -127,12 +125,11 @@ export class Sidebar {
     }
   }
 
-  public removeNodeElement = (view: FDGNode) => {
-    if (!view.data.isFruit()) {
-      if (view.config.slug === 'seedling') {
+  public removeNodeElement = (node: PlantNode) => {
+    if (!node.isFruit()) {
+      if (node.slug === 'seedling') {
         this.nextSkillPanel.clear();
       }
-      let node = view.data;
       let index = this.nodeMap.findIndex(map => map.node === node);
       this.container.removeChild(this.nodeMap[index].element);
       this.nodeMap.splice(index, 1);
@@ -143,8 +140,8 @@ export class Sidebar {
     this.nodeMap.forEach(data => {
       let contentElement = data.element.querySelector('.node-content');
       contentElement.innerHTML = data.node.toString();
-      if (data.node.config.slug === 'seedling') {
-        this.nextSkillPanel.updateSkillpoints(data.node.researchCurrent);
+      if (data.node.slug === 'seedling') {
+        this.nextSkillPanel.updateSkillpoints(data.node.power.researchCurrent);
         this.notification.hidden = (this.nextSkillPanel.skillpoints === 0 || !this.nextSkillPanel.hidden);
       }
     });
@@ -163,17 +160,17 @@ export class Sidebar {
     return element;
   }
 
-  public highlightNode(node: FDGNode, andHighlightNode?: boolean) {
+  public highlightNode(node: PlantNode, andHighlightNode?: boolean) {
     if (this.currentHighlight) {
       this.currentHighlight.element.classList.remove('highlight');
       this.currentHighlight.node.view.highlight = false;
       this.currentHighlight = null;
     }
     if (node) {
-      let map = this.nodeMap.find(data => data.node.view === node);
+      let map = this.nodeMap.find(data => data.node === node);
       map.element.classList.add('highlight');
       if (andHighlightNode) {
-        node.highlight = true;
+        node.view.highlight = true;
       }
       this.currentHighlight = map;
     }

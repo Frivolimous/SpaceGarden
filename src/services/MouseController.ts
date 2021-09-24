@@ -1,13 +1,13 @@
 import * as PIXI from 'pixi.js';
+import { PlantNode } from '../engine/nodes/PlantNode';
 import { ScrollingContainer } from '../components/ScrollingContainer';
 import { FDGContainer, IPull } from '../engine/FDG/FDGContainer';
-import { FDGNode } from '../engine/FDG/FDGNode';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
 
 export class MouseController {
   // objects: IPull[] = [];
 
-  public onDelete: JMEventListener = new JMEventListener<FDGNode>();
+  public onDelete: JMEventListener = new JMEventListener<PlantNode>();
   public onMove: JMEventListener = new JMEventListener<{x: number, y: number}>();
   public deleteNext = false;
 

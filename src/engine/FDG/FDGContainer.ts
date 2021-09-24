@@ -2,21 +2,21 @@ import * as PIXI from 'pixi.js';
 import * as _ from 'lodash';
 
 import { FDGLink } from './FDGLink';
-import { FDGNode } from './FDGNode';
 import { JMRect } from '../../JMGE/others/JMRect';
 import { NodeSlug } from '../../data/NodeData';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Config } from '../../Config';
 import { CrawlerView } from '../Mechanics/Parts/CrawlerView';
+import { PlantNode } from '../nodes/PlantNode';
 
 export class FDGContainer extends PIXI.Graphics {
-  public onNodeAdded = new JMEventListener<FDGNode>();
-  public onNodeRemoved = new JMEventListener<FDGNode>();
+  public onNodeAdded = new JMEventListener<PlantNode>();
+  public onNodeRemoved = new JMEventListener<PlantNode>();
   public links: FDGLink[] = [];
 
   private nodeLayer = new PIXI.Container();
   private crawlerLayer = new PIXI.Container();
-  private nodes: FDGNode[] = [];
+  private nodes: PlantNode[] = [];
   private pulls: IPull[] = [];
 
   constructor(private borders: JMRect) {
@@ -32,19 +32,19 @@ export class FDGContainer extends PIXI.Graphics {
     _.pull(this.pulls, pull);
   }
 
-  public addNode(node: FDGNode) {
+  public addNode(node: PlantNode) {
     this.nodes.push(node);
-    this.nodeLayer.addChild(node);
+    this.nodeLayer.addChild(node.view);
     this.onNodeAdded.publish(node);
   }
 
-  public removeNode(node: FDGNode) {
+  public removeNode(node: PlantNode) {
     let i = this.nodes.indexOf(node);
 
     if (i < 0) return;
 
-    let outlets = _.clone(node.data.outlets);
-    let fruits = _.clone(node.data.fruits);
+    let outlets = _.clone(node.outlets);
+    let fruits = _.clone(node.fruits);
     this.removeAllLinksFor(node);
 
     this.nodes.splice(i, 1);
@@ -53,18 +53,18 @@ export class FDGContainer extends PIXI.Graphics {
     this.onNodeRemoved.publishSync(node);
 
     outlets.forEach(n => {
-      if (!n.view.isConnectedToCore()) {
-        this.removeNode(n.view);
+      if (!n.isConnectedToCore()) {
+        this.removeNode(n);
       }
     });
 
-    fruits.forEach(n => this.removeNode(n.view));
+    fruits.forEach(n => this.removeNode(n));
   }
 
-  public removeAllLinksFor(node: FDGNode, excludeFruit?: boolean) {
+  public removeAllLinksFor(node: PlantNode, excludeFruit?: boolean) {
     for (let i = this.links.length - 1; i >= 0; i--) {
       if (this.links[i].hasNode(node)) {
-        if (excludeFruit && this.links[i].other(node).data.isFruit()) continue;
+        if (excludeFruit && this.links[i].other(node).isFruit()) continue;
 
         this.links[i].origin.removeNode(this.links[i].target);
         this.links[i].target.removeNode(this.links[i].origin);
@@ -81,14 +81,11 @@ export class FDGContainer extends PIXI.Graphics {
     this.crawlerLayer.removeChild(crawler);
   }
 
-  public getLink(origin: FDGNode, target: FDGNode): FDGLink {
+  public getLink(origin: PlantNode, target: PlantNode): FDGLink {
     return this.links.find(link => link.hasNode(origin) && link.hasNode(target));
   }
 
-  public linkNodes(origin: FDGNode, target: FDGNode): FDGLink {
-    origin.linkNode(target);
-    target.linkNode(origin, true);
-
+  public addLink(origin: PlantNode, target: PlantNode): FDGLink {
     let link = new FDGLink(origin, target);
 
     this.links.push(link);
@@ -96,7 +93,7 @@ export class FDGContainer extends PIXI.Graphics {
     return link;
   }
 
-  public removeLink(origin: FDGNode, target: FDGNode) {
+  public removeLink(origin: PlantNode, target: PlantNode) {
     for (let i = this.links.length; i >= 0; i--) {
       if (this.links[i].hasNode(origin, target)) {
         origin.removeNode(target);
@@ -107,23 +104,23 @@ export class FDGContainer extends PIXI.Graphics {
     }
   }
 
-  public getClosestObject(config: { x: number, y: number, distance?: number, maxLinks?: boolean, filter?: FDGNode, notType?: NodeSlug, notFruit?: boolean }) {
-    let m: FDGNode;
+  public getClosestObject(config: { x: number, y: number, distance?: number, maxLinks?: boolean, filter?: PlantNode, notType?: NodeSlug, notFruit?: boolean }) {
+    let m: PlantNode;
 
     let distance = config.distance ? config.distance * config.distance : Config.PHYSICS.MAX_GRAB * Config.PHYSICS.MAX_GRAB;
 
     for (let i = 0; i < this.nodes.length; i++) {
       let node = this.nodes[i];
 
-      if (config.maxLinks && node.data.outlets.length >= node.config.maxLinks) continue;
+      if (config.maxLinks && node.outlets.length >= node.maxOutlets) continue;
       if (config.filter && config.filter === node) continue;
-      if (config.notType && node.config.slug === config.notType) continue;
-      if (config.notFruit && node.data.isFruit()) continue;
+      if (config.notType && node.slug === config.notType) continue;
+      if (config.notFruit && node.isFruit()) continue;
       // if (par.hasTag!=null && par.hasTag!==this.nodes[i].tag) continue;
       // if (par.notHasTag!=null && par.notHasTag===this.nodes[i].tag) continue;
 
-      let x = node.x - config.x;
-      let y = node.y - config.y;
+      let x = node.view.x - config.x;
+      let y = node.view.y - config.y;
 
       let distance2 = x * x + y * y;
 
@@ -137,7 +134,7 @@ export class FDGContainer extends PIXI.Graphics {
   }
 
   public showConnectionCount(show: boolean = true) {
-    this.nodes.forEach(node => !node.data.isFruit() ? node.showConnectionCount(show) : null);
+    this.nodes.forEach(node => !node.isFruit() ? node.showConnectionCount(show) : null);
   }
 
   // ==== RUNNING ==== \\
@@ -160,8 +157,8 @@ export class FDGContainer extends PIXI.Graphics {
 
       link.onTick.publish();
 
-      let dX = link.origin.x - link.target.x;
-      let dY = link.origin.y - link.target.y;
+      let dX = link.origin.view.x - link.target.view.x;
+      let dY = link.origin.view.y - link.target.view.y;
       let dist2 = dX * dX + dY * dY;
       let dist = Math.sqrt(dist2);
 
@@ -169,18 +166,18 @@ export class FDGContainer extends PIXI.Graphics {
 
       let mult = Config.PHYSICS.ELASTICITY * (link.length - dist) / dist;
 
-      link.origin.v.x += mult * dX * link.origin.iMass;
-      link.origin.v.y += mult * dY * link.origin.iMass;
-      link.target.v.x -= mult * dX * link.target.iMass;
-      link.target.v.y -= mult * dY * link.target.iMass;
+      link.origin.physics.vX += mult * dX * link.origin.physics.iMass;
+      link.origin.physics.vY += mult * dY * link.origin.physics.iMass;
+      link.target.physics.vX -= mult * dX * link.target.physics.iMass;
+      link.target.physics.vY -= mult * dY * link.target.physics.iMass;
     });
 
     this.pulls.forEach(pull => {
-      pull.node.v.x *= Config.PHYSICS.PULL_FRICTION;
-      pull.node.v.y *= Config.PHYSICS.PULL_FRICTION;
+      pull.node.physics.vX *= Config.PHYSICS.PULL_FRICTION;
+      pull.node.physics.vY *= Config.PHYSICS.PULL_FRICTION;
 
-      let dX = pull.node.x - pull.x;
-      let dY = pull.node.y - pull.y;
+      let dX = pull.node.view.x - pull.x;
+      let dY = pull.node.view.y - pull.y;
       let dist2 = dX * dX + dY * dY;
 
       if (dist2 > Config.PHYSICS.TARGET_MIN) {
@@ -189,8 +186,8 @@ export class FDGContainer extends PIXI.Graphics {
 
           if (pull.force) mult *= pull.force;
 
-          pull.node.v.x += mult * dX * pull.node.iMass;
-          pull.node.v.y += mult * dY * pull.node.iMass;
+          pull.node.physics.vX += mult * dX * pull.node.physics.iMass;
+          pull.node.physics.vY += mult * dY * pull.node.physics.iMass;
         }
       }
     });
@@ -201,8 +198,8 @@ export class FDGContainer extends PIXI.Graphics {
       for (let j = i - 1; j >= 0; j--) {
         let other = this.nodes[j];
 
-        let dX = node.x - other.x;
-        let dY = node.y - other.y;
+        let dX = node.view.x - other.view.x;
+        let dY = node.view.y - other.view.y;
 
         if (dX > 0) dX = Math.max(2, dX);
         else dX = Math.min(-2, dX);
@@ -211,20 +208,20 @@ export class FDGContainer extends PIXI.Graphics {
         else dY = Math.min(-2, dY);
 
         let dist2 = dX * dX + dY * dY;
-        let mult = node.config.force * other.config.force / dist2 / Math.sqrt(dist2);
+        let mult = node.physics.force * other.physics.force / dist2 / Math.sqrt(dist2);
 
-        node.v.x += mult * dX * node.iMass;
-        node.v.y += mult * dY * node.iMass;
-        other.v.x -= mult * dX * other.iMass;
-        other.v.y -= mult * dY * other.iMass;
+        node.physics.vX += mult * dX * node.physics.iMass;
+        node.physics.vY += mult * dY * node.physics.iMass;
+        other.physics.vX -= mult * dX * other.physics.iMass;
+        other.physics.vY -= mult * dY * other.physics.iMass;
       }
 
-      if (node.x < this.borders.left) node.v.x += Config.PHYSICS.EDGE_BOUNCE * (-node.x + this.borders.left);
-      if (node.x > this.borders.right) node.v.x += Config.PHYSICS.EDGE_BOUNCE * (-node.x + this.borders.right);
-      if (node.y < this.borders.top) node.v.y += Config.PHYSICS.EDGE_BOUNCE * (-node.y + this.borders.top);
-      if (node.y > this.borders.bottom) node.v.y += Config.PHYSICS.EDGE_BOUNCE * (-node.y + this.borders.bottom);
+      if (node.view.x < this.borders.left) node.physics.vX += Config.PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.left);
+      if (node.view.x > this.borders.right) node.physics.vX += Config.PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.right);
+      if (node.view.y < this.borders.top) node.physics.vY += Config.PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.top);
+      if (node.view.y > this.borders.bottom) node.physics.vY += Config.PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.bottom);
 
-      node.tick();
+      node.tickPhysics();
     }
   }
 }
@@ -232,7 +229,7 @@ export class FDGContainer extends PIXI.Graphics {
 export interface IPull {
   x: number;
   y: number;
-  node: FDGNode;
+  node: PlantNode;
   minD?: number;
   force?: number;
 

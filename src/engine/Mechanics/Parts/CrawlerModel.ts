@@ -1,6 +1,6 @@
 import _ from 'lodash';
+import { PlantNode } from 'src/engine/nodes/PlantNode';
 import { CrawlerView } from './CrawlerView';
-import { GameNode } from './GameNode';
 
 export enum AIType {
   NONE,
@@ -16,14 +16,14 @@ export class CrawlerModel {
   public angle: number = 0;
   public speed: number = 0.01;
 
-  public cLoc: GameNode;
-  public nextLoc: GameNode;
+  public cLoc: PlantNode;
+  public nextLoc: PlantNode;
 
   public aiType: AIType = AIType.IDLE;
   public aiExtra = 0;
   public aiExtra1 = 0;
 
-  constructor(startingNode: GameNode) {
+  constructor(startingNode: PlantNode) {
     this.cLoc = startingNode;
     this.view = new CrawlerView();
   }
@@ -76,8 +76,8 @@ export class CrawlerModel {
       x = this.cLoc.view.x + (this.nextLoc.view.x - this.cLoc.view.x) * this.magnitude;
       y = this.cLoc.view.y + (this.nextLoc.view.y - this.cLoc.view.y) * this.magnitude;
     } else {
-      x = this.cLoc.view.x + this.magnitude * this.cLoc.config.radius * Math.cos(this.angle);
-      y = this.cLoc.view.y + this.magnitude * this.cLoc.config.radius * Math.sin(this.angle);
+      x = this.cLoc.view.x + this.magnitude * this.cLoc.view.radius * Math.cos(this.angle);
+      y = this.cLoc.view.y + this.magnitude * this.cLoc.view.radius * Math.sin(this.angle);
     }
 
     this.view.x = x;

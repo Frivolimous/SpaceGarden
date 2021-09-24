@@ -13,9 +13,7 @@ import { NodeManager } from '../services/NodeManager';
 import { FDGLink } from '../engine/FDG/FDGLink';
 import { GameController } from '../engine/Mechanics/GameController';
 import { Sidebar } from '../components/domui/Sidebar';
-import { GameNode } from '../engine/Mechanics/Parts/GameNode';
 import { INodeConfig, NodeData } from '../data/NodeData';
-import { FDGNode } from '../engine/FDG/FDGNode';
 import { IExtrinsicModel, TierSaves } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
 import { Config } from '../Config';
@@ -24,6 +22,7 @@ import { ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
 import { StringManager } from '../services/StringManager';
 import { GOD_MODE } from '../services/_Debug';
+import { PlantNode } from '../engine/nodes/PlantNode';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -84,7 +83,7 @@ export class GameUI extends BaseUI {
     this.container.onNodeAdded.addListener(this.sidebar.addNodeElement);
     this.container.onNodeAdded.addListener(this.bottomBar.nodeAdded);
     this.container.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
-    this.container.onNodeRemoved.addListener(this.gameC.removeNodeByView);
+    this.container.onNodeRemoved.addListener(this.gameC.removeNode);
     this.container.onNodeRemoved.addListener(this.sidebar.removeNodeElement);
     this.bottomBar.onProceedButton.addListener(this.nextStage);
     this.bottomBar.onCreateButton.addListener(this.createNewNode);
@@ -182,12 +181,12 @@ export class GameUI extends BaseUI {
 
   public newGame() {
     let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
-    node.position.set(600, 300);
-    node.data.powerPercent = 0.5;
+    node.view.position.set(600, 300);
+    node.power.powerPercent = 0.5;
   }
 
   public resetGame = () => {
-    GameNode.resetUid();
+    PlantNode.resetUid();
     this.navAndDestroy(new GameUI('empty'));
   }
 
@@ -202,14 +201,14 @@ export class GameUI extends BaseUI {
 
     if (!this.running) return;
 
-    this.gameC.onTick(this.gameSpeed);
     this.container.onTick(this.gameSpeed);
+    this.gameC.onTick(this.gameSpeed);
     this.sidebar.updateNodes();
 
-    let seedling = this.gameC.nodes.find(node => node.config.slug === 'seedling');
+    let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
 
     if (seedling) {
-      this.bottomBar.updateSeedling(seedling.view);
+      this.bottomBar.updateSeedling(seedling);
     }
   }
 
@@ -273,18 +272,18 @@ export class GameUI extends BaseUI {
     let link: FDGLink;
 
     node.ghostMode = true;
-    node.data.active = false;
-    node.position.set(position.x, position.y);
+    node.active = false;
+    node.view.position.set(position.x, position.y);
 
     this.container.showConnectionCount();
 
     this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
       onRelease: () => {
         this.container.showConnectionCount(false);
-        if (node.data.outlets.length > 0) {
+        if (node.outlets.length > 0) {
           node.ghostMode = false;
-          node.data.active = true;
-          node.setIntensity(node.data.powerPercent, true);
+          node.active = true;
+          node.view.setIntensity(node.power.powerPercent, true);
           if (link) link.active = true;
         } else {
           this.container.removeNode(node);
@@ -296,7 +295,7 @@ export class GameUI extends BaseUI {
         let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
         if (nearest) {
           node.ghostMode = false;
-          link = this.container.linkNodes(nearest, node);
+          link = this.gameC.linkNodes(nearest, node);
           link.active = false;
         }
 
@@ -332,7 +331,7 @@ export class GameUI extends BaseUI {
     let extrinsic = JSON.parse(json);
     console.log('extrinsic');
     SaveManager.saveExtrinsic(extrinsic, true).then(() => {
-      GameNode.resetUid();
+      PlantNode.resetUid();
       this.navAndDestroy(new GameUI());
     });
   }

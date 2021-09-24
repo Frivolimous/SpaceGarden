@@ -1,13 +1,13 @@
 import * as PIXI from 'pixi.js';
 import { GOD_MODE } from '../services/_Debug';
 import { INodeConfig } from '../data/NodeData';
-import { FDGNode } from '../engine/FDG/FDGNode';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
 import { StringManager } from '../services/StringManager';
 import { TooltipReader } from './tooltip/TooltipReader';
 import { Button } from './ui/Button';
 import { NodeButton } from './ui/NodeButton';
 import { ToggleButton } from './ui/ToggleButton';
+import { PlantNode } from 'src/engine/nodes/PlantNode';
 
 export class BottomBar extends PIXI.Container {
   public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent }>();
@@ -77,8 +77,8 @@ export class BottomBar extends PIXI.Container {
     this.turboButton.position.set(this.proceedButton.x - this.turboButton.getWidth() - 10, 25);
   }
 
-  public nodeAdded = (node: FDGNode) => {
-    let button = this.buttons.find(b => b.getLabel() === node.config.slug);
+  public nodeAdded = (node: PlantNode) => {
+    let button = this.buttons.find(b => b.getLabel() === node.slug);
 
     if (button && button.maxNodes > 0) {
       button.count++;
@@ -88,13 +88,13 @@ export class BottomBar extends PIXI.Container {
       }
     }
 
-    if (node.config.slug === 'seedling') {
+    if (node.slug === 'seedling') {
       this.updateSeedling(node);
     }
   }
 
-  public nodeRemoved = (node: FDGNode) => {
-    let button = this.buttons.find(b => b.getLabel() === node.config.slug);
+  public nodeRemoved = (node: PlantNode) => {
+    let button = this.buttons.find(b => b.getLabel() === node.slug);
 
     if (button && button.maxNodes > 0) {
       button.count--;
@@ -102,18 +102,18 @@ export class BottomBar extends PIXI.Container {
       button.disabled = false;
     }
 
-    if (node.config.slug === 'seedling') {
+    if (node.slug === 'seedling') {
       this.updateSeedling(null);
     }
   }
 
-  public updateSeedling(node?: FDGNode) {
+  public updateSeedling(node?: PlantNode) {
     if (node) {
       if (this.proceedButton.visible === false) {
         this.proceedButton.visible = true;
         this.proceedButton.highlight(true, 2.5);
       }
-      let percent = node.data.powerPercent;
+      let percent = node.power.powerPercent;
       this.proceedButton.addLabel(`${StringManager.data.BUTTON_PROCEED} (${Math.floor(percent * 100)}%)`);
       if (this.proceedButton.disabled) {
         if (percent >= 1) {

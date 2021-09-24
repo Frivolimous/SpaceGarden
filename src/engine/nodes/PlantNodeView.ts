@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { JMTween } from '../../JMGE/JMTween';
 import { Fonts } from '../../data/Fonts';
-import { colorLuminance } from 'src/JMGE/others/Colors';
+import { colorLuminance } from '../../JMGE/others/Colors';
 
 export class PlantNodeView extends PIXI.Container {
   public sprite: PIXI.Sprite;
@@ -43,18 +43,6 @@ export class PlantNodeView extends PIXI.Container {
     if (!this._Intensity || instant) this._Intensity = this.targetIntensity * 0.9;
   }
 
-  public pulse(color: number) {
-    let pulseCircle = new PIXI.Graphics();
-    pulseCircle.beginFill(color);
-    pulseCircle.drawCircle(0, 0, Math.max(this.radius * 1.2, this.radius + 4));
-    pulseCircle.alpha = 0;
-    this.addChildAt(pulseCircle, 0);
-
-    new JMTween(pulseCircle, 100).to({alpha: 0.5}).start().chain(pulseCircle, 300).to({alpha: 0}).onComplete(() => {
-      pulseCircle.destroy();
-    });
-  }
-
   public adjustIntensity = () => {
     if (this._Intensity !== this.targetIntensity) {
       if (this._Intensity < this.targetIntensity) {
@@ -65,6 +53,18 @@ export class PlantNodeView extends PIXI.Container {
       this.sprite.tint = colorLuminance(this.color, this._Intensity);
       this.sprite.scale.set(this._Intensity);
     }
+  }
+
+  public pulse(color: number) {
+    let pulseCircle = new PIXI.Graphics();
+    pulseCircle.beginFill(color);
+    pulseCircle.drawCircle(0, 0, Math.max(this.radius * 1.2, this.radius + 4));
+    pulseCircle.alpha = 0;
+    this.addChildAt(pulseCircle, 0);
+
+    new JMTween(pulseCircle, 100).to({alpha: 0.5}).start().chain(pulseCircle, 300).to({alpha: 0}).onComplete(() => {
+      pulseCircle.destroy();
+    });
   }
 
   public showConnectionCount(current: number, max: number) {

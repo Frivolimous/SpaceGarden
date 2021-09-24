@@ -25,7 +25,6 @@ export class PlantNode {
   private static cUid: number = 0;
 
   public uid: number;
-  public onUpdate = new JMEventListener<PlantNode>();
   public outlets: PlantNode[] = [];
   public fruits: PlantNode[] = [];
 
@@ -35,7 +34,7 @@ export class PlantNode {
   public physics: PlantNodePhysics;
   public power: PlantNodePower;
 
-  constructor(private config: INodeConfig, private transferPower: TransferPowerFunction) {
+  constructor(private config: INodeConfig, transferPower: TransferPowerFunction) {
     _.defaults(config, dNodeConfig);
 
     this.uid = PlantNode.generateUid();
@@ -58,6 +57,14 @@ export class PlantNode {
       this.view.alpha = 1;
       this.physics.hasMass = true;
     }
+  }
+
+  get maxOutlets(): number {
+    return this.config.maxLinks;
+  }
+
+  public destroy() {
+    this.view.destroy();
   }
 
   public isFruit(): boolean {
@@ -171,15 +178,17 @@ export class PlantNode {
     this.power.researchCurrent += amount;
   }
 
-  public onTick = () => {
-    if (!this.active) return;
+  public tickPower() {
+    if (this.active) {
+      this.power.onTick();
+      this.view.setIntensity(this.power.powerPercent);
+    }
+  }
 
-    this.power.onTick();
+  public tickPhysics() {
     this.physics.moveBody();
     this.view.adjustIntensity();
 
-    if (this.view) this.view.setIntensity(this.power.powerPercent);
-    this.onUpdate.publish(this);
   }
 
   public toString(): string {

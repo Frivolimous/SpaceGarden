@@ -3,45 +3,37 @@ import { Config } from '../../Config';
 import { Colors } from '../../data/Colors';
 import { INodeConfig } from '../../data/NodeData';
 import { NodeManager } from '../../services/NodeManager';
-import { TextureCache } from '../../services/TextureCache';
 import { FDGContainer } from '../FDG/FDGContainer';
 import { FDGLink } from '../FDG/FDGLink';
-import { FDGNode } from '../FDG/FDGNode';
+import { INodeSave, PlantNode } from '../nodes/PlantNode';
+import { ITransferBlock } from '../nodes/PlantNodePower';
 import { AIType, CrawlerModel } from './Parts/CrawlerModel';
-import { GameNode, INodeSave, ITransferBlock } from './Parts/GameNode';
 
 export class GameController {
-  public nodes: GameNode[] = [];
+  public nodes: PlantNode[] = [];
   public crawlers: CrawlerModel[] = [];
 
   constructor(private container: FDGContainer, private nodeManager: NodeManager) {
 
   }
 
-  public addNewNode(config: INodeConfig): FDGNode {
-    let node: FDGNode = new FDGNode(TextureCache.getNodeGraphicTexture(config.shape, config.radius), config);
-
-    this.container.addNode(node);
-    this.addNode(node);
-
-    return node;
-  }
-
-  public addNode = (view: FDGNode) => {
-    let node = new GameNode(view, view.config, this.transferPower);
-    this.nodes.push(node);
-  }
-
-  public removeNodeByView = (view: FDGNode) => {
-    let node = view.data;
-    _.pull(this.nodes, node);
-  }
-
   public destroy() {
 
   }
 
-  public addCrawler(config: any, node: GameNode): CrawlerModel {
+  public addNewNode(config: INodeConfig): PlantNode {
+    let node = new PlantNode(config, this.transferPower);
+    this.container.addNode(node);
+    this.nodes.push(node);
+
+    return node;
+  }
+
+  public removeNode = (node: PlantNode) => {
+    _.pull(this.nodes, node);
+  }
+
+  public addCrawler(config: any, node: PlantNode): CrawlerModel {
     let crawler = new CrawlerModel(node);
     this.crawlers.push(crawler);
     this.container.addCrawler(crawler.view);
@@ -53,72 +45,78 @@ export class GameController {
     this.container.removeCrawler(crawler.view);
   }
 
+  public linkNodes(origin: PlantNode, target: PlantNode): FDGLink {
+    origin.linkNode(target);
+    target.linkNode(origin, true);
+
+    return this.container.addLink(origin, target);
+  }
+
   public onTick(ticks: number) {
-    this.nodes.forEach(node => {
-      node.onTick();
-      if (node.fruitSpawn > 1 && node.fruits.length < node.maxFruits) {
-        node.fruitSpawn--;
-        let fruitConfig = this.nodeManager.getNodeConfig(node.fruitType);
-
-        let fruit = this.addNewNode(fruitConfig);
-
-        this.container.linkNodes(node.view, fruit);
-        fruit.position.set(node.view.x, node.view.y);
-      }
-    });
-
-    this.updateCrawlers();
+    this.nodes.forEach(this.updateNode);
+    this.crawlers.forEach(this.updateCrawler);
 
     if (ticks > 1) {
       this.onTick(ticks - 1);
     }
   }
 
-  public updateCrawlers() {
-    this.crawlers.forEach(crawler => {
-      switch (crawler.aiType) {
-        case AIType.WANDER:
-          crawler.magnitude += crawler.speed;
-          if (crawler.magnitude > 1) {
-            crawler.magnitude = 0;
-            crawler.cLoc = crawler.nextLoc;
-            crawler.nextLoc = null;
-            crawler.randomizeAi();
-          }
-          break;
-        case AIType.IDLE:
-          crawler.magnitude += crawler.speed / crawler.cLoc.config.radius * 10;
-          if (crawler.magnitude > crawler.aiExtra) {
-            crawler.magnitude = crawler.aiExtra;
-            crawler.speed = - crawler.speed;
-          } else if (crawler.magnitude < 0) {
-            crawler.magnitude = 0;
-            crawler.setAi();
-          }
-          break;
-        case AIType.GO_CENTER:
-          crawler.magnitude -= crawler.speed / crawler.cLoc.config.radius * 10;
-          if (crawler.magnitude < 0) {
-            crawler.magnitude = 0;
-            crawler.setAi();
-          }
-          break;
-      }
+  public updateNode(node: PlantNode) {
+    node.tickPower();
 
-      crawler.update();
-      console.log('crawler', crawler);
-    });
+    if (node.power.fruitSpawn >= 1 && node.canSpawnFruit()) {
+      node.power.fruitSpawn--;
+
+      let fruitConfig = this.nodeManager.getNodeConfig(node.power.fruitType);
+      let fruit = this.addNewNode(fruitConfig);
+      this.linkNodes(node, fruit);
+      fruit.view.position.set(node.view.x, node.view.y);
+    }
+  }
+
+  public updateCrawler(crawler: CrawlerModel) {
+    switch (crawler.aiType) {
+      case AIType.WANDER:
+        crawler.magnitude += crawler.speed;
+        if (crawler.magnitude > 1) {
+          crawler.magnitude = 0;
+          crawler.cLoc = crawler.nextLoc;
+          crawler.nextLoc = null;
+          crawler.randomizeAi();
+        }
+        break;
+      case AIType.IDLE:
+        crawler.magnitude += crawler.speed / crawler.cLoc.view.radius * 10;
+        if (crawler.magnitude > crawler.aiExtra) {
+          crawler.magnitude = crawler.aiExtra;
+          crawler.speed = - crawler.speed;
+        } else if (crawler.magnitude < 0) {
+          crawler.magnitude = 0;
+          crawler.setAi();
+        }
+        break;
+      case AIType.GO_CENTER:
+        crawler.magnitude -= crawler.speed / crawler.cLoc.view.radius * 10;
+        if (crawler.magnitude < 0) {
+          crawler.magnitude = 0;
+          crawler.setAi();
+        }
+        break;
+    }
+
+    crawler.update();
+    console.log('crawler', crawler);
   }
 
   public saveNodes(): INodeSave[] {
     let saves: INodeSave[] = this.nodes.map(node => {
-      let outlets: number[] = this.container.links.filter(l => l.origin === node.view).map(l => l.target.data.uid);
+      let outlets: number[] = this.container.links.filter(l => l.origin === node).map(l => l.target.uid);
 
       return {
         uid: node.uid,
-        slug: node.config.slug,
-        powerCurrent: Math.round(node.powerCurrent),
-        researchCurrent: node.config.slug === 'seedling' ? node.researchCurrent : 0,
+        slug: node.slug,
+        powerCurrent: Math.round(node.power.powerCurrent),
+        researchCurrent: node.slug === 'seedling' ? node.power.researchCurrent : 0,
         outlets,
         x: Math.round(node.view.x),
         y: Math.round(node.view.y),
@@ -134,80 +132,77 @@ export class GameController {
     console.log('LOAD_SAVE', saves.map(save => save.slug));
 
     nodes.forEach((node, i) => {
-      this.container.addNode(node.view);
+      this.container.addNode(node);
 
       saves[i].outlets.forEach(uid => {
-        this.container.linkNodes(node.view, nodes.find(node2 => node2.uid === uid).view);
+        this.linkNodes(node, nodes.find(node2 => node2.uid === uid));
       });
     });
   }
 
-  public importSave(save: INodeSave): GameNode {
+  public importSave(save: INodeSave): PlantNode {
     let config = this.nodeManager.getNodeConfig(save.slug);
 
-    let texture = TextureCache.getNodeGraphicTexture(config.shape, config.radius);
+    let node = new PlantNode(config, this.transferPower);
+    node.power.powerCurrent = save.powerCurrent;
+    node.power.researchCurrent = save.researchCurrent;
+    node.uid = save.uid;
+    node.view.position.set(save.x, save.y);
 
-    let m = new GameNode(new FDGNode(texture, config), config, this.transferPower);
-    m.powerCurrent = save.powerCurrent;
-    m.researchCurrent = save.researchCurrent;
-
-    m.uid = save.uid;
-
-    m.view.position.set(save.x, save.y);
-
-    GameNode.addUid(save.uid);
-    return m;
+    PlantNode.addUid(save.uid);
+    return node;
   }
 
-  public transferPower = (origin: GameNode, target: GameNode, block: ITransferBlock) => {
+  public transferPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
+    let link = this.container.getLink(origin, target);
+    if (!link) return;
+
     if (block.type === 'grow') {
-      target.powerCurrent += block.amount;
+      target.power.powerCurrent += block.amount;
 
       if (block.removeOrigin) {
-        this.container.removeNode(origin.view);
+        this.container.removeNode(origin);
       } else {
-        let link = this.container.getLink(origin.view, target.view);
-        if (link) {
-          link.flash();
-        }
+        link.flash();
       }
     } else if (block.type === 'research') {
-      let link = this.container.getLink(origin.view, target.view);
-      if (link) {
-        link.zip(origin.view, Colors.Node.purple, block.fade, () => {
-          if (target.config.slug === 'seedling') {
-            target.receiveResearch(block.amount);
-            // add research
-          } else {
-            block.fade--;
-            if (block.fade <= 0) return;
-            let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
-            // let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling'))));
-            if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
-            if (target2) {
-              this.transferPower(target, target2, block);
-            }
+      link.zip(origin, Colors.Node.purple, block.fade, () => {
+        if (target.slug === 'seedling') {
+          target.receiveResearch(block.amount);
+        } else {
+          block.fade--;
+          if (block.fade <= 0) return;
+          let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+          // let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling'))));
+          if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
+          if (target2) {
+            this.transferPower(target, target2, block);
           }
-        });
-      }
+        }
+      });
     } else if (block.type === 'fruit') {
-      let link = this.container.getLink(origin.view, target.view);
-      if (link) {
-        link.zip(origin.view, Colors.Node.orange, block.fade, () => {
-          if (target.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
-            target.receiveFruitPower(block.amount, Colors.Node.orange);
-            // add research
-          } else {
-            block.fade--;
-            if (block.fade <= 0) return;
-            let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
-            if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
-            if (target2) {
-              this.transferPower(target, target2, block);
-            }
+      link.zip(origin, Colors.Node.orange, block.fade, () => {
+        if (target.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
+          target.receiveFruitPower(block.amount);
+          // add research
+        } else {
+          block.fade--;
+          if (block.fade <= 0) return;
+          let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+          if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
+          if (target2) {
+            this.transferPower(target, target2, block);
           }
-        });
-      }
+        }
+      });
     }
   }
+
+  public transferGrowPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
+  }
+  public transferResearchPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
+  }
+  public transferFruitPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
+  }
+
 }

@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { JMTween } from '../../JMGE/JMTween';
 import { colorLuminance } from '../../JMGE/others/Colors';
-import { FDGNode } from './FDGNode';
+import { PlantNode } from '../nodes/PlantNode';
 
 interface IBlob {
   x: number;
@@ -22,16 +22,16 @@ export class FDGLink {
   private lineStyle = 2;
   private blobs: IBlob[] = [];
 
-  constructor(public origin: FDGNode, public target: FDGNode) {
-    this.color = target.config.color;
-    if (origin.data.isFruit() || target.data.isFruit()) {
-      this.length = (origin.config.radius + target.config.radius);
+  constructor(public origin: PlantNode, public target: PlantNode) {
+    this.color = target.view.color;
+    if (origin.isFruit() || target.isFruit()) {
+      this.length = (origin.view.radius + target.view.radius);
     } else {
-      this.length = (origin.config.radius + target.config.radius) * 1.5;
+      this.length = (origin.view.radius + target.view.radius) * 1.5;
     }
   }
 
-  public hasNode(node1: FDGNode, node2?: FDGNode): boolean {
+  public hasNode(node1: PlantNode, node2?: PlantNode): boolean {
     if (this.origin === node1) {
       if (!node2 || this.target === node2) {
         return true;
@@ -45,7 +45,7 @@ export class FDGLink {
     return false;
   }
 
-  public other(node: FDGNode) {
+  public other(node: PlantNode) {
     return this.origin === node ? this.target : this.origin;
   }
 
@@ -58,14 +58,14 @@ export class FDGLink {
     return new JMTween((this as FDGLink), 300).to({ intensity: 0 }).start();
   }
 
-  public zip(origin: FDGNode, color: number, fade: number, onComplete: () => void): JMTween {
-    let blob: IBlob = {x: origin.x, y: origin.y, color, size: 2, fade};
+  public zip(origin: PlantNode, color: number, fade: number, onComplete: () => void): JMTween {
+    let blob: IBlob = {x: origin.view.x, y: origin.view.y, color, size: 2, fade};
     let target = this.other(origin);
     this.blobs.push(blob);
     return new JMTween({percent: 0}, 300).to({percent: 1}).start().onUpdate(data => {
-      if (!origin.parent || !target.parent) return;
-      blob.x = origin.x + (target.x - origin.x) * data.percent;
-      blob.y = origin.y + (target.y - origin.y) * data.percent;
+      if (!origin.view.parent || !target.view.parent) return;
+      blob.x = origin.view.x + (target.view.x - origin.view.x) * data.percent;
+      blob.y = origin.view.y + (target.view.y - origin.view.y) * data.percent;
     }).onComplete(() => {
       _.pull(this.blobs, blob);
       onComplete();
@@ -74,8 +74,8 @@ export class FDGLink {
 
   public drawTo(canvas: PIXI.Graphics) {
     canvas.lineStyle(this.lineStyle, this.getColor())
-        .moveTo(this.origin.x, this.origin.y)
-        .lineTo(this.target.x, this.target.y);
+        .moveTo(this.origin.view.x, this.origin.view.y)
+        .lineTo(this.target.view.x, this.target.view.y);
 
     this.blobs.forEach(blob => {
       canvas.lineStyle(0).beginFill(blob.color).drawCircle(blob.x, blob.y, blob.size);
