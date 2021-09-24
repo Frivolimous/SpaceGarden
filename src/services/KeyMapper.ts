@@ -23,6 +23,11 @@ export class KeyMapper {
     this.keysUp = keysUp || this.keysUp;
   }
 
+  public addKeys(keysDown: IKeyMap[]) {
+    this.makeLower(keysDown);
+    this.keysDown = this.keysDown.concat(keysDown);
+  }
+
   private makeLower(map: IKeyMap[]) {
     map.forEach(data => {
       data.key = data.key.toLowerCase();

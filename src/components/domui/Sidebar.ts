@@ -13,7 +13,7 @@ export class Sidebar {
   private static aid: number = 0;
 
   public nodeMap: { element: HTMLDivElement, node: GameNode, atStart?: boolean }[] = [];
-  public currentHighlight: HTMLDivElement;
+  public currentHighlight: { element: HTMLDivElement, node: GameNode};
   public hideStemButton: HTMLButtonElement;
 
   public container: HTMLDivElement;
@@ -82,10 +82,18 @@ export class Sidebar {
   }
 
   public addNodeElement = (view: FDGNode) => {
-    if (view.config.type !== 'fruit') {
+    if (!view.data.isFruit()) {
       let node = view.data;
       let atStart = view.config.slug === 'seedling';
       let element = this.addElement(node.toString(), atStart);
+      element.addEventListener('pointerover', () => {
+        this.highlightNode(view, true);
+      });
+
+      element.addEventListener('pointerout', () => {
+        this.highlightNode(null);
+      });
+
       this.nodeMap.push({ element, node, atStart });
 
       if (view.config.slug === 'seedling') {
@@ -120,7 +128,7 @@ export class Sidebar {
   }
 
   public removeNodeElement = (view: FDGNode) => {
-    if (view.config.type !== 'fruit') {
+    if (!view.data.isFruit()) {
       if (view.config.slug === 'seedling') {
         this.nextSkillPanel.clear();
       }
@@ -155,15 +163,19 @@ export class Sidebar {
     return element;
   }
 
-  public highlightNode(node: FDGNode) {
+  public highlightNode(node: FDGNode, andHighlightNode?: boolean) {
     if (this.currentHighlight) {
-      this.currentHighlight.classList.remove('highlight');
+      this.currentHighlight.element.classList.remove('highlight');
+      this.currentHighlight.node.view.highlight = false;
       this.currentHighlight = null;
     }
     if (node) {
       let map = this.nodeMap.find(data => data.node.view === node);
       map.element.classList.add('highlight');
-      this.currentHighlight = map.element;
+      if (andHighlightNode) {
+        node.highlight = true;
+      }
+      this.currentHighlight = map;
     }
   }
 }

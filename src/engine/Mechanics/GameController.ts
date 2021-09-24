@@ -7,10 +7,12 @@ import { TextureCache } from '../../services/TextureCache';
 import { FDGContainer } from '../FDG/FDGContainer';
 import { FDGLink } from '../FDG/FDGLink';
 import { FDGNode } from '../FDG/FDGNode';
+import { AIType, CrawlerModel } from './Parts/CrawlerModel';
 import { GameNode, INodeSave, ITransferBlock } from './Parts/GameNode';
 
 export class GameController {
   public nodes: GameNode[] = [];
+  public crawlers: CrawlerModel[] = [];
 
   constructor(private container: FDGContainer, private nodeManager: NodeManager) {
 
@@ -39,6 +41,18 @@ export class GameController {
 
   }
 
+  public addCrawler(config: any, node: GameNode): CrawlerModel {
+    let crawler = new CrawlerModel(node);
+    this.crawlers.push(crawler);
+    this.container.addCrawler(crawler.view);
+    return crawler;
+  }
+
+  public removeCrawler(crawler: CrawlerModel) {
+    _.pull(this.crawlers, crawler);
+    this.container.removeCrawler(crawler.view);
+  }
+
   public onTick(ticks: number) {
     this.nodes.forEach(node => {
       node.onTick();
@@ -53,9 +67,47 @@ export class GameController {
       }
     });
 
+    this.updateCrawlers();
+
     if (ticks > 1) {
       this.onTick(ticks - 1);
     }
+  }
+
+  public updateCrawlers() {
+    this.crawlers.forEach(crawler => {
+      switch (crawler.aiType) {
+        case AIType.WANDER:
+          crawler.magnitude += crawler.speed;
+          if (crawler.magnitude > 1) {
+            crawler.magnitude = 0;
+            crawler.cLoc = crawler.nextLoc;
+            crawler.nextLoc = null;
+            crawler.randomizeAi();
+          }
+          break;
+        case AIType.IDLE:
+          crawler.magnitude += crawler.speed / crawler.cLoc.config.radius * 10;
+          if (crawler.magnitude > crawler.aiExtra) {
+            crawler.magnitude = crawler.aiExtra;
+            crawler.speed = - crawler.speed;
+          } else if (crawler.magnitude < 0) {
+            crawler.magnitude = 0;
+            crawler.setAi();
+          }
+          break;
+        case AIType.GO_CENTER:
+          crawler.magnitude -= crawler.speed / crawler.cLoc.config.radius * 10;
+          if (crawler.magnitude < 0) {
+            crawler.magnitude = 0;
+            crawler.setAi();
+          }
+          break;
+      }
+
+      crawler.update();
+      console.log('crawler', crawler);
+    });
   }
 
   public saveNodes(): INodeSave[] {

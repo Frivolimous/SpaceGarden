@@ -7,17 +7,21 @@ import { JMRect } from '../../JMGE/others/JMRect';
 import { NodeSlug } from '../../data/NodeData';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Config } from '../../Config';
+import { CrawlerView } from '../Mechanics/Parts/CrawlerView';
 
 export class FDGContainer extends PIXI.Graphics {
   public onNodeAdded = new JMEventListener<FDGNode>();
   public onNodeRemoved = new JMEventListener<FDGNode>();
-
   public links: FDGLink[] = [];
+
+  private nodeLayer = new PIXI.Container();
+  private crawlerLayer = new PIXI.Container();
   private nodes: FDGNode[] = [];
   private pulls: IPull[] = [];
 
   constructor(private borders: JMRect) {
     super();
+    this.addChild(this.nodeLayer, this.crawlerLayer);
   }
 
   public addPull(pull: IPull) {
@@ -30,7 +34,7 @@ export class FDGContainer extends PIXI.Graphics {
 
   public addNode(node: FDGNode) {
     this.nodes.push(node);
-    this.addChild(node);
+    this.nodeLayer.addChild(node);
     this.onNodeAdded.publish(node);
   }
 
@@ -60,13 +64,21 @@ export class FDGContainer extends PIXI.Graphics {
   public removeAllLinksFor(node: FDGNode, excludeFruit?: boolean) {
     for (let i = this.links.length - 1; i >= 0; i--) {
       if (this.links[i].hasNode(node)) {
-        if (excludeFruit && this.links[i].other(node).config.type === 'fruit') continue;
+        if (excludeFruit && this.links[i].other(node).data.isFruit()) continue;
 
         this.links[i].origin.removeNode(this.links[i].target);
         this.links[i].target.removeNode(this.links[i].origin);
         this.links.splice(i, 1);
       }
     }
+  }
+
+  public addCrawler(crawler: CrawlerView) {
+    this.crawlerLayer.addChild(crawler);
+  }
+
+  public removeCrawler(crawler: CrawlerView) {
+    this.crawlerLayer.removeChild(crawler);
   }
 
   public getLink(origin: FDGNode, target: FDGNode): FDGLink {
@@ -106,7 +118,7 @@ export class FDGContainer extends PIXI.Graphics {
       if (config.maxLinks && node.data.outlets.length >= node.config.maxLinks) continue;
       if (config.filter && config.filter === node) continue;
       if (config.notType && node.config.slug === config.notType) continue;
-      if (config.notFruit && node.config.type === 'fruit') continue;
+      if (config.notFruit && node.data.isFruit()) continue;
       // if (par.hasTag!=null && par.hasTag!==this.nodes[i].tag) continue;
       // if (par.notHasTag!=null && par.notHasTag===this.nodes[i].tag) continue;
 
@@ -125,7 +137,7 @@ export class FDGContainer extends PIXI.Graphics {
   }
 
   public showConnectionCount(show: boolean = true) {
-    this.nodes.forEach(node => node.config.type !== 'fruit' ? node.showConnectionCount(show) : null);
+    this.nodes.forEach(node => !node.data.isFruit() ? node.showConnectionCount(show) : null);
   }
 
   // ==== RUNNING ==== \\

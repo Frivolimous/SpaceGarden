@@ -15,16 +15,16 @@ interface IBlob {
 export class FDGLink {
   public onTick = new JMEventListener();
   public length = 40;
-  public color = 0xFFFFFF;
-  public lineStyle = 2;
   public intensity = 0;
   public active = true;
 
-  public blobs: IBlob[] = [];
+  private color = 0xFFFFFF;
+  private lineStyle = 2;
+  private blobs: IBlob[] = [];
 
   constructor(public origin: FDGNode, public target: FDGNode) {
     this.color = target.config.color;
-    if (origin.config.type === 'fruit' || target.config.type === 'fruit') {
+    if (origin.data.isFruit() || target.data.isFruit()) {
       this.length = (origin.config.radius + target.config.radius);
     } else {
       this.length = (origin.config.radius + target.config.radius) * 1.5;
@@ -43,6 +43,10 @@ export class FDGLink {
     }
 
     return false;
+  }
+
+  public other(node: FDGNode) {
+    return this.origin === node ? this.target : this.origin;
   }
 
   public getColor() {
@@ -66,10 +70,6 @@ export class FDGLink {
       _.pull(this.blobs, blob);
       onComplete();
     });
-  }
-
-  public other(node: FDGNode) {
-    return this.origin === node ? this.target : this.origin;
   }
 
   public drawTo(canvas: PIXI.Graphics) {

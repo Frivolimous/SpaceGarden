@@ -1,4 +1,5 @@
 import * as PIXI from 'pixi.js';
+import { GOD_MODE } from '../services/_Debug';
 import { INodeConfig } from '../data/NodeData';
 import { FDGNode } from '../engine/FDG/FDGNode';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
@@ -7,8 +8,6 @@ import { TooltipReader } from './tooltip/TooltipReader';
 import { Button } from './ui/Button';
 import { NodeButton } from './ui/NodeButton';
 import { ToggleButton } from './ui/ToggleButton';
-
-const TURBO = true;
 
 export class BottomBar extends PIXI.Container {
   public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent }>();
@@ -53,7 +52,7 @@ export class BottomBar extends PIXI.Container {
     TooltipReader.addTooltip(this.deleteButton, {title: StringManager.data.TOOLTIP_DELETE_TITLE, description: StringManager.data.TOOLTIP_DELETE_DESC});
     this.turboButton = new ToggleButton({ label: StringManager.data.BUTTON_TURBO, width: 100, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: this.onTurboButton.publish });
     TooltipReader.addTooltip(this.turboButton, {title: StringManager.data.TOOLTIP_TURBO_TITLE, description: StringManager.data.TOOLTIP_TURBO_DESC});
-    this.turboButton.visible = TURBO;
+    this.turboButton.visible = GOD_MODE;
     this.proceedButton = new Button({ label: StringManager.data.BUTTON_PROCEED, onClick: this.onProceedButton.publish });
     TooltipReader.addTooltip(this.proceedButton, {title: StringManager.data.TOOLTIP_PROCEED_TITLE, description: StringManager.data.TOOLTIP_PROCEED_DESC});
     this.proceedButton.visible = false;

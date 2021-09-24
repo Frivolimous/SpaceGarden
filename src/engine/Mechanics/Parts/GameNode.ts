@@ -3,8 +3,6 @@ import { Config } from '../../../Config';
 import { Colors } from '../../../data/Colors';
 import { INodeConfig, NodeSlug } from '../../../data/NodeData';
 import { JMEventListener } from '../../../JMGE/events/JMEventListener';
-import { NodeManager } from '../../../services/NodeManager';
-import { TextureCache } from '../../../services/TextureCache';
 import { FDGNode } from '../../FDG/FDGNode';
 
 export class GameNode {
@@ -46,7 +44,7 @@ export class GameNode {
   constructor(public view: FDGNode, public config: INodeConfig, private transferPower: TransferPowerFunction) {
     this.uid = GameNode.generateUid();
     view.data = this;
-    view.intensity = 1;
+    view.setIntensity(1, true);
 
     this.fruitType = config.fruitType;
     this.fruitChain = config.fruitChain;
@@ -68,8 +66,12 @@ export class GameNode {
     return this.powerCurrent / this.config.powerMax / this.config.powerWeight;
   }
 
+  public isFruit(): boolean {
+    return this.config.type === 'fruit';
+  }
+
   public removeNode(node: GameNode) {
-    if (node.config.type === 'fruit') {
+    if (node.isFruit()) {
       for (let i = 0; i < this.fruits.length; i++) {
         if (this.fruits[i] === node) {
           this.fruits.splice(i, 1);
@@ -118,7 +120,7 @@ export class GameNode {
   }
 
   public linkNode(target: GameNode, forceOutlet = false) {
-    if (target.config.type === 'fruit' && !forceOutlet) {
+    if (target.isFruit() && !forceOutlet) {
       this.fruits.push(target);
       target.fruitType = target.fruitType || this.fruitType;
       target.fruitChain = this.fruitChain - 1;
@@ -126,7 +128,7 @@ export class GameNode {
     } else {
       this.outlets.push(target);
 
-      if (target.config.type !== 'fruit' && this.config.outletEffects) {
+      if (!target.isFruit() && this.config.outletEffects) {
         this.config.outletEffects.forEach(effect => {
           if (effect.type === 'additive') {
             (target as any)[effect.stat] += effect.amount;
@@ -177,7 +179,7 @@ export class GameNode {
       this.attemptTransferPower();
     }
 
-    if (this.view) this.view.intensity = this.powerPercent;
+    if (this.view) this.view.setIntensity(this.powerPercent);
     this.onUpdate.publish(this);
   }
 

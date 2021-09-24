@@ -79,9 +79,12 @@ export class SaveManager {
     });
   }
 
-  public static async saveExtrinsic(extrinsic?: IExtrinsicModel): Promise<IExtrinsicModel> {
+  public static async saveExtrinsic(extrinsic?: IExtrinsicModel, andSet?: boolean): Promise<IExtrinsicModel> {
     return new Promise((resolve) => {
       extrinsic = extrinsic || SaveManager.extrinsic;
+      if (andSet) {
+        SaveManager.extrinsic = extrinsic;
+      }
 
       switch (SAVE_LOC) {
         case 'virtual': virtualSave.extrinsic = extrinsic; break;

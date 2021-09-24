@@ -16,13 +16,14 @@ import { Sidebar } from '../components/domui/Sidebar';
 import { GameNode } from '../engine/Mechanics/Parts/GameNode';
 import { INodeConfig, NodeData } from '../data/NodeData';
 import { FDGNode } from '../engine/FDG/FDGNode';
-import { IExtrinsicModel } from '../data/SaveData';
+import { IExtrinsicModel, TierSaves } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
 import { Config } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
 import { ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
 import { StringManager } from '../services/StringManager';
+import { GOD_MODE } from '../services/_Debug';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -43,7 +44,7 @@ export class GameUI extends BaseUI {
 
   private extrinsic: IExtrinsicModel;
 
-  constructor(level?: string) {
+  constructor(level?: any) {
     super({bgColor: 0x777777});
 
     this.extrinsic = SaveManager.getExtrinsic();
@@ -99,25 +100,34 @@ export class GameUI extends BaseUI {
       {key: ' ', function: () => this.running = !this.running},
       {key: '=', altKey: '+', function: () => this.canvas.zoomBy(1.2), noHold: true},
       {key: '-', altKey: '_', function: () => this.canvas.zoomBy(1 / 1.2), noHold: true},
-      {key: '[', function: () => this.gameSpeed = Math.max(this.gameSpeed - 1, 1)},
-      {key: ']', function: () => this.gameSpeed++},
     ],
     [
       {key: 'ArrowLeft', altKey: 'a', function: () => this.canvas.endPan(Direction.LEFT)},
       {key: 'ArrowRight', altKey: 'd', function: () => this.canvas.endPan(Direction.RIGHT)},
       {key: 'ArrowUp', altKey: 'w', function: () => this.canvas.endPan(Direction.UP)},
       {key: 'ArrowDown', altKey: 's', function: () => this.canvas.endPan(Direction.DOWN)},
-      {key: 'p', function: () => this.resetGame()},
     ]);
+
+    if (GOD_MODE) {
+      this.keymapper.addKeys([
+        {key: '[', function: () => this.gameSpeed = Math.max(this.gameSpeed - 1, 1)},
+        {key: ']', function: () => this.gameSpeed++},
+        {key: 'p', function: () => this.resetGame()},
+        {key: '`', function: () => this.logSave()},
+        {key: '1', function: () => this.loadSave(TierSaves[1])},
+        {key: '0', function: () => this.loadSave(TierSaves[0])},
+        {key: 'z', function: () => this.gameC.addCrawler(null, this.gameC.nodes[0])},
+      ]);
+    }
 
     if (level) {
       if (level === 'empty') {
         this.newGame();
       } else {
-        this.gameC.loadSaves(JSON.parse(level));
+        this.gameC.loadSaves(level);
       }
     } else if (this.extrinsic.stageState) {
-      this.gameC.loadSaves(JSON.parse(this.extrinsic.stageState));
+      this.gameC.loadSaves(this.extrinsic.stageState);
     } else this.newGame();
 
     this.saveGameTimeout();
@@ -165,7 +175,7 @@ export class GameUI extends BaseUI {
   }
 
   public saveGame = () => {
-    let state = JSON.stringify(this.gameC.saveNodes());
+    let state = this.gameC.saveNodes();
     this.extrinsic.stageState = state;
     SaveManager.saveExtrinsic();
   }
@@ -251,8 +261,10 @@ export class GameUI extends BaseUI {
   }
 
   public onMouseMove = (position: {x: number, y: number}) => {
-    let node = this.container.getClosestObject({x: position.x, y: position.y, notFruit: true});
-    this.sidebar.highlightNode(node);
+    if (position.x < this.previousResize.outerBounds.right) {
+      let node = this.container.getClosestObject({x: position.x, y: position.y, notFruit: true});
+      this.sidebar.highlightNode(node);
+    }
   }
 
   public createNewNode = (e: {config: INodeConfig, e: PIXI.InteractionEvent}) => {
@@ -272,6 +284,7 @@ export class GameUI extends BaseUI {
         if (node.data.outlets.length > 0) {
           node.ghostMode = false;
           node.data.active = true;
+          node.setIntensity(node.data.powerPercent, true);
           if (link) link.active = true;
         } else {
           this.container.removeNode(node);
@@ -308,6 +321,19 @@ export class GameUI extends BaseUI {
         //   }
         // }
       },
+    });
+  }
+
+  private logSave = () => {
+    console.log(JSON.stringify(this.extrinsic));
+  }
+
+  private loadSave = (json: string) => {
+    let extrinsic = JSON.parse(json);
+    console.log('extrinsic');
+    SaveManager.saveExtrinsic(extrinsic, true).then(() => {
+      GameNode.resetUid();
+      this.navAndDestroy(new GameUI());
     });
   }
 }

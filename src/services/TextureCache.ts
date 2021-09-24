@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { Colors } from '../data/Colors';
 
-type TextureName = 'circle' | 'square' | 'triangle' |'thin-rect' | 'fat-rect' | 'pentagon' | 'hexagon' | 'firework';
+type TextureName = 'circle' | 'square' | 'triangle' |'thin-rect' | 'fat-rect' | 'pentagon' | 'hexagon' | 'firework' |
+    'crawler-power' | 'crawler';
 
 export const enum TextureUrl {
   GHOST = 'www.nowhere.com/ghost.png',
@@ -131,6 +132,14 @@ function createGraphicTextures() {
         TextureCache.addTextureFromNodeGraphic(polyNames[i], j, graphic);
       }
     }
+
+    graphic.clear().beginFill(0xffffff)
+      .drawCircle(0, 0, 4);
+    TextureCache.addTextureFromGraphic('crawler', graphic);
+
+    graphic.clear().beginFill(0xffffff)
+      .drawRect(0, 0, 2, 2);
+    TextureCache.addTextureFromGraphic('crawler-power', graphic);
 
     // graphic.clear()
     //   .lineStyle(20,0xffffff)
