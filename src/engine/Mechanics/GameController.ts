@@ -1,4 +1,5 @@
 import * as _ from 'lodash';
+import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Config } from '../../Config';
 import { Colors } from '../../data/Colors';
 import { INodeConfig } from '../../data/NodeData';
@@ -7,9 +8,12 @@ import { FDGContainer } from '../FDG/FDGContainer';
 import { FDGLink } from '../FDG/FDGLink';
 import { INodeSave, PlantNode } from '../nodes/PlantNode';
 import { ITransferBlock } from '../nodes/PlantNodePower';
-import { AIType, CrawlerModel } from './Parts/CrawlerModel';
+import { CrawlerModel, ICrawler } from './Parts/CrawlerModel';
+import { ICrawlerSave } from 'src/data/SaveData';
 
 export class GameController {
+  public onCrawlerAdded: JMEventListener<CrawlerModel> = new JMEventListener();
+  public onCrawlerRemoved: JMEventListener<CrawlerModel> = new JMEventListener();
   public nodes: PlantNode[] = [];
   public crawlers: CrawlerModel[] = [];
 
@@ -33,16 +37,18 @@ export class GameController {
     _.pull(this.nodes, node);
   }
 
-  public addCrawler(config: any, node: PlantNode): CrawlerModel {
-    let crawler = new CrawlerModel(node);
+  public addCrawler(config: ICrawler, node: PlantNode): CrawlerModel {
+    let crawler = new CrawlerModel(config, node);
     this.crawlers.push(crawler);
     this.container.addCrawler(crawler.view);
+    this.onCrawlerAdded.publish(crawler);
     return crawler;
   }
 
   public removeCrawler(crawler: CrawlerModel) {
     _.pull(this.crawlers, crawler);
     this.container.removeCrawler(crawler.view);
+    this.onCrawlerRemoved.publish(crawler);
   }
 
   public linkNodes(origin: PlantNode, target: PlantNode): FDGLink {
@@ -53,15 +59,21 @@ export class GameController {
   }
 
   public onTick(ticks: number) {
-    this.nodes.forEach(this.updateNode);
     this.crawlers.forEach(this.updateCrawler);
+    this.nodes.forEach(this.updateNode);
 
     if (ticks > 1) {
       this.onTick(ticks - 1);
     }
   }
 
-  public updateNode(node: PlantNode) {
+  public updateNode = (node: PlantNode) => {
+    if (node.flagDestroy) {
+      this.container.removeNode(node);
+      return;
+    } else if (node.flagUnlink) {
+      this.container.removeAllLinksFor(node);
+    }
     node.tickPower();
 
     if (node.power.fruitSpawn >= 1 && node.canSpawnFruit()) {
@@ -71,45 +83,31 @@ export class GameController {
       let fruit = this.addNewNode(fruitConfig);
       this.linkNodes(node, fruit);
       fruit.view.position.set(node.view.x, node.view.y);
+
+      if (node.slug === 'home' && this.crawlers.length < this.nodes.filter(node2 => node2.slug === 'home').length) {
+        this.addCrawler({}, node);
+      }
     }
   }
 
-  public updateCrawler(crawler: CrawlerModel) {
-    switch (crawler.aiType) {
-      case AIType.WANDER:
-        crawler.magnitude += crawler.speed;
-        if (crawler.magnitude > 1) {
-          crawler.magnitude = 0;
-          crawler.cLoc = crawler.nextLoc;
-          crawler.nextLoc = null;
-          crawler.randomizeAi();
-        }
-        break;
-      case AIType.IDLE:
-        crawler.magnitude += crawler.speed / crawler.cLoc.view.radius * 10;
-        if (crawler.magnitude > crawler.aiExtra) {
-          crawler.magnitude = crawler.aiExtra;
-          crawler.speed = - crawler.speed;
-        } else if (crawler.magnitude < 0) {
-          crawler.magnitude = 0;
-          crawler.setAi();
-        }
-        break;
-      case AIType.GO_CENTER:
-        crawler.magnitude -= crawler.speed / crawler.cLoc.view.radius * 10;
-        if (crawler.magnitude < 0) {
-          crawler.magnitude = 0;
-          crawler.setAi();
-        }
-        break;
-    }
-
+  public updateCrawler = (crawler: CrawlerModel) => {
     crawler.update();
-    console.log('crawler', crawler);
+    if (crawler.health > 1.5) {
+      console.log('breed!', crawler.health);
+      crawler.health /= 2;
+      this.addCrawler({health: crawler.health}, crawler.cLoc);
+    } else if (crawler.health <= 0) {
+      // this.removeCrawler(crawler);
+      _.pull(this.crawlers, crawler);
+      crawler.view.animateDie(() => {
+        this.container.removeCrawler(crawler.view);
+        this.onCrawlerRemoved.publish(crawler);
+      });
+    }
   }
 
   public saveNodes(): INodeSave[] {
-    let saves: INodeSave[] = this.nodes.map(node => {
+    let saves: INodeSave[] = this.nodes.filter(node => node.outlets.length > 0).map(node => {
       let outlets: number[] = this.container.links.filter(l => l.origin === node).map(l => l.target.uid);
 
       return {
@@ -126,7 +124,25 @@ export class GameController {
     return saves;
   }
 
-  public loadSaves(saves: INodeSave[]) {
+  public saveCrawlers(): ICrawlerSave[] {
+    let saves: ICrawlerSave[] = this.crawlers.map(crawler => {
+      return {
+        preference: crawler.preference,
+        health: crawler.health,
+        location: crawler.cLoc.uid,
+      };
+    });
+
+    return saves;
+
+    // export interface ICrawlerSave {
+    //   preference: CommandType;
+    //   health: number;
+    //   location: number;
+    // }
+  }
+
+  public loadSaves(saves: INodeSave[], crawlerSaves: ICrawlerSave[]) {
     let nodes = saves.map(save => this.importSave(save));
     this.nodes = nodes;
     console.log('LOAD_SAVE', saves.map(save => save.slug));
@@ -137,6 +153,10 @@ export class GameController {
       saves[i].outlets.forEach(uid => {
         this.linkNodes(node, nodes.find(node2 => node2.uid === uid));
       });
+    });
+
+    crawlerSaves.forEach((save, i) => {
+      this.addCrawler({health: save.health, preference: save.preference}, nodes.find(node2 => node2.uid === save.location));
     });
   }
 
@@ -197,12 +217,4 @@ export class GameController {
       });
     }
   }
-
-  public transferGrowPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
-  }
-  public transferResearchPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
-  }
-  public transferFruitPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
-  }
-
 }

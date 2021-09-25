@@ -34,6 +34,9 @@ export class PlantNode {
   public physics: PlantNodePhysics;
   public power: PlantNodePower;
 
+  public flagUnlink = false;
+  public flagDestroy = false;
+
   constructor(private config: INodeConfig, transferPower: TransferPowerFunction) {
     _.defaults(config, dNodeConfig);
 
@@ -83,7 +86,11 @@ export class PlantNode {
   }
 
   public isConnectedToCore(): boolean {
-    return this.checkConnections(node => node.config.slug === 'core');
+    return this.findNode(node => node.config.slug === 'core') !== null;
+  }
+
+  public findCore() {
+    return this.findNode(node => node.config.slug === 'core');
   }
 
   public removeNode(node: PlantNode) {
@@ -115,13 +122,13 @@ export class PlantNode {
     this.fruits = [];
   }
 
-  public checkConnections(testFunction: (node: PlantNode) => boolean): boolean {
+  public findNode(testFunction: (node: PlantNode) => boolean): PlantNode {
     let open: PlantNode[] = [this];
     let closed: PlantNode[] = [];
 
     while (open.length > 0) {
       let current = open.shift();
-      if (testFunction(current)) return true;
+      if (testFunction(current)) return current;
 
       closed.push(current);
 
@@ -132,7 +139,27 @@ export class PlantNode {
       });
     }
 
-    return false;
+    return null;
+  }
+
+  public distanceTo(testFunction: (node: PlantNode) => boolean): number {
+    let open: {node: PlantNode, distance: number}[] = [{node: this, distance: 0}];
+    let closed: {node: PlantNode, distance: number}[] = [];
+
+    while (open.length > 0) {
+      let current = open.shift();
+      if (testFunction(current.node)) return current.distance;
+
+      closed.push(current);
+
+      current.node.outlets.forEach(node => {
+        if (!_.some(open, data => data.node === node) && !_.some(closed, data => data.node === node)) {
+          open.push({node, distance: current.distance + 1});
+        }
+      });
+    }
+
+    return -1;
   }
 
   public setFruitStats(fruitType: NodeSlug, maxFruits: number, fruitChain: number) {
@@ -176,6 +203,23 @@ export class PlantNode {
   public receiveResearch = (amount: number) => {
     this.view.pulse(Colors.Node.purple);
     this.power.researchCurrent += amount;
+  }
+
+  public isHarvestable = (): boolean => {
+    return this.power.powerPercent > 0.6;
+  }
+
+  public hasHarvestableFruit(): boolean {
+    return _.some(this.fruits, fruit => (fruit.isHarvestable() || fruit.hasHarvestableFruit()));
+  }
+
+  public harvestFruit(): PlantNode {
+    let fruit: PlantNode;
+    fruit = _.sample(_.filter(this.fruits, fruit2 => fruit2.isHarvestable()));
+
+    if (!fruit) return null;
+
+    return fruit.harvestFruit() || fruit;
   }
 
   public tickPower() {

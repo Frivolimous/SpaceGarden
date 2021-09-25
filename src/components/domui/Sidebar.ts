@@ -1,6 +1,9 @@
+import { CrawlerModel } from '../../engine/Mechanics/Parts/CrawlerModel';
 import { PlantNode } from '../../engine/nodes/PlantNode';
 import { StringManager } from '../../services/StringManager';
 import { SkillPanel } from './SkillPanel';
+
+type SidebarElement = PlantNode | CrawlerModel;
 
 export class Sidebar {
   public static genAid(): string {
@@ -11,9 +14,10 @@ export class Sidebar {
 
   private static aid: number = 0;
 
-  public nodeMap: { element: HTMLDivElement, node: PlantNode, atStart?: boolean }[] = [];
-  public currentHighlight: { element: HTMLDivElement, node: PlantNode};
+  public nodeMap: { element: HTMLDivElement, node: SidebarElement, atStart?: boolean }[] = [];
+  public currentHighlight: { element: HTMLDivElement, node: SidebarElement};
   public hideStemButton: HTMLButtonElement;
+  public showCrawlersButton: HTMLButtonElement;
 
   public container: HTMLDivElement;
   // currentSkillPanel: SkillPanel;
@@ -21,9 +25,11 @@ export class Sidebar {
   public notification: HTMLElement;
 
   public _AreStemsHidden: boolean;
+  public _IsCrawlerMode: boolean;
 
   constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel) {
     this.container = document.getElementById('node-container') as HTMLDivElement;
+
     this.hideStemButton = document.createElement('button');
     this.hideStemButton.classList.add('skill-button');
     this.hideStemButton.innerHTML = StringManager.data.UI_SIDEBAR_HIDE_STEMS;
@@ -59,6 +65,31 @@ export class Sidebar {
     }
   }
 
+  public get isCrawlerMode(): boolean {
+    return this._IsCrawlerMode;
+  }
+
+  public set isCrawlerMode(b: boolean) {
+    this._IsCrawlerMode = b;
+    if (b) {
+      this.nodeMap.forEach(data => {
+        if (data.node.slug === 'crawler') {
+          data.element.style.removeProperty('display');
+        } else {
+          data.element.style.display = 'none';
+        }
+      });
+    } else {
+      this.nodeMap.forEach(data => {
+        if (data.node.slug === 'crawler') {
+          data.element.style.display = 'none';
+        } else {
+          data.element.style.removeProperty('display');
+        }
+      });
+    }
+  }
+
   public destroy() {
     this.currentSkillPanel && this.currentSkillPanel.destroy();
     this.nextSkillPanel.destroy();
@@ -67,6 +98,8 @@ export class Sidebar {
   public navIn() {
     this.container.innerHTML = '';
     this.container.appendChild(this.hideStemButton);
+    this.showCrawlersButton && this.container.appendChild(this.showCrawlersButton);
+
     this.nodeMap.forEach(data => {
       if (data.atStart) {
         this.container.prepend(data.element);
@@ -80,9 +113,30 @@ export class Sidebar {
     this.container.innerHTML = '';
   }
 
-  public addNodeElement = (node: PlantNode) => {
+  public addShowCrawlersButton() {
+    if (this.showCrawlersButton) return;
+
+    this.showCrawlersButton = document.createElement('button');
+    this.showCrawlersButton.classList.add('skill-button');
+    this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_CRAWLER_MODE;
+    this.showCrawlersButton.style.position = 'absolute';
+    this.showCrawlersButton.style.left = '5px';
+    this.showCrawlersButton.style.top = '0px';
+    this.showCrawlersButton.addEventListener('click', () => {
+      this.isCrawlerMode = !this.isCrawlerMode;
+      if (this.isCrawlerMode) {
+        this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_NODE_MODE;
+      } else {
+        this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_CRAWLER_MODE;
+      }
+    });
+    this.container.appendChild(this.showCrawlersButton);
+  }
+
+  public addNodeElement = (node: SidebarElement) => {
+    if (node.slug === 'crawler') this.addShowCrawlersButton();
     if (!node.isFruit()) {
-      let atStart = node.slug === 'seedling';
+      let atStart = (node.slug === 'seedling' || node.slug === 'crawler');
       let element = this.addElement(node.toString(), atStart);
       element.addEventListener('pointerover', () => {
         this.highlightNode(node, true);
@@ -112,6 +166,15 @@ export class Sidebar {
           element.style.display = 'none';
         }
       }
+      if (this.isCrawlerMode) {
+        if (node.slug !== 'crawler') {
+          element.style.display = 'none';
+        }
+      } else {
+        if (node.slug === 'crawler') {
+          element.style.display = 'none';
+        }
+      }
 
       if (node.slug === 'core' && this.currentSkillPanel) {
         let button = document.createElement('button');
@@ -125,7 +188,7 @@ export class Sidebar {
     }
   }
 
-  public removeNodeElement = (node: PlantNode) => {
+  public removeNodeElement = (node: SidebarElement) => {
     if (!node.isFruit()) {
       if (node.slug === 'seedling') {
         this.nextSkillPanel.clear();
@@ -160,7 +223,7 @@ export class Sidebar {
     return element;
   }
 
-  public highlightNode(node: PlantNode, andHighlightNode?: boolean) {
+  public highlightNode(node: SidebarElement, andHighlightNode?: boolean) {
     if (this.currentHighlight) {
       this.currentHighlight.element.classList.remove('highlight');
       this.currentHighlight.node.view.highlight = false;

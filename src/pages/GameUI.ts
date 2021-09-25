@@ -22,7 +22,7 @@ import { ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
 import { StringManager } from '../services/StringManager';
 import { GOD_MODE } from '../services/_Debug';
-import { PlantNode } from '../engine/nodes/PlantNode';
+import { INodeSave, PlantNode } from '../engine/nodes/PlantNode';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -43,7 +43,7 @@ export class GameUI extends BaseUI {
 
   private extrinsic: IExtrinsicModel;
 
-  constructor(level?: any) {
+  constructor(level?: INodeSave[]) {
     super({bgColor: 0x777777});
 
     this.extrinsic = SaveManager.getExtrinsic();
@@ -81,10 +81,12 @@ export class GameUI extends BaseUI {
 
     this.mouseC.onMove.addListener(this.onMouseMove);
     this.container.onNodeAdded.addListener(this.sidebar.addNodeElement);
+    this.gameC.onCrawlerAdded.addListener(this.sidebar.addNodeElement);
     this.container.onNodeAdded.addListener(this.bottomBar.nodeAdded);
     this.container.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
     this.container.onNodeRemoved.addListener(this.gameC.removeNode);
     this.container.onNodeRemoved.addListener(this.sidebar.removeNodeElement);
+    this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
     this.bottomBar.onProceedButton.addListener(this.nextStage);
     this.bottomBar.onCreateButton.addListener(this.createNewNode);
     this.bottomBar.onDeleteButton.addListener(this.mouseC.deleteNextClicked);
@@ -115,18 +117,18 @@ export class GameUI extends BaseUI {
         {key: '`', function: () => this.logSave()},
         {key: '1', function: () => this.loadSave(TierSaves[1])},
         {key: '0', function: () => this.loadSave(TierSaves[0])},
-        {key: 'z', function: () => this.gameC.addCrawler(null, this.gameC.nodes[0])},
+        {key: 'z', function: () => this.gameC.addCrawler({}, this.gameC.nodes[0])},
       ]);
     }
 
     if (level) {
-      if (level === 'empty') {
+      if (level === []) {
         this.newGame();
       } else {
-        this.gameC.loadSaves(level);
+        this.gameC.loadSaves(level, []);
       }
     } else if (this.extrinsic.stageState) {
-      this.gameC.loadSaves(this.extrinsic.stageState);
+      this.gameC.loadSaves(this.extrinsic.stageState, this.extrinsic.crawlers);
     } else this.newGame();
 
     this.saveGameTimeout();
@@ -174,8 +176,8 @@ export class GameUI extends BaseUI {
   }
 
   public saveGame = () => {
-    let state = this.gameC.saveNodes();
-    this.extrinsic.stageState = state;
+    this.extrinsic.stageState = this.gameC.saveNodes();
+    this.extrinsic.crawlers = this.gameC.saveCrawlers();
     SaveManager.saveExtrinsic();
   }
 
@@ -187,7 +189,7 @@ export class GameUI extends BaseUI {
 
   public resetGame = () => {
     PlantNode.resetUid();
-    this.navAndDestroy(new GameUI('empty'));
+    this.navAndDestroy(new GameUI([]));
   }
 
   public nextStage = () => {

@@ -9,6 +9,8 @@ export const EnglishStringData = {
   UI_SKILLTREE_TIER: 'Tier',
   UI_SIDEBAR_SHOW_STEMS: 'Show Stems',
   UI_SIDEBAR_HIDE_STEMS: 'Hide Stems',
+  UI_SIDEBAR_CRAWLER_MODE: 'Crawler Mode',
+  UI_SIDEBAR_NODE_MODE: 'Node Mode',
   UI_SIDEBAR_SKILLTREE_NEXT: 'Next Evolution',
   UI_SIDEBAR_SKILLTREE_CURRENT: 'Current Evolution',
   UI_SAVE: 'Game Saved!',
