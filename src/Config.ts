@@ -30,4 +30,8 @@ export const Config = {
     GEN_FADE: 30,
     FRUIT_APPLY: 0.3,
   },
+
+  CRAWLER: {
+    BREED_AT: 1.5,
+  },
 };

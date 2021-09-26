@@ -2,13 +2,14 @@ import { BaseCommand, CommandType } from './_BaseCommand';
 import { Colors } from '../../../data/Colors';
 import { PlantNode } from '../../../engine/nodes/PlantNode';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
+import { GameKnowledge } from '../GameKnowledge';
 
 export class ResearchCommand extends BaseCommand {
 
   private state: 'walk' | 'harvest' | 'carry' | 'deliver';
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
 
     this.type = CommandType.RESEARCH;
     this.color = Colors.Node.purple;
@@ -18,18 +19,22 @@ export class ResearchCommand extends BaseCommand {
     this.isComplete = false;
 
     this.state = 'walk';
-    this.startPath(this.hasResearch, this.harvestHere, this.cancelPath);
+    this.startPath(this.hasResearch, this.harvestHere, this.cancelPath, true);
   }
 
   public genPriority(): number {
-    if (!this.crawler.cLoc.findNode(this.hasResearch)) {
-      return 10;
+    let numResearch = this.knowledge.sortedNodes.research.filter(node => node.isHarvestable()).length;
+
+    let numLabs = this.knowledge.sortedNodes.lab.length;
+    let fruitPerLab = this.knowledge.numFruitsPerNode('lab');
+
+    if (numResearch === 0 || this.knowledge.sortedNodes.seedling.length === 0) {
+      return 20;
     }
-    if (this.crawler.cLoc.findNode(node => node.slug === 'seedling')) {
-      return 0.3 + Math.random() * 0.5 - (this.crawler.preference === this.type ? this.crawler.preferenceAmount : 0);
-    } else {
-      return 2;
-    }
+
+    let researchRatio = Math.max(1, numResearch / (fruitPerLab * numLabs));
+
+    return 1 - researchRatio * 0.5 - this.crawler.preference === this.type ? 0.25 : 0;
   }
 
   public update() {
@@ -52,7 +57,7 @@ export class ResearchCommand extends BaseCommand {
 
   private harvestHere = () => {
     this.state = 'harvest';
-    let fruit = this.crawler.cLoc.harvestFruit();
+    let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
 
     this.grabFruit(fruit, () => {
       this.state = 'carry';
@@ -67,6 +72,7 @@ export class ResearchCommand extends BaseCommand {
       this.fruit = null;
     }
     this.crawler.setCommand(CommandType.FRUSTRATED);
+    this.crawler.frustratedBy = CommandType[this.type];
   }
 
   private deliverHere = () => {

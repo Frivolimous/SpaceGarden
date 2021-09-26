@@ -6,6 +6,7 @@ import { PlantNodePower, TransferPowerFunction } from './PlantNodePower';
 import { PlantNodeView } from './PlantNodeView';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Colors } from '../../data/Colors';
+import { CrawlerModel } from '../Mechanics/Parts/CrawlerModel';
 
 export class PlantNode {
   public static generateUid() {
@@ -37,6 +38,8 @@ export class PlantNode {
 
   public flagUnlink = false;
   public flagDestroy = false;
+  public flagCallOnRemove = true;
+  public claimedBy: CrawlerModel;
 
   constructor(private config: INodeConfig, transferPower: TransferPowerFunction) {
     _.defaults(config, dNodeConfig);
@@ -208,7 +211,7 @@ export class PlantNode {
   }
 
   public isHarvestable = (): boolean => {
-    return this.power.powerPercent > 0.6;
+    return this.power.powerPercent > 0.6 && !this.claimedBy;
   }
 
   public hasHarvestableFruit(): boolean {

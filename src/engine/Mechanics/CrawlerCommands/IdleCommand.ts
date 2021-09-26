@@ -1,19 +1,20 @@
 import { BaseCommand, CommandType } from './_BaseCommand';
 import { Colors } from '../../../data/Colors';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
+import { GameKnowledge } from '../GameKnowledge';
 
 export class IdleCommand extends BaseCommand {
   private repeatCount: number;
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
 
     this.type = CommandType.IDLE;
     this.color = Colors.Node.green;
   }
 
   public genPriority(): number {
-    return 0.9 + Math.random() * 0.3 - (this.crawler.preference === this.type ? this.crawler.preferenceAmount : 0);
+    return 0.9 + Math.random() * 0.3;
   }
 
   public initialize() {

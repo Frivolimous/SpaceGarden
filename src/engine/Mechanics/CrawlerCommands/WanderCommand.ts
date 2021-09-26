@@ -1,14 +1,15 @@
 import _ from 'lodash';
 import { Colors } from '../../../data/Colors';
 import { PlantNode } from '../../nodes/PlantNode';
+import { GameKnowledge } from '../GameKnowledge';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
 import { BaseCommand, CommandType } from './_BaseCommand';
 
 export class WanderCommand extends BaseCommand {
   private repeatCount: number;
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
 
     this.type = CommandType.WANDER;
     this.color = Colors.Node.green;
@@ -22,7 +23,7 @@ export class WanderCommand extends BaseCommand {
   }
 
   public genPriority(): number {
-    return 0.9 + Math.random() * 0.3 - (this.crawler.preference === this.type ? this.crawler.preferenceAmount / 3 : 0);
+    return 0.9 + Math.random() * 0.3 - (this.crawler.preference === this.type ? 0.15 : 0);
   }
 
   public update() {
@@ -34,6 +35,7 @@ export class WanderCommand extends BaseCommand {
   private cancelPath = () => {
     this.isComplete = true;
     this.crawler.setCommand(CommandType.FRUSTRATED);
+    this.crawler.frustratedBy = CommandType[this.type];
   }
 
   private finishCommand = () => {

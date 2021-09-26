@@ -99,7 +99,7 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-2-3',
       title: 'Woodcutters',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can bring Grove Fruits to the Seedling to power it',
+      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can use Grove Fruits to power the Seedling or low power nodes',
       cost: 2,
       skillRequirements: ['skill-2-1'],
       effects: [

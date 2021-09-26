@@ -2,14 +2,15 @@ import _ from 'lodash';
 import { Colors } from '../../../data/Colors';
 import { JMTween } from '../../../JMGE/JMTween';
 import { PlantNode } from '../../nodes/PlantNode';
+import { GameKnowledge } from '../GameKnowledge';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
 import { BaseCommand, CommandType } from './_BaseCommand';
 
 export class EatCommand extends BaseCommand {
   private state: 'eat' | 'walk';
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
     this.type = CommandType.EAT;
     this.color = Colors.Node.blue;
   }
@@ -18,12 +19,12 @@ export class EatCommand extends BaseCommand {
     this.isComplete = false;
 
     this.state = 'walk';
-    this.startPath(this.hasFood, this.eatHere, this.cancelPath);
+    this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);
   }
 
   public genPriority(): number {
     if (this.crawler.health < 0.5) return this.crawler.health / 2;
-    return 5;
+    return 20;
   }
 
   public update() {
@@ -42,7 +43,7 @@ export class EatCommand extends BaseCommand {
 
   private eatHere = () => {
     this.state = 'eat';
-    let fruit = this.crawler.cLoc.harvestFruit();
+    let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
 
     this.grabFruit(fruit, () => {
       this.deliverFruit(() => {

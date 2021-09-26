@@ -10,8 +10,6 @@ import { CrawlerView } from '../Mechanics/Parts/CrawlerView';
 import { PlantNode } from '../nodes/PlantNode';
 
 export class FDGContainer extends PIXI.Graphics {
-  public onNodeAdded = new JMEventListener<PlantNode>();
-  public onNodeRemoved = new JMEventListener<PlantNode>();
   public links: FDGLink[] = [];
 
   private nodeLayer = new PIXI.Container();
@@ -35,41 +33,14 @@ export class FDGContainer extends PIXI.Graphics {
   public addNode(node: PlantNode) {
     this.nodes.push(node);
     this.nodeLayer.addChild(node.view);
-    this.onNodeAdded.publish(node);
   }
 
   public removeNode(node: PlantNode) {
     let i = this.nodes.indexOf(node);
 
-    if (i < 0) return;
-
-    let outlets = _.clone(node.outlets);
-    let fruits = _.clone(node.fruits);
-    this.removeAllLinksFor(node);
-
-    this.nodes.splice(i, 1);
-
-    node.destroy();
-    this.onNodeRemoved.publishSync(node);
-
-    outlets.forEach(n => {
-      if (!n.isConnectedToCore()) {
-        this.removeNode(n);
-      }
-    });
-
-    fruits.forEach(n => this.removeNode(n));
-  }
-
-  public removeAllLinksFor(node: PlantNode, excludeFruit?: boolean) {
-    for (let i = this.links.length - 1; i >= 0; i--) {
-      if (this.links[i].hasNode(node)) {
-        if (excludeFruit && this.links[i].other(node).isFruit()) continue;
-
-        this.links[i].origin.removeNode(this.links[i].target);
-        this.links[i].target.removeNode(this.links[i].origin);
-        this.links.splice(i, 1);
-      }
+    if (i >= 0) {
+      this.nodeLayer.removeChild(node.view);
+      this.nodes.splice(i, 1);
     }
   }
 
@@ -81,10 +52,6 @@ export class FDGContainer extends PIXI.Graphics {
     this.crawlerLayer.removeChild(crawler);
   }
 
-  public getLink(origin: PlantNode, target: PlantNode): FDGLink {
-    return this.links.find(link => link.hasNode(origin) && link.hasNode(target));
-  }
-
   public addLink(origin: PlantNode, target: PlantNode): FDGLink {
     let link = new FDGLink(origin, target);
 
@@ -94,14 +61,23 @@ export class FDGContainer extends PIXI.Graphics {
   }
 
   public removeLink(origin: PlantNode, target: PlantNode) {
-    for (let i = this.links.length; i >= 0; i--) {
-      if (this.links[i].hasNode(origin, target)) {
-        origin.removeNode(target);
-        target.removeNode(origin);
+    let index = this.links.findIndex(link => link.hasNode(origin, target));
+    if (index >= 0) {
+      this.links.splice(index, 1);
+    }
+  }
+
+  public removeAllLinksFor(node: PlantNode, excludeFruit?: boolean) {
+    for (let i = this.links.length - 1; i >= 0; i--) {
+      if (this.links[i].hasNode(node)) {
+        if (excludeFruit && this.links[i].other(node).isFruit()) continue;
         this.links.splice(i, 1);
-        return;
       }
     }
+  }
+
+  public getLink(origin: PlantNode, target: PlantNode): FDGLink {
+    return this.links.find(link => link.hasNode(origin) && link.hasNode(target));
   }
 
   public getClosestObject(config: { x: number, y: number, distance?: number, maxLinks?: boolean, filter?: PlantNode, notType?: NodeSlug, notFruit?: boolean }) {

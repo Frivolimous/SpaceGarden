@@ -6,26 +6,26 @@ import { SkillPanel } from './SkillPanel';
 type SidebarElement = PlantNode | CrawlerModel;
 
 export class Sidebar {
-  public static genAid(): string {
+  private static aid: number = 0;
+
+  private static genAid(): string {
     Sidebar.aid++;
 
     return `id-${Sidebar.aid}`;
   }
 
-  private static aid: number = 0;
+  public knowledgeElement: HTMLDivElement;
 
-  public nodeMap: { element: HTMLDivElement, node: SidebarElement, atStart?: boolean }[] = [];
-  public currentHighlight: { element: HTMLDivElement, node: SidebarElement};
-  public hideStemButton: HTMLButtonElement;
-  public showCrawlersButton: HTMLButtonElement;
+  private nodeMap: { element: HTMLDivElement, node: SidebarElement, atStart?: boolean }[] = [];
+  private currentHighlight: { element: HTMLDivElement, node: SidebarElement};
+  private hideStemButton: HTMLButtonElement;
+  private showCrawlersButton: HTMLButtonElement;
 
-  public container: HTMLDivElement;
-  // currentSkillPanel: SkillPanel;
-  // nextSkillPanel: SkillPanel;
-  public notification: HTMLElement;
+  private container: HTMLDivElement;
+  private notification: HTMLElement;
 
-  public _AreStemsHidden: boolean;
-  public _IsCrawlerMode: boolean;
+  private _AreStemsHidden: boolean;
+  private _IsCrawlerMode: boolean;
 
   constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel) {
     this.container = document.getElementById('node-container') as HTMLDivElement;
@@ -46,11 +46,11 @@ export class Sidebar {
     });
   }
 
-  public get areStemsHidden(): boolean {
+  private get areStemsHidden(): boolean {
     return this._AreStemsHidden;
   }
 
-  public set areStemsHidden(b: boolean) {
+  private set areStemsHidden(b: boolean) {
     this._AreStemsHidden = b;
     if (b) {
       this.nodeMap.forEach(data => {
@@ -65,11 +65,11 @@ export class Sidebar {
     }
   }
 
-  public get isCrawlerMode(): boolean {
+  private get isCrawlerMode(): boolean {
     return this._IsCrawlerMode;
   }
 
-  public set isCrawlerMode(b: boolean) {
+  private set isCrawlerMode(b: boolean) {
     this._IsCrawlerMode = b;
     if (b) {
       this.nodeMap.forEach(data => {
@@ -113,24 +113,26 @@ export class Sidebar {
     this.container.innerHTML = '';
   }
 
-  public addShowCrawlersButton() {
-    if (this.showCrawlersButton) return;
+  public addKnowledgeElement(content: string) {
+    if (this.knowledgeElement) return;
 
-    this.showCrawlersButton = document.createElement('button');
-    this.showCrawlersButton.classList.add('skill-button');
-    this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_CRAWLER_MODE;
-    this.showCrawlersButton.style.position = 'absolute';
-    this.showCrawlersButton.style.left = '5px';
-    this.showCrawlersButton.style.top = '0px';
-    this.showCrawlersButton.addEventListener('click', () => {
-      this.isCrawlerMode = !this.isCrawlerMode;
-      if (this.isCrawlerMode) {
-        this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_NODE_MODE;
-      } else {
-        this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_CRAWLER_MODE;
-      }
-    });
-    this.container.appendChild(this.showCrawlersButton);
+    let element = this.addElement(content, true);
+
+    this.knowledgeElement = element;
+  }
+
+  public removeKnowledgeElement() {
+    if (this.knowledgeElement) {
+      this.container.removeChild(this.knowledgeElement);
+      this.knowledgeElement = null;
+    }
+  }
+
+  public updateKnowledge(content: string) {
+    if (this.knowledgeElement) {
+      let contentElement = this.knowledgeElement.querySelector('.node-content');
+      contentElement.innerHTML = content;
+    }
   }
 
   public addNodeElement = (node: SidebarElement) => {
@@ -210,19 +212,6 @@ export class Sidebar {
     });
   }
 
-  public addElement(content: string, start: boolean): HTMLDivElement {
-    let element = document.createElement('div');
-    element.innerHTML = `<div class="node-content">${content}</div>`;
-    element.classList.add('node-block');
-    element.id = Sidebar.genAid();
-    if (start) {
-      this.container.prepend(element);
-    } else {
-      this.container.appendChild(element);
-    }
-    return element;
-  }
-
   public highlightNode(node: SidebarElement, andHighlightNode?: boolean) {
     if (this.currentHighlight) {
       this.currentHighlight.element.classList.remove('highlight');
@@ -239,5 +228,38 @@ export class Sidebar {
         this.currentHighlight = map;
       }
     }
+  }
+
+  private addShowCrawlersButton() {
+    if (this.showCrawlersButton) return;
+
+    this.showCrawlersButton = document.createElement('button');
+    this.showCrawlersButton.classList.add('skill-button');
+    this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_CRAWLER_MODE;
+    this.showCrawlersButton.style.position = 'absolute';
+    this.showCrawlersButton.style.left = '5px';
+    this.showCrawlersButton.style.top = '0px';
+    this.showCrawlersButton.addEventListener('click', () => {
+      this.isCrawlerMode = !this.isCrawlerMode;
+      if (this.isCrawlerMode) {
+        this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_NODE_MODE;
+      } else {
+        this.showCrawlersButton.innerHTML = StringManager.data.UI_SIDEBAR_CRAWLER_MODE;
+      }
+    });
+    this.container.appendChild(this.showCrawlersButton);
+  }
+
+  private addElement(content: string, start: boolean): HTMLDivElement {
+    let element = document.createElement('div');
+    element.innerHTML = `<div class="node-content">${content}</div>`;
+    element.classList.add('node-block');
+    element.id = Sidebar.genAid();
+    if (start) {
+      this.container.prepend(element);
+    } else {
+      this.container.appendChild(element);
+    }
+    return element;
   }
 }

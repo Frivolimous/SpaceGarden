@@ -4,6 +4,7 @@ import { PlantNode } from '../../../engine/nodes/PlantNode';
 import { JMTween, JMEasing } from '../../../JMGE/JMTween';
 import _ from 'lodash';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
+import { GameKnowledge } from '../GameKnowledge';
 
 export class DanceCommand extends BaseCommand {
   private state: 'dance' | 'walk' | 'return';
@@ -12,11 +13,11 @@ export class DanceCommand extends BaseCommand {
 
   private danceTicks: number;
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
 
     this.type = CommandType.DANCE;
-    this.color = Colors.Node.yellow;
+    this.color = Colors.Node.lightyellow;
   }
 
   public initialize() {
@@ -28,8 +29,8 @@ export class DanceCommand extends BaseCommand {
 
   public genPriority(): number {
     let core = this.crawler.cLoc.findCore();
-    if (!core) return 10;
-    return core.power.powerPercent - Math.random() * 0.1 - (this.crawler.preference === this.type ? this.crawler.preferenceAmount : 0);
+    if (!core) return 20;
+    return 0.25 + 0.75 * core.power.powerPercent - (this.crawler.preference === this.type ? 0.25 : 0);
   }
 
   public update() {
@@ -87,6 +88,7 @@ export class DanceCommand extends BaseCommand {
   private cancelPath = () => {
     this.isComplete = true;
     this.crawler.setCommand(CommandType.FRUSTRATED);
+    this.crawler.frustratedBy = CommandType[this.type];
   }
 
   private returnComplete = () => {

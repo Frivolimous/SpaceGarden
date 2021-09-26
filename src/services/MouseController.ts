@@ -33,7 +33,7 @@ export class MouseController {
 
       let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
       if (nodeToDelete) {
-        this.container.removeNode(nodeToDelete);
+        nodeToDelete.flagDestroy = true;
       }
 
       this.deleteNext = false;

@@ -1,14 +1,16 @@
 import _ from 'lodash';
+import { Config } from '../../../Config';
 import { Colors } from '../../../data/Colors';
 import { PlantNode } from '../../nodes/PlantNode';
+import { GameKnowledge } from '../GameKnowledge';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
 import { BaseCommand, CommandType } from './_BaseCommand';
 
 export class BreedCommand extends BaseCommand {
   private state: 'eat' | 'walk';
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
     this.type = CommandType.BREED;
     this.color = Colors.Node.lightblue;
   }
@@ -17,14 +19,18 @@ export class BreedCommand extends BaseCommand {
     this.isComplete = false;
 
     this.state = 'walk';
-    this.startPath(this.hasFood, this.eatHere, this.cancelPath);
+    this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);
   }
 
   public genPriority(): number {
-    if (this.crawler.health > this.config.breedHealthMin && this.crawler.cLoc.findNode(this.hasFood)) {
-      return this.crawler.health - Math.random() * 0.25 - (this.crawler.preference === this.type ? this.crawler.preferenceAmount : 0);
+    let numCrawlers = this.knowledge.crawlerCount;
+    let numFood = this.knowledge.sortedNodes.food.filter(node => node.isHarvestable()).length;
+
+    if (numFood > 0 && numCrawlers < numFood) {
+      return 0.5 + numCrawlers / numFood * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
     }
-    return 10;
+
+    return 20;
   }
 
   public update() {
@@ -43,18 +49,23 @@ export class BreedCommand extends BaseCommand {
 
   private eatHere = () => {
     this.state = 'eat';
-    let fruit = this.crawler.cLoc.harvestFruit();
+    let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
 
     this.grabFruit(fruit, () => {
       this.deliverFruit(() => {
-        this.isComplete = true;
         this.crawler.health += fruit.power.powerCurrent * this.config.eatRatio;
+        if (this.crawler.health < Config.CRAWLER.BREED_AT) {
+          this.initialize();
+        } else {
+          this.isComplete = true;
+        }
       });
     });
   }
 
   private cancelPath = () => {
     this.isComplete = true;
-    this.crawler.setCommand(CommandType.STARVING);
+    this.crawler.setCommand(CommandType.FRUSTRATED);
+    this.crawler.frustratedBy = CommandType[this.type];
   }
 }

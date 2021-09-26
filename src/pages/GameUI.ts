@@ -40,6 +40,7 @@ export class GameUI extends BaseUI {
   private turboSpeed: number = 3;
   private running = true;
   private exists = true;
+  private wantUpdateKnowledge = false;
 
   private extrinsic: IExtrinsicModel;
 
@@ -79,12 +80,11 @@ export class GameUI extends BaseUI {
     this.addChild(this.bottomBar);
 
     this.mouseC.onMove.addListener(this.onMouseMove);
-    this.container.onNodeAdded.addListener(this.sidebar.addNodeElement);
+    this.gameC.onNodeAdded.addListener(this.sidebar.addNodeElement);
+    this.gameC.onNodeAdded.addListener(this.bottomBar.nodeAdded);
+    this.gameC.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
+    this.gameC.onNodeRemoved.addListener(this.sidebar.removeNodeElement);
     this.gameC.onCrawlerAdded.addListener(this.sidebar.addNodeElement);
-    this.container.onNodeAdded.addListener(this.bottomBar.nodeAdded);
-    this.container.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
-    this.container.onNodeRemoved.addListener(this.gameC.removeNode);
-    this.container.onNodeRemoved.addListener(this.sidebar.removeNodeElement);
     this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
     this.bottomBar.onProceedButton.addListener(this.nextStage);
     this.bottomBar.onCreateButton.addListener(this.createNewNode);
@@ -117,6 +117,7 @@ export class GameUI extends BaseUI {
         {key: '1', function: () => this.loadSave(TierSaves[1])},
         {key: '0', function: () => this.loadSave(TierSaves[0])},
         {key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0])},
+        {key: 'k', function: this.toggleKnowledge},
       ]);
     }
 
@@ -211,6 +212,10 @@ export class GameUI extends BaseUI {
 
     if (seedling) {
       this.bottomBar.updateSeedling(seedling);
+    }
+
+    if (this.wantUpdateKnowledge) {
+      this.sidebar.updateKnowledge(this.gameC.knowledge.toString());
     }
   }
 
@@ -308,11 +313,11 @@ export class GameUI extends BaseUI {
           node.view.setIntensity(node.power.powerPercent, true);
           if (link) link.active = true;
         } else {
-          this.container.removeNode(node);
+          this.gameC.removeNode(node);
         }
       },
       onMove: (position2: {x: number, y: number}) => {
-        this.container.removeAllLinksFor(node, true);
+        this.gameC.disconnectNode(node);
         node.ghostMode = true;
         let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
         if (nearest) {
@@ -343,6 +348,16 @@ export class GameUI extends BaseUI {
         // }
       },
     });
+  }
+
+  private toggleKnowledge = () => {
+    this.wantUpdateKnowledge = !this.wantUpdateKnowledge;
+    if (this.wantUpdateKnowledge) {
+      let content = this.gameC.knowledge.toString();
+      this.sidebar.addKnowledgeElement(content);
+    } else {
+      this.sidebar.removeKnowledgeElement();
+    }
   }
 
   private logSave = () => {

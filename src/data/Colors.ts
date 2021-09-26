@@ -2,7 +2,8 @@ export const Colors = {
   Node: {
     red: 0xE02323,
     orange: 0xE07000,
-    yellow: 0xF5F570,
+    yellow: 0xE5E570,
+    lightyellow: 0xFFFFD0,
     darkyellow: 0xa39320,
     green: 0x07E000,
     darkgreen: 0x03aa03,

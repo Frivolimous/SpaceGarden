@@ -10,15 +10,20 @@ import { INodeSave, PlantNode } from '../nodes/PlantNode';
 import { ITransferBlock } from '../nodes/PlantNodePower';
 import { CrawlerModel, ICrawler } from './Parts/CrawlerModel';
 import { ICrawlerSave } from 'src/data/SaveData';
+import { GameKnowledge } from './GameKnowledge';
 
 export class GameController {
+  public onNodeAdded = new JMEventListener<PlantNode>();
+  public onNodeRemoved = new JMEventListener<PlantNode>();
+  public onNodeClaimed = new JMEventListener<{claim: boolean, node: PlantNode, claimer: CrawlerModel}>();
   public onCrawlerAdded: JMEventListener<CrawlerModel> = new JMEventListener();
   public onCrawlerRemoved: JMEventListener<CrawlerModel> = new JMEventListener();
   public nodes: PlantNode[] = [];
   public crawlers: CrawlerModel[] = [];
+  public knowledge: GameKnowledge;
 
   constructor(private container: FDGContainer, private nodeManager: NodeManager) {
-
+    this.knowledge = new GameKnowledge(this, container, nodeManager);
   }
 
   public destroy() {
@@ -30,20 +35,31 @@ export class GameController {
     this.container.addNode(node);
     this.nodes.push(node);
 
+    this.onNodeAdded.publish(node);
+
     return node;
   }
 
   public removeNode = (node: PlantNode) => {
     _.pull(this.nodes, node);
+
     this.crawlers.forEach(crawler => {
       if (crawler.cLoc === node) {
         this.killCrawler(crawler);
       }
     });
+
+    this.disconnectNode(node);
+
+    this.container.removeNode(node);
+
+    node.destroy();
+    if (node.flagCallOnRemove) this.onNodeRemoved.publish(node);
   }
 
   public addCrawler(config: ICrawler, node: PlantNode): CrawlerModel {
-    let crawler = new CrawlerModel(config, node);
+    let crawler = new CrawlerModel(config, node, this.knowledge);
+    crawler.onNodeClaimed.addListener(this.onNodeClaimed.publish);
     this.crawlers.push(crawler);
     this.container.addCrawler(crawler.view);
     this.onCrawlerAdded.publish(crawler);
@@ -51,6 +67,7 @@ export class GameController {
   }
 
   public removeCrawler(crawler: CrawlerModel) {
+    crawler.destroy();
     _.pull(this.crawlers, crawler);
     this.container.removeCrawler(crawler.view);
     this.onCrawlerRemoved.publish(crawler);
@@ -74,10 +91,16 @@ export class GameController {
 
   public updateNode = (node: PlantNode) => {
     if (node.flagDestroy) {
-      this.container.removeNode(node);
+      this.removeNode(node);
       return;
     } else if (node.flagUnlink) {
-      this.container.removeAllLinksFor(node);
+      node.flagUnlink = false;
+      this.disconnectNode(node);
+      if (node.flagCallOnRemove) {
+        this.onNodeRemoved.publish(node);
+        node.flagCallOnRemove = false;
+      }
+      return;
     }
     node.tickPower();
 
@@ -91,6 +114,23 @@ export class GameController {
 
       if (node.slug === 'home' && this.crawlers.length < this.nodes.filter(node2 => node2.slug === 'home').length) {
         this.addCrawler(this.nodeManager.crawlerConfig, node);
+      }
+    }
+  }
+
+  public disconnectNode = (node: PlantNode) => {
+    this.container.removeAllLinksFor(node);
+
+    while (node.fruits.length > 0) {
+      let fruit = node.fruits.shift();
+      fruit.removeNode(node);
+      this.removeNode(fruit);
+    }
+    while (node.outlets.length > 0) {
+      let outlet = node.outlets.shift();
+      outlet.removeNode(node);
+      if (!outlet.isConnectedToCore()) {
+        this.removeNode(outlet);
       }
     }
   }
@@ -143,12 +183,6 @@ export class GameController {
     });
 
     return saves;
-
-    // export interface ICrawlerSave {
-    //   preference: CommandType;
-    //   health: number;
-    //   location: number;
-    // }
   }
 
   public loadSaves(saves: INodeSave[], crawlerSaves: ICrawlerSave[]) {
@@ -158,6 +192,7 @@ export class GameController {
 
     nodes.forEach((node, i) => {
       this.container.addNode(node);
+      this.onNodeAdded.publish(node);
 
       saves[i].outlets.forEach(uid => {
         this.linkNodes(node, nodes.find(node2 => node2.uid === uid));
@@ -183,14 +218,14 @@ export class GameController {
   }
 
   public transferPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
+    if (origin.outlets.indexOf(target) === -1) return;
     let link = this.container.getLink(origin, target);
-    if (!link) return;
 
     if (block.type === 'grow') {
       target.power.powerCurrent += block.amount;
 
       if (block.removeOrigin) {
-        this.container.removeNode(origin);
+        this.removeNode(origin);
       } else {
         link.flash();
       }

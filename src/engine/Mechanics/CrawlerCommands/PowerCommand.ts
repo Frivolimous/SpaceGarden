@@ -2,12 +2,13 @@ import { BaseCommand, CommandType } from './_BaseCommand';
 import { Colors } from '../../../data/Colors';
 import { PlantNode } from '../../../engine/nodes/PlantNode';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
+import { GameKnowledge } from '../GameKnowledge';
 
 export class PowerCommand extends BaseCommand {
   private state: 'walk' | 'harvest' | 'carry' | 'deliver';
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
 
     this.type = CommandType.POWER;
     this.color = Colors.Node.yellow;
@@ -17,18 +18,24 @@ export class PowerCommand extends BaseCommand {
     this.isComplete = false;
 
     this.state = 'walk';
-    this.startPath(this.hasPower, this.harvestHere, this.cancelPath);
+    this.startPath(this.hasPower, this.harvestHere, this.cancelPath, true);
   }
 
   // lowest is better
   public genPriority(): number {
-    if (!this.crawler.cLoc.findNode(this.hasPower)) {
-      return 10;
+    let numGen = this.knowledge.sortedNodes.gen.filter(node => node.isHarvestable()).length;
+
+    if (numGen <= 0) {
+      return 20;
     }
+
     let seedling = this.crawler.cLoc.findNode(node => node.slug === 'seedling');
     let closest = this.crawler.cLoc.findNode(node => node.power.powerPercent < 0.5);
 
-    return Math.min(seedling ? seedling.power.powerPercent : 2, closest ? closest.power.powerPercent * 2 : 2) - (this.crawler.preference === this.type ? this.crawler.preferenceAmount : 0);
+    return Math.min(
+      seedling ? 0.25 + 0.75 * seedling.power.powerPercent : 20,
+      closest ? 0.5 + closest.power.powerPercent : 20)
+       - (this.crawler.preference === this.type ? 0.25 : 0);
   }
 
   public update() {
@@ -46,12 +53,12 @@ export class PowerCommand extends BaseCommand {
   }
 
   private isDeliverable(node: PlantNode): boolean {
-    return node.slug !== 'stem' && node.power.powerPercent < 0.7 || node.slug === 'seedling';
+    return node.slug !== 'stem' && node.power.powerPercent < 0.5 || node.slug === 'seedling';
   }
 
   private harvestHere = () => {
     this.state = 'harvest';
-    let fruit = this.crawler.cLoc.harvestFruit();
+    let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
 
     this.grabFruit(fruit, () => {
       this.state = 'carry';
@@ -66,6 +73,7 @@ export class PowerCommand extends BaseCommand {
       this.fruit = null;
     }
     this.crawler.setCommand(CommandType.FRUSTRATED);
+    this.crawler.frustratedBy = CommandType[this.type];
   }
 
   private deliverHere = () => {

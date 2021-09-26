@@ -2,14 +2,15 @@ import _ from 'lodash';
 import { Colors } from '../../../data/Colors';
 import { JMTween } from '../../../JMGE/JMTween';
 import { PlantNode } from '../../nodes/PlantNode';
+import { GameKnowledge } from '../GameKnowledge';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
 import { BaseCommand, CommandType } from './_BaseCommand';
 
 export class StarvingCommand extends BaseCommand {
   private state: 'idle' | 'walk';
 
-  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
-    super(crawler, config);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
+    super(crawler, config, knowledge);
 
     this.type = CommandType.STARVING;
     this.color = Colors.Node.darkblue;

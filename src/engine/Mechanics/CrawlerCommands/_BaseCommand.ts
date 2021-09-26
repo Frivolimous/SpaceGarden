@@ -1,5 +1,6 @@
 import { PlantNode } from '../../../engine/nodes/PlantNode';
 import { JMEasing, JMTween } from '../../../JMGE/JMTween';
+import { GameKnowledge } from '../GameKnowledge';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
 import { IdleCommand } from './IdleCommand';
 import { WanderCommand } from './WanderCommand';
@@ -39,7 +40,7 @@ export class BaseCommand {
 
   private return = false;
 
-  constructor(protected crawler: CrawlerModel, protected config: ICommandConfig) {
+  constructor(protected crawler: CrawlerModel, protected config: ICommandConfig, protected knowledge: GameKnowledge) {
   }
 
   public initialize() {
@@ -55,6 +56,7 @@ export class BaseCommand {
   }
 
   protected grabFruit = (fruit: PlantNode, onComplete: () => void) => {
+    this.crawler.unclaimNode();
     fruit.flagUnlink = true;
     fruit.active = false;
     fruit.physics.fixed = true;
@@ -125,7 +127,7 @@ export class BaseCommand {
     this.crawler.view.y = this.crawler.cLoc.view.y + this.magnitude * this.crawler.cLoc.view.radius * Math.sin(this.angle);
   }
 
-  protected startPath(condition: (node: PlantNode) => boolean, onComplete: () => void, onCancel: (prePath: boolean) => void) {
+  protected startPath(condition: (node: PlantNode) => boolean, onComplete: () => void, onCancel: (prePath: boolean) => void, andClaimFruit?: boolean) {
     if (condition(this.crawler.cLoc)) {
       onComplete();
     } else {
@@ -135,6 +137,12 @@ export class BaseCommand {
       } else {
         path.shift();
         this.currentPath = {condition, onComplete, onCancel, path};
+        if (andClaimFruit) {
+          let target = path[path.length - 1];
+          let fruit = target.harvestFruit();
+          this.crawler.claimNode(fruit);
+        }
+
         this.startNextStep();
       }
     }
@@ -162,6 +170,7 @@ export class BaseCommand {
       if (!this.nextLoc.exists) {
         this.isComplete = true;
         this.crawler.setCommand(CommandType.FRUSTRATED);
+        this.crawler.frustratedBy = 'Stepping ' + CommandType[this.type];
         if (this.fruit) {
           this.destroyFruit();
         }
@@ -170,12 +179,12 @@ export class BaseCommand {
     } else {
       let path = this.currentPath;
       this.currentPath = null;
-
-      if (path.condition(this.crawler.cLoc)) {
-        path.onComplete();
-      } else {
-        path.onCancel(false);
-      }
+      path.onComplete();
+      // if (path.condition(this.crawler.cLoc)) {
+      //   path.onComplete();
+      // } else {
+      //   path.onCancel(false);
+      // }
     }
   }
 }
