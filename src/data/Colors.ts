@@ -7,6 +7,7 @@ export const Colors = {
     green: 0x07E000,
     darkgreen: 0x03aa03,
     blue: 0x0093FC,
+    darkblue: 0x004296,
     purple: 0x9370E0,
   },
   // Node: {

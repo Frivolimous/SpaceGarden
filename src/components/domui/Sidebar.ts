@@ -231,11 +231,13 @@ export class Sidebar {
     }
     if (node) {
       let map = this.nodeMap.find(data => data.node === node);
-      map.element.classList.add('highlight');
-      if (andHighlightNode) {
-        node.view.highlight = true;
+      if (map) {
+        map.element.classList.add('highlight');
+        if (andHighlightNode) {
+          node.view.highlight = true;
+        }
+        this.currentHighlight = map;
       }
-      this.currentHighlight = map;
     }
   }
 }

@@ -180,7 +180,7 @@ export const NodeDataTop: INodeData = {
       outletEffects: [{stat: 'powerGen', type: 'additive', amount: -NodeBase.powerDrain / 2}],
     },
     {
-      slug: 'food', type: 'fruit', color: Colors.Node.orange, shape: 'square',
+      slug: 'food', type: 'fruit', color: Colors.Node.orange, shape: 'pentagon',
       radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
       powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1 / 2,
       powerDelay: NodeBase.powerDelay, powerClump: 0,

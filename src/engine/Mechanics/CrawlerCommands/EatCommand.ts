@@ -27,12 +27,12 @@ export class EatCommand extends BaseCommand {
     if (this.hasFood(this.crawler.cLoc)) {
       this.eatHere();
     } else {
-      this.state = 'walk';
       this.path = this.crawler.findPath(this.hasFood);
       if (!this.path || this.path.length === 0) {
         this.isComplete = true;
-        this.crawler.setCommand(CommandType.FRUSTRATED);
+        this.crawler.setCommand(CommandType.STARVING);
       } else {
+        this.state = 'walk';
         this.path.shift();
         this.startNextStep();
       }

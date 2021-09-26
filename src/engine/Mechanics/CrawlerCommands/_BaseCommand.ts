@@ -11,6 +11,7 @@ export enum CommandType {
   RESEARCH,
   POWER,
   FRUSTRATED,
+  STARVING,
   BREED,
 }
 

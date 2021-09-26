@@ -85,7 +85,7 @@ export class GameController {
       fruit.view.position.set(node.view.x, node.view.y);
 
       if (node.slug === 'home' && this.crawlers.length < this.nodes.filter(node2 => node2.slug === 'home').length) {
-        this.addCrawler({}, node);
+        this.addCrawler(this.nodeManager.crawlerConfig, node);
       }
     }
   }
@@ -95,7 +95,7 @@ export class GameController {
     if (crawler.health > 1.5) {
       console.log('breed!', crawler.health);
       crawler.health /= 2;
-      this.addCrawler({health: crawler.health}, crawler.cLoc);
+      this.addCrawler(_.defaults({health: crawler.health}, this.nodeManager.crawlerConfig), crawler.cLoc);
     } else if (crawler.health <= 0) {
       // this.removeCrawler(crawler);
       _.pull(this.crawlers, crawler);
@@ -156,7 +156,7 @@ export class GameController {
     });
 
     crawlerSaves.forEach((save, i) => {
-      this.addCrawler({health: save.health, preference: save.preference}, nodes.find(node2 => node2.uid === save.location));
+      this.addCrawler(_.defaults({health: save.health, preference: save.preference}, this.nodeManager.crawlerConfig), nodes.find(node2 => node2.uid === save.location));
     });
   }
 

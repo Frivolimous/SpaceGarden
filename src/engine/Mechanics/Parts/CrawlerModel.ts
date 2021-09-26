@@ -12,6 +12,7 @@ import { ResearchCommand } from '../CrawlerCommands/ResearchCommand';
 import { PowerCommand } from '../CrawlerCommands/PowerCommand';
 import { FrustratedCommand } from '../CrawlerCommands/FrustratedCommand';
 import { BreedCommand } from '../CrawlerCommands/BreedCommand';
+import { StarvingCommand } from '../CrawlerCommands/StarvingCommand';
 
 export class CrawlerModel {
   public static commandMap: {[key in CommandType]: typeof BaseCommand} = {
@@ -23,15 +24,16 @@ export class CrawlerModel {
     [CommandType.RESEARCH]: ResearchCommand,
     [CommandType.POWER]: PowerCommand,
     [CommandType.FRUSTRATED]: FrustratedCommand,
+    [CommandType.STARVING]: StarvingCommand,
     [CommandType.BREED]: BreedCommand,
   };
 
   public slug: 'crawler' = 'crawler';
 
   public health: number = 1;
-  public healthDrain: number = 0.0001;
+  public healthDrain: number;
   public view: CrawlerView;
-  public speed: number = 0.01;
+  public speed: number;
   public cLoc: PlantNode;
   public currentCommand: BaseCommand;
   public preference: CommandType;
@@ -42,6 +44,8 @@ export class CrawlerModel {
   constructor(private config: ICrawler, startingNode: PlantNode) {
     _.defaults(config, dCrawler);
     this.health = config.health;
+    this.healthDrain = config.healthDrain;
+    this.speed = config.speed;
     this.cLoc = startingNode;
 
     this.preference = config.preference || _.sample(config.preferenceList);
@@ -104,6 +108,8 @@ export class CrawlerModel {
 
 export interface ICrawler {
   health?: number;
+  healthDrain?: number;
+  speed?: number;
   commands?: CommandType[];
   preference?: CommandType;
   preferenceList?: CommandType[];
@@ -111,21 +117,24 @@ export interface ICrawler {
 
 const dCrawler: ICrawler = {
   health: 1,
+  healthDrain: 0.0002,
+  speed: 0.01,
   commands: [
     CommandType.WANDER,
     CommandType.IDLE,
     CommandType.EAT,
-    CommandType.DANCE,
-    CommandType.RESEARCH,
-    CommandType.POWER,
+    // CommandType.DANCE,
+    // CommandType.RESEARCH,
+    // CommandType.POWER,
     CommandType.FRUSTRATED,
-    CommandType.BREED,
+    CommandType.STARVING,
+    // CommandType.BREED,
   ],
   preferenceList: [
     CommandType.WANDER,
-    CommandType.BREED,
-    CommandType.DANCE,
-    CommandType.RESEARCH,
-    CommandType.POWER,
+    // CommandType.BREED,
+    // CommandType.DANCE,
+    // CommandType.RESEARCH,
+    // CommandType.POWER,
   ],
 };

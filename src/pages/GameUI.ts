@@ -53,7 +53,6 @@ export class GameUI extends BaseUI {
     let skills = this.nodeManager.getSkillsBySlugs(this.extrinsic.skillsCurrent);
     skills.filter(skill => skill.effects.find(effect => effect.effectType === 'tier')).forEach(this.applySkillTier);
 
-    console.log('s', skills);
     let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
     let allSkills = _.uniq(skills.concat(this.nodeManager.getSkillsBySlugs(always)));
     allSkills.forEach(this.applySkill);
@@ -73,7 +72,7 @@ export class GameUI extends BaseUI {
 
     this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel);
     this.keymapper = new KeyMapper();
-    this.bottomBar = new BottomBar(100, 100, this.extrinsic.nodes.map(slug => this.nodeManager.getNodeConfig(slug)));
+    this.bottomBar = new BottomBar(100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
 
     this.canvas.addChild(this.container);
     this.addChild(this.canvas);
@@ -117,12 +116,12 @@ export class GameUI extends BaseUI {
         {key: '`', function: () => this.logSave()},
         {key: '1', function: () => this.loadSave(TierSaves[1])},
         {key: '0', function: () => this.loadSave(TierSaves[0])},
-        {key: 'z', function: () => this.gameC.addCrawler({}, this.gameC.nodes[0])},
+        {key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0])},
       ]);
     }
 
     if (level) {
-      if (level === []) {
+      if (level.length === 0) {
         this.newGame();
       } else {
         this.gameC.loadSaves(level, []);
@@ -182,6 +181,7 @@ export class GameUI extends BaseUI {
   }
 
   public newGame() {
+    console.log('new game');
     let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
     node.view.position.set(600, 300);
     node.power.powerPercent = 0.5;
@@ -237,7 +237,7 @@ export class GameUI extends BaseUI {
   public applySkill = (skill: ISkillConfig) => {
     skill.effects.forEach(effect => {
       if (effect.effectType === 'node') {
-        let node = this.nodeManager.data.find(block => block.slug === effect.slug);
+        let node = this.nodeManager.getNodeConfig(effect.slug);
         if (effect.key === 'outletEffect') {
           if (effect.valueType === 'additive') {
             node.outletEffects = node.outletEffects || [];
@@ -245,13 +245,33 @@ export class GameUI extends BaseUI {
           } else if (effect.valueType === 'replace') {
             node.outletEffects = [_.clone(effect.value)];
           }
+        } else {
+          if (effect.valueType === 'additive') {
+            (node as any)[effect.key] += effect.value;
+          } else if (effect.valueType === 'multiplicative') {
+            (node as any)[effect.key] *= effect.value;
+          } else if (effect.valueType === 'replace') {
+            (node as any)[effect.key] = effect.value;
+          }
         }
+      } else if (effect.effectType === 'crawler') {
+        let config = this.nodeManager.crawlerConfig;
+        if (effect.key === 'commands' || effect.key === 'preferenceList') {
+          if (effect.valueType === 'additive') {
+            (config as any)[effect.key].push(effect.value);
+          }
+        } else {
+          if (effect.valueType === 'additive') {
+            (config as any)[effect.key] += effect.value;
+          } else if (effect.valueType === 'multiplicative') {
+            (config as any)[effect.key] *= effect.value;
+          } else if (effect.valueType === 'replace') {
+            (config as any)[effect.key] = effect.value;
+          }
+        }
+      } else if (effect.effectType === 'buildable') {
         if (effect.valueType === 'additive') {
-          (node as any)[effect.key] += effect.value;
-        } else if (effect.valueType === 'multiplicative') {
-          (node as any)[effect.key] *= effect.value;
-        } else if (effect.valueType === 'replace') {
-          (node as any)[effect.key] = effect.value;
+          this.nodeManager.buildableNodes.push(effect.value);
         }
       }
     });
