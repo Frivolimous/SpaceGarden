@@ -3,24 +3,17 @@ import { Colors } from '../../../data/Colors';
 import { PlantNode } from '../../../engine/nodes/PlantNode';
 import { JMTween, JMEasing } from '../../../JMGE/JMTween';
 import _ from 'lodash';
-import { CrawlerModel } from '../Parts/CrawlerModel';
+import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
 
 export class DanceCommand extends BaseCommand {
-  private magnitude: number;
-  private angle: number;
-
-  private nextLoc: PlantNode;
-
-  private path: PlantNode[];
-
   private state: 'dance' | 'walk' | 'return';
 
   private hopping: boolean;
 
   private danceTicks: number;
 
-  constructor(crawler: CrawlerModel) {
-    super(crawler);
+  constructor(crawler: CrawlerModel, protected config: ICommandConfig) {
+    super(crawler, config);
 
     this.type = CommandType.DANCE;
     this.color = Colors.Node.yellow;
@@ -28,86 +21,57 @@ export class DanceCommand extends BaseCommand {
 
   public initialize() {
     this.isComplete = false;
-    if (this.isDanceable(this.crawler.cLoc)) {
-      this.danceHere();
-    } else {
-      this.state = 'walk';
-      this.path = this.crawler.findPath(this.isDanceable);
-      if (!this.path || this.path.length === 0) {
-        this.isComplete = true;
-        this.crawler.setCommand(CommandType.FRUSTRATED);
-      } else {
-        this.path.shift();
-        this.startNextStep();
-      }
-    }
+
+    this.state = 'walk';
+    this.startPath(this.isDanceable, this.danceHere, this.cancelPath);
   }
 
   public genPriority(): number {
     let core = this.crawler.cLoc.findCore();
     if (!core) return 10;
-    return core.power.powerPercent - Math.random() * 0.25 - (this.crawler.preference === this.type ? this.crawler.preferenceAmount : 0);
+    return core.power.powerPercent - Math.random() * 0.1 - (this.crawler.preference === this.type ? this.crawler.preferenceAmount : 0);
   }
 
   public update() {
     if (this.isComplete) return;
     if (this.state === 'dance') {
-      if (this.danceTicks <= 0 && !this.hopping) {
-        this.startReturn();
-      } else {
-        this.danceTicks--;
-
-        if (!this.hopping) {
-          this.hop();
-        }
-
-        let fruit = _.sample(this.crawler.cLoc.fruits);
-        if (fruit) {
-          fruit.power.powerCurrent += 5;
-        }
-      }
-
+      this.updateDance();
     } else if (this.state === 'return') {
-      this.magnitude -= this.crawler.speed / this.crawler.cLoc.view.radius * 50;
-
-      if (this.magnitude < 0) {
-        this.isComplete = true;
-      } else {
-        this.crawler.view.x = this.crawler.cLoc.view.x + this.magnitude * this.crawler.cLoc.view.radius * Math.cos(this.angle);
-        this.crawler.view.y = this.crawler.cLoc.view.y + this.magnitude * this.crawler.cLoc.view.radius * Math.sin(this.angle);
-      }
+      this.updateIdle(this.returnComplete);
     } else {
-      this.magnitude += this.crawler.speed;
-      if (this.magnitude > 1) {
-        this.magnitude = 0;
-        this.crawler.cLoc = this.nextLoc;
-        this.startNextStep();
-      } else {
-        this.crawler.view.x = this.crawler.cLoc.view.x + (this.nextLoc.view.x - this.crawler.cLoc.view.x) * this.magnitude;
-        this.crawler.view.y = this.crawler.cLoc.view.y + (this.nextLoc.view.y - this.crawler.cLoc.view.y) * this.magnitude;
+      this.updatePath();
+    }
+  }
+
+  private updateDance() {
+    if (this.danceTicks <= 0 && !this.hopping) {
+      this.state = 'return';
+      this.startIdleReturn();
+    } else {
+      this.danceTicks--;
+
+      if (!this.hopping) {
+        this.hop();
+      }
+
+      let fruit = _.sample(this.crawler.cLoc.fruits);
+      if (fruit) {
+        fruit.power.powerCurrent += this.config.danceGen;
       }
     }
   }
 
-  public isDanceable(node: PlantNode): boolean {
+  private isDanceable(node: PlantNode): boolean {
     return node.slug === 'core' && node.fruits.length > 0;
   }
 
-  public danceHere = () => {
+  private danceHere = () => {
     this.state = 'dance';
-    this.danceTicks = 500;
+    this.danceTicks = this.config.danceTicks;
     this.hop();
   }
 
-  public startReturn = () => {
-    this.state = 'return';
-    let dX = this.crawler.view.x - this.crawler.cLoc.view.x;
-    let dY = this.crawler.view.y - this.crawler.cLoc.view.y;
-    this.magnitude = Math.sqrt(dX * dX + dY * dY) / 50;
-    this.angle = Math.atan2(dY, dX);
-  }
-
-  public hop = () => {
+  private hop = () => {
     this.hopping = true;
 
     let node = this.crawler.cLoc;
@@ -120,16 +84,12 @@ export class DanceCommand extends BaseCommand {
     new JMTween(this.crawler.view, 1000).to({x: targetX}).easing(JMEasing.Quadratic.InOut).start().onComplete(() => this.hopping = false);
   }
 
-  private startNextStep() {
-    if (this.path && this.path.length > 0) {
-      this.nextLoc = this.path.shift();
-      this.magnitude = 0;
-    } else {
-      if (this.isDanceable(this.crawler.cLoc)) {
-        this.danceHere();
-      } else {
-        this.isComplete = true;
-      }
-    }
+  private cancelPath = () => {
+    this.isComplete = true;
+    this.crawler.setCommand(CommandType.FRUSTRATED);
+  }
+
+  private returnComplete = () => {
+    this.isComplete = true;
   }
 }

@@ -16,7 +16,7 @@ export const EnglishStringData = {
   UI_SAVE: 'Game Saved!',
 
   TOOLTIP_home_TITLE: 'Crawler Home',
-  TOOLTIP_home_DESC: 'Produces fruits that are required to sustain and breed Crawlers.\n\nFruits are harvested by crawlers to sustain them.',
+  TOOLTIP_home_DESC: 'Produces fruits that are required to sustain and breed Crawlers.\n\nYou automatically breed up to one Crawler per Home as fruits spawn.\n\nFruits are harvested by crawlers to sustain them.',
 
   TOOLTIP_lab_TITLE: 'Evolution Lab',
   // TOOLTIP_lab_DESC: 'Creates Research Particles that will be absorbed by a seedling if present.\n\nFruits are harvested by crawlers to enhance research.',

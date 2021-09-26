@@ -73,7 +73,7 @@ export const SkillData: ISkillData = {
       skillRequirements: ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6'],
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 1},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.4},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.3},
       ],
     },
     {
@@ -145,11 +145,20 @@ export const SkillData: ISkillData = {
       title: 'Tier 3',
       description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 2 skills to unlock</p> Permanently unlock Tier 2 but increases Seedling Max Power by x10 and Power Drain by +0.4/s',
       skillRequirements: ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6'],
-      cost: 3,
+      cost: 2,
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 2},
         {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'multiplicative', value: 10},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.4},
+      ],
+    },
+    {
+      slug: 'placeholder',
+      title: 'You win!',
+      description: 'You beat the game!  For now... more content will be coming soon!',
+      cost: 99,
+      effects: [
+
       ],
     },
   ],
@@ -186,7 +195,8 @@ export const SkillData: ISkillData = {
   skillTiers: [
     [],
     ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6', 'skill-tier-1'],
-    ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-tier-2'],
+    ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6', 'skill-tier-2'],
+    ['placeholder'],
   ],
 };
 

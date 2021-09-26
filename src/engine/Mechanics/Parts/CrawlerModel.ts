@@ -52,7 +52,7 @@ export class CrawlerModel {
     this.view = new CrawlerView();
 
     config.commands.forEach(type => {
-      this.commandList.push(new (CrawlerModel.commandMap[type])(this));
+      this.commandList.push(new (CrawlerModel.commandMap[type])(this, config.commandConfig));
     });
 
     this.setCommand(CommandType.IDLE);
@@ -89,6 +89,10 @@ export class CrawlerModel {
     }
   }
 
+  public killMe = () => {
+    this.health = -100;
+  }
+
   public findPath(condition: (node: PlantNode) => boolean, start?: PlantNode): PlantNode[] {
     let pathing = new AStarPath(start || this.cLoc, condition);
 
@@ -113,6 +117,20 @@ export interface ICrawler {
   commands?: CommandType[];
   preference?: CommandType;
   preferenceList?: CommandType[];
+  commandConfig?: ICommandConfig;
+}
+
+export interface ICommandConfig {
+  breedHealthMin: number;
+  wanderRepeat: number;
+  idleRepeat: number;
+  frustratedRepeat: number;
+  fruitSpeed: number;
+  researchRatio: number;
+  powerRatio: number;
+  eatRatio: number;
+  danceGen: number;
+  danceTicks: number;
 }
 
 const dCrawler: ICrawler = {
@@ -137,4 +155,17 @@ const dCrawler: ICrawler = {
     // CommandType.RESEARCH,
     // CommandType.POWER,
   ],
+
+  commandConfig: {
+    breedHealthMin: 0.9,
+    wanderRepeat: 3,
+    idleRepeat: 3,
+    frustratedRepeat: 3,
+    fruitSpeed: 0.95,
+    researchRatio: 1,
+    powerRatio: 2,
+    eatRatio: 0.0075,
+    danceGen: 5,
+    danceTicks: 500,
+  },
 };

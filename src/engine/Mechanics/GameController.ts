@@ -35,6 +35,11 @@ export class GameController {
 
   public removeNode = (node: PlantNode) => {
     _.pull(this.nodes, node);
+    this.crawlers.forEach(crawler => {
+      if (crawler.cLoc === node) {
+        this.killCrawler(crawler);
+      }
+    });
   }
 
   public addCrawler(config: ICrawler, node: PlantNode): CrawlerModel {
@@ -91,19 +96,23 @@ export class GameController {
   }
 
   public updateCrawler = (crawler: CrawlerModel) => {
-    crawler.update();
-    if (crawler.health > 1.5) {
-      console.log('breed!', crawler.health);
+    if (crawler.health <= 0) {
+      this.killCrawler(crawler);
+      return;
+    } else if (crawler.health > 1.5) {
       crawler.health /= 2;
       this.addCrawler(_.defaults({health: crawler.health}, this.nodeManager.crawlerConfig), crawler.cLoc);
-    } else if (crawler.health <= 0) {
-      // this.removeCrawler(crawler);
-      _.pull(this.crawlers, crawler);
-      crawler.view.animateDie(() => {
-        this.container.removeCrawler(crawler.view);
-        this.onCrawlerRemoved.publish(crawler);
-      });
     }
+
+    crawler.update();
+  }
+
+  public killCrawler = (crawler: CrawlerModel) => {
+    _.pull(this.crawlers, crawler);
+    crawler.view.animateDie(() => {
+      this.container.removeCrawler(crawler.view);
+      this.onCrawlerRemoved.publish(crawler);
+    });
   }
 
   public saveNodes(): INodeSave[] {

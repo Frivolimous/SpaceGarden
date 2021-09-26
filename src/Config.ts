@@ -28,6 +28,6 @@ export const Config = {
     FRUIT_THRESHOLD: 0.6,
     POWER_THRESHOLD: 0.25,
     GEN_FADE: 30,
-    FRUIT_APPLY: 0.2,
+    FRUIT_APPLY: 0.3,
   },
 };

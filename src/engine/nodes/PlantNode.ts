@@ -29,6 +29,7 @@ export class PlantNode {
   public fruits: PlantNode[] = [];
 
   public active = true;
+  public exists = true;
 
   public view: PlantNodeView;
   public physics: PlantNodePhysics;
@@ -67,6 +68,7 @@ export class PlantNode {
   }
 
   public destroy() {
+    this.exists = false;
     this.view.destroy();
   }
 
