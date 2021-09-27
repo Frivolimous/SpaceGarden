@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { Colors } from '../../../data/Colors';
-import { JMTween } from '../../../JMGE/JMTween';
 import { PlantNode } from '../../nodes/PlantNode';
 import { GameKnowledge } from '../GameKnowledge';
 import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';

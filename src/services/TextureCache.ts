@@ -141,42 +141,6 @@ function createGraphicTextures() {
       .drawRect(0, 0, 2, 2);
     TextureCache.addTextureFromGraphic('crawler-power', graphic);
 
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawRect(0, 0, 100, 100);
-    // TextureCache.addTextureFromGraphic('square', graphic);
-
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100,75,0, -100,100,75]);
-    // TextureCache.addTextureFromGraphic('triangle', graphic);
-
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100, -30, -100,30,100,30,100, -30]);
-    // TextureCache.addTextureFromGraphic('thin-rect', graphic);
-
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100, -70, -100,70,100,70,100, -70]);
-    // TextureCache.addTextureFromGraphic('fat-rect', graphic);
-
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([100,0,100*(Math.sqrt(5)-1)/4, -100*Math.sqrt(10+2*Math.sqrt(5))/4, -100*(Math.sqrt(5)+1)/4, -100*Math.sqrt(10-2*Math.sqrt(5))/4, -100*(Math.sqrt(5)+1)/4,100*Math.sqrt(10-2*Math.sqrt(5))/4,100*(Math.sqrt(5)-1)/4,100*Math.sqrt(10+2*Math.sqrt(5))/4]);
-    // TextureCache.addTextureFromGraphic('pentagon', graphic);
-
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([100,0,50,100*Math.sqrt(3)/ 2, -50,100*Math.sqrt(3)/ 2, -100,0, -50, -100*Math.sqrt(3)/ 2,50, -100*Math.sqrt(3)/ 2]);
-    // TextureCache.addTextureFromGraphic('hexagon', graphic);
-
     graphic = new PIXI.Graphics();
     graphic.beginFill(0xffffff);
     graphic.drawCircle(0, 0, 5);

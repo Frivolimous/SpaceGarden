@@ -130,9 +130,6 @@ export class PlantNodePower {
 
       this.data.outlets.forEach(outlet => {
         if (outlet.active) {
-          if (outlet.slug === 'seedling') {
-            // console.log(this.powerPercent, outlet.powerPercent, outlet.powerWeight, target ? target.powerWeight : 'no target');
-          }
           if (outlet.power.powerPercent < this.powerPercent && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
             target = outlet;
           }

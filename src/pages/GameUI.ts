@@ -115,6 +115,7 @@ export class GameUI extends BaseUI {
         {key: 'p', function: () => this.resetGame()},
         {key: '`', function: () => this.logSave()},
         {key: '1', function: () => this.loadSave(TierSaves[1])},
+        {key: '2', function: () => this.loadSave(TierSaves[2])},
         {key: '0', function: () => this.loadSave(TierSaves[0])},
         {key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0])},
         {key: 'k', function: this.toggleKnowledge},

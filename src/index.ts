@@ -15,7 +15,6 @@ import { GameEvents, IResizeEvent } from './services/GameEvents';
 import { Debug } from './services/_Debug';
 import { BaseUI, IFadeTiming, dFadeTiming } from './pages/_BaseUI';
 import { ScreenCover } from './JMGE/effects/ScreenCover';
-import { DEBUG_MODE } from './services/_Debug';
 import { FontLoader } from './services/FontLoader';
 
 export let interactionMode: 'desktop'|'mobile' = 'desktop';
@@ -107,11 +106,6 @@ export let Facade = new class FacadeInner {
       this.currentPage = menu;
       this.screen.addChild(menu);
       menu.navIn();
-
-      if (DEBUG_MODE) {
-        // let navbar = new Navbar();
-        // this.screen.addChild(navbar);
-      }
 
       this.finishResize();
     });

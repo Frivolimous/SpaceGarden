@@ -32,9 +32,8 @@ export class ResearchCommand extends BaseCommand {
       return 20;
     }
 
-    let researchRatio = Math.max(1, numResearch / (fruitPerLab * numLabs));
-
-    return 1 - researchRatio * 0.5 - this.crawler.preference === this.type ? 0.25 : 0;
+    let researchRatio = Math.min(1, numResearch / (fruitPerLab * numLabs));
+    return 1 - researchRatio * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
   }
 
   public update() {

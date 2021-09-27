@@ -1,6 +1,7 @@
 export class KeyMapper {
   public enabled = true;
-  public holding: string[] = [];
+
+  private holding: string[] = [];
 
   constructor(private keysDown?: IKeyMap[], private keysUp?: IKeyMap[]) {
     if (keysDown) this.makeLower(keysDown);

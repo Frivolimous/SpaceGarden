@@ -184,9 +184,9 @@ export class PlantNode {
       if (!target.isFruit() && this.config.outletEffects) {
         this.config.outletEffects.forEach(effect => {
           if (effect.type === 'additive') {
-            (target as any)[effect.stat] += effect.amount;
+            (target.power as any)[effect.stat] += effect.amount;
           } else {
-            (target as any)[effect.stat] *= effect.amount;
+            (target.power as any)[effect.stat] *= effect.amount;
           }
         });
       }

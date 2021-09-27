@@ -218,7 +218,7 @@ export class GameController {
   }
 
   public transferPower = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => {
-    if (origin.outlets.indexOf(target) === -1) return;
+    // if (origin.outlets.indexOf(target) === -1 && origin.fruits.indexOf(target) === -1) return;
     let link = this.container.getLink(origin, target);
 
     if (block.type === 'grow') {

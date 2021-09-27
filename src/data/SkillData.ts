@@ -41,7 +41,7 @@ export const SkillData: ISkillData = {
       // description: 'Leaves reduce power drain of Stems by {1-value-amount}',
       cost: 2,
       effects: [
-        { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: {stat: 'powerGen', type: 'additive', amount: -NodeBase.powerDrain / 2}},
+        { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: {stat: '_PowerGen', type: 'additive', amount: -NodeBase.powerDrain / 2}},
       ],
     },
     {

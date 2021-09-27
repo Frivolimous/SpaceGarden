@@ -5,15 +5,12 @@ import { FDGContainer, IPull } from '../engine/FDG/FDGContainer';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
 
 export class MouseController {
-  // objects: IPull[] = [];
-
   public onDelete: JMEventListener = new JMEventListener<PlantNode>();
   public onMove: JMEventListener = new JMEventListener<{x: number, y: number}>();
-  public deleteNext = false;
 
-  public currentPull: IPull;
-
-  public down = false;
+  private deleteNext = false;
+  private currentPull: IPull;
+  private down = false;
 
   public constructor(private canvas: ScrollingContainer, private container: FDGContainer) {
     canvas.background.addListener('pointerdown', this.onMouseDown);
@@ -27,7 +24,22 @@ export class MouseController {
     this.canvas.background.removeListener('pointermove', this.onMouseMove);
   }
 
-  public onMouseDown = (e: PIXI.InteractionEvent) => {
+  public startDrag(config: IPull) {
+    this.currentPull = config;
+    this.container.addPull(config);
+  }
+
+  public deleteNextClicked = (e: { onComplete: () => void }) => {
+    if (e && e.onComplete) {
+      this.deleteNext = true;
+      this.onDelete.addOnce(e.onComplete);
+    } else {
+      this.deleteNext = false;
+      this.onDelete.clear();
+    }
+  }
+
+  private onMouseDown = (e: PIXI.InteractionEvent) => {
     let position = e.data.getLocalPosition(this.container);
     if (this.deleteNext) {
 
@@ -55,16 +67,10 @@ export class MouseController {
     }
   }
 
-  public startDrag(config: IPull) {
-    this.currentPull = config;
-    this.container.addPull(config);
-  }
-
-  public onMouseUp = () => {
+  private onMouseUp = () => {
     if (this.currentPull) {
       this.container.removePull(this.currentPull);
       if (this.currentPull.onRelease) {
-        // let position = e.data.getLocalPosition(this.container);
         this.currentPull.onRelease();
       }
       this.currentPull = null;
@@ -76,7 +82,7 @@ export class MouseController {
     this.down = false;
   }
 
-  public onMouseMove = (e: PIXI.InteractionEvent) => {
+  private onMouseMove = (e: PIXI.InteractionEvent) => {
     let position = e.data.getLocalPosition(this.container);
     if (this.currentPull) {
       this.currentPull.x = position.x;
@@ -87,16 +93,6 @@ export class MouseController {
       this.canvas.diff.tY = position.y;
     } else {
       this.onMove.publish(position);
-    }
-  }
-
-  public deleteNextClicked = (e: { onComplete: () => void }) => {
-    if (e && e.onComplete) {
-      this.deleteNext = true;
-      this.onDelete.addOnce(e.onComplete);
-    } else {
-      this.deleteNext = false;
-      this.onDelete.clear();
     }
   }
 }

@@ -8,6 +8,8 @@ import { GameKnowledge } from '../GameKnowledge';
 
 export class DanceCommand extends BaseCommand {
   private state: 'dance' | 'walk' | 'return';
+  // private walking = false;
+  // private animating = false;
 
   private hopping: boolean;
 
@@ -30,11 +32,14 @@ export class DanceCommand extends BaseCommand {
   public genPriority(): number {
     let core = this.crawler.cLoc.findCore();
     if (!core) return 20;
-    return 0.25 + 0.75 * core.power.powerPercent - (this.crawler.preference === this.type ? 0.25 : 0);
+    return 0.25 + 0.85 * core.power.powerPercent - (this.crawler.preference === this.type ? 0.25 : 0);
   }
 
   public update() {
     if (this.isComplete) return;
+    // if (this.walking) {
+    //   this.updateIdle(() => this.walking = false);
+    // }
     if (this.state === 'dance') {
       this.updateDance();
     } else if (this.state === 'return') {
@@ -46,10 +51,18 @@ export class DanceCommand extends BaseCommand {
 
   private updateDance() {
     if (this.danceTicks <= 0 && !this.hopping) {
+    // if (this.danceTicks <= 0 && !this.walking) {
       this.state = 'return';
       this.startIdleReturn();
     } else {
       this.danceTicks--;
+
+      // if (!this.walking) {
+      //   this.startWalk();
+      // }
+      // if (!this.animating) {
+      //   this.startAnimate();
+      // }
 
       if (!this.hopping) {
         this.hop();
@@ -71,6 +84,20 @@ export class DanceCommand extends BaseCommand {
     this.danceTicks = this.config.danceTicks;
     this.hop();
   }
+
+  // private startWalk = () => {
+  //   this.walking = true;
+  //   this.startIdleLoop();
+  // }
+
+  // private startAnimate = () => {
+  //   this.animating = true;
+  //   if (Math.random() < 0.5) {
+  //     new JMTween(this.crawler.view.sprite.scale, 500).to({x: 0.5}).easing(JMEasing.Sinusoidal.Out).start().yoyo(true).onComplete(() => this.animating = false);
+  //   } else {
+  //     new JMTween(this.crawler.view.sprite.scale, 500).to({y: 0.25}).easing(JMEasing.Sinusoidal.Out).start().yoyo(true).onComplete(() => this.animating = false);
+  //   }
+  // }
 
   private hop = () => {
     this.hopping = true;
