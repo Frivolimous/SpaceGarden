@@ -210,6 +210,8 @@ export class GameUI extends BaseUI {
 
     this.container.onTick(this.gameSpeed);
     this.gameC.onTick(this.gameSpeed);
+    this.gameC.knowledge.update();
+
     this.sidebar.updateNodes();
 
     let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
@@ -311,6 +313,7 @@ export class GameUI extends BaseUI {
     let dragCreate = false;
     let timeout = window.setTimeout(() => {
       dragCreate = true;
+      this.mouseC.clearNextClickEvent();
 
       let position = e.e.data.getLocalPosition(this.container);
       let node = this.gameC.addNewNode(e.config);

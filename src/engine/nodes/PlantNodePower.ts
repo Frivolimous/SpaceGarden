@@ -26,11 +26,16 @@ export class PlantNodePower {
   }
 
   public get powerPercent(): number {
-    return Math.min(this.powerCurrent / this.config.powerMax, 1);
+    return this.powerCurrent / this.config.powerMax;
+    // return Math.min(this.powerCurrent / this.config.powerMax, 1);
   }
 
   public set powerPercent(n: number) {
     this.powerCurrent = this.config.powerMax * n;
+  }
+
+  public get powerPercentOne(): number {
+    return Math.min(this.powerCurrent / this.config.powerMax, 1);
   }
 
   public get powerWeight(): number {
@@ -39,18 +44,18 @@ export class PlantNodePower {
 
   public get powerGen() {
     if (this._PowerGen > 0) {
-      return this._PowerGen * this.powerPercent;
+      return this._PowerGen * this.powerPercentOne;
     } else {
       return this._PowerGen * this.powerPercent;
     }
   }
 
   public get fruitGen() {
-    return (this.config.fruitGen || 0) * this.powerPercent;
+    return (this.config.fruitGen || 0) * this.powerPercentOne;
   }
 
   public get researchGen() {
-    return (this.config.researchGen || 0) * this.powerPercent;
+    return (this.config.researchGen || 0) * this.powerPercentOne;
   }
 
   public onTick() {
@@ -111,12 +116,12 @@ export class PlantNodePower {
     if (this.data.fruits.length > 0 && this.powerPercent >= Config.NODE.FRUIT_THRESHOLD) {
       let target: PlantNode;
       this.data.fruits.forEach(fruit => {
-        if (!target || fruit.power.powerPercent < target.power.powerPercent) {
+        if (!target || fruit.power.powerPercentOne < target.power.powerPercent) {
           target = fruit;
         }
       });
 
-      if (this.powerPercent > target.power.powerPercent) {
+      if (this.powerPercent > target.power.powerPercentOne) {
         let clump = Math.min(this.powerCurrent, this.config.fruitClump);
         this.transferPower(this.data, target, {type: 'grow', amount: clump, removeOrigin: clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1)});
         this.powerCurrent -= clump;
@@ -130,7 +135,7 @@ export class PlantNodePower {
 
       this.data.outlets.forEach(outlet => {
         if (outlet.active) {
-          if (outlet.power.powerPercent < this.powerPercent && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
+          if (outlet.power.powerPercentOne < this.powerPercent && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
             target = outlet;
           }
         }

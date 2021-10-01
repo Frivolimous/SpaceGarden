@@ -15,7 +15,6 @@ export class SkillPanel {
   private skillMap: { element: HTMLButtonElement, skill: ISkillConfig }[] = [];
 
   private skillLevels: number = 0;
-  
 
   constructor(skills: ISkillConfig[], private leveled: string[], private always: string[], tier: number, private disabled?: boolean) {
     this.element = document.createElement('div');

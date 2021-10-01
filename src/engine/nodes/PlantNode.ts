@@ -41,7 +41,7 @@ export class PlantNode {
   public flagCallOnRemove = true;
   public claimedBy: CrawlerModel;
 
-  constructor(private config: INodeConfig, transferPower: TransferPowerFunction) {
+  constructor(public config: INodeConfig, transferPower: TransferPowerFunction) {
     _.defaults(config, dNodeConfig);
 
     this.uid = PlantNode.generateUid();
