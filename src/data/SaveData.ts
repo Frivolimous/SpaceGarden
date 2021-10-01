@@ -4,7 +4,7 @@ import { NodeSlug } from './NodeData';
 
 export type CurrencySlug = 'gold' | 'tokens' | 'refresh' | 'suns' | 'souls';
 
-export const CURRENT_VERSION = 22;
+export const CURRENT_VERSION = 23;
 
 export interface IExtrinsicModel {
   achievements: boolean[];

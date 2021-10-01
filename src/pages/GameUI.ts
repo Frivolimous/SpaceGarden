@@ -88,7 +88,7 @@ export class GameUI extends BaseUI {
     this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
     this.bottomBar.onProceedButton.addListener(this.nextStage);
     this.bottomBar.onCreateButton.addListener(this.createNewNode);
-    this.bottomBar.onDeleteButton.addListener(this.mouseC.deleteNextClicked);
+    this.bottomBar.onDeleteButton.addListener(this.deleteNextClicked);
     this.bottomBar.onTurboButton.addListener(this.toggleTurboMode);
 
     this.keymapper.enabled = false;
@@ -171,6 +171,7 @@ export class GameUI extends BaseUI {
   public saveGameTimeout = () => {
     if (!this.exists) return;
     new InfoPopup(StringManager.data.UI_SAVE);
+    GameEvents.APP_LOG.publish({type: 'SAVE', text: 'SAVE_GAME_TIMEOUT'});
 
     this.saveGame();
     window.setTimeout(this.saveGameTimeout, 30000);
@@ -179,6 +180,7 @@ export class GameUI extends BaseUI {
   public saveGame = () => {
     this.extrinsic.stageState = this.gameC.saveNodes();
     this.extrinsic.crawlers = this.gameC.saveCrawlers();
+    console.log('SAVE: ' + this.extrinsic.stageState);
     SaveManager.saveExtrinsic();
   }
 
@@ -187,6 +189,7 @@ export class GameUI extends BaseUI {
     let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
     node.view.position.set(600, 300);
     node.power.powerPercent = 0.5;
+    // this.saveGame();
   }
 
   public resetGame = () => {
@@ -294,61 +297,121 @@ export class GameUI extends BaseUI {
     }
   }
 
-  public createNewNode = (e: {config: INodeConfig, e: PIXI.InteractionEvent}) => {
-    let position = e.e.data.getLocalPosition(this.container);
-    let node = this.gameC.addNewNode(e.config);
-    let link: FDGLink;
+  public createNewNode = (e: {config: INodeConfig, e: PIXI.InteractionEvent, onComplete: () => void}) => {
+    if (!e) {
+      this.mouseC.clearNextClickEvent();
+      this.container.showConnectionCount(false);
+      return;
+    }
 
-    node.ghostMode = true;
-    node.active = false;
-    node.view.position.set(position.x, position.y);
+    let link: FDGLink;
 
     this.container.showConnectionCount();
 
-    this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
-      onRelease: () => {
-        this.container.showConnectionCount(false);
-        if (node.outlets.length > 0) {
-          node.ghostMode = false;
-          node.active = true;
-          node.view.setIntensity(node.power.powerPercent, true);
-          if (link) link.active = true;
-        } else {
-          this.gameC.removeNode(node);
-        }
-      },
-      onMove: (position2: {x: number, y: number}) => {
-        this.gameC.disconnectNode(node);
-        node.ghostMode = true;
-        let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
-        if (nearest) {
-          node.ghostMode = false;
-          link = this.gameC.linkNodes(nearest, node);
-          link.active = false;
+    let dragCreate = false;
+    let timeout = window.setTimeout(() => {
+      dragCreate = true;
+
+      let position = e.e.data.getLocalPosition(this.container);
+      let node = this.gameC.addNewNode(e.config);
+      node.ghostMode = true;
+      node.active = false;
+      node.view.position.set(position.x, position.y);
+
+      let initialNearest = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
+      if (initialNearest) {
+        node.ghostMode = false;
+        link = this.gameC.linkNodes(initialNearest, node);
+        link.active = false;
+      }
+
+      this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
+        onRelease: () => {
+          this.container.showConnectionCount(false);
+          if (node.outlets.length > 0) {
+            node.ghostMode = false;
+            node.active = true;
+            node.view.setIntensity(node.power.powerPercent, true);
+            if (link) link.active = true;
+          } else {
+            this.gameC.removeNode(node);
+          }
+          e.onComplete();
+        },
+        onMove: (position2: {x: number, y: number}) => {
+          this.gameC.disconnectNode(node);
+          node.ghostMode = true;
+          let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
+          if (nearest) {
+            node.ghostMode = false;
+            link = this.gameC.linkNodes(nearest, node);
+            link.active = false;
+          }
+        },
+      });
+    }, 150);
+
+    this.mouseC.onUp.addOnce(() => {
+      if (!dragCreate) {
+        window.clearTimeout(timeout);
+      }
+    });
+
+    this.mouseC.setNextClickEvent({onDown: position => {
+      let node = this.gameC.addNewNode(e.config);
+      node.ghostMode = true;
+      node.active = false;
+      node.view.position.set(position.x, position.y);
+
+      let initialNearest = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
+      if (initialNearest) {
+        node.ghostMode = false;
+        link = this.gameC.linkNodes(initialNearest, node);
+        link.active = false;
+      }
+
+      this.mouseC.startDrag({x: position.x, y: position.y, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
+        onRelease: () => {
+          this.container.showConnectionCount(false);
+          if (node.outlets.length > 0) {
+            node.ghostMode = false;
+            node.active = true;
+            node.view.setIntensity(node.power.powerPercent, true);
+            if (link) link.active = true;
+          } else {
+            this.gameC.removeNode(node);
+          }
+          e.onComplete();
+        },
+        onMove: (position2: {x: number, y: number}) => {
+          this.gameC.disconnectNode(node);
+          node.ghostMode = true;
+          let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
+          if (nearest) {
+            node.ghostMode = false;
+            link = this.gameC.linkNodes(nearest, node);
+            link.active = false;
+          }
+        },
+      });
+    }});
+  }
+
+  public deleteNextClicked = (e: { onComplete: () => void }) => {
+    if (e) {
+      this.container.showConnectionCount();
+      this.mouseC.setNextClickEvent({ onDown: position => {
+        let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
+        if (nodeToDelete) {
+          nodeToDelete.flagDestroy = true;
         }
 
-        // let nearest2 = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
-        // if (nearest2) {
-        //   if (!nearest) {
-        //     node.ghostMode = false;
-        //     link = this.container.linkNodes(nearest2, node);
-        //     link.active = false;
-        //     nearest = nearest2;
-        //   } else if (nearest2 !== nearest) {
-        //     this.container.removeAllLinksFor(node, true);
-        //     link = this.container.linkNodes(nearest2, node);
-        //     link.active = false;
-        //     nearest = nearest2;
-        //   }
-        // } else {
-        //   if (nearest) {
-        //     node.ghostMode = true;
-        //     this.container.removeAllLinksFor(node, true);
-        //     nearest = null;
-        //   }
-        // }
-      },
-    });
+        e.onComplete && e.onComplete();
+      } });
+    } else {
+      this.mouseC.clearNextClickEvent();
+      this.container.showConnectionCount(false);
+    }
   }
 
   private toggleKnowledge = () => {

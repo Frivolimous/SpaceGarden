@@ -108,6 +108,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: space-between;
 }
 
 .skill-panel .skill-title {
@@ -175,7 +176,7 @@ body {
     max-width: 650px;
     justify-content: flex-start;
     margin: 20px;
-    height: 65%;
+    height: 60%;
     align-content: flex-start;
 }
 
@@ -242,6 +243,7 @@ body {
 }
 
 .skillbar {
+    text-align: center;
     font-style: italic;
     font-size: 18px;
     font-weight: bold;

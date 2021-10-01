@@ -16,7 +16,8 @@ export interface INodeButton {
   rounding?: number;
   label?: string;
   labelStyle?: any;
-  onDown: (e: PIXI.InteractionEvent) => void;
+  onUp?: (e: PIXI.InteractionEvent) => void;
+  onDown?: (e: PIXI.InteractionEvent) => void;
   hoverScale?: number;
   maxNodes?: number;
 }
@@ -66,6 +67,10 @@ export class NodeButton extends PIXI.Container {
       this.numberText = new PIXI.Text(' / ', style);
       this.inner.addChild(this.numberText);
       this.count = 0;
+    } else {
+      this.numberText = new PIXI.Text('∞', style);
+      this.inner.addChild(this.numberText);
+      this.count = Infinity;
     }
 
     this.interactive = true;
@@ -85,19 +90,21 @@ export class NodeButton extends PIXI.Container {
       if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1);
+      config.onUp && config.onUp(e);
     });
 
     this.addListener('touchend', (e) => {
       if (this.disabled) return;
       this.background.tint = this.color;
       this.inner.scale.set(1);
+      config.onUp && config.onUp(e);
     });
 
     this.addListener('pointerdown', e => {
       if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1 - this.config.hoverScale);
-      config.onDown(e);
+      config.onDown && config.onDown(e);
       // SoundData.playSound(SoundIndex.CLICK);
     });
   }
@@ -124,13 +131,23 @@ export class NodeButton extends PIXI.Container {
 
   public set selected(b: boolean) {
     this._Selected = b;
-    this.interactive = !b;
+    // this.interactive = !b;
     if (b) {
-      this.color = this.selectedColor;
+      if (!this._Highlight) {
+        this._Highlight = new PIXI.Graphics();
+        this._Highlight.lineStyle(3, 0xffff00);
+        this._Highlight.drawRoundedRect(0, 0, this.getWidth(), this.getHeight(), this.config.rounding);
+        this.inner.addChild(this._Highlight);
+      }
+      // this.color = this.selectedColor;
     } else {
-      this.color = this.defaultColor;
+      if (this._Highlight) {
+        this._Highlight.destroy();
+        this._Highlight = null;
+      }
+      // this.color = this.defaultColor;
     }
-    this.background.tint = this.color;
+    // this.background.tint = this.color;
   }
 
   public get selected(): boolean {
@@ -138,8 +155,13 @@ export class NodeButton extends PIXI.Container {
   }
 
   public set count(n: number) {
-    this._Count = n;
-    this.numberText.text = `${n}/${this.config.maxNodes}`;
+    if (n === Infinity) {
+      this._Count = Infinity;
+      this.numberText.text = ' ∞ ';
+    } else {
+      this._Count = n;
+      this.numberText.text = `${n}/${this.config.maxNodes}`;
+    }
     this.numberText.width = this.config.width / 3;
     this.numberText.scale.y = this.numberText.scale.x;
     this.numberText.x = this.config.width * 2 / 3 - 2;

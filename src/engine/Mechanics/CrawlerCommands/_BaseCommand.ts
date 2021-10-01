@@ -148,12 +148,12 @@ export class BaseCommand {
     }
   }
 
-  protected updatePath() {
+  protected updatePath(speed: number = 1) {
     if (!this.nextLoc.exists) {
       this.crawler.killMe();
       return;
     }
-    this.magnitude += this.crawler.speed;
+    this.magnitude += this.crawler.speed * speed;
     if (this.magnitude > 1) {
       this.magnitude = 0;
       this.crawler.cLoc = this.nextLoc;

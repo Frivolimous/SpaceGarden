@@ -53,7 +53,7 @@ export class PowerCommand extends BaseCommand {
   }
 
   private isDeliverable(node: PlantNode): boolean {
-    return node.slug !== 'stem' && node.power.powerPercent < 0.5 || node.slug === 'seedling';
+    return node.slug !== 'stem' && node.power.powerPercent < 0.5 || (node.slug === 'seedling' && node.power.powerPercent <= 1.2);
   }
 
   private harvestHere = () => {
@@ -67,13 +67,17 @@ export class PowerCommand extends BaseCommand {
   }
 
   private cancelPath = (prepath: boolean) => {
-    this.isComplete = true;
-    if (this.fruit) {
-      this.fruit.flagDestroy = true;
-      this.fruit = null;
+    if (prepath && this.fruit) {
+      this.deliverHere();
+    } else {
+      this.isComplete = true;
+      if (this.fruit) {
+        this.fruit.flagDestroy = true;
+        this.fruit = null;
+      }
+      this.crawler.setCommand(CommandType.FRUSTRATED);
+      this.crawler.frustratedBy = CommandType[this.type];
     }
-    this.crawler.setCommand(CommandType.FRUSTRATED);
-    this.crawler.frustratedBy = CommandType[this.type];
   }
 
   private deliverHere = () => {

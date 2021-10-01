@@ -2,8 +2,8 @@ export const EnglishStringData = {
   GAME_TITLE: 'Space Garden',
 
   UI_SKILLTREE_TITLE: 'Evolution Tree',
-  UI_SKILLTREE_SUBTITLE_ACTIVE: 'Currently active skills',
-  UI_SKILLTREE_SUBTITLE_INACTIVE: 'Your skills will be applied only on the next plant',
+  UI_SKILLTREE_SUBTITLE_INACTIVE: 'Currently active skills',
+  UI_SKILLTREE_SUBTITLE_ACTIVE: 'Your skills will be applied only on the next plant',
   UI_SKILLTREE_SKILLPOINTS: 'Skillpoints',
   UI_SKILLTREE_RESEARCH: 'Research',
   UI_SKILLTREE_TIER: 'Tier',

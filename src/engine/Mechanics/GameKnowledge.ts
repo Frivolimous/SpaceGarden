@@ -29,7 +29,7 @@ export class GameKnowledge {
 
   public crawlerCount: number = 0;
 
-  constructor(private gameC: GameController, private container: FDGContainer, private manager: NodeManager) {
+  constructor(private gameC: GameController, private manager: NodeManager) {
     gameC.onCrawlerAdded.addListener(this.crawlerAdded);
     gameC.onCrawlerRemoved.addListener(this.crawlerRemoved);
     gameC.onNodeAdded.addListener(this.nodeAdded);

@@ -1,14 +1,13 @@
 import * as PIXI from 'pixi.js';
-import { PlantNode } from '../engine/nodes/PlantNode';
 import { ScrollingContainer } from '../components/ScrollingContainer';
 import { FDGContainer, IPull } from '../engine/FDG/FDGContainer';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
 
 export class MouseController {
-  public onDelete: JMEventListener = new JMEventListener<PlantNode>();
+  public onUp: JMEventListener = new JMEventListener<null>();
   public onMove: JMEventListener = new JMEventListener<{x: number, y: number}>();
 
-  private deleteNext = false;
+  private nextClickEvent: { onDown?: (e: {x: number, y: number}) => void, onUp?: () => void};
   private currentPull: IPull;
   private down = false;
 
@@ -29,30 +28,26 @@ export class MouseController {
     this.container.addPull(config);
   }
 
-  public deleteNextClicked = (e: { onComplete: () => void }) => {
-    if (e && e.onComplete) {
-      this.deleteNext = true;
-      this.onDelete.addOnce(e.onComplete);
-    } else {
-      this.deleteNext = false;
-      this.onDelete.clear();
-    }
+  public setNextClickEvent = (data: { onDown?: (e: {x: number, y: number}) => void, onUp?: () => void}) => {
+    this.nextClickEvent = data;
+  }
+
+  public clearNextClickEvent = () => {
+    this.nextClickEvent = null;
   }
 
   private onMouseDown = (e: PIXI.InteractionEvent) => {
     let position = e.data.getLocalPosition(this.container);
-    if (this.deleteNext) {
-
-      let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
-      if (nodeToDelete) {
-        nodeToDelete.flagDestroy = true;
+    if (this.nextClickEvent) {
+      if (this.nextClickEvent.onDown) {
+        this.nextClickEvent.onDown(position);
+        if (!this.nextClickEvent.onUp) {
+          this.nextClickEvent = null;
+        }
+        return;
       }
-
-      this.deleteNext = false;
-      this.onDelete.publish(nodeToDelete);
-
-      return;
     }
+
     if (this.down) return;
     this.down = true;
 
@@ -68,6 +63,15 @@ export class MouseController {
   }
 
   private onMouseUp = () => {
+    this.onUp.publish();
+    if (this.nextClickEvent) {
+      if (this.nextClickEvent.onUp) {
+        this.nextClickEvent.onUp();
+        this.nextClickEvent = null;
+        return;
+      }
+    }
+
     if (this.currentPull) {
       this.container.removePull(this.currentPull);
       if (this.currentPull.onRelease) {

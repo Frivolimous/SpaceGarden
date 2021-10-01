@@ -23,7 +23,7 @@ export class GameController {
   public knowledge: GameKnowledge;
 
   constructor(private container: FDGContainer, private nodeManager: NodeManager) {
-    this.knowledge = new GameKnowledge(this, container, nodeManager);
+    this.knowledge = new GameKnowledge(this, nodeManager);
   }
 
   public destroy() {
@@ -156,7 +156,7 @@ export class GameController {
   }
 
   public saveNodes(): INodeSave[] {
-    let saves: INodeSave[] = this.nodes.filter(node => node.outlets.length > 0).map(node => {
+    let saves: INodeSave[] = this.nodes.filter(node => (node.slug === 'core' || node.outlets.length > 0)).map(node => {
       let outlets: number[] = this.container.links.filter(l => l.origin === node).map(l => l.target.uid);
 
       return {

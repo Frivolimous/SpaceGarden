@@ -1,9 +1,11 @@
 import { StringManager } from '../../services/StringManager';
 import { ISkillConfig, SkillData } from '../../data/SkillData';
 import { SkillBar } from './SkillBar';
+import { Formula } from '../../services/Formula';
 
 export class SkillPanel {
   public skillsSpent: number = 0;
+  public hasSkillToLevel: boolean = false;
 
   private element: HTMLDivElement;
   private tierContainer: HTMLDivElement;
@@ -13,6 +15,7 @@ export class SkillPanel {
   private skillMap: { element: HTMLButtonElement, skill: ISkillConfig }[] = [];
 
   private skillLevels: number = 0;
+  
 
   constructor(skills: ISkillConfig[], private leveled: string[], private always: string[], tier: number, private disabled?: boolean) {
     this.element = document.createElement('div');
@@ -113,12 +116,12 @@ export class SkillPanel {
     this.skillMap.forEach(data => data.element.disabled = false);
   }
 
-  public updateSkillpoints = (skillpoints: number) => {
+  public updateSkillpoints = (research: number) => {
     if (this.disabled) return;
     let oldpoints = this.skillpoints;
-    this.skillLevels = SkillData.skillExchange.findIndex(cost => cost > skillpoints);
-    let nextCost = SkillData.skillExchange[this.skillLevels];
-    this.skillbar.updateText(skillpoints, nextCost);
+    this.skillLevels = Formula.getNextSkillLevel(research);
+    let nextCost = Formula.getSkillCost(this.skillLevels);
+    this.skillbar.updateText(research, nextCost);
     this.skillpointElement.innerHTML = `${Math.round(this.skillpoints)} ${StringManager.data.UI_SKILLTREE_SKILLPOINTS}`;
     if (oldpoints !== this.skillpoints) {
       this.updateHighlights();
@@ -127,9 +130,11 @@ export class SkillPanel {
 
   private updateHighlights() {
     let sp = this.skillpoints;
+    this.hasSkillToLevel = false;
     this.skillMap.forEach((data, i) => {
       if (data.skill.cost <= sp && !data.element.disabled && !data.element.classList.contains('greyed')) {
         data.element.classList.add('highlight');
+        this.hasSkillToLevel = true;
       } else {
         data.element.classList.remove('highlight');
       }
@@ -160,8 +165,8 @@ export class SkillPanel {
           this.skillsSpent += skill.cost;
           this.leveled.push(skill.slug);
           element.disabled = true;
-          this.updateHighlights();
           this.skillMap.forEach(this.checkRequirements);
+          this.updateHighlights();
         }
       });
       this.checkRequirements({element, skill});

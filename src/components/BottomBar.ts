@@ -10,7 +10,7 @@ import { ToggleButton } from './ui/ToggleButton';
 import { PlantNode } from 'src/engine/nodes/PlantNode';
 
 export class BottomBar extends PIXI.Container {
-  public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent }>();
+  public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent, onComplete: () => void }>();
   public onDeleteButton = new JMEventListener<{ onComplete: () => void }>();
   public onProceedButton = new JMEventListener<null>();
   public onTurboButton = new JMEventListener<boolean>();
@@ -30,7 +30,20 @@ export class BottomBar extends PIXI.Container {
       .drawRect(0, 0, barWidth, barHeight);
 
     configs.forEach(config => {
-      let button = new NodeButton({label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => this.onCreateButton.publish({config, e})});
+      let button = new NodeButton({label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => {
+        button.selected = !button.selected;
+        if (button.selected) {
+          this.buttons.forEach(otherButton => {
+            if (otherButton !== button) {
+              otherButton.selected = false;
+            }
+          });
+          this.deleteButton.selected = false;
+          this.onCreateButton.publish({config, e, onComplete: () => button.selected = false});
+        } else {
+          this.onCreateButton.publish(null);
+        }
+      }});
       TooltipReader.addTooltip(button, {title: (StringManager.data as any)[`TOOLTIP_${config.slug}_TITLE`], description: (StringManager.data as any)[`TOOLTIP_${config.slug}_DESC`]});
       this.addChild(button);
       this.buttons.push(button);
@@ -39,6 +52,7 @@ export class BottomBar extends PIXI.Container {
     this.deleteButton = new ToggleButton({
       label: StringManager.data.BUTTON_DELETE, width: 50, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: (b: boolean) => {
         if (b) {
+          this.buttons.forEach(button => button.selected = false);
           this.onDeleteButton.publish({
             onComplete: () => {
               this.deleteButton.selected = false;

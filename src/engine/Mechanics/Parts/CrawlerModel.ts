@@ -184,7 +184,7 @@ const dCrawler: ICrawler = {
 
   commandConfig: {
     breedHealthMin: 0.9,
-    wanderRepeat: 3,
+    wanderRepeat: 2,
     idleRepeat: 3,
     frustratedRepeat: 3,
     fruitSpeed: 0.95,

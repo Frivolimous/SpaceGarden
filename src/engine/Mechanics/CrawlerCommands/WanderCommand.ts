@@ -28,7 +28,7 @@ export class WanderCommand extends BaseCommand {
   public update() {
     if (this.isComplete) return;
 
-    this.updatePath();
+    this.updatePath(0.5);
   }
 
   private cancelPath = () => {

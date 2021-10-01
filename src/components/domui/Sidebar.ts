@@ -52,6 +52,8 @@ export class Sidebar {
 
   private set areStemsHidden(b: boolean) {
     this._AreStemsHidden = b;
+    if (this.isCrawlerMode) return;
+
     if (b) {
       this.nodeMap.forEach(data => {
         if (data.node.slug === 'stem') {
@@ -60,7 +62,9 @@ export class Sidebar {
       });
     } else {
       this.nodeMap.forEach(data => {
-        data.element.style.removeProperty('display');
+        if (data.node.slug !== 'crawler') {
+          data.element.style.removeProperty('display');
+        }
       });
     }
   }
@@ -84,7 +88,9 @@ export class Sidebar {
         if (data.node.slug === 'crawler') {
           data.element.style.display = 'none';
         } else {
-          data.element.style.removeProperty('display');
+          if (!this.areStemsHidden || data.node.slug !== 'stem') {
+            data.element.style.removeProperty('display');
+          }
         }
       });
     }
@@ -138,7 +144,7 @@ export class Sidebar {
   public addNodeElement = (node: SidebarElement) => {
     if (node.slug === 'crawler') this.addShowCrawlersButton();
     if (!node.isFruit()) {
-      let atStart = (node.slug === 'seedling' || node.slug === 'crawler');
+      let atStart = (node.slug === 'seedling');
       let element = this.addElement(node.toString(), atStart);
       element.addEventListener('pointerover', () => {
         this.highlightNode(node, true);
@@ -207,7 +213,7 @@ export class Sidebar {
       contentElement.innerHTML = data.node.toString();
       if (data.node.slug === 'seedling') {
         this.nextSkillPanel.updateSkillpoints(data.node.power.researchCurrent);
-        this.notification.hidden = (this.nextSkillPanel.skillpoints === 0 || !this.nextSkillPanel.hidden);
+        this.notification.hidden = !this.nextSkillPanel.hidden || !this.nextSkillPanel.hasSkillToLevel;
       }
     });
   }

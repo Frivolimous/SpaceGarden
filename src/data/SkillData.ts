@@ -189,7 +189,6 @@ export const SkillData: ISkillData = {
     50000,
     65000,
     80000,
-    100000,
   ],
 
   skillTiers: [

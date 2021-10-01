@@ -63011,7 +63011,10 @@ const Config = {
         FRUIT_THRESHOLD: 0.6,
         POWER_THRESHOLD: 0.25,
         GEN_FADE: 30,
-        FRUIT_APPLY: 0.2,
+        FRUIT_APPLY: 0.3,
+    },
+    CRAWLER: {
+        BREED_AT: 1.5,
     },
 };
 
@@ -63679,6 +63682,187 @@ const JMTicker = {
 
 /***/ }),
 
+/***/ "./src/JMGE/others/AStar.ts":
+/*!**********************************!*\
+  !*** ./src/JMGE/others/AStar.ts ***!
+  \**********************************/
+/*! exports provided: AStarPath, astarSpacialHermeneutic, astarGridHermeneutic */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AStarPath", function() { return AStarPath; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "astarSpacialHermeneutic", function() { return astarSpacialHermeneutic; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "astarGridHermeneutic", function() { return astarGridHermeneutic; });
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+
+/**
+ * @class this is a utility class for pathfinding that can be used to find a path between any two parts of a connected network
+ */
+class AStarPath {
+    /**
+     * @constructor this is a utility class for pathfinding that can be used to find a path between any two parts of a connected network
+     * @param start the node to start the path from
+     * @param end the node to end the path from
+     * @param hermeneutic A Hermeneutic Function is a predictive algorithm that should return the minimum possible 'distance' between any two nodes.  Optional - if provided it will shorten the processing time by a great deal
+     */
+    constructor(start, end, tileValue, hermeneutic) {
+        this.tileValue = tileValue;
+        this.hermeneutic = hermeneutic || astarBlankHermeneutic;
+        this.tileValue = tileValue || (() => 1);
+        if (lodash__WEBPACK_IMPORTED_MODULE_0___default.a.isFunction(end)) {
+            this.makePathFunction(start, end);
+        }
+        else {
+            this.makePath(start, end);
+        }
+    }
+    /**
+     * @function call this to generate a new path.
+     */
+    makePath(start, end) {
+        let open = [];
+        this.closed = [];
+        open.push({ current: start, previous: null, pValue: 0, hValue: this.hermeneutic(start, end) });
+        while (open.length) {
+            let node = open.shift();
+            let current = node.current;
+            let cValue = this.tileValue(current);
+            if (current === end) {
+                this.path = [node.current];
+                while (node.previous) {
+                    node = node.previous;
+                    this.path.unshift(node.current);
+                }
+                return this.path;
+            }
+            else {
+                main: for (let i = 0; i < current.outlets.length; i++) {
+                    for (let j = 0; j < open.length; j++) {
+                        if (current.outlets[i] === open[j].current) {
+                            if (node.pValue + cValue < open[j].pValue) {
+                                open[j].pValue = node.pValue + cValue;
+                                open[j].previous = node;
+                            }
+                            continue main;
+                        }
+                    }
+                    for (let j = 0; j < this.closed.length; j++) {
+                        if (current.outlets[i] === this.closed[j].current) {
+                            if (node.pValue + cValue < this.closed[j].pValue) {
+                                this.closed[j].pValue = node.pValue + cValue;
+                                this.closed[j].previous = node;
+                            }
+                            continue main;
+                        }
+                    }
+                    let node2 = { current: current.outlets[i], previous: node, pValue: node.pValue + this.tileValue(current.outlets[i]), hValue: this.hermeneutic(current.outlets[i], end) };
+                    // for (let j=0;j<open.length;j++){
+                    //   if (node2.hValue+node2.pValue < open[j].hValue+open[j].pValue){
+                    //     open.splice(j,0,node2);
+                    //     continue main;
+                    //   }
+                    // }
+                    open.push(node2);
+                }
+                open.sort((a, b) => {
+                    if (a.pValue + a.hValue < b.pValue + b.hValue) {
+                        return -1;
+                    }
+                    else if (a.pValue + a.hValue > b.pValue + b.hValue) {
+                        return 1;
+                    }
+                    else {
+                        return 0;
+                    }
+                });
+                this.closed.push(node);
+            }
+        }
+        this.path = null;
+        return null;
+    }
+    makePathFunction(start, end) {
+        let open = [];
+        this.closed = [];
+        open.push({ current: start, previous: null, pValue: 0, hValue: 1 });
+        while (open.length) {
+            let node = open.shift();
+            let current = node.current;
+            let cValue = this.tileValue(current);
+            if (end(current)) {
+                this.path = [node.current];
+                while (node.previous) {
+                    node = node.previous;
+                    this.path.unshift(node.current);
+                }
+                return this.path;
+            }
+            else {
+                main: for (let i = 0; i < current.outlets.length; i++) {
+                    for (let j = 0; j < open.length; j++) {
+                        if (current.outlets[i] === open[j].current) {
+                            if (node.pValue + cValue < open[j].pValue) {
+                                open[j].pValue = node.pValue + cValue;
+                                open[j].previous = node;
+                            }
+                            continue main;
+                        }
+                    }
+                    for (let j = 0; j < this.closed.length; j++) {
+                        if (current.outlets[i] === this.closed[j].current) {
+                            if (node.pValue + cValue < this.closed[j].pValue) {
+                                this.closed[j].pValue = node.pValue + cValue;
+                                this.closed[j].previous = node;
+                            }
+                            continue main;
+                        }
+                    }
+                    let node2 = { current: current.outlets[i], previous: node, pValue: node.pValue + this.tileValue(current.outlets[i]), hValue: 1 };
+                    open.push(node2);
+                }
+                open.sort((a, b) => {
+                    if (a.pValue + a.hValue < b.pValue + b.hValue) {
+                        return -1;
+                    }
+                    else if (a.pValue + a.hValue > b.pValue + b.hValue) {
+                        return 1;
+                    }
+                    else {
+                        return 0;
+                    }
+                });
+                this.closed.push(node);
+            }
+        }
+        this.path = null;
+        return null;
+    }
+}
+/**
+ * @constant astarBlanklHermeneutic a null hermeneutic for when you don't have another option
+ */
+const astarBlankHermeneutic = (node, end) => {
+    return 0;
+};
+/**
+ * @constant astarSpacialHermeneutic used for a 2d grid.  Nodes must have x,y coordinates
+ */
+const astarSpacialHermeneutic = (node, end) => {
+    return Math.sqrt((node.x - end.x) * (node.x - end.x) + (node.y - end.y) * (node.y - end.y));
+};
+/**
+ * @constant astarGridHermeneutic used for a 2d grid where you don't care about diagonal distance
+ */
+const astarGridHermeneutic = (node, end) => {
+    return Math.abs(node.x - end.x) + Math.abs(node.y - end.y);
+    // return Math.sqrt((node.x-end.x)*(node.x-end.x)+(node.y-end.y)*(node.y-end.y));
+};
+
+
+/***/ }),
+
 /***/ "./src/JMGE/others/Colors.ts":
 /*!***********************************!*\
   !*** ./src/JMGE/others/Colors.ts ***!
@@ -63994,24 +64178,24 @@ class BottomBar extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
         this.graphic = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
         this.buttons = [];
         this.nodeAdded = (node) => {
-            let button = this.buttons.find(b => b.getLabel() === node.config.slug);
+            let button = this.buttons.find(b => b.getLabel() === node.slug);
             if (button && button.maxNodes > 0) {
                 button.count++;
                 if (button.count >= button.maxNodes) {
                     button.disabled = true;
                 }
             }
-            if (node.config.slug === 'seedling') {
+            if (node.slug === 'seedling') {
                 this.updateSeedling(node);
             }
         };
         this.nodeRemoved = (node) => {
-            let button = this.buttons.find(b => b.getLabel() === node.config.slug);
+            let button = this.buttons.find(b => b.getLabel() === node.slug);
             if (button && button.maxNodes > 0) {
                 button.count--;
                 button.disabled = false;
             }
-            if (node.config.slug === 'seedling') {
+            if (node.slug === 'seedling') {
                 this.updateSeedling(null);
             }
         };
@@ -64066,7 +64250,7 @@ class BottomBar extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
                 this.proceedButton.visible = true;
                 this.proceedButton.highlight(true, 2.5);
             }
-            let percent = node.data.powerPercent;
+            let percent = node.power.powerPercent;
             this.proceedButton.addLabel(`${_services_StringManager__WEBPACK_IMPORTED_MODULE_3__["StringManager"].data.BUTTON_PROCEED} (${Math.floor(percent * 100)}%)`);
             if (this.proceedButton.disabled) {
                 if (percent >= 1) {
@@ -64336,13 +64520,20 @@ class Sidebar {
         this.currentSkillPanel = currentSkillPanel;
         this.nextSkillPanel = nextSkillPanel;
         this.nodeMap = [];
-        this.addNodeElement = (view) => {
-            if (view.config.type !== 'fruit') {
-                let node = view.data;
-                let atStart = view.config.slug === 'seedling';
+        this.addNodeElement = (node) => {
+            if (node.slug === 'crawler')
+                this.addShowCrawlersButton();
+            if (!node.isFruit()) {
+                let atStart = (node.slug === 'seedling' || node.slug === 'crawler');
                 let element = this.addElement(node.toString(), atStart);
+                element.addEventListener('pointerover', () => {
+                    this.highlightNode(node, true);
+                });
+                element.addEventListener('pointerout', () => {
+                    this.highlightNode(null);
+                });
                 this.nodeMap.push({ element, node, atStart });
-                if (view.config.slug === 'seedling') {
+                if (node.slug === 'seedling') {
                     let button = document.createElement('button');
                     button.classList.add('skill-button');
                     button.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_SKILLTREE_NEXT;
@@ -64355,12 +64546,22 @@ class Sidebar {
                     element.appendChild(this.notification);
                     this.notification.hidden = true;
                 }
-                else if (view.config.slug === 'stem') {
+                else if (node.slug === 'stem') {
                     if (this.areStemsHidden) {
                         element.style.display = 'none';
                     }
                 }
-                if (view.config.slug === 'core' && this.currentSkillPanel) {
+                if (this.isCrawlerMode) {
+                    if (node.slug !== 'crawler') {
+                        element.style.display = 'none';
+                    }
+                }
+                else {
+                    if (node.slug === 'crawler') {
+                        element.style.display = 'none';
+                    }
+                }
+                if (node.slug === 'core' && this.currentSkillPanel) {
                     let button = document.createElement('button');
                     button.classList.add('skill-button');
                     button.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_SKILLTREE_CURRENT;
@@ -64371,12 +64572,11 @@ class Sidebar {
                 }
             }
         };
-        this.removeNodeElement = (view) => {
-            if (view.config.type !== 'fruit') {
-                if (view.config.slug === 'seedling') {
+        this.removeNodeElement = (node) => {
+            if (!node.isFruit()) {
+                if (node.slug === 'seedling') {
                     this.nextSkillPanel.clear();
                 }
-                let node = view.data;
                 let index = this.nodeMap.findIndex(map => map.node === node);
                 this.container.removeChild(this.nodeMap[index].element);
                 this.nodeMap.splice(index, 1);
@@ -64410,7 +64610,7 @@ class Sidebar {
         this._AreStemsHidden = b;
         if (b) {
             this.nodeMap.forEach(data => {
-                if (data.node.config.slug === 'stem') {
+                if (data.node.slug === 'stem') {
                     data.element.style.display = 'none';
                 }
             });
@@ -64421,6 +64621,32 @@ class Sidebar {
             });
         }
     }
+    get isCrawlerMode() {
+        return this._IsCrawlerMode;
+    }
+    set isCrawlerMode(b) {
+        this._IsCrawlerMode = b;
+        if (b) {
+            this.nodeMap.forEach(data => {
+                if (data.node.slug === 'crawler') {
+                    data.element.style.removeProperty('display');
+                }
+                else {
+                    data.element.style.display = 'none';
+                }
+            });
+        }
+        else {
+            this.nodeMap.forEach(data => {
+                if (data.node.slug === 'crawler') {
+                    data.element.style.display = 'none';
+                }
+                else {
+                    data.element.style.removeProperty('display');
+                }
+            });
+        }
+    }
     destroy() {
         this.currentSkillPanel && this.currentSkillPanel.destroy();
         this.nextSkillPanel.destroy();
@@ -64428,6 +64654,7 @@ class Sidebar {
     navIn() {
         this.container.innerHTML = '';
         this.container.appendChild(this.hideStemButton);
+        this.showCrawlersButton && this.container.appendChild(this.showCrawlersButton);
         this.nodeMap.forEach(data => {
             if (data.atStart) {
                 this.container.prepend(data.element);
@@ -64440,15 +64667,70 @@ class Sidebar {
     navOut() {
         this.container.innerHTML = '';
     }
+    addKnowledgeElement(content) {
+        if (this.knowledgeElement)
+            return;
+        let element = this.addElement(content, true);
+        this.knowledgeElement = element;
+    }
+    removeKnowledgeElement() {
+        if (this.knowledgeElement) {
+            this.container.removeChild(this.knowledgeElement);
+            this.knowledgeElement = null;
+        }
+    }
+    updateKnowledge(content) {
+        if (this.knowledgeElement) {
+            let contentElement = this.knowledgeElement.querySelector('.node-content');
+            contentElement.innerHTML = content;
+        }
+    }
     updateNodes() {
         this.nodeMap.forEach(data => {
             let contentElement = data.element.querySelector('.node-content');
             contentElement.innerHTML = data.node.toString();
-            if (data.node.config.slug === 'seedling') {
-                this.nextSkillPanel.updateSkillpoints(data.node.researchCurrent);
+            if (data.node.slug === 'seedling') {
+                this.nextSkillPanel.updateSkillpoints(data.node.power.researchCurrent);
                 this.notification.hidden = (this.nextSkillPanel.skillpoints === 0 || !this.nextSkillPanel.hidden);
             }
         });
+    }
+    highlightNode(node, andHighlightNode) {
+        if (this.currentHighlight) {
+            this.currentHighlight.element.classList.remove('highlight');
+            this.currentHighlight.node.view.highlight = false;
+            this.currentHighlight = null;
+        }
+        if (node) {
+            let map = this.nodeMap.find(data => data.node === node);
+            if (map) {
+                map.element.classList.add('highlight');
+                if (andHighlightNode) {
+                    node.view.highlight = true;
+                }
+                this.currentHighlight = map;
+            }
+        }
+    }
+    addShowCrawlersButton() {
+        if (this.showCrawlersButton)
+            return;
+        this.showCrawlersButton = document.createElement('button');
+        this.showCrawlersButton.classList.add('skill-button');
+        this.showCrawlersButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_CRAWLER_MODE;
+        this.showCrawlersButton.style.position = 'absolute';
+        this.showCrawlersButton.style.left = '5px';
+        this.showCrawlersButton.style.top = '0px';
+        this.showCrawlersButton.addEventListener('click', () => {
+            this.isCrawlerMode = !this.isCrawlerMode;
+            if (this.isCrawlerMode) {
+                this.showCrawlersButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_NODE_MODE;
+            }
+            else {
+                this.showCrawlersButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_CRAWLER_MODE;
+            }
+        });
+        this.container.appendChild(this.showCrawlersButton);
     }
     addElement(content, start) {
         let element = document.createElement('div');
@@ -64462,17 +64744,6 @@ class Sidebar {
             this.container.appendChild(element);
         }
         return element;
-    }
-    highlightNode(node) {
-        if (this.currentHighlight) {
-            this.currentHighlight.classList.remove('highlight');
-            this.currentHighlight = null;
-        }
-        if (node) {
-            let map = this.nodeMap.find(data => data.node.view === node);
-            map.element.classList.add('highlight');
-            this.currentHighlight = map.element;
-        }
     }
 }
 Sidebar.aid = 0;
@@ -65895,11 +66166,14 @@ const Colors = {
     Node: {
         red: 0xE02323,
         orange: 0xE07000,
-        yellow: 0xF5F570,
+        yellow: 0xE5E570,
+        lightyellow: 0xFFFFD0,
         darkyellow: 0xa39320,
         green: 0x07E000,
         darkgreen: 0x03aa03,
         blue: 0x0093FC,
+        lightblue: 0x60A3FC,
+        darkblue: 0x004296,
         purple: 0x9370E0,
     },
     // Node: {
@@ -65943,14 +66217,12 @@ const Fonts = {
 /*!******************************!*\
   !*** ./src/data/NodeData.ts ***!
   \******************************/
-/*! exports provided: NodeBase, NodeDataBase, NodeDataTop, NodeData */
+/*! exports provided: NodeBase, NodeData */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "NodeBase", function() { return NodeBase; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "NodeDataBase", function() { return NodeDataBase; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "NodeDataTop", function() { return NodeDataTop; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "NodeData", function() { return NodeData; });
 /* harmony import */ var _Colors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Colors */ "./src/data/Colors.ts");
 
@@ -65964,7 +66236,7 @@ const NodeBase = {
     powerClumpSub: 5,
     fruitClump: 5,
 };
-const NodeDataBase = {
+const NodeData = {
     Nodes: [
         {
             slug: 'core', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.yellow, shape: 'circle',
@@ -66033,7 +66305,7 @@ const NodeDataBase = {
             fruitClump: NodeBase.fruitClump,
         },
         {
-            slug: 'food', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.orange, shape: 'square',
+            slug: 'food', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.orange, shape: 'pentagon',
             radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
             powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1,
             powerDelay: NodeBase.powerDelay, powerClump: 0,
@@ -66062,106 +66334,6 @@ const NodeDataBase = {
         },
     ],
 };
-const NodeDataTop = {
-    Nodes: [
-        {
-            slug: 'core', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.yellow, shape: 'circle',
-            radius: 30, mass: 30, force: 30, maxLinks: 2, maxCount: 1,
-            powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.corGen * 1.5, powerWeight: 5,
-            powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump * 1.5,
-            fruitType: 'battery', fruitChain: 3, maxFruits: 2, fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'seedling', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.darkgreen, shape: 'hexagon',
-            radius: 30, mass: 30, force: 30, maxLinks: 1, maxCount: 1,
-            powerMax: NodeBase.powerMax * 100, powerGen: 0, powerWeight: 0.75,
-            powerDelay: NodeBase.powerDelay, powerClump: 0,
-            fruitChain: 0,
-        },
-        {
-            slug: 'stem', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.green, shape: 'circle',
-            radius: 10, mass: 1, force: 1, maxLinks: 3, maxCount: 8,
-            powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain, powerWeight: 1,
-            powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump * 3,
-            fruitType: 'leaf', fruitChain: 1, maxFruits: 2, fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'lab', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.purple, shape: 'hexagon',
-            radius: 15, mass: 2, force: 1.5, maxLinks: 1,
-            powerMax: NodeBase.powerMax * 2, powerGen: NodeBase.powerDrain * 2, powerWeight: 1,
-            powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
-            researchGen: 0.1 * 5,
-            fruitType: 'research', fruitChain: 1, maxFruits: 3, fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'generator', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.yellow, shape: 'pentagon',
-            radius: 15, mass: 3, force: 3, maxLinks: 1, maxCount: 4,
-            powerMax: NodeBase.powerMax, powerGen: NodeBase.smallGen, powerWeight: 1.5,
-            powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump,
-            fruitType: 'burr', fruitChain: 1, maxFruits: 3, fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'home', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.blue, shape: 'circle',
-            radius: 10, mass: 1, force: 1, maxLinks: 1,
-            powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain, powerWeight: 1,
-            powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
-            fruitType: 'food', fruitChain: 2, maxFruits: 3, fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'grove', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.orange, shape: 'square',
-            radius: 10, mass: 1, force: 1, maxLinks: 1,
-            fruitGen: 0.07,
-            powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain, powerWeight: 1,
-            powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
-            fruitType: 'gen', fruitChain: 1, maxFruits: 2, fruitClump: NodeBase.fruitClump,
-        },
-        // fruits \\
-        {
-            slug: 'battery', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.darkyellow, shape: 'circle',
-            radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
-            powerMax: NodeBase.powerMax / 2, powerGen: 0.01, powerWeight: 1 / 2,
-            powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerMax / 2,
-            maxFruits: 1, fruitClump: NodeBase.fruitClump * 4,
-        },
-        {
-            slug: 'leaf', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.darkgreen, shape: 'triangle',
-            radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
-            powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1 / 2,
-            powerDelay: NodeBase.powerDelay, powerClump: 0,
-            fruitClump: NodeBase.fruitClump,
-            outletEffects: [{ stat: 'powerGen', type: 'additive', amount: -NodeBase.powerDrain / 2 }],
-        },
-        {
-            slug: 'food', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.orange, shape: 'square',
-            radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
-            powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1 / 2,
-            powerDelay: NodeBase.powerDelay, powerClump: 0,
-            fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'research', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.purple, shape: 'pentagon',
-            radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
-            powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1 / 2,
-            powerDelay: NodeBase.powerDelay, powerClump: 0,
-            fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'gen', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.yellow, shape: 'triangle',
-            radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
-            powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1 / 2,
-            powerDelay: NodeBase.powerDelay, powerClump: 0,
-            fruitClump: NodeBase.fruitClump,
-        },
-        {
-            slug: 'burr', type: 'fruit', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.red, shape: 'triangle',
-            radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
-            powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1 / 2,
-            powerDelay: NodeBase.powerDelay, powerClump: 0,
-            fruitClump: NodeBase.fruitClump,
-        },
-    ],
-};
-const NodeData = NodeDataBase;
 
 
 /***/ }),
@@ -66178,7 +66350,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CURRENT_VERSION", function() { return CURRENT_VERSION; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dExtrinsicModel", function() { return dExtrinsicModel; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "TierSaves", function() { return TierSaves; });
-const CURRENT_VERSION = 22;
+const CURRENT_VERSION = 23;
 const dExtrinsicModel = {
     achievements: [],
     currency: {
@@ -66188,14 +66360,7 @@ const dExtrinsicModel = {
         suns: 0,
         souls: 0,
     },
-    nodes: [
-        'core',
-        'stem',
-        'generator',
-        'grove',
-        'lab',
-        'seedling',
-    ],
+    crawlers: [],
     options: {
         autoFill: false,
     },
@@ -66204,7 +66369,9 @@ const dExtrinsicModel = {
     skillTier: 0,
 };
 const TierSaves = [
-    '',
+    '{"achievements":[],"currency":{"gold":0,"tokens":0,"refresh":0,"suns":0,"souls":0},"options":{"autoFill":false},"skillsCurrent":[],"skillsNext":[],"skillTier":0,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":281,"researchCurrent":0,"outlets":[2],"x":621,"y":309},{"uid":2,"slug":"stem","powerCurrent":91,"researchCurrent":0,"outlets":[4,8],"x":549,"y":299},{"uid":4,"slug":"stem","powerCurrent":95,"researchCurrent":0,"outlets":[5,6],"x":511,"y":314},{"uid":5,"slug":"stem","powerCurrent":84,"researchCurrent":0,"outlets":[7],"x":477,"y":307},{"uid":6,"slug":"generator","powerCurrent":79,"researchCurrent":0,"outlets":[],"x":483,"y":347},{"uid":7,"slug":"generator","powerCurrent":78,"researchCurrent":0,"outlets":[],"x":437,"y":293},{"uid":8,"slug":"seedling","powerCurrent":80,"researchCurrent":0,"outlets":[],"x":520,"y":237}]}',
+    '{"achievements":[],"currency":{"gold":0,"tokens":0,"refresh":0,"suns":0,"souls":0},"options":{"autoFill":false},"skillsCurrent":[],"skillsNext":[],"skillTier":1,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":300,"researchCurrent":0,"outlets":[8,9,10,17],"x":589,"y":269},{"uid":8,"slug":"battery","powerCurrent":25,"researchCurrent":0,"outlets":[24],"x":625,"y":279},{"uid":9,"slug":"stem","powerCurrent":51,"researchCurrent":0,"outlets":[13,16,21,25],"x":582,"y":341},{"uid":10,"slug":"stem","powerCurrent":80,"researchCurrent":0,"outlets":[15,20,42,79],"x":601,"y":194},{"uid":13,"slug":"generator","powerCurrent":58,"researchCurrent":0,"outlets":[26,36,37],"x":616,"y":364},{"uid":15,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":615,"y":187},{"uid":16,"slug":"stem","powerCurrent":80,"researchCurrent":0,"outlets":[19,31,33,43],"x":567,"y":379},{"uid":17,"slug":"battery","powerCurrent":64,"researchCurrent":0,"outlets":[35],"x":552,"y":272},{"uid":19,"slug":"generator","powerCurrent":66,"researchCurrent":0,"outlets":[23,27,39],"x":591,"y":411},{"uid":20,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":616,"y":200},{"uid":21,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":576,"y":355},{"uid":23,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":611,"y":417},{"uid":24,"slug":"battery","powerCurrent":0,"researchCurrent":0,"outlets":[34],"x":636,"y":282},{"uid":25,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":567,"y":346},{"uid":26,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":636,"y":365},{"uid":27,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":606,"y":426},{"uid":31,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":553,"y":374},{"uid":33,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":554,"y":386},{"uid":34,"slug":"battery","powerCurrent":20,"researchCurrent":0,"outlets":[],"x":647,"y":284},{"uid":35,"slug":"battery","powerCurrent":0,"researchCurrent":0,"outlets":[38],"x":541,"y":273},{"uid":36,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":634,"y":374},{"uid":37,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":627,"y":381},{"uid":38,"slug":"battery","powerCurrent":20,"researchCurrent":0,"outlets":[],"x":530,"y":273},{"uid":39,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":596,"y":431},{"uid":42,"slug":"seedling","powerCurrent":4484,"researchCurrent":481.65477692913043,"outlets":[],"x":604,"y":119},{"uid":43,"slug":"stem","powerCurrent":78,"researchCurrent":0,"outlets":[45,46,50,52],"x":546,"y":411},{"uid":45,"slug":"stem","powerCurrent":48,"researchCurrent":0,"outlets":[47,51,53,78],"x":553,"y":445},{"uid":46,"slug":"stem","powerCurrent":50,"researchCurrent":0,"outlets":[57,58,59,77],"x":514,"y":426},{"uid":47,"slug":"generator","powerCurrent":75,"researchCurrent":0,"outlets":[54,56,60],"x":572,"y":481},{"uid":50,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":533,"y":404},{"uid":51,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":567,"y":451},{"uid":52,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":537,"y":423},{"uid":53,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":540,"y":454},{"uid":54,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":590,"y":491},{"uid":56,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":581,"y":499},{"uid":57,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":512,"y":441},{"uid":58,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":499,"y":427},{"uid":59,"slug":"stem","powerCurrent":93,"researchCurrent":0,"outlets":[62,63,68,76],"x":487,"y":447},{"uid":60,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":569,"y":501},{"uid":62,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":489,"y":462},{"uid":63,"slug":"stem","powerCurrent":104,"researchCurrent":0,"outlets":[67,70,73,75],"x":466,"y":473},{"uid":67,"slug":"lab","powerCurrent":187,"researchCurrent":0,"outlets":[71],"x":431,"y":489},{"uid":68,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":471,"y":446},{"uid":70,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":466,"y":489},{"uid":71,"slug":"research","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":413,"y":498},{"uid":73,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":451,"y":473},{"uid":75,"slug":"lab","powerCurrent":180,"researchCurrent":0,"outlets":[],"x":461,"y":512},{"uid":76,"slug":"lab","powerCurrent":143,"researchCurrent":0,"outlets":[],"x":448,"y":440},{"uid":77,"slug":"lab","powerCurrent":169,"researchCurrent":0,"outlets":[],"x":481,"y":406},{"uid":78,"slug":"lab","powerCurrent":148,"researchCurrent":0,"outlets":[],"x":533,"y":479},{"uid":79,"slug":"lab","powerCurrent":182,"researchCurrent":0,"outlets":[],"x":641,"y":196}]}',
+    '{"achievements":[],"currency":{"gold":0,"tokens":0,"refresh":0,"suns":0,"souls":0},"options":{"autoFill":false},"skillsCurrent":["skill-2-1","skill-2-2","skill-2-4","skill-2-3","skill-2-6","skill-2-5","skill-tier-2"],"skillsNext":[],"skillTier":2,"crawlers":[{"preference":1,"health":0.4593562500005972,"location":158},{"preference":5,"health":0.8301250000007385,"location":79},{"preference":5,"health":0.7856000000005192,"location":1},{"preference":5,"health":0.785212500000722,"location":1},{"preference":6,"health":1.0930281250004885,"location":3},{"preference":9,"health":1.0932281250004885,"location":79}],"stageState":[{"uid":1,"slug":"core","powerCurrent":318,"researchCurrent":0,"outlets":[3,13,34,36],"x":512,"y":287},{"uid":3,"slug":"stem","powerCurrent":93,"researchCurrent":0,"outlets":[5,30,40,79],"x":584,"y":275},{"uid":5,"slug":"stem","powerCurrent":85,"researchCurrent":0,"outlets":[7,15,19,142],"x":626,"y":274},{"uid":7,"slug":"stem","powerCurrent":60,"researchCurrent":0,"outlets":[24,28,83,158],"x":665,"y":274},{"uid":13,"slug":"stem","powerCurrent":75,"researchCurrent":0,"outlets":[46,47,62,86],"x":440,"y":259},{"uid":15,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":641,"y":271},{"uid":19,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":638,"y":283},{"uid":24,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":672,"y":260},{"uid":28,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":680,"y":277},{"uid":30,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":595,"y":266},{"uid":34,"slug":"battery","powerCurrent":120878,"researchCurrent":0,"outlets":[38],"x":534,"y":256},{"uid":36,"slug":"battery","powerCurrent":120356,"researchCurrent":0,"outlets":[48],"x":517,"y":249},{"uid":38,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[41],"x":540,"y":247},{"uid":40,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":584,"y":259},{"uid":41,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[],"x":546,"y":238},{"uid":46,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":441,"y":244},{"uid":47,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":450,"y":248},{"uid":48,"slug":"battery","powerCurrent":51,"researchCurrent":0,"outlets":[51],"x":518,"y":238},{"uid":51,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[],"x":520,"y":227},{"uid":62,"slug":"seedling","powerCurrent":49927,"researchCurrent":2297.8443574963953,"outlets":[],"x":376,"y":218},{"uid":79,"slug":"stem","powerCurrent":70,"researchCurrent":0,"outlets":[81,87,96,312],"x":606,"y":254},{"uid":81,"slug":"home","powerCurrent":87,"researchCurrent":0,"outlets":[],"x":609,"y":221},{"uid":83,"slug":"stem","powerCurrent":61,"researchCurrent":0,"outlets":[84,85,88,104],"x":696,"y":254},{"uid":84,"slug":"generator","powerCurrent":84,"researchCurrent":0,"outlets":[110,117,122],"x":736,"y":258},{"uid":85,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":706,"y":265},{"uid":86,"slug":"generator","powerCurrent":115,"researchCurrent":0,"outlets":[95,105,137],"x":421,"y":296},{"uid":87,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":610,"y":238},{"uid":88,"slug":"stem","powerCurrent":85,"researchCurrent":0,"outlets":[89,91,94,99],"x":714,"y":224},{"uid":89,"slug":"grove","powerCurrent":78,"researchCurrent":0,"outlets":[],"x":705,"y":195},{"uid":91,"slug":"generator","powerCurrent":85,"researchCurrent":0,"outlets":[102,108,124],"x":744,"y":197},{"uid":94,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":720,"y":211},{"uid":95,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":411,"y":314},{"uid":96,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":619,"y":248},{"uid":99,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":702,"y":215},{"uid":102,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":764,"y":193},{"uid":104,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":692,"y":239},{"uid":105,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":422,"y":316},{"uid":108,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":759,"y":183},{"uid":110,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":753,"y":270},{"uid":117,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":757,"y":260},{"uid":122,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":755,"y":249},{"uid":124,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":748,"y":177},{"uid":137,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":404,"y":307},{"uid":142,"slug":"grove","powerCurrent":95,"researchCurrent":0,"outlets":[379],"x":644,"y":249},{"uid":158,"slug":"stem","powerCurrent":66,"researchCurrent":0,"outlets":[159,171,172,215],"x":688,"y":301},{"uid":159,"slug":"generator","powerCurrent":66,"researchCurrent":0,"outlets":[175,186,204],"x":721,"y":325},{"uid":171,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":702,"y":297},{"uid":172,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":677,"y":311},{"uid":175,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":741,"y":326},{"uid":186,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":737,"y":337},{"uid":204,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":727,"y":344},{"uid":215,"slug":"home","powerCurrent":51,"researchCurrent":0,"outlets":[366,369,380],"x":686,"y":333},{"uid":312,"slug":"lab","powerCurrent":168,"researchCurrent":0,"outlets":[378],"x":601,"y":295},{"uid":366,"slug":"food","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":692,"y":347},{"uid":369,"slug":"food","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":680,"y":347},{"uid":378,"slug":"research","powerCurrent":85,"researchCurrent":0,"outlets":[],"x":609,"y":313},{"uid":379,"slug":"gen","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":649,"y":234},{"uid":380,"slug":"food","powerCurrent":30,"researchCurrent":0,"outlets":[],"x":670,"y":328}]}',
 ];
 
 
@@ -66220,7 +66387,9 @@ const TierSaves = [
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SkillData", function() { return SkillData; });
-/* harmony import */ var _NodeData__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./NodeData */ "./src/data/NodeData.ts");
+/* harmony import */ var _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../engine/Mechanics/CrawlerCommands/_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _NodeData__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./NodeData */ "./src/data/NodeData.ts");
+
 
 const SkillData = {
     skills: [
@@ -66262,7 +66431,7 @@ const SkillData = {
             // description: 'Leaves reduce power drain of Stems by {1-value-amount}',
             cost: 2,
             effects: [
-                { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: { stat: 'powerGen', type: 'additive', amount: -_NodeData__WEBPACK_IMPORTED_MODULE_0__["NodeBase"].powerDrain / 2 } },
+                { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: { stat: '_PowerGen', type: 'additive', amount: -_NodeData__WEBPACK_IMPORTED_MODULE_1__["NodeBase"].powerDrain / 2 } },
             ],
         },
         {
@@ -66290,72 +66459,95 @@ const SkillData = {
             slug: 'skill-tier-1',
             title: 'Tier 2',
             description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 1 skills to unlock</p> Permanently unlock all Tier 1 skills but increases Seedling Power Drain to 0.4/s',
-            cost: 3,
+            cost: 2,
             skillRequirements: ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6'],
             effects: [
                 { effectType: 'tier', valueType: 'replace', value: 1 },
-                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.4 },
+                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.3 },
             ],
         },
         {
             slug: 'skill-2-1',
-            title: 'To be continued...',
-            description: 'You beat the game!  More content coming soon!  Such as...',
-            cost: 99,
-            effects: [],
+            title: 'Crawlers',
+            description: 'Unlock the "Home" Node which spawns Crawlers.',
+            cost: 1,
+            effects: [
+                { effectType: 'buildable', valueType: 'additive', value: 'home' },
+            ],
         },
         {
             slug: 'skill-2-2',
-            title: 'Crawlers',
-            description: 'Unlock the "Home" Node which spawns Crawlers.',
-            cost: 99,
-            effects: [],
+            title: 'Crawler Smarts',
+            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can bring Lab Fruits to the Seedling produce research',
+            cost: 2,
+            skillRequirements: ['skill-2-1'],
+            effects: [
+                { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].RESEARCH },
+                { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].RESEARCH },
+            ],
         },
         {
             slug: 'skill-2-3',
-            title: 'Crawler Smarts',
-            description: 'Crawlers can bring Lab Fruits to the Seedling produce research',
-            cost: 99,
-            effects: [],
+            title: 'Woodcutters',
+            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can use Grove Fruits to power the Seedling or low power nodes',
+            cost: 2,
+            skillRequirements: ['skill-2-1'],
+            effects: [
+                { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].POWER },
+                { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].POWER },
+            ],
         },
         {
             slug: 'skill-2-4',
-            title: 'Woodcutters',
-            description: 'Crawlers can bring Grove Fruits to the Seedling to power it',
-            cost: 99,
-            effects: [],
+            title: 'More Crawlers!',
+            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can over-consume Home Fruits to spawn more crawlers',
+            cost: 3,
+            skillRequirements: ['skill-2-1'],
+            effects: [
+                { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].BREED },
+                { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].BREED },
+            ],
         },
         {
             slug: 'skill-2-5',
-            title: 'More Crawlers!',
-            description: 'Crawlers can over-consume Home Fruits to spawn more crawlers',
-            cost: 99,
-            effects: [],
+            title: 'Worship',
+            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can dance on the Core to charge its fruits',
+            cost: 3,
+            skillRequirements: ['skill-2-1'],
+            effects: [
+                { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].DANCE },
+                { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].DANCE },
+            ],
         },
         {
             slug: 'skill-2-6',
-            title: 'Worship',
-            description: 'Crawlers can dance on the Core to charge its fruits',
-            cost: 99,
-            effects: [],
-        },
-        {
-            slug: 'skill-2-7',
-            title: 'Take Off!',
-            description: 'When launching your seedling, up to two crawlers come along',
-            cost: 99,
-            effects: [],
+            title: 'Longevity.',
+            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers lose half as much health per second and move 20% faster.',
+            cost: 3,
+            skillRequirements: ['skill-2-1'],
+            effects: [
+                { effectType: 'crawler', key: 'healthDrain', valueType: 'multiplicative', value: 0.5 },
+                { effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.2 },
+            ],
         },
         {
             slug: 'skill-tier-2',
             title: 'Tier 3',
-            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 2 skills to unlock</p> Permanently unlock all Tier 2 skills and increases Seedling Max Power by x10',
+            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 2 skills to unlock</p> Permanently unlock Tier 2 but increases Seedling Max Power by x10 and Power Drain by +0.4/s',
             skillRequirements: ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6'],
-            cost: 99,
+            cost: 2,
             effects: [
-                { effectType: 'tier', valueType: 'replace', value: 1 },
+                { effectType: 'tier', valueType: 'replace', value: 2 },
                 { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'multiplicative', value: 10 },
+                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.4 },
             ],
+        },
+        {
+            slug: 'placeholder',
+            title: 'You win!',
+            description: 'You beat the game!  For now... more content will be coming soon!',
+            cost: 99,
+            effects: [],
         },
     ],
     skillExchange: [
@@ -66389,7 +66581,8 @@ const SkillData = {
     skillTiers: [
         [],
         ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6', 'skill-tier-1'],
-        ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6', 'skill-2-7', 'skill-tier-2'],
+        ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6', 'skill-tier-2'],
+        ['placeholder'],
     ],
 };
 
@@ -66409,18 +66602,20 @@ __webpack_require__.r(__webpack_exports__);
 const EnglishStringData = {
     GAME_TITLE: 'Space Garden',
     UI_SKILLTREE_TITLE: 'Evolution Tree',
-    UI_SKILLTREE_SUBTITLE_ACTIVE: 'Currently active skills',
-    UI_SKILLTREE_SUBTITLE_INACTIVE: 'Your skills will be applied only on the next plant',
+    UI_SKILLTREE_SUBTITLE_INACTIVE: 'Currently active skills',
+    UI_SKILLTREE_SUBTITLE_ACTIVE: 'Your skills will be applied only on the next plant',
     UI_SKILLTREE_SKILLPOINTS: 'Skillpoints',
     UI_SKILLTREE_RESEARCH: 'Research',
     UI_SKILLTREE_TIER: 'Tier',
     UI_SIDEBAR_SHOW_STEMS: 'Show Stems',
     UI_SIDEBAR_HIDE_STEMS: 'Hide Stems',
+    UI_SIDEBAR_CRAWLER_MODE: 'Crawler Mode',
+    UI_SIDEBAR_NODE_MODE: 'Node Mode',
     UI_SIDEBAR_SKILLTREE_NEXT: 'Next Evolution',
     UI_SIDEBAR_SKILLTREE_CURRENT: 'Current Evolution',
     UI_SAVE: 'Game Saved!',
     TOOLTIP_home_TITLE: 'Crawler Home',
-    TOOLTIP_home_DESC: 'Produces fruits that are required to sustain and breed Crawlers.\n\nFruits are harvested by crawlers to sustain them.',
+    TOOLTIP_home_DESC: 'Produces fruits that are required to sustain and breed Crawlers.\n\nYou automatically breed up to one Crawler per Home as fruits spawn.\n\nFruits are harvested by crawlers to sustain them.',
     TOOLTIP_lab_TITLE: 'Evolution Lab',
     // TOOLTIP_lab_DESC: 'Creates Research Particles that will be absorbed by a seedling if present.\n\nFruits are harvested by crawlers to enhance research.',
     TOOLTIP_lab_DESC: 'Creates Research Particles that will be absorbed by a seedling if present.',
@@ -66478,9 +66673,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _FDGLink__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./FDGLink */ "./src/engine/FDG/FDGLink.ts");
-/* harmony import */ var _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../JMGE/events/JMEventListener */ "./src/JMGE/events/JMEventListener.ts");
-/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
-
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
 
 
 
@@ -66489,9 +66682,9 @@ class FDGContainer extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
     constructor(borders) {
         super();
         this.borders = borders;
-        this.onNodeAdded = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_3__["JMEventListener"]();
-        this.onNodeRemoved = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_3__["JMEventListener"]();
         this.links = [];
+        this.nodeLayer = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"]();
+        this.crawlerLayer = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"]();
         this.nodes = [];
         this.pulls = [];
         this.drawLinks = () => {
@@ -66505,31 +66698,31 @@ class FDGContainer extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
                 if (!link.active)
                     return;
                 link.onTick.publish();
-                let dX = link.origin.x - link.target.x;
-                let dY = link.origin.y - link.target.y;
+                let dX = link.origin.view.x - link.target.view.x;
+                let dY = link.origin.view.y - link.target.view.y;
                 let dist2 = dX * dX + dY * dY;
                 let dist = Math.sqrt(dist2);
                 if (dist < link.length)
                     return;
-                let mult = _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.ELASTICITY * (link.length - dist) / dist;
-                link.origin.v.x += mult * dX * link.origin.iMass;
-                link.origin.v.y += mult * dY * link.origin.iMass;
-                link.target.v.x -= mult * dX * link.target.iMass;
-                link.target.v.y -= mult * dY * link.target.iMass;
+                let mult = _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.ELASTICITY * (link.length - dist) / dist;
+                link.origin.physics.vX += mult * dX * link.origin.physics.iMass;
+                link.origin.physics.vY += mult * dY * link.origin.physics.iMass;
+                link.target.physics.vX -= mult * dX * link.target.physics.iMass;
+                link.target.physics.vY -= mult * dY * link.target.physics.iMass;
             });
             this.pulls.forEach(pull => {
-                pull.node.v.x *= _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.PULL_FRICTION;
-                pull.node.v.y *= _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.PULL_FRICTION;
-                let dX = pull.node.x - pull.x;
-                let dY = pull.node.y - pull.y;
+                pull.node.physics.vX *= _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.PULL_FRICTION;
+                pull.node.physics.vY *= _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.PULL_FRICTION;
+                let dX = pull.node.view.x - pull.x;
+                let dY = pull.node.view.y - pull.y;
                 let dist2 = dX * dX + dY * dY;
-                if (dist2 > _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.TARGET_MIN) {
+                if (dist2 > _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.TARGET_MIN) {
                     if (!pull.minD || dist2 > pull.minD * pull.minD) {
-                        let mult = -_Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.TARGET_RATIO;
+                        let mult = -_Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.TARGET_RATIO;
                         if (pull.force)
                             mult *= pull.force;
-                        pull.node.v.x += mult * dX * pull.node.iMass;
-                        pull.node.v.y += mult * dY * pull.node.iMass;
+                        pull.node.physics.vX += mult * dX * pull.node.physics.iMass;
+                        pull.node.physics.vY += mult * dY * pull.node.physics.iMass;
                     }
                 }
             });
@@ -66537,8 +66730,8 @@ class FDGContainer extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
                 let node = this.nodes[i];
                 for (let j = i - 1; j >= 0; j--) {
                     let other = this.nodes[j];
-                    let dX = node.x - other.x;
-                    let dY = node.y - other.y;
+                    let dX = node.view.x - other.view.x;
+                    let dY = node.view.y - other.view.y;
                     if (dX > 0)
                         dX = Math.max(2, dX);
                     else
@@ -66548,23 +66741,24 @@ class FDGContainer extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
                     else
                         dY = Math.min(-2, dY);
                     let dist2 = dX * dX + dY * dY;
-                    let mult = node.config.force * other.config.force / dist2 / Math.sqrt(dist2);
-                    node.v.x += mult * dX * node.iMass;
-                    node.v.y += mult * dY * node.iMass;
-                    other.v.x -= mult * dX * other.iMass;
-                    other.v.y -= mult * dY * other.iMass;
+                    let mult = node.physics.force * other.physics.force / dist2 / Math.sqrt(dist2);
+                    node.physics.vX += mult * dX * node.physics.iMass;
+                    node.physics.vY += mult * dY * node.physics.iMass;
+                    other.physics.vX -= mult * dX * other.physics.iMass;
+                    other.physics.vY -= mult * dY * other.physics.iMass;
                 }
-                if (node.x < this.borders.left)
-                    node.v.x += _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.EDGE_BOUNCE * (-node.x + this.borders.left);
-                if (node.x > this.borders.right)
-                    node.v.x += _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.EDGE_BOUNCE * (-node.x + this.borders.right);
-                if (node.y < this.borders.top)
-                    node.v.y += _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.EDGE_BOUNCE * (-node.y + this.borders.top);
-                if (node.y > this.borders.bottom)
-                    node.v.y += _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.EDGE_BOUNCE * (-node.y + this.borders.bottom);
-                node.tick();
+                if (node.view.x < this.borders.left)
+                    node.physics.vX += _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.left);
+                if (node.view.x > this.borders.right)
+                    node.physics.vX += _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.right);
+                if (node.view.y < this.borders.top)
+                    node.physics.vY += _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.top);
+                if (node.view.y > this.borders.bottom)
+                    node.physics.vY += _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.bottom);
+                node.tickPhysics();
             }
         };
+        this.addChild(this.nodeLayer, this.crawlerLayer);
     }
     addPull(pull) {
         this.pulls.push(pull);
@@ -66574,33 +66768,37 @@ class FDGContainer extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
     }
     addNode(node) {
         this.nodes.push(node);
-        this.addChild(node);
-        this.onNodeAdded.publish(node);
+        this.nodeLayer.addChild(node.view);
     }
     removeNode(node) {
         let i = this.nodes.indexOf(node);
-        if (i < 0)
-            return;
-        let outlets = lodash__WEBPACK_IMPORTED_MODULE_1__["clone"](node.data.outlets);
-        let fruits = lodash__WEBPACK_IMPORTED_MODULE_1__["clone"](node.data.fruits);
-        this.removeAllLinksFor(node);
-        this.nodes.splice(i, 1);
-        node.destroy();
-        this.onNodeRemoved.publishSync(node);
-        outlets.forEach(n => {
-            if (!n.view.isConnectedToCore()) {
-                this.removeNode(n.view);
-            }
-        });
-        fruits.forEach(n => this.removeNode(n.view));
+        if (i >= 0) {
+            this.nodeLayer.removeChild(node.view);
+            this.nodes.splice(i, 1);
+        }
+    }
+    addCrawler(crawler) {
+        this.crawlerLayer.addChild(crawler);
+    }
+    removeCrawler(crawler) {
+        this.crawlerLayer.removeChild(crawler);
+    }
+    addLink(origin, target) {
+        let link = new _FDGLink__WEBPACK_IMPORTED_MODULE_2__["FDGLink"](origin, target);
+        this.links.push(link);
+        return link;
+    }
+    removeLink(origin, target) {
+        let index = this.links.findIndex(link => link.hasNode(origin, target));
+        if (index >= 0) {
+            this.links.splice(index, 1);
+        }
     }
     removeAllLinksFor(node, excludeFruit) {
         for (let i = this.links.length - 1; i >= 0; i--) {
             if (this.links[i].hasNode(node)) {
-                if (excludeFruit && this.links[i].other(node).config.type === 'fruit')
+                if (excludeFruit && this.links[i].other(node).isFruit())
                     continue;
-                this.links[i].origin.removeNode(this.links[i].target);
-                this.links[i].target.removeNode(this.links[i].origin);
                 this.links.splice(i, 1);
             }
         }
@@ -66608,40 +66806,23 @@ class FDGContainer extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
     getLink(origin, target) {
         return this.links.find(link => link.hasNode(origin) && link.hasNode(target));
     }
-    linkNodes(origin, target) {
-        origin.linkNode(target);
-        target.linkNode(origin, true);
-        let link = new _FDGLink__WEBPACK_IMPORTED_MODULE_2__["FDGLink"](origin, target);
-        this.links.push(link);
-        return link;
-    }
-    removeLink(origin, target) {
-        for (let i = this.links.length; i >= 0; i--) {
-            if (this.links[i].hasNode(origin, target)) {
-                origin.removeNode(target);
-                target.removeNode(origin);
-                this.links.splice(i, 1);
-                return;
-            }
-        }
-    }
     getClosestObject(config) {
         let m;
-        let distance = config.distance ? config.distance * config.distance : _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.MAX_GRAB * _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.MAX_GRAB;
+        let distance = config.distance ? config.distance * config.distance : _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.MAX_GRAB * _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].PHYSICS.MAX_GRAB;
         for (let i = 0; i < this.nodes.length; i++) {
             let node = this.nodes[i];
-            if (config.maxLinks && node.data.outlets.length >= node.config.maxLinks)
+            if (config.maxLinks && node.outlets.length >= node.maxOutlets)
                 continue;
             if (config.filter && config.filter === node)
                 continue;
-            if (config.notType && node.config.slug === config.notType)
+            if (config.notType && node.slug === config.notType)
                 continue;
-            if (config.notFruit && node.config.type === 'fruit')
+            if (config.notFruit && node.isFruit())
                 continue;
             // if (par.hasTag!=null && par.hasTag!==this.nodes[i].tag) continue;
             // if (par.notHasTag!=null && par.notHasTag===this.nodes[i].tag) continue;
-            let x = node.x - config.x;
-            let y = node.y - config.y;
+            let x = node.view.x - config.x;
+            let y = node.view.y - config.y;
             let distance2 = x * x + y * y;
             if (distance2 < distance) {
                 distance = distance2;
@@ -66651,7 +66832,7 @@ class FDGContainer extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
         return m;
     }
     showConnectionCount(show = true) {
-        this.nodes.forEach(node => node.config.type !== 'fruit' ? node.showConnectionCount(show) : null);
+        this.nodes.forEach(node => !node.isFruit() ? node.showConnectionCount(show) : null);
     }
     // ==== RUNNING ==== \\
     onTick(ticks) {
@@ -66688,17 +66869,17 @@ class FDGLink {
         this.target = target;
         this.onTick = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
         this.length = 40;
-        this.color = 0xFFFFFF;
-        this.lineStyle = 2;
         this.intensity = 0;
         this.active = true;
+        this.color = 0xFFFFFF;
+        this.lineStyle = 2;
         this.blobs = [];
-        this.color = target.config.color;
-        if (origin.config.type === 'fruit' || target.config.type === 'fruit') {
-            this.length = (origin.config.radius + target.config.radius);
+        this.color = target.view.color;
+        if (origin.isFruit() || target.isFruit()) {
+            this.length = (origin.view.radius + target.view.radius);
         }
         else {
-            this.length = (origin.config.radius + target.config.radius) * 1.5;
+            this.length = (origin.view.radius + target.view.radius) * 1.5;
         }
     }
     hasNode(node1, node2) {
@@ -66714,6 +66895,9 @@ class FDGLink {
         }
         return false;
     }
+    other(node) {
+        return this.origin === node ? this.target : this.origin;
+    }
     getColor() {
         return Object(_JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_3__["colorLuminance"])(this.color, 0.3 + 0.7 * this.intensity);
     }
@@ -66722,26 +66906,23 @@ class FDGLink {
         return new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__["JMTween"](this, 300).to({ intensity: 0 }).start();
     }
     zip(origin, color, fade, onComplete) {
-        let blob = { x: origin.x, y: origin.y, color, size: 2, fade };
+        let blob = { x: origin.view.x, y: origin.view.y, color, size: 2, fade };
         let target = this.other(origin);
         this.blobs.push(blob);
         return new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__["JMTween"]({ percent: 0 }, 300).to({ percent: 1 }).start().onUpdate(data => {
-            if (!origin.parent || !target.parent)
+            if (!origin.view.parent || !target.view.parent)
                 return;
-            blob.x = origin.x + (target.x - origin.x) * data.percent;
-            blob.y = origin.y + (target.y - origin.y) * data.percent;
+            blob.x = origin.view.x + (target.view.x - origin.view.x) * data.percent;
+            blob.y = origin.view.y + (target.view.y - origin.view.y) * data.percent;
         }).onComplete(() => {
             lodash__WEBPACK_IMPORTED_MODULE_0__["pull"](this.blobs, blob);
             onComplete();
         });
     }
-    other(node) {
-        return this.origin === node ? this.target : this.origin;
-    }
     drawTo(canvas) {
         canvas.lineStyle(this.lineStyle, this.getColor())
-            .moveTo(this.origin.x, this.origin.y)
-            .lineTo(this.target.x, this.target.y);
+            .moveTo(this.origin.view.x, this.origin.view.y)
+            .lineTo(this.target.view.x, this.target.view.y);
         this.blobs.forEach(blob => {
             canvas.lineStyle(0).beginFill(blob.color).drawCircle(blob.x, blob.y, blob.size);
         });
@@ -66751,137 +66932,806 @@ class FDGLink {
 
 /***/ }),
 
-/***/ "./src/engine/FDG/FDGNode.ts":
-/*!***********************************!*\
-  !*** ./src/engine/FDG/FDGNode.ts ***!
-  \***********************************/
-/*! exports provided: FDGNode */
+/***/ "./src/engine/Mechanics/CrawlerCommands/BreedCommand.ts":
+/*!**************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/BreedCommand.ts ***!
+  \**************************************************************/
+/*! exports provided: BreedCommand */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FDGNode", function() { return FDGNode; });
-/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/dist/esm/pixi.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _data_Fonts__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../data/Fonts */ "./src/data/Fonts.ts");
-/* harmony import */ var _JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../JMGE/others/Colors */ "./src/JMGE/others/Colors.ts");
-/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
-/* harmony import */ var _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../JMGE/JMTween */ "./src/JMGE/JMTween.ts");
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BreedCommand", function() { return BreedCommand; });
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../Config */ "./src/Config.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
 
 
 
-
-
-
-class FDGNode extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
-    constructor(texture, config) {
-        super();
+class BreedCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_2__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
         this.config = config;
-        this.v = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Point"](0, 0);
-        this._iMass = 0;
-        this.vR = 0.005;
-        this.fixed = false;
-        this.hasMass = true;
-        this.text = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Text"]('2/2', { fontSize: 12, fontFamily: _data_Fonts__WEBPACK_IMPORTED_MODULE_2__["Fonts"].FLYING, stroke: 0, strokeThickness: 1, fill: 0xffffff });
-        this.moveBody = () => {
-            this.rotate();
-            if (this.fixed)
-                return;
-            this.v.x *= _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.DAMP;
-            this.v.y *= _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.DAMP;
-            if (Math.abs(this.v.x) > _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.MIN_V || Math.abs(this.v.y) > _Config__WEBPACK_IMPORTED_MODULE_4__["Config"].PHYSICS.MIN_V) {
-                this.x += this.v.x;
-                this.y += this.v.y;
-            }
-            else {
-                this.v.set(0, 0);
-            }
+        this.eatHere = () => {
+            this.state = 'eat';
+            let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
+            this.grabFruit(fruit, () => {
+                this.deliverFruit(() => {
+                    this.crawler.health += fruit.power.powerCurrent * this.config.eatRatio;
+                    if (this.crawler.health < _Config__WEBPACK_IMPORTED_MODULE_0__["Config"].CRAWLER.BREED_AT) {
+                        this.initialize();
+                    }
+                    else {
+                        this.isComplete = true;
+                    }
+                });
+            });
         };
-        this.tick = () => {
-            this.moveBody();
+        this.cancelPath = () => {
+            this.isComplete = true;
+            this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_2__["CommandType"].FRUSTRATED);
+            this.crawler.frustratedBy = _BaseCommand__WEBPACK_IMPORTED_MODULE_2__["CommandType"][this.type];
         };
-        lodash__WEBPACK_IMPORTED_MODULE_1__["defaults"](config, dFDGNode);
-        this.sprite = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Sprite"](texture);
-        this.sprite.anchor.set(0.5);
-        this.text.anchor.set(0.5);
-        this.text.visible = false;
-        this.addChild(this.sprite, this.text);
-        this._iMass = 1 / config.mass;
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_2__["CommandType"].BREED;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_1__["Colors"].Node.lightblue;
     }
-    get iMass() {
-        return this.hasMass ? this._iMass : 5;
+    initialize() {
+        this.isComplete = false;
+        this.state = 'walk';
+        this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);
     }
-    set intensity(n) {
-        n = Math.min(0.3 + 0.7 * n, 1);
-        this.sprite.tint = Object(_JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_3__["colorLuminance"])(this.config.color, n);
-        this.sprite.scale.set(n);
+    genPriority() {
+        let numCrawlers = this.knowledge.crawlerCount;
+        let numFood = this.knowledge.sortedNodes.food.filter(node => node.isHarvestable()).length;
+        if (numFood > 0 && numCrawlers < numFood) {
+            return 0.5 + numCrawlers / numFood * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
+        }
+        return 20;
     }
-    set ghostMode(b) {
-        if (b) {
-            this.alpha = 0.5;
-            this.hasMass = false;
+    update() {
+        if (this.isComplete)
+            return;
+        if (this.state === 'eat') {
+            this.standStill();
+            this.dragFruit();
         }
         else {
-            this.alpha = 1;
-            this.hasMass = true;
+            this.updatePath();
         }
     }
-    linkNode(target, forceOutlet = false) {
-        this.data.linkNode(target.data, forceOutlet);
-    }
-    removeNode(node) {
-        this.data.removeNode(node.data);
-    }
-    removeAllNodes() {
-        this.data.removeAllNodes();
-    }
-    showConnectionCount(show) {
-        if (show) {
-            this.text.text = `${this.data.outlets.length}/${this.config.maxLinks}`;
-            let remaining = this.config.maxLinks - this.data.outlets.length;
-            if (remaining <= 0) {
-                this.text.tint = 0xff0000;
-            }
-            else if (remaining === 1) {
-                this.text.tint = 0xcccc00;
-            }
-            else {
-                this.text.tint = 0xffffff;
-            }
-            this.text.visible = true;
-        }
-        else {
-            this.text.visible = false;
-        }
-    }
-    isConnectedToCore() {
-        return this.data.checkConnections(node => node.config.slug === 'core');
-    }
-    rotate() {
-        this.sprite.rotation += this.vR;
-        if (this.sprite.rotation > Math.PI)
-            this.sprite.rotation -= Math.PI * 2;
-        if (this.sprite.rotation < -Math.PI)
-            this.sprite.rotation += Math.PI * 2;
-    }
-    pulse(color) {
-        let pulseCircle = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
-        pulseCircle.beginFill(color);
-        pulseCircle.drawCircle(0, 0, this.config.radius * this.sprite.scale.x * 1.2);
-        pulseCircle.alpha = 0;
-        this.addChildAt(pulseCircle, 0);
-        new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_5__["JMTween"](pulseCircle, 100).to({ alpha: 0.5 }).start().chain(pulseCircle, 300).to({ alpha: 0 }).onComplete(() => {
-            pulseCircle.destroy();
-        });
+    hasFood(node) {
+        return (node.power.fruitType === 'food' && node.hasHarvestableFruit());
     }
 }
-const dFDGNode = {
-    color: 0xffffff,
-    radius: 10,
-    mass: 1,
-    force: 1,
-};
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/DanceCommand.ts":
+/*!**************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/DanceCommand.ts ***!
+  \**************************************************************/
+/*! exports provided: DanceCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "DanceCommand", function() { return DanceCommand; });
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+/* harmony import */ var _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../JMGE/JMTween */ "./src/JMGE/JMTween.ts");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_3__);
+
+
+
+
+class DanceCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.danceHere = () => {
+            this.state = 'dance';
+            this.danceTicks = this.config.danceTicks;
+            this.hop();
+        };
+        // private startWalk = () => {
+        //   this.walking = true;
+        //   this.startIdleLoop();
+        // }
+        // private startAnimate = () => {
+        //   this.animating = true;
+        //   if (Math.random() < 0.5) {
+        //     new JMTween(this.crawler.view.sprite.scale, 500).to({x: 0.5}).easing(JMEasing.Sinusoidal.Out).start().yoyo(true).onComplete(() => this.animating = false);
+        //   } else {
+        //     new JMTween(this.crawler.view.sprite.scale, 500).to({y: 0.25}).easing(JMEasing.Sinusoidal.Out).start().yoyo(true).onComplete(() => this.animating = false);
+        //   }
+        // }
+        this.hop = () => {
+            this.hopping = true;
+            let node = this.crawler.cLoc;
+            let targetX = node.view.x + (-3 / 4 + 6 / 4 * Math.random()) * node.view.radius;
+            let targetY = node.view.y + (-3 / 4 + 6 / 4 * Math.random()) * node.view.radius;
+            let apexY = (node.view.y + targetY) / 2 - 15;
+            new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__["JMTween"](this.crawler.view, 500).to({ y: apexY }).easing(_JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__["JMEasing"].Quadratic.Out).start()
+                .chain(this.crawler.view, 500).to({ y: targetY }).easing(_JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__["JMEasing"].Quadratic.In);
+            new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__["JMTween"](this.crawler.view, 1000).to({ x: targetX }).easing(_JMGE_JMTween__WEBPACK_IMPORTED_MODULE_2__["JMEasing"].Quadratic.InOut).start().onComplete(() => this.hopping = false);
+        };
+        this.cancelPath = () => {
+            this.isComplete = true;
+            this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].FRUSTRATED);
+            this.crawler.frustratedBy = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"][this.type];
+        };
+        this.returnComplete = () => {
+            this.isComplete = true;
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].DANCE;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_1__["Colors"].Node.lightyellow;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.state = 'walk';
+        this.startPath(this.isDanceable, this.danceHere, this.cancelPath);
+    }
+    genPriority() {
+        let core = this.crawler.cLoc.findCore();
+        if (!core)
+            return 20;
+        return 0.25 + 0.85 * core.power.powerPercent - (this.crawler.preference === this.type ? 0.25 : 0);
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        // if (this.walking) {
+        //   this.updateIdle(() => this.walking = false);
+        // }
+        if (this.state === 'dance') {
+            this.updateDance();
+        }
+        else if (this.state === 'return') {
+            this.updateIdle(this.returnComplete);
+        }
+        else {
+            this.updatePath();
+        }
+    }
+    updateDance() {
+        if (this.danceTicks <= 0 && !this.hopping) {
+            // if (this.danceTicks <= 0 && !this.walking) {
+            this.state = 'return';
+            this.startIdleReturn();
+        }
+        else {
+            this.danceTicks--;
+            // if (!this.walking) {
+            //   this.startWalk();
+            // }
+            // if (!this.animating) {
+            //   this.startAnimate();
+            // }
+            if (!this.hopping) {
+                this.hop();
+            }
+            let fruit = lodash__WEBPACK_IMPORTED_MODULE_3___default.a.sample(this.crawler.cLoc.fruits);
+            if (fruit) {
+                fruit.power.powerCurrent += this.config.danceGen;
+            }
+        }
+    }
+    isDanceable(node) {
+        return node.slug === 'core' && node.fruits.length > 0;
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/EatCommand.ts":
+/*!************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/EatCommand.ts ***!
+  \************************************************************/
+/*! exports provided: EatCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "EatCommand", function() { return EatCommand; });
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+
+
+class EatCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.eatHere = () => {
+            this.state = 'eat';
+            let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
+            this.grabFruit(fruit, () => {
+                this.deliverFruit(() => {
+                    this.isComplete = true;
+                    this.crawler.health += fruit.power.powerCurrent * this.config.eatRatio;
+                });
+            });
+        };
+        this.cancelPath = () => {
+            this.isComplete = true;
+            this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].STARVING);
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].EAT;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.blue;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.state = 'walk';
+        this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);
+    }
+    genPriority() {
+        if (this.crawler.health < 0.5)
+            return this.crawler.health / 2;
+        return 20;
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        if (this.state === 'eat') {
+            this.standStill();
+            this.dragFruit();
+        }
+        else {
+            this.updatePath();
+        }
+    }
+    hasFood(node) {
+        return (node.power.fruitType === 'food' && node.hasHarvestableFruit());
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/FrustratedCommand.ts":
+/*!*******************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/FrustratedCommand.ts ***!
+  \*******************************************************************/
+/*! exports provided: FrustratedCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FrustratedCommand", function() { return FrustratedCommand; });
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+
+
+class FrustratedCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.idleComplete = () => {
+            this.repeatCount--;
+            if (this.repeatCount > 0) {
+                this.startIdleLoop();
+            }
+            else {
+                this.isComplete = true;
+            }
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].FRUSTRATED;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_1__["Colors"].Node.red;
+    }
+    genPriority() {
+        return 20;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.repeatCount = this.config.frustratedRepeat;
+        this.startIdleLoop();
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        this.updateIdle(this.idleComplete);
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/IdleCommand.ts":
+/*!*************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/IdleCommand.ts ***!
+  \*************************************************************/
+/*! exports provided: IdleCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "IdleCommand", function() { return IdleCommand; });
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+
+
+class IdleCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.idleComplete = () => {
+            this.repeatCount--;
+            if (this.repeatCount > 0) {
+                this.startIdleLoop();
+            }
+            else {
+                this.isComplete = true;
+            }
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].IDLE;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_1__["Colors"].Node.green;
+    }
+    genPriority() {
+        return 0.9 + Math.random() * 0.3;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.repeatCount = this.config.idleRepeat;
+        this.startIdleLoop();
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        this.updateIdle(this.idleComplete);
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/PowerCommand.ts":
+/*!**************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/PowerCommand.ts ***!
+  \**************************************************************/
+/*! exports provided: PowerCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PowerCommand", function() { return PowerCommand; });
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+
+
+class PowerCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.harvestHere = () => {
+            this.state = 'harvest';
+            let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
+            this.grabFruit(fruit, () => {
+                this.state = 'carry';
+                this.startPath(this.isDeliverable, this.deliverHere, this.cancelPath);
+            });
+        };
+        this.cancelPath = (prepath) => {
+            this.isComplete = true;
+            if (this.fruit) {
+                this.fruit.flagDestroy = true;
+                this.fruit = null;
+            }
+            this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].FRUSTRATED);
+            this.crawler.frustratedBy = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"][this.type];
+        };
+        this.deliverHere = () => {
+            this.state = 'deliver';
+            this.deliverFruit(fruit => {
+                this.isComplete = true;
+                this.crawler.cLoc.power.powerCurrent += (fruit.power.powerCurrent * this.config.powerRatio);
+            });
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].POWER;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_1__["Colors"].Node.yellow;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.state = 'walk';
+        this.startPath(this.hasPower, this.harvestHere, this.cancelPath, true);
+    }
+    // lowest is better
+    genPriority() {
+        let numGen = this.knowledge.sortedNodes.gen.filter(node => node.isHarvestable()).length;
+        if (numGen <= 0) {
+            return 20;
+        }
+        let seedling = this.crawler.cLoc.findNode(node => node.slug === 'seedling');
+        let closest = this.crawler.cLoc.findNode(node => node.power.powerPercent < 0.5);
+        return Math.min(seedling ? 0.25 + 0.75 * seedling.power.powerPercent : 20, closest ? 0.5 + closest.power.powerPercent : 20)
+            - (this.crawler.preference === this.type ? 0.25 : 0);
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        this.dragFruit();
+        if (this.state === 'harvest' || this.state === 'deliver') {
+            this.standStill();
+        }
+        else {
+            this.updatePath();
+        }
+    }
+    hasPower(node) {
+        return node.power.fruitType === 'gen' && node.hasHarvestableFruit();
+    }
+    isDeliverable(node) {
+        return node.slug !== 'stem' && node.power.powerPercent < 0.5 || node.slug === 'seedling';
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/ResearchCommand.ts":
+/*!*****************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/ResearchCommand.ts ***!
+  \*****************************************************************/
+/*! exports provided: ResearchCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ResearchCommand", function() { return ResearchCommand; });
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+
+
+class ResearchCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.harvestHere = () => {
+            this.state = 'harvest';
+            let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
+            this.grabFruit(fruit, () => {
+                this.state = 'carry';
+                this.startPath(this.isSeed, this.deliverHere, this.cancelPath);
+            });
+        };
+        this.cancelPath = (prepath) => {
+            this.isComplete = true;
+            if (this.fruit) {
+                this.fruit.flagDestroy = true;
+                this.fruit = null;
+            }
+            this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].FRUSTRATED);
+            this.crawler.frustratedBy = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"][this.type];
+        };
+        this.deliverHere = () => {
+            this.state = 'deliver';
+            this.deliverFruit(fruit => {
+                this.isComplete = true;
+                this.crawler.cLoc.receiveResearch(fruit.power.powerCurrent * this.config.researchRatio);
+            });
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].RESEARCH;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_1__["Colors"].Node.purple;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.state = 'walk';
+        this.startPath(this.hasResearch, this.harvestHere, this.cancelPath, true);
+    }
+    genPriority() {
+        let numResearch = this.knowledge.sortedNodes.research.filter(node => node.isHarvestable()).length;
+        let numLabs = this.knowledge.sortedNodes.lab.length;
+        let fruitPerLab = this.knowledge.numFruitsPerNode('lab');
+        if (numResearch === 0 || this.knowledge.sortedNodes.seedling.length === 0) {
+            return 20;
+        }
+        let researchRatio = Math.min(1, numResearch / (fruitPerLab * numLabs));
+        return 1 - researchRatio * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        this.dragFruit();
+        if (this.state === 'harvest' || this.state === 'deliver') {
+            this.standStill();
+        }
+        else {
+            this.updatePath();
+        }
+    }
+    hasResearch(node) {
+        return node.power.fruitType === 'research' && node.hasHarvestableFruit();
+    }
+    isSeed(node) {
+        return node.slug === 'seedling';
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/StarvingCommand.ts":
+/*!*****************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/StarvingCommand.ts ***!
+  \*****************************************************************/
+/*! exports provided: StarvingCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "StarvingCommand", function() { return StarvingCommand; });
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+
+
+class StarvingCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.finishPath = () => {
+            if (this.currentPath) {
+                this.isComplete = true;
+            }
+            else {
+                this.state = 'idle';
+                this.startIdleLoop();
+            }
+        };
+        this.cancelPath = () => {
+            this.state = 'idle';
+            this.startIdleLoop();
+        };
+        this.idleComplete = () => {
+            this.isComplete = true;
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].STARVING;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.darkblue;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.state = 'walk';
+        this.startPath(this.makesFood, this.finishPath, this.cancelPath);
+    }
+    genPriority() {
+        return 20;
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        if (this.state === 'idle') {
+            this.updateIdle(this.idleComplete);
+        }
+        else {
+            this.updatePath();
+        }
+    }
+    makesFood(node) {
+        return (node.power.fruitType === 'food');
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/WanderCommand.ts":
+/*!***************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/WanderCommand.ts ***!
+  \***************************************************************/
+/*! exports provided: WanderCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "WanderCommand", function() { return WanderCommand; });
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+/* harmony import */ var _BaseCommand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+
+
+class WanderCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["BaseCommand"] {
+    constructor(crawler, config, knowledge) {
+        super(crawler, config, knowledge);
+        this.config = config;
+        this.cancelPath = () => {
+            this.isComplete = true;
+            this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].FRUSTRATED);
+            this.crawler.frustratedBy = _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"][this.type];
+        };
+        this.finishCommand = () => {
+            this.repeatCount--;
+            if (this.repeatCount > 0) {
+                let start = this.crawler.cLoc;
+                this.startPath(node => node !== start, this.finishCommand, this.cancelPath);
+            }
+            else {
+                this.isComplete = true;
+            }
+        };
+        this.type = _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].WANDER;
+        this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.green;
+    }
+    initialize() {
+        this.isComplete = false;
+        this.repeatCount = this.config.wanderRepeat;
+        let start = this.crawler.cLoc;
+        this.startPath(node => node !== start, this.finishCommand, this.cancelPath);
+    }
+    genPriority() {
+        return 0.9 + Math.random() * 0.3 - (this.crawler.preference === this.type ? 0.15 : 0);
+    }
+    update() {
+        if (this.isComplete)
+            return;
+        this.updatePath();
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts":
+/*!**************************************************************!*\
+  !*** ./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts ***!
+  \**************************************************************/
+/*! exports provided: CommandType, BaseCommand */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CommandType", function() { return CommandType; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BaseCommand", function() { return BaseCommand; });
+/* harmony import */ var _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../JMGE/JMTween */ "./src/JMGE/JMTween.ts");
+
+var CommandType;
+(function (CommandType) {
+    CommandType[CommandType["NONE"] = 0] = "NONE";
+    CommandType[CommandType["WANDER"] = 1] = "WANDER";
+    CommandType[CommandType["IDLE"] = 2] = "IDLE";
+    CommandType[CommandType["EAT"] = 3] = "EAT";
+    CommandType[CommandType["DANCE"] = 4] = "DANCE";
+    CommandType[CommandType["RESEARCH"] = 5] = "RESEARCH";
+    CommandType[CommandType["POWER"] = 6] = "POWER";
+    CommandType[CommandType["FRUSTRATED"] = 7] = "FRUSTRATED";
+    CommandType[CommandType["STARVING"] = 8] = "STARVING";
+    CommandType[CommandType["BREED"] = 9] = "BREED";
+})(CommandType || (CommandType = {}));
+class BaseCommand {
+    constructor(crawler, config, knowledge) {
+        this.crawler = crawler;
+        this.config = config;
+        this.knowledge = knowledge;
+        this.isComplete = false;
+        this.return = false;
+        this.grabFruit = (fruit, onComplete) => {
+            this.crawler.unclaimNode();
+            fruit.flagUnlink = true;
+            fruit.active = false;
+            fruit.physics.fixed = true;
+            this.fruit = fruit;
+            window.setTimeout(onComplete, 1000);
+        };
+        this.startNextStep = () => {
+            if (this.currentPath && this.currentPath.path.length > 0) {
+                this.nextLoc = this.currentPath.path.shift();
+                if (!this.nextLoc.exists) {
+                    this.isComplete = true;
+                    this.crawler.setCommand(CommandType.FRUSTRATED);
+                    this.crawler.frustratedBy = 'Stepping ' + CommandType[this.type];
+                    if (this.fruit) {
+                        this.destroyFruit();
+                    }
+                }
+                this.magnitude = 0;
+            }
+            else {
+                let path = this.currentPath;
+                this.currentPath = null;
+                path.onComplete();
+                // if (path.condition(this.crawler.cLoc)) {
+                //   path.onComplete();
+                // } else {
+                //   path.onCancel(false);
+                // }
+            }
+        };
+    }
+    initialize() {
+    }
+    genPriority() {
+        return 0;
+    }
+    update() {
+    }
+    deliverFruit(onComplete) {
+        let fruit = this.fruit;
+        this.fruit = null;
+        new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_0__["JMTween"](fruit.view.scale, 500).easing(_JMGE_JMTween__WEBPACK_IMPORTED_MODULE_0__["JMEasing"].Back.In).to({ x: 0, y: 0 }).start().onComplete(() => {
+            fruit.flagDestroy = true;
+            onComplete(fruit);
+        });
+    }
+    dragFruit() {
+        if (this.fruit) {
+            this.fruit.view.x = this.crawler.view.x + (this.fruit.view.x - this.crawler.view.x) * this.config.fruitSpeed;
+            this.fruit.view.y = this.crawler.view.y + (this.fruit.view.y - this.crawler.view.y) * this.config.fruitSpeed;
+        }
+    }
+    destroyFruit() {
+        let fruit = this.fruit;
+        this.fruit = null;
+        new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_0__["JMTween"](fruit.view, 1000).easing(_JMGE_JMTween__WEBPACK_IMPORTED_MODULE_0__["JMEasing"].Back.In).to({ alpha: 0 }).start().onComplete(() => {
+            fruit.flagDestroy = true;
+        });
+    }
+    standStill() {
+        this.crawler.view.x = this.crawler.cLoc.view.x;
+        this.crawler.view.y = this.crawler.cLoc.view.y;
+    }
+    startIdleLoop() {
+        this.return = false;
+        this.magnitude = 0;
+        this.targetMagnitude = 0.3 + Math.random() * 0.7;
+        this.angle = -Math.PI + 2 * Math.PI * Math.random();
+    }
+    startIdleReturn() {
+        this.return = true;
+        let dX = this.crawler.view.x - this.crawler.cLoc.view.x;
+        let dY = this.crawler.view.y - this.crawler.cLoc.view.y;
+        this.targetMagnitude = Infinity;
+        this.magnitude = Math.sqrt(dX * dX + dY * dY) / 50;
+        this.angle = Math.atan2(dY, dX);
+    }
+    updateIdle(onComplete) {
+        this.magnitude += this.crawler.speed / this.crawler.cLoc.view.radius * 50 * (this.return ? -1 : 1);
+        if (this.magnitude > this.targetMagnitude) {
+            this.magnitude = this.targetMagnitude;
+            this.return = true;
+        }
+        else if (this.magnitude < 0) {
+            onComplete();
+            return;
+        }
+        this.crawler.view.x = this.crawler.cLoc.view.x + this.magnitude * this.crawler.cLoc.view.radius * Math.cos(this.angle);
+        this.crawler.view.y = this.crawler.cLoc.view.y + this.magnitude * this.crawler.cLoc.view.radius * Math.sin(this.angle);
+    }
+    startPath(condition, onComplete, onCancel, andClaimFruit) {
+        if (condition(this.crawler.cLoc)) {
+            onComplete();
+        }
+        else {
+            let path = this.crawler.findPath(condition);
+            if (!path || path.length === 0) {
+                onCancel(true);
+            }
+            else {
+                path.shift();
+                this.currentPath = { condition, onComplete, onCancel, path };
+                if (andClaimFruit) {
+                    let target = path[path.length - 1];
+                    let fruit = target.harvestFruit();
+                    this.crawler.claimNode(fruit);
+                }
+                this.startNextStep();
+            }
+        }
+    }
+    updatePath() {
+        if (!this.nextLoc.exists) {
+            this.crawler.killMe();
+            return;
+        }
+        this.magnitude += this.crawler.speed;
+        if (this.magnitude > 1) {
+            this.magnitude = 0;
+            this.crawler.cLoc = this.nextLoc;
+            this.startNextStep();
+        }
+        else {
+            this.crawler.view.x = this.crawler.cLoc.view.x + (this.nextLoc.view.x - this.crawler.cLoc.view.x) * this.magnitude;
+            this.crawler.view.y = this.crawler.cLoc.view.y + (this.nextLoc.view.y - this.crawler.cLoc.view.y) * this.magnitude;
+        }
+    }
+}
 
 
 /***/ }),
@@ -66898,11 +67748,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GameController", function() { return GameController; });
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
-/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../data/Colors */ "./src/data/Colors.ts");
-/* harmony import */ var _services_TextureCache__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../services/TextureCache */ "./src/services/TextureCache.ts");
-/* harmony import */ var _FDG_FDGNode__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../FDG/FDGNode */ "./src/engine/FDG/FDGNode.ts");
-/* harmony import */ var _Parts_GameNode__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Parts/GameNode */ "./src/engine/Mechanics/Parts/GameNode.ts");
+/* harmony import */ var _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../JMGE/events/JMEventListener */ "./src/JMGE/events/JMEventListener.ts");
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../data/Colors */ "./src/data/Colors.ts");
+/* harmony import */ var _nodes_PlantNode__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/PlantNode */ "./src/engine/nodes/PlantNode.ts");
+/* harmony import */ var _Parts_CrawlerModel__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Parts/CrawlerModel */ "./src/engine/Mechanics/Parts/CrawlerModel.ts");
+/* harmony import */ var _GameKnowledge__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./GameKnowledge */ "./src/engine/Mechanics/GameKnowledge.ts");
+
 
 
 
@@ -66913,106 +67765,181 @@ class GameController {
     constructor(container, nodeManager) {
         this.container = container;
         this.nodeManager = nodeManager;
+        this.onNodeAdded = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
+        this.onNodeRemoved = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
+        this.onNodeClaimed = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
+        this.onCrawlerAdded = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
+        this.onCrawlerRemoved = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
         this.nodes = [];
-        this.addNode = (view) => {
-            let node = new _Parts_GameNode__WEBPACK_IMPORTED_MODULE_5__["GameNode"](view, view.config, this.transferPower);
-            this.nodes.push(node);
-        };
-        this.removeNodeByView = (view) => {
-            let node = view.data;
+        this.crawlers = [];
+        this.removeNode = (node) => {
             lodash__WEBPACK_IMPORTED_MODULE_0__["pull"](this.nodes, node);
+            this.crawlers.forEach(crawler => {
+                if (crawler.cLoc === node) {
+                    this.killCrawler(crawler);
+                }
+            });
+            this.disconnectNode(node);
+            this.container.removeNode(node);
+            node.destroy();
+            if (node.flagCallOnRemove)
+                this.onNodeRemoved.publish(node);
+        };
+        this.updateNode = (node) => {
+            if (node.flagDestroy) {
+                this.removeNode(node);
+                return;
+            }
+            else if (node.flagUnlink) {
+                node.flagUnlink = false;
+                this.disconnectNode(node);
+                if (node.flagCallOnRemove) {
+                    this.onNodeRemoved.publish(node);
+                    node.flagCallOnRemove = false;
+                }
+                return;
+            }
+            node.tickPower();
+            if (node.power.fruitSpawn >= 1 && node.canSpawnFruit()) {
+                node.power.fruitSpawn--;
+                let fruitConfig = this.nodeManager.getNodeConfig(node.power.fruitType);
+                let fruit = this.addNewNode(fruitConfig);
+                this.linkNodes(node, fruit);
+                fruit.view.position.set(node.view.x, node.view.y);
+                if (node.slug === 'home' && this.crawlers.length < this.nodes.filter(node2 => node2.slug === 'home').length) {
+                    this.addCrawler(this.nodeManager.crawlerConfig, node);
+                }
+            }
+        };
+        this.disconnectNode = (node) => {
+            this.container.removeAllLinksFor(node);
+            while (node.fruits.length > 0) {
+                let fruit = node.fruits.shift();
+                fruit.removeNode(node);
+                this.removeNode(fruit);
+            }
+            while (node.outlets.length > 0) {
+                let outlet = node.outlets.shift();
+                outlet.removeNode(node);
+                if (!outlet.isConnectedToCore()) {
+                    this.removeNode(outlet);
+                }
+            }
+        };
+        this.updateCrawler = (crawler) => {
+            if (crawler.health <= 0) {
+                this.killCrawler(crawler);
+                return;
+            }
+            else if (crawler.health > 1.5) {
+                crawler.health /= 2;
+                this.addCrawler(lodash__WEBPACK_IMPORTED_MODULE_0__["defaults"]({ health: crawler.health }, this.nodeManager.crawlerConfig), crawler.cLoc);
+            }
+            crawler.update();
+        };
+        this.killCrawler = (crawler) => {
+            lodash__WEBPACK_IMPORTED_MODULE_0__["pull"](this.crawlers, crawler);
+            crawler.view.animateDie(() => {
+                this.container.removeCrawler(crawler.view);
+                this.onCrawlerRemoved.publish(crawler);
+            });
         };
         this.transferPower = (origin, target, block) => {
+            // if (origin.outlets.indexOf(target) === -1 && origin.fruits.indexOf(target) === -1) return;
+            let link = this.container.getLink(origin, target);
             if (block.type === 'grow') {
-                target.powerCurrent += block.amount;
+                target.power.powerCurrent += block.amount;
                 if (block.removeOrigin) {
-                    this.container.removeNode(origin.view);
+                    this.removeNode(origin);
                 }
                 else {
-                    let link = this.container.getLink(origin.view, target.view);
-                    if (link) {
-                        link.flash();
-                    }
+                    link.flash();
                 }
             }
             else if (block.type === 'research') {
-                let link = this.container.getLink(origin.view, target.view);
-                if (link) {
-                    link.zip(origin.view, _data_Colors__WEBPACK_IMPORTED_MODULE_2__["Colors"].Node.purple, block.fade, () => {
-                        if (target.config.slug === 'seedling') {
-                            target.receiveResearch(block.amount);
-                            // add research
+                link.zip(origin, _data_Colors__WEBPACK_IMPORTED_MODULE_3__["Colors"].Node.purple, block.fade, () => {
+                    if (target.slug === 'seedling') {
+                        target.receiveResearch(block.amount);
+                    }
+                    else {
+                        block.fade--;
+                        if (block.fade <= 0)
+                            return;
+                        let target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+                        // let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling'))));
+                        if (!target2)
+                            target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active)));
+                        if (target2) {
+                            this.transferPower(target, target2, block);
                         }
-                        else {
-                            block.fade--;
-                            if (block.fade <= 0)
-                                return;
-                            let target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
-                            // let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling'))));
-                            if (!target2)
-                                target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active)));
-                            if (target2) {
-                                this.transferPower(target, target2, block);
-                            }
-                        }
-                    });
-                }
+                    }
+                });
             }
             else if (block.type === 'fruit') {
-                let link = this.container.getLink(origin.view, target.view);
-                if (link) {
-                    link.zip(origin.view, _data_Colors__WEBPACK_IMPORTED_MODULE_2__["Colors"].Node.orange, block.fade, () => {
-                        if (target.canSpawnFruit() && Math.random() < _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.FRUIT_APPLY) {
-                            target.receiveFruitPower(block.amount, _data_Colors__WEBPACK_IMPORTED_MODULE_2__["Colors"].Node.orange);
-                            // add research
+                link.zip(origin, _data_Colors__WEBPACK_IMPORTED_MODULE_3__["Colors"].Node.orange, block.fade, () => {
+                    if (target.canSpawnFruit() && Math.random() < _Config__WEBPACK_IMPORTED_MODULE_2__["Config"].NODE.FRUIT_APPLY) {
+                        target.receiveFruitPower(block.amount);
+                        // add research
+                    }
+                    else {
+                        block.fade--;
+                        if (block.fade <= 0)
+                            return;
+                        let target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+                        if (!target2)
+                            target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active)));
+                        if (target2) {
+                            this.transferPower(target, target2, block);
                         }
-                        else {
-                            block.fade--;
-                            if (block.fade <= 0)
-                                return;
-                            let target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
-                            if (!target2)
-                                target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active)));
-                            if (target2) {
-                                this.transferPower(target, target2, block);
-                            }
-                        }
-                    });
-                }
+                    }
+                });
             }
         };
-    }
-    addNewNode(config) {
-        let node = new _FDG_FDGNode__WEBPACK_IMPORTED_MODULE_4__["FDGNode"](_services_TextureCache__WEBPACK_IMPORTED_MODULE_3__["TextureCache"].getNodeGraphicTexture(config.shape, config.radius), config);
-        this.container.addNode(node);
-        this.addNode(node);
-        return node;
+        this.knowledge = new _GameKnowledge__WEBPACK_IMPORTED_MODULE_6__["GameKnowledge"](this, nodeManager);
     }
     destroy() {
     }
+    addNewNode(config) {
+        let node = new _nodes_PlantNode__WEBPACK_IMPORTED_MODULE_4__["PlantNode"](config, this.transferPower);
+        this.container.addNode(node);
+        this.nodes.push(node);
+        this.onNodeAdded.publish(node);
+        return node;
+    }
+    addCrawler(config, node) {
+        let crawler = new _Parts_CrawlerModel__WEBPACK_IMPORTED_MODULE_5__["CrawlerModel"](config, node, this.knowledge);
+        crawler.onNodeClaimed.addListener(this.onNodeClaimed.publish);
+        this.crawlers.push(crawler);
+        this.container.addCrawler(crawler.view);
+        this.onCrawlerAdded.publish(crawler);
+        return crawler;
+    }
+    removeCrawler(crawler) {
+        crawler.destroy();
+        lodash__WEBPACK_IMPORTED_MODULE_0__["pull"](this.crawlers, crawler);
+        this.container.removeCrawler(crawler.view);
+        this.onCrawlerRemoved.publish(crawler);
+    }
+    linkNodes(origin, target) {
+        origin.linkNode(target);
+        target.linkNode(origin, true);
+        return this.container.addLink(origin, target);
+    }
     onTick(ticks) {
-        this.nodes.forEach(node => {
-            node.onTick();
-            if (node.fruitSpawn > 1 && node.fruits.length < node.maxFruits) {
-                node.fruitSpawn--;
-                let fruitConfig = this.nodeManager.getNodeConfig(node.fruitType);
-                let fruit = this.addNewNode(fruitConfig);
-                this.container.linkNodes(node.view, fruit);
-                fruit.position.set(node.view.x, node.view.y);
-            }
-        });
+        this.crawlers.forEach(this.updateCrawler);
+        this.nodes.forEach(this.updateNode);
         if (ticks > 1) {
             this.onTick(ticks - 1);
         }
     }
     saveNodes() {
-        let saves = this.nodes.map(node => {
-            let outlets = this.container.links.filter(l => l.origin === node.view).map(l => l.target.data.uid);
+        let saves = this.nodes.filter(node => (node.slug === 'core' || node.outlets.length > 0)).map(node => {
+            let outlets = node.outlets.map(node2 => node2.uid);
             return {
                 uid: node.uid,
-                slug: node.config.slug,
-                powerCurrent: Math.round(node.powerCurrent),
-                researchCurrent: node.config.slug === 'seedling' ? node.researchCurrent : 0,
+                slug: node.slug,
+                powerCurrent: Math.round(node.power.powerCurrent),
+                researchCurrent: node.slug === 'seedling' ? node.power.researchCurrent : 0,
                 outlets,
                 x: Math.round(node.view.x),
                 y: Math.round(node.view.y),
@@ -67020,26 +67947,129 @@ class GameController {
         });
         return saves;
     }
-    loadSaves(saves) {
+    saveCrawlers() {
+        let saves = this.crawlers.map(crawler => {
+            return {
+                preference: crawler.preference,
+                health: crawler.health,
+                location: crawler.cLoc.uid,
+            };
+        });
+        return saves;
+    }
+    loadSaves(saves, crawlerSaves) {
         let nodes = saves.map(save => this.importSave(save));
         this.nodes = nodes;
         console.log('LOAD_SAVE', saves.map(save => save.slug));
         nodes.forEach((node, i) => {
-            this.container.addNode(node.view);
+            this.container.addNode(node);
+            this.onNodeAdded.publish(node);
             saves[i].outlets.forEach(uid => {
-                this.container.linkNodes(node.view, nodes.find(node2 => node2.uid === uid).view);
+                this.linkNodes(node, nodes.find(node2 => node2.uid === uid));
             });
+        });
+        crawlerSaves.forEach((save, i) => {
+            this.addCrawler(lodash__WEBPACK_IMPORTED_MODULE_0__["defaults"]({ health: save.health, preference: save.preference }, this.nodeManager.crawlerConfig), nodes.find(node2 => node2.uid === save.location));
         });
     }
     importSave(save) {
         let config = this.nodeManager.getNodeConfig(save.slug);
-        let texture = _services_TextureCache__WEBPACK_IMPORTED_MODULE_3__["TextureCache"].getNodeGraphicTexture(config.shape, config.radius);
-        let m = new _Parts_GameNode__WEBPACK_IMPORTED_MODULE_5__["GameNode"](new _FDG_FDGNode__WEBPACK_IMPORTED_MODULE_4__["FDGNode"](texture, config), config, this.transferPower);
-        m.powerCurrent = save.powerCurrent;
-        m.researchCurrent = save.researchCurrent;
-        m.uid = save.uid;
-        m.view.position.set(save.x, save.y);
-        _Parts_GameNode__WEBPACK_IMPORTED_MODULE_5__["GameNode"].addUid(save.uid);
+        let node = new _nodes_PlantNode__WEBPACK_IMPORTED_MODULE_4__["PlantNode"](config, this.transferPower);
+        node.power.powerCurrent = save.powerCurrent;
+        node.power.researchCurrent = save.researchCurrent;
+        node.uid = save.uid;
+        node.view.position.set(save.x, save.y);
+        _nodes_PlantNode__WEBPACK_IMPORTED_MODULE_4__["PlantNode"].addUid(save.uid);
+        return node;
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/GameKnowledge.ts":
+/*!***********************************************!*\
+  !*** ./src/engine/Mechanics/GameKnowledge.ts ***!
+  \***********************************************/
+/*! exports provided: GameKnowledge */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GameKnowledge", function() { return GameKnowledge; });
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+
+class GameKnowledge {
+    constructor(gameC, manager) {
+        this.gameC = gameC;
+        this.manager = manager;
+        this.sortedNodes = {
+            'home': [],
+            'lab': [],
+            'generator': [],
+            'grove': [],
+            'stem': [],
+            'core': [],
+            'seedling': [],
+            'enemy-core': [],
+            'enemy-box': [],
+            'food': [],
+            'research': [],
+            'battery': [],
+            'gen': [],
+            'burr': [],
+            'big-evil': [],
+            'small-evil': [],
+            'leaf': [],
+        };
+        this.crawlerCount = 0;
+        this.crawlerAdded = (crawler) => {
+            this.crawlerCount++;
+        };
+        this.crawlerRemoved = (crawler) => {
+            this.crawlerCount--;
+        };
+        this.nodeAdded = (node) => {
+            this.sortedNodes[node.slug].push(node);
+        };
+        this.nodeRemoved = (node) => {
+            lodash__WEBPACK_IMPORTED_MODULE_0___default.a.pull(this.sortedNodes[node.slug], node);
+        };
+        this.nodeClaimed = (e) => {
+            // if (e.claim) {
+            //   this.nodeClaims[e.node.slug]++;
+            // } else {
+            //   this.nodeClaims[e.node.slug]--;
+            // }
+        };
+        gameC.onCrawlerAdded.addListener(this.crawlerAdded);
+        gameC.onCrawlerRemoved.addListener(this.crawlerRemoved);
+        gameC.onNodeAdded.addListener(this.nodeAdded);
+        gameC.onNodeRemoved.addListener(this.nodeRemoved);
+        gameC.onNodeClaimed.addListener(this.nodeClaimed);
+    }
+    numFruitsPerNode(slug) {
+        return this.manager.getNodeConfig(slug).maxFruits;
+    }
+    toString() {
+        let m = `<div class='node-title'>Knowledge</div>`;
+        m += `<br>Crawlers: ${this.crawlerCount}`;
+        let keys = Object.keys(this.sortedNodes);
+        keys.forEach(key => {
+            let value = this.sortedNodes[key].length;
+            if (value !== 0) {
+                m += `<br>${key}: ${value}`;
+            }
+        });
+        m += `<br>Claimed`;
+        keys = Object.keys(this.sortedNodes);
+        keys.forEach(key => {
+            let value = this.sortedNodes[key].filter(node => node.claimedBy).length;
+            if (value !== 0) {
+                m += `<br>${key}: ${value}`;
+            }
+        });
         return m;
     }
 }
@@ -67047,113 +68077,334 @@ class GameController {
 
 /***/ }),
 
-/***/ "./src/engine/Mechanics/Parts/GameNode.ts":
-/*!************************************************!*\
-  !*** ./src/engine/Mechanics/Parts/GameNode.ts ***!
-  \************************************************/
-/*! exports provided: GameNode */
+/***/ "./src/engine/Mechanics/Parts/CrawlerModel.ts":
+/*!****************************************************!*\
+  !*** ./src/engine/Mechanics/Parts/CrawlerModel.ts ***!
+  \****************************************************/
+/*! exports provided: CrawlerModel */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GameNode", function() { return GameNode; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CrawlerModel", function() { return CrawlerModel; });
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../Config */ "./src/Config.ts");
-/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
-/* harmony import */ var _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../JMGE/events/JMEventListener */ "./src/JMGE/events/JMEventListener.ts");
+/* harmony import */ var _CrawlerCommands_IdleCommand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../CrawlerCommands/IdleCommand */ "./src/engine/Mechanics/CrawlerCommands/IdleCommand.ts");
+/* harmony import */ var _CrawlerCommands_EatCommand__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../CrawlerCommands/EatCommand */ "./src/engine/Mechanics/CrawlerCommands/EatCommand.ts");
+/* harmony import */ var _CrawlerCommands_WanderCommand__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../CrawlerCommands/WanderCommand */ "./src/engine/Mechanics/CrawlerCommands/WanderCommand.ts");
+/* harmony import */ var _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../CrawlerCommands/_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _CrawlerView__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./CrawlerView */ "./src/engine/Mechanics/Parts/CrawlerView.ts");
+/* harmony import */ var _JMGE_others_AStar__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../JMGE/others/AStar */ "./src/JMGE/others/AStar.ts");
+/* harmony import */ var _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../JMGE/JMTween */ "./src/JMGE/JMTween.ts");
+/* harmony import */ var _CrawlerCommands_DanceCommand__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../CrawlerCommands/DanceCommand */ "./src/engine/Mechanics/CrawlerCommands/DanceCommand.ts");
+/* harmony import */ var _CrawlerCommands_ResearchCommand__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../CrawlerCommands/ResearchCommand */ "./src/engine/Mechanics/CrawlerCommands/ResearchCommand.ts");
+/* harmony import */ var _CrawlerCommands_PowerCommand__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../CrawlerCommands/PowerCommand */ "./src/engine/Mechanics/CrawlerCommands/PowerCommand.ts");
+/* harmony import */ var _CrawlerCommands_FrustratedCommand__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../CrawlerCommands/FrustratedCommand */ "./src/engine/Mechanics/CrawlerCommands/FrustratedCommand.ts");
+/* harmony import */ var _CrawlerCommands_BreedCommand__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../CrawlerCommands/BreedCommand */ "./src/engine/Mechanics/CrawlerCommands/BreedCommand.ts");
+/* harmony import */ var _CrawlerCommands_StarvingCommand__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../CrawlerCommands/StarvingCommand */ "./src/engine/Mechanics/CrawlerCommands/StarvingCommand.ts");
+/* harmony import */ var _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../../../JMGE/events/JMEventListener */ "./src/JMGE/events/JMEventListener.ts");
 
 
 
 
-class GameNode {
-    constructor(view, config, transferPower) {
-        this.view = view;
+
+
+
+
+
+
+
+
+
+
+
+class CrawlerModel {
+    constructor(config, startingNode, knowledge) {
         this.config = config;
-        this.transferPower = transferPower;
-        this.onUpdate = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_3__["JMEventListener"]();
+        this.knowledge = knowledge;
+        this.onNodeClaimed = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_14__["JMEventListener"]();
+        this.slug = 'crawler';
+        this.health = 1;
+        this.commandList = [];
+        this.isFruit = () => false;
+        this.update = () => {
+            this.health -= this.healthDrain;
+            this.currentCommand.update();
+            if (this.currentCommand.isComplete) {
+                this.selectNextCommand();
+            }
+        };
+        this.killMe = () => {
+            this.health = -100;
+        };
+        this.claimNode = (node) => {
+            this.claimedNode = node;
+            this.claimedNode.claimedBy = this;
+            this.onNodeClaimed.publish({ claim: true, node, claimer: this });
+        };
+        this.unclaimNode = () => {
+            if (this.claimedNode) {
+                this.onNodeClaimed.publish({ claim: false, node: this.claimedNode, claimer: this });
+                this.claimedNode.claimedBy = null;
+                this.claimedNode = null;
+            }
+        };
+        lodash__WEBPACK_IMPORTED_MODULE_0___default.a.defaults(config, dCrawler);
+        this.health = config.health;
+        this.healthDrain = config.healthDrain;
+        this.speed = config.speed;
+        this.cLoc = startingNode;
+        this.preference = config.preference || lodash__WEBPACK_IMPORTED_MODULE_0___default.a.sample(config.preferenceList);
+        this.view = new _CrawlerView__WEBPACK_IMPORTED_MODULE_5__["CrawlerView"]();
+        config.commands.forEach(type => {
+            this.commandList.push(new (CrawlerModel.commandMap[type])(this, config.commandConfig, knowledge));
+        });
+        this.setCommand(_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].IDLE);
+    }
+    destroy() {
+        this.unclaimNode();
+    }
+    selectNextCommand() {
+        this.currentCommand = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.sortBy(this.commandList, command => command.genPriority())[0];
+        this.currentCommand.initialize();
+        this.colorTo(this.currentCommand.color);
+    }
+    setCommand(type = _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].NONE) {
+        let command = this.commandList.find(data => data.type === type);
+        if (command) {
+            this.currentCommand = command;
+            command.initialize();
+            this.colorTo(command.color);
+        }
+        else {
+            this.selectNextCommand();
+        }
+    }
+    colorTo(color) {
+        new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_7__["JMTween"](this.view.sprite, 500).colorTo({ tint: color }).start();
+    }
+    findPath(condition, start) {
+        let pathing = new _JMGE_others_AStar__WEBPACK_IMPORTED_MODULE_6__["AStarPath"](start || this.cLoc, condition);
+        return pathing.path;
+    }
+    toString() {
+        let m = `<div class='node-title'>Crawler</div>`;
+        m += `Health: ${Math.floor(this.health * 100)}%`;
+        m += `<br>Action: ${this.currentCommand ? _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"][this.currentCommand.type] : 'NONE'}`;
+        if (this.currentCommand.type === _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].FRUSTRATED && this.frustratedBy) {
+            m += ` by ${this.frustratedBy}`;
+        }
+        if (this.preference) {
+            m += `<br>Loves to ${_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"][this.preference]}`;
+        }
+        return m;
+    }
+}
+CrawlerModel.commandMap = {
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].NONE]: null,
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].WANDER]: _CrawlerCommands_WanderCommand__WEBPACK_IMPORTED_MODULE_3__["WanderCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].IDLE]: _CrawlerCommands_IdleCommand__WEBPACK_IMPORTED_MODULE_1__["IdleCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].EAT]: _CrawlerCommands_EatCommand__WEBPACK_IMPORTED_MODULE_2__["EatCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].DANCE]: _CrawlerCommands_DanceCommand__WEBPACK_IMPORTED_MODULE_8__["DanceCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].RESEARCH]: _CrawlerCommands_ResearchCommand__WEBPACK_IMPORTED_MODULE_9__["ResearchCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].POWER]: _CrawlerCommands_PowerCommand__WEBPACK_IMPORTED_MODULE_10__["PowerCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].FRUSTRATED]: _CrawlerCommands_FrustratedCommand__WEBPACK_IMPORTED_MODULE_11__["FrustratedCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].STARVING]: _CrawlerCommands_StarvingCommand__WEBPACK_IMPORTED_MODULE_13__["StarvingCommand"],
+    [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].BREED]: _CrawlerCommands_BreedCommand__WEBPACK_IMPORTED_MODULE_12__["BreedCommand"],
+};
+const dCrawler = {
+    health: 1,
+    healthDrain: 0.0002,
+    speed: 0.01,
+    commands: [
+        _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].WANDER,
+        _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].IDLE,
+        _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].EAT,
+        // CommandType.DANCE,
+        // CommandType.RESEARCH,
+        // CommandType.POWER,
+        _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].FRUSTRATED,
+        _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].STARVING,
+        // CommandType.BREED,
+    ],
+    preferenceList: [
+        _CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].WANDER,
+        // CommandType.BREED,
+        // CommandType.DANCE,
+        // CommandType.RESEARCH,
+        // CommandType.POWER,
+    ],
+    commandConfig: {
+        breedHealthMin: 0.9,
+        wanderRepeat: 3,
+        idleRepeat: 3,
+        frustratedRepeat: 3,
+        fruitSpeed: 0.95,
+        researchRatio: 1,
+        powerRatio: 2,
+        eatRatio: 0.0075,
+        danceGen: 5,
+        danceTicks: 500,
+    },
+};
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/Parts/CrawlerView.ts":
+/*!***************************************************!*\
+  !*** ./src/engine/Mechanics/Parts/CrawlerView.ts ***!
+  \***************************************************/
+/*! exports provided: CrawlerView */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CrawlerView", function() { return CrawlerView; });
+/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/dist/esm/pixi.js");
+/* harmony import */ var _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../JMGE/JMTween */ "./src/JMGE/JMTween.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../data/Colors */ "./src/data/Colors.ts");
+/* harmony import */ var _services_TextureCache__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../services/TextureCache */ "./src/services/TextureCache.ts");
+
+
+
+
+class CrawlerView extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
+    constructor() {
+        super();
+        this.sprite = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Sprite"](_services_TextureCache__WEBPACK_IMPORTED_MODULE_3__["TextureCache"].getGraphicTexture('crawler'));
+        this.sprite.tint = _data_Colors__WEBPACK_IMPORTED_MODULE_2__["Colors"].Node.orange;
+        this.sprite.anchor.set(0.5);
+        this._Highlight = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
+        this._Highlight.beginFill(0xffff00, 0.5);
+        this._Highlight.drawCircle(0, 0, 10);
+        this._Highlight.visible = false;
+        this.addChild(this._Highlight, this.sprite);
+    }
+    get highlight() {
+        return this._Highlight.visible;
+    }
+    set highlight(b) {
+        this._Highlight.visible = b;
+    }
+    animateDie(onComplete) {
+        new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_1__["JMTween"](this.sprite, 1000).colorTo({ tint: 0 }).to({ alpha: 0 }).start().onComplete(onComplete);
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/nodes/PlantNode.ts":
+/*!***************************************!*\
+  !*** ./src/engine/nodes/PlantNode.ts ***!
+  \***************************************/
+/*! exports provided: PlantNode */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PlantNode", function() { return PlantNode; });
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _services_TextureCache__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../services/TextureCache */ "./src/services/TextureCache.ts");
+/* harmony import */ var _PlantNodePhysics__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./PlantNodePhysics */ "./src/engine/nodes/PlantNodePhysics.ts");
+/* harmony import */ var _PlantNodePower__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./PlantNodePower */ "./src/engine/nodes/PlantNodePower.ts");
+/* harmony import */ var _PlantNodeView__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./PlantNodeView */ "./src/engine/nodes/PlantNodeView.ts");
+/* harmony import */ var _data_Colors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../data/Colors */ "./src/data/Colors.ts");
+
+
+
+
+
+
+class PlantNode {
+    constructor(config, transferPower) {
+        this.config = config;
         this.outlets = [];
         this.fruits = [];
         this.active = true;
-        this.fruitChain = 0;
-        this.maxFruits = 0;
-        this.powerCurrent = 0;
-        this.fruitCurrent = 0;
-        this.researchCurrent = 0;
-        this.powerGen = 0;
-        this.powerTick = 0;
-        this.fruitSpawn = 0;
-        this.onTick = () => {
-            if (!this.active)
-                return;
-            if (this.powerGen > 0) {
-                if (this.powerCurrent < this.config.powerMax) {
-                    this.powerCurrent += this.getPowerGen();
-                }
-            }
-            else {
-                if (this.powerCurrent > 0) {
-                    this.powerCurrent += this.getPowerGen();
-                }
-            }
-            this.powerTick--;
-            if (this.powerTick <= 0) {
-                this.powerTick = this.config.powerDelay + (-3 + 6 * Math.random());
-                this.generateSpecial();
-                this.powerFruits();
-                // this.spawnFruits();
-                this.attemptTransferPower();
-            }
-            if (this.view)
-                this.view.intensity = this.powerPercent;
-            this.onUpdate.publish(this);
-        };
-        this.receiveFruitPower = (amount, color) => {
+        this.exists = true;
+        this.flagUnlink = false;
+        this.flagDestroy = false;
+        this.flagCallOnRemove = true;
+        this.receiveFruitPower = (amount) => {
             if (this.fruits.length < this.config.maxFruits) {
-                this.fruitSpawn += amount;
-                this.view.pulse(color);
+                this.power.fruitSpawn += amount;
+                this.view.pulse(_data_Colors__WEBPACK_IMPORTED_MODULE_5__["Colors"].Node.orange);
             }
             else {
                 let fruit = this.fruits.find(fruit2 => fruit2.canSpawnFruit());
                 if (fruit) {
-                    fruit.receiveFruitPower(amount, color);
+                    fruit.receiveFruitPower(amount);
                 }
             }
         };
         this.receiveResearch = (amount) => {
-            this.view.pulse(_data_Colors__WEBPACK_IMPORTED_MODULE_2__["Colors"].Node.purple);
-            this.researchCurrent += amount;
+            this.view.pulse(_data_Colors__WEBPACK_IMPORTED_MODULE_5__["Colors"].Node.purple);
+            this.power.researchCurrent += amount;
         };
-        this.uid = GameNode.generateUid();
-        view.data = this;
-        view.intensity = 1;
-        this.fruitType = config.fruitType;
-        this.fruitChain = config.fruitChain;
-        this.maxFruits = config.maxFruits;
-        this.powerGen = config.powerGen;
-        this.powerTick = config.powerDelay;
+        this.isHarvestable = () => {
+            return this.power.powerPercent > 0.6 && !this.claimedBy;
+        };
+        lodash__WEBPACK_IMPORTED_MODULE_0___default.a.defaults(config, dNodeConfig);
+        this.uid = PlantNode.generateUid();
+        let texture = _services_TextureCache__WEBPACK_IMPORTED_MODULE_1__["TextureCache"].getNodeGraphicTexture(config.shape, config.radius);
+        this.view = new _PlantNodeView__WEBPACK_IMPORTED_MODULE_4__["PlantNodeView"](texture, config.color, config.radius);
+        this.physics = new _PlantNodePhysics__WEBPACK_IMPORTED_MODULE_2__["PlantNodePhysics"](config, this.view);
+        this.power = new _PlantNodePower__WEBPACK_IMPORTED_MODULE_3__["PlantNodePower"](config, this, transferPower);
     }
     static generateUid() {
-        GameNode.cUid++;
+        PlantNode.cUid++;
         return this.cUid;
     }
     static addUid(uid) {
-        GameNode.cUid = Math.max(uid, GameNode.cUid);
+        PlantNode.cUid = Math.max(uid, PlantNode.cUid);
     }
     static resetUid() {
-        GameNode.cUid = 0;
+        PlantNode.cUid = 0;
     }
-    get powerPercent() {
-        return Math.min(this.powerCurrent / this.config.powerMax, 1);
+    get slug() {
+        return this.config.slug;
     }
-    set powerPercent(n) {
-        this.powerCurrent = this.config.powerMax * n;
+    set ghostMode(b) {
+        if (b) {
+            this.view.alpha = 0.5;
+            this.physics.hasMass = false;
+        }
+        else {
+            this.view.alpha = 1;
+            this.physics.hasMass = true;
+        }
     }
-    get powerWeight() {
-        return this.powerCurrent / this.config.powerMax / this.config.powerWeight;
+    get maxOutlets() {
+        return this.config.maxLinks;
+    }
+    destroy() {
+        this.exists = false;
+        this.view.destroy();
+    }
+    isFruit() {
+        return this.config.type === 'fruit';
+    }
+    canSpawnFruit() {
+        if (this.power.fruitChain <= 0)
+            return false;
+        if (this.fruits.length < this.config.maxFruits)
+            return true;
+        if (this.fruits.length > 0) {
+            return lodash__WEBPACK_IMPORTED_MODULE_0___default.a.some(this.fruits, fruit => fruit.canSpawnFruit());
+        }
+        return false;
+    }
+    isConnectedToCore() {
+        return this.findNode(node => node.config.slug === 'core') !== null;
+    }
+    findCore() {
+        return this.findNode(node => node.config.slug === 'core');
     }
     removeNode(node) {
-        if (node.config.type === 'fruit') {
+        if (node.isFruit()) {
             for (let i = 0; i < this.fruits.length; i++) {
                 if (this.fruits[i] === node) {
                     this.fruits.splice(i, 1);
@@ -67180,13 +68431,13 @@ class GameNode {
         this.outlets = [];
         this.fruits = [];
     }
-    checkConnections(testFunction) {
+    findNode(testFunction) {
         let open = [this];
         let closed = [];
         while (open.length > 0) {
             let current = open.shift();
             if (testFunction(current))
-                return true;
+                return current;
             closed.push(current);
             current.outlets.forEach(node => {
                 if (!open.includes(node) && !closed.includes(node)) {
@@ -67194,139 +68445,90 @@ class GameNode {
                 }
             });
         }
-        return false;
+        return null;
+    }
+    distanceTo(testFunction) {
+        let open = [{ node: this, distance: 0 }];
+        let closed = [];
+        while (open.length > 0) {
+            let current = open.shift();
+            if (testFunction(current.node))
+                return current.distance;
+            closed.push(current);
+            current.node.outlets.forEach(node => {
+                if (!lodash__WEBPACK_IMPORTED_MODULE_0___default.a.some(open, data => data.node === node) && !lodash__WEBPACK_IMPORTED_MODULE_0___default.a.some(closed, data => data.node === node)) {
+                    open.push({ node, distance: current.distance + 1 });
+                }
+            });
+        }
+        return -1;
+    }
+    setFruitStats(fruitType, maxFruits, fruitChain) {
+        this.power.fruitType = this.power.fruitType || fruitType;
+        this.power.maxFruits = this.power.maxFruits || maxFruits;
+        this.power.fruitChain = fruitChain;
     }
     linkNode(target, forceOutlet = false) {
-        if (target.config.type === 'fruit' && !forceOutlet) {
+        if (target.isFruit() && !forceOutlet) {
             this.fruits.push(target);
-            target.fruitType = target.fruitType || this.fruitType;
-            target.fruitChain = this.fruitChain - 1;
-            target.maxFruits = target.maxFruits || this.maxFruits;
+            target.setFruitStats(this.power.fruitType, this.power.maxFruits, this.power.fruitChain - 1);
         }
         else {
             this.outlets.push(target);
-            if (target.config.type !== 'fruit' && this.config.outletEffects) {
+            if (!target.isFruit() && this.config.outletEffects) {
                 this.config.outletEffects.forEach(effect => {
                     if (effect.type === 'additive') {
-                        target[effect.stat] += effect.amount;
+                        target.power[effect.stat] += effect.amount;
                     }
                     else {
-                        target[effect.stat] *= effect.amount;
+                        target.power[effect.stat] *= effect.amount;
                     }
                 });
             }
         }
     }
-    getPowerGen() {
-        if (this.powerGen > 0) {
-            return this.powerGen * this.powerPercent;
-        }
-        else {
-            return this.powerGen * this.powerPercent;
+    hasHarvestableFruit() {
+        return lodash__WEBPACK_IMPORTED_MODULE_0___default.a.some(this.fruits, fruit => (fruit.isHarvestable() || fruit.hasHarvestableFruit()));
+    }
+    harvestFruit() {
+        let fruit;
+        fruit = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.sample(lodash__WEBPACK_IMPORTED_MODULE_0___default.a.filter(this.fruits, fruit2 => fruit2.isHarvestable()));
+        if (!fruit)
+            return null;
+        return fruit.harvestFruit() || fruit;
+    }
+    tickPower() {
+        if (this.active) {
+            this.power.onTick();
+            this.view.setIntensity(this.power.powerPercent);
         }
     }
-    getFruitGen() {
-        return (this.config.fruitGen || 0) * this.powerPercent;
-    }
-    getResearchGen() {
-        return (this.config.researchGen || 0) * this.powerPercent;
-    }
-    generateSpecial() {
-        if (this.config.researchGen > 0) {
-            let target = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](this.outlets.filter(outlet => outlet.active));
-            if (target) {
-                this.researchCurrent += this.getResearchGen();
-                if (this.researchCurrent > Math.max(this.config.researchGen * 10, 1)) {
-                    let clump = this.researchCurrent;
-                    this.researchCurrent = 0;
-                    this.transferPower(this, target, { type: 'research', amount: clump, fade: _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.GEN_FADE });
-                }
-            }
-        }
-        if (this.config.fruitGen > 0) {
-            let target = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](this.outlets.filter(outlet => outlet.active));
-            if (target) {
-                this.fruitCurrent += this.getFruitGen();
-                if (this.fruitCurrent > Math.max(this.config.fruitGen * 10, 1)) {
-                    if (this.canSpawnFruit() && Math.random() < _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.FRUIT_APPLY) {
-                        this.receiveFruitPower(this.fruitCurrent, _data_Colors__WEBPACK_IMPORTED_MODULE_2__["Colors"].Node.orange);
-                    }
-                    else {
-                        let clump = this.fruitCurrent;
-                        this.transferPower(this, target, { type: 'fruit', amount: clump, fade: _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.GEN_FADE });
-                    }
-                    this.fruitCurrent = 0;
-                }
-            }
-        }
-    }
-    powerFruits() {
-        if (this.fruits.length > 0 && this.powerPercent >= _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.FRUIT_THRESHOLD) {
-            let target;
-            for (let i = 0; i < this.fruits.length; i++) {
-                if (!target || this.fruits[i].powerPercent < target.powerPercent) {
-                    target = this.fruits[i];
-                }
-            }
-            if (this.powerPercent > target.powerPercent) {
-                let clump = Math.min(this.powerCurrent, this.config.fruitClump);
-                this.transferPower(this, target, { type: 'grow', amount: clump, removeOrigin: clump === this.powerCurrent && (this.outlets.length + this.fruits.length === 1) });
-                this.powerCurrent -= clump;
-            }
-        }
-    }
-    attemptTransferPower() {
-        if (this.config.powerClump > 0 && this.outlets.length > 0 && this.powerPercent > _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.POWER_THRESHOLD) {
-            let target;
-            this.outlets.forEach(outlet => {
-                if (outlet.active) {
-                    if (outlet.config.slug === 'seedling') {
-                        // console.log(this.powerPercent, outlet.powerPercent, outlet.powerWeight, target ? target.powerWeight : 'no target');
-                    }
-                    if (outlet.powerPercent < this.powerPercent && (!target || outlet.powerWeight < target.powerWeight)) {
-                        target = outlet;
-                    }
-                }
-            });
-            if (target) {
-                let clump = Math.min(this.powerCurrent, this.config.powerClump);
-                this.transferPower(this, target, { type: 'grow', amount: clump });
-                this.powerCurrent -= clump;
-            }
-        }
-    }
-    canSpawnFruit() {
-        if (this.fruitChain <= 0)
-            return false;
-        if (this.fruits.length < this.config.maxFruits)
-            return true;
-        if (this.fruits.length > 0) {
-            return lodash__WEBPACK_IMPORTED_MODULE_0__["some"](this.fruits, fruit => fruit.canSpawnFruit());
-        }
-        return false;
+    tickPhysics() {
+        this.physics.moveBody();
+        this.view.adjustIntensity();
     }
     toString() {
         let m = `<div class='node-title'>${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
-        Power: ${Math.round(this.powerCurrent)} / ${this.config.powerMax}`;
+        Power: ${Math.round(this.power.powerCurrent)} / ${this.config.powerMax}`;
         if (!this.active) {
             m += `<p style='color: #eedd33;'>[ Drag to your network in order to connect the new node ]</p>`;
         }
         else {
             if (this.config.slug === 'seedling') {
-                m += `<br>Research Points: ${Math.round(this.researchCurrent)}`;
+                m += `<br>Research Points: ${Math.round(this.power.researchCurrent)}`;
             }
-            if (this.getPowerGen() > 0) {
-                m += `<br>Power Gen: ${this.getPowerGen().toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+            if (this.power.powerGen > 0) {
+                m += `<br>Power Gen: ${this.power.powerGen.toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
             }
             else {
-                m += `<br>Power Drain: ${-this.getPowerGen().toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+                m += `<br>Power Drain: ${-this.power.powerGen.toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
             }
             // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
-            if (this.getResearchGen() > 0) {
-                m += `<br>Research Gen: ${this.getResearchGen().toFixed(2)}`;
+            if (this.power.researchGen > 0) {
+                m += `<br>Research Gen: ${this.power.researchGen.toFixed(2)}`;
             }
-            if (this.getFruitGen() > 0) {
-                m += `<br>Fruit Gen: ${this.getFruitGen().toFixed(2)}`;
+            if (this.power.fruitGen > 0) {
+                m += `<br>Fruit Gen: ${this.power.fruitGen.toFixed(2)}`;
             }
             if (this.config.maxLinks > 1) {
                 m += `<br>Connections: ${this.outlets.length} / ${this.config.maxLinks}`;
@@ -67337,8 +68539,313 @@ class GameNode {
         }
         return m;
     }
+    showConnectionCount(show) {
+        if (show) {
+            this.view.showConnectionCount(this.outlets.length, this.config.maxLinks);
+        }
+        else {
+            this.view.showConnectionCount(0, 0);
+        }
+    }
 }
-GameNode.cUid = 0;
+PlantNode.cUid = 0;
+const dNodeConfig = {
+    color: 0xffffff,
+    radius: 10,
+    mass: 1,
+    force: 1,
+};
+
+
+/***/ }),
+
+/***/ "./src/engine/nodes/PlantNodePhysics.ts":
+/*!**********************************************!*\
+  !*** ./src/engine/nodes/PlantNodePhysics.ts ***!
+  \**********************************************/
+/*! exports provided: PlantNodePhysics */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PlantNodePhysics", function() { return PlantNodePhysics; });
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
+
+class PlantNodePhysics {
+    constructor(config, view) {
+        this.config = config;
+        this.view = view;
+        this._iMass = 0;
+        this.vR = 0.005;
+        this.fixed = false;
+        this.hasMass = true;
+        this.moveBody = () => {
+            this.rotate();
+            if (this.fixed)
+                return;
+            this.vX *= _Config__WEBPACK_IMPORTED_MODULE_0__["Config"].PHYSICS.DAMP;
+            this.vY *= _Config__WEBPACK_IMPORTED_MODULE_0__["Config"].PHYSICS.DAMP;
+            if (Math.abs(this.vX) > _Config__WEBPACK_IMPORTED_MODULE_0__["Config"].PHYSICS.MIN_V || Math.abs(this.vY) > _Config__WEBPACK_IMPORTED_MODULE_0__["Config"].PHYSICS.MIN_V) {
+                this.view.x += this.vX;
+                this.view.y += this.vY;
+            }
+            else {
+                this.vX = 0;
+                this.vY = 0;
+            }
+        };
+        this._iMass = 1 / config.mass;
+    }
+    get force() {
+        return this.config.force;
+    }
+    get iMass() {
+        return this.hasMass ? this._iMass : 5;
+    }
+    rotate() {
+        this.view.sprite.rotation += this.vR;
+        if (this.view.sprite.rotation > Math.PI)
+            this.view.sprite.rotation -= Math.PI * 2;
+        if (this.view.sprite.rotation < -Math.PI)
+            this.view.sprite.rotation += Math.PI * 2;
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/nodes/PlantNodePower.ts":
+/*!********************************************!*\
+  !*** ./src/engine/nodes/PlantNodePower.ts ***!
+  \********************************************/
+/*! exports provided: PlantNodePower */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PlantNodePower", function() { return PlantNodePower; });
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
+
+
+class PlantNodePower {
+    constructor(config, data, transferPower) {
+        this.config = config;
+        this.data = data;
+        this.transferPower = transferPower;
+        this.fruitChain = 0;
+        this.maxFruits = 0;
+        this.powerCurrent = 0;
+        this.fruitCurrent = 0;
+        this.researchCurrent = 0;
+        this._PowerGen = 0;
+        this.powerTick = 0;
+        this.fruitSpawn = 0;
+        this.fruitType = config.fruitType;
+        this.fruitChain = config.fruitChain;
+        this.maxFruits = config.maxFruits;
+        this._PowerGen = config.powerGen;
+        this.powerTick = config.powerDelay;
+    }
+    get powerPercent() {
+        return Math.min(this.powerCurrent / this.config.powerMax, 1);
+    }
+    set powerPercent(n) {
+        this.powerCurrent = this.config.powerMax * n;
+    }
+    get powerWeight() {
+        return this.powerCurrent / this.config.powerMax / this.config.powerWeight;
+    }
+    get powerGen() {
+        if (this._PowerGen > 0) {
+            return this._PowerGen * this.powerPercent;
+        }
+        else {
+            return this._PowerGen * this.powerPercent;
+        }
+    }
+    get fruitGen() {
+        return (this.config.fruitGen || 0) * this.powerPercent;
+    }
+    get researchGen() {
+        return (this.config.researchGen || 0) * this.powerPercent;
+    }
+    onTick() {
+        if (this.powerGen > 0) {
+            if (this.powerCurrent < this.config.powerMax) {
+                this.powerCurrent += this.powerGen;
+            }
+        }
+        else {
+            if (this.powerCurrent > 0) {
+                this.powerCurrent += this.powerGen;
+            }
+        }
+        this.powerTick--;
+        if (this.powerTick <= 0) {
+            this.powerTick = this.config.powerDelay + (-3 + 6 * Math.random());
+            this.generateSpecial();
+            this.powerFruits();
+            // this.spawnFruits();
+            this.attemptTransferPower();
+        }
+    }
+    generateSpecial() {
+        if (this.config.researchGen > 0) {
+            let target = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.sample(this.data.outlets.filter(outlet => outlet.active));
+            if (target) {
+                this.researchCurrent += this.researchGen;
+                if (this.researchCurrent > Math.max(this.config.researchGen * 10, 1)) {
+                    let clump = this.researchCurrent;
+                    this.researchCurrent = 0;
+                    this.transferPower(this.data, target, { type: 'research', amount: clump, fade: _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.GEN_FADE });
+                }
+            }
+        }
+        if (this.config.fruitGen > 0) {
+            let target = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.sample(this.data.outlets.filter(outlet => outlet.active));
+            if (target) {
+                this.fruitCurrent += this.fruitGen;
+                if (this.fruitCurrent > Math.max(this.config.fruitGen * 10, 1)) {
+                    if (this.data.canSpawnFruit() && Math.random() < _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.FRUIT_APPLY) {
+                        this.data.receiveFruitPower(this.fruitCurrent);
+                    }
+                    else {
+                        let clump = this.fruitCurrent;
+                        this.transferPower(this.data, target, { type: 'fruit', amount: clump, fade: _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.GEN_FADE });
+                    }
+                    this.fruitCurrent = 0;
+                }
+            }
+        }
+    }
+    powerFruits() {
+        if (this.data.fruits.length > 0 && this.powerPercent >= _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.FRUIT_THRESHOLD) {
+            let target;
+            this.data.fruits.forEach(fruit => {
+                if (!target || fruit.power.powerPercent < target.power.powerPercent) {
+                    target = fruit;
+                }
+            });
+            if (this.powerPercent > target.power.powerPercent) {
+                let clump = Math.min(this.powerCurrent, this.config.fruitClump);
+                this.transferPower(this.data, target, { type: 'grow', amount: clump, removeOrigin: clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1) });
+                this.powerCurrent -= clump;
+            }
+        }
+    }
+    attemptTransferPower() {
+        if (this.config.powerClump > 0 && this.data.outlets.length > 0 && this.powerPercent > _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.POWER_THRESHOLD) {
+            let target;
+            this.data.outlets.forEach(outlet => {
+                if (outlet.active) {
+                    if (outlet.power.powerPercent < this.powerPercent && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
+                        target = outlet;
+                    }
+                }
+            });
+            if (target) {
+                let clump = Math.min(this.powerCurrent, this.config.powerClump);
+                this.transferPower(this.data, target, { type: 'grow', amount: clump });
+                this.powerCurrent -= clump;
+            }
+        }
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/nodes/PlantNodeView.ts":
+/*!*******************************************!*\
+  !*** ./src/engine/nodes/PlantNodeView.ts ***!
+  \*******************************************/
+/*! exports provided: PlantNodeView */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PlantNodeView", function() { return PlantNodeView; });
+/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/dist/esm/pixi.js");
+/* harmony import */ var _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../JMGE/JMTween */ "./src/JMGE/JMTween.ts");
+/* harmony import */ var _data_Fonts__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../data/Fonts */ "./src/data/Fonts.ts");
+/* harmony import */ var _JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../JMGE/others/Colors */ "./src/JMGE/others/Colors.ts");
+
+
+
+
+class PlantNodeView extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
+    constructor(texture, color, radius) {
+        super();
+        this.color = color;
+        this.radius = radius;
+        this.text = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Text"]('2/2', { fontSize: 12, fontFamily: _data_Fonts__WEBPACK_IMPORTED_MODULE_2__["Fonts"].FLYING, stroke: 0, strokeThickness: 1, fill: 0xffffff });
+        this.targetIntensity = 1;
+        this.adjustIntensity = () => {
+            if (this._Intensity !== this.targetIntensity) {
+                if (this._Intensity < this.targetIntensity) {
+                    this._Intensity = Math.min(this._Intensity + 0.01, this.targetIntensity);
+                }
+                else if (this._Intensity > this.targetIntensity) {
+                    this._Intensity = Math.max(this._Intensity - 0.01, this.targetIntensity);
+                }
+                this.sprite.tint = Object(_JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_3__["colorLuminance"])(this.color, this._Intensity);
+                this.sprite.scale.set(this._Intensity);
+            }
+        };
+        this.sprite = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Sprite"](texture);
+        this.sprite.anchor.set(0.5);
+        this.text.anchor.set(0.5);
+        this.text.visible = false;
+        this._Highlight = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
+        this._Highlight.beginFill(0xffff00, 0.5);
+        this._Highlight.drawCircle(0, 0, Math.max(this.radius * 1.2, this.radius + 4));
+        this._Highlight.visible = false;
+        this.addChild(this._Highlight, this.sprite, this.text);
+        this.setIntensity(1, true);
+    }
+    get highlight() {
+        return this._Highlight.visible;
+    }
+    set highlight(b) {
+        this._Highlight.visible = b;
+    }
+    setIntensity(n, instant) {
+        this.targetIntensity = Math.min(0.3 + 0.7 * n, 1);
+        if (!this._Intensity || instant)
+            this._Intensity = this.targetIntensity * 0.9;
+    }
+    pulse(color) {
+        let pulseCircle = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
+        pulseCircle.beginFill(color);
+        pulseCircle.drawCircle(0, 0, Math.max(this.radius * 1.2, this.radius + 4));
+        pulseCircle.alpha = 0;
+        this.addChildAt(pulseCircle, 0);
+        new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_1__["JMTween"](pulseCircle, 100).to({ alpha: 0.5 }).start().chain(pulseCircle, 300).to({ alpha: 0 }).onComplete(() => {
+            pulseCircle.destroy();
+        });
+    }
+    showConnectionCount(current, max) {
+        if (max === 0) {
+            this.text.visible = false;
+        }
+        else {
+            this.text.visible = true;
+            let remaining = max - current;
+            this.text.text = `${current} / ${max}`;
+            if (remaining <= 0) {
+                this.text.tint = 0xff0000;
+            }
+            else if (remaining === 1) {
+                this.text.tint = 0xcccc00;
+            }
+            else {
+                this.text.tint = 0xffffff;
+            }
+        }
+    }
+}
 
 
 /***/ }),
@@ -67390,7 +68897,6 @@ var _a;
 
 
 
-
 let interactionMode = 'desktop';
 let Facade = new (_a = class FacadeInner {
         constructor() {
@@ -67411,10 +68917,6 @@ let Facade = new (_a = class FacadeInner {
                     this.currentPage = menu;
                     this.screen.addChild(menu);
                     menu.navIn();
-                    if (_services_Debug__WEBPACK_IMPORTED_MODULE_14__["DEBUG_MODE"]) {
-                        // let navbar = new Navbar();
-                        // this.screen.addChild(navbar);
-                    }
                     this.finishResize();
                 });
             };
@@ -67538,16 +69040,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_NodeManager__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../services/NodeManager */ "./src/services/NodeManager.ts");
 /* harmony import */ var _engine_Mechanics_GameController__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../engine/Mechanics/GameController */ "./src/engine/Mechanics/GameController.ts");
 /* harmony import */ var _components_domui_Sidebar__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../components/domui/Sidebar */ "./src/components/domui/Sidebar.ts");
-/* harmony import */ var _engine_Mechanics_Parts_GameNode__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../engine/Mechanics/Parts/GameNode */ "./src/engine/Mechanics/Parts/GameNode.ts");
-/* harmony import */ var _data_NodeData__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../data/NodeData */ "./src/data/NodeData.ts");
-/* harmony import */ var _data_SaveData__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../data/SaveData */ "./src/data/SaveData.ts");
-/* harmony import */ var _services_SaveManager__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../services/SaveManager */ "./src/services/SaveManager.ts");
-/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../Config */ "./src/Config.ts");
-/* harmony import */ var _components_domui_InfoPopup__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../components/domui/InfoPopup */ "./src/components/domui/InfoPopup.ts");
-/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ../data/SkillData */ "./src/data/SkillData.ts");
-/* harmony import */ var _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../components/domui/SkillPanel */ "./src/components/domui/SkillPanel.ts");
-/* harmony import */ var _services_StringManager__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ../services/StringManager */ "./src/services/StringManager.ts");
-/* harmony import */ var _services_Debug__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ../services/_Debug */ "./src/services/_Debug.ts");
+/* harmony import */ var _data_NodeData__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../data/NodeData */ "./src/data/NodeData.ts");
+/* harmony import */ var _data_SaveData__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../data/SaveData */ "./src/data/SaveData.ts");
+/* harmony import */ var _services_SaveManager__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../services/SaveManager */ "./src/services/SaveManager.ts");
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../Config */ "./src/Config.ts");
+/* harmony import */ var _components_domui_InfoPopup__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../components/domui/InfoPopup */ "./src/components/domui/InfoPopup.ts");
+/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../data/SkillData */ "./src/data/SkillData.ts");
+/* harmony import */ var _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ../components/domui/SkillPanel */ "./src/components/domui/SkillPanel.ts");
+/* harmony import */ var _services_StringManager__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../services/StringManager */ "./src/services/StringManager.ts");
+/* harmony import */ var _services_Debug__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ../services/_Debug */ "./src/services/_Debug.ts");
+/* harmony import */ var _engine_nodes_PlantNode__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ../engine/nodes/PlantNode */ "./src/engine/nodes/PlantNode.ts");
 
 
 
@@ -67577,6 +69079,7 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         this.turboSpeed = 3;
         this.running = true;
         this.exists = true;
+        this.wantUpdateKnowledge = false;
         this.navIn = () => {
             _JMGE_events_JMTicker__WEBPACK_IMPORTED_MODULE_5__["JMTicker"].add(this.onTick);
             this.keymapper.enabled = true;
@@ -67593,18 +69096,20 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         this.saveGameTimeout = () => {
             if (!this.exists)
                 return;
-            new _components_domui_InfoPopup__WEBPACK_IMPORTED_MODULE_17__["InfoPopup"](_services_StringManager__WEBPACK_IMPORTED_MODULE_20__["StringManager"].data.UI_SAVE);
+            new _components_domui_InfoPopup__WEBPACK_IMPORTED_MODULE_16__["InfoPopup"](_services_StringManager__WEBPACK_IMPORTED_MODULE_19__["StringManager"].data.UI_SAVE);
+            _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'SAVE', text: 'SAVE_GAME_TIMEOUT' });
             this.saveGame();
             window.setTimeout(this.saveGameTimeout, 30000);
         };
         this.saveGame = () => {
-            let state = JSON.stringify(this.gameC.saveNodes());
-            this.extrinsic.stageState = state;
-            _services_SaveManager__WEBPACK_IMPORTED_MODULE_15__["SaveManager"].saveExtrinsic();
+            this.extrinsic.stageState = this.gameC.saveNodes();
+            this.extrinsic.crawlers = this.gameC.saveCrawlers();
+            console.log('SAVE: ' + this.extrinsic.stageState);
+            _services_SaveManager__WEBPACK_IMPORTED_MODULE_14__["SaveManager"].saveExtrinsic();
         };
         this.resetGame = () => {
-            _engine_Mechanics_Parts_GameNode__WEBPACK_IMPORTED_MODULE_12__["GameNode"].resetUid();
-            this.navAndDestroy(new GameUI('empty'));
+            _engine_nodes_PlantNode__WEBPACK_IMPORTED_MODULE_21__["PlantNode"].resetUid();
+            this.navAndDestroy(new GameUI([]));
         };
         this.nextStage = () => {
             this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
@@ -67615,12 +69120,15 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
             this.canvas.onTick();
             if (!this.running)
                 return;
-            this.gameC.onTick(this.gameSpeed);
             this.container.onTick(this.gameSpeed);
+            this.gameC.onTick(this.gameSpeed);
             this.sidebar.updateNodes();
-            let seedling = this.gameC.nodes.find(node => node.config.slug === 'seedling');
+            let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
             if (seedling) {
-                this.bottomBar.updateSeedling(seedling.view);
+                this.bottomBar.updateSeedling(seedling);
+            }
+            if (this.wantUpdateKnowledge) {
+                this.sidebar.updateKnowledge(this.gameC.knowledge.toString());
             }
         };
         this.positionElements = (e) => {
@@ -67644,7 +69152,7 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         this.applySkill = (skill) => {
             skill.effects.forEach(effect => {
                 if (effect.effectType === 'node') {
-                    let node = this.nodeManager.data.find(block => block.slug === effect.slug);
+                    let node = this.nodeManager.getNodeConfig(effect.slug);
                     if (effect.key === 'outletEffect') {
                         if (effect.valueType === 'additive') {
                             node.outletEffects = node.outletEffects || [];
@@ -67654,14 +69162,40 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
                             node.outletEffects = [lodash__WEBPACK_IMPORTED_MODULE_0__["clone"](effect.value)];
                         }
                     }
+                    else {
+                        if (effect.valueType === 'additive') {
+                            node[effect.key] += effect.value;
+                        }
+                        else if (effect.valueType === 'multiplicative') {
+                            node[effect.key] *= effect.value;
+                        }
+                        else if (effect.valueType === 'replace') {
+                            node[effect.key] = effect.value;
+                        }
+                    }
+                }
+                else if (effect.effectType === 'crawler') {
+                    let config = this.nodeManager.crawlerConfig;
+                    if (effect.key === 'commands' || effect.key === 'preferenceList') {
+                        if (effect.valueType === 'additive') {
+                            config[effect.key].push(effect.value);
+                        }
+                    }
+                    else {
+                        if (effect.valueType === 'additive') {
+                            config[effect.key] += effect.value;
+                        }
+                        else if (effect.valueType === 'multiplicative') {
+                            config[effect.key] *= effect.value;
+                        }
+                        else if (effect.valueType === 'replace') {
+                            config[effect.key] = effect.value;
+                        }
+                    }
+                }
+                else if (effect.effectType === 'buildable') {
                     if (effect.valueType === 'additive') {
-                        node[effect.key] += effect.value;
-                    }
-                    else if (effect.valueType === 'multiplicative') {
-                        node[effect.key] *= effect.value;
-                    }
-                    else if (effect.valueType === 'replace') {
-                        node[effect.key] = effect.value;
+                        this.nodeManager.buildableNodes.push(effect.value);
                     }
                 }
             });
@@ -67670,37 +69204,40 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
             this.gameSpeed = b ? this.turboSpeed : 1;
         };
         this.onMouseMove = (position) => {
-            let node = this.container.getClosestObject({ x: position.x, y: position.y, notFruit: true });
-            this.sidebar.highlightNode(node);
+            if (position.x < this.previousResize.outerBounds.right) {
+                let node = this.container.getClosestObject({ x: position.x, y: position.y, notFruit: true });
+                this.sidebar.highlightNode(node);
+            }
         };
         this.createNewNode = (e) => {
             let position = e.e.data.getLocalPosition(this.container);
             let node = this.gameC.addNewNode(e.config);
             let link;
             node.ghostMode = true;
-            node.data.active = false;
-            node.position.set(position.x, position.y);
+            node.active = false;
+            node.view.position.set(position.x, position.y);
             this.container.showConnectionCount();
-            this.mouseC.startDrag({ x: position.x, y: position.y - 100, minD: _Config__WEBPACK_IMPORTED_MODULE_16__["Config"].PHYSICS.NEW_MIND, force: _Config__WEBPACK_IMPORTED_MODULE_16__["Config"].PHYSICS.NEW_FORCE, node,
+            this.mouseC.startDrag({ x: position.x, y: position.y - 100, minD: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_MIND, force: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_FORCE, node,
                 onRelease: () => {
                     this.container.showConnectionCount(false);
-                    if (node.data.outlets.length > 0) {
+                    if (node.outlets.length > 0) {
                         node.ghostMode = false;
-                        node.data.active = true;
+                        node.active = true;
+                        node.view.setIntensity(node.power.powerPercent, true);
                         if (link)
                             link.active = true;
                     }
                     else {
-                        this.container.removeNode(node);
+                        this.gameC.removeNode(node);
                     }
                 },
                 onMove: (position2) => {
-                    this.container.removeAllLinksFor(node, true);
+                    this.gameC.disconnectNode(node);
                     node.ghostMode = true;
                     let nearest = this.container.getClosestObject({ x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true });
                     if (nearest) {
                         node.ghostMode = false;
-                        link = this.container.linkNodes(nearest, node);
+                        link = this.gameC.linkNodes(nearest, node);
                         link.active = false;
                     }
                     // let nearest2 = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
@@ -67726,21 +69263,31 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
                 },
             });
         };
+        this.toggleKnowledge = () => {
+            this.wantUpdateKnowledge = !this.wantUpdateKnowledge;
+            if (this.wantUpdateKnowledge) {
+                let content = this.gameC.knowledge.toString();
+                this.sidebar.addKnowledgeElement(content);
+            }
+            else {
+                this.sidebar.removeKnowledgeElement();
+            }
+        };
         this.logSave = () => {
             console.log(JSON.stringify(this.extrinsic));
         };
         this.loadSave = (json) => {
             let extrinsic = JSON.parse(json);
-            _services_SaveManager__WEBPACK_IMPORTED_MODULE_15__["SaveManager"].saveExtrinsic(extrinsic).then(() => {
-                _engine_Mechanics_Parts_GameNode__WEBPACK_IMPORTED_MODULE_12__["GameNode"].resetUid();
+            console.log('extrinsic');
+            _services_SaveManager__WEBPACK_IMPORTED_MODULE_14__["SaveManager"].saveExtrinsic(extrinsic, true).then(() => {
+                _engine_nodes_PlantNode__WEBPACK_IMPORTED_MODULE_21__["PlantNode"].resetUid();
                 this.navAndDestroy(new GameUI());
             });
         };
-        this.extrinsic = _services_SaveManager__WEBPACK_IMPORTED_MODULE_15__["SaveManager"].getExtrinsic();
-        this.nodeManager = new _services_NodeManager__WEBPACK_IMPORTED_MODULE_9__["NodeManager"](_data_NodeData__WEBPACK_IMPORTED_MODULE_13__["NodeData"].Nodes, _data_SkillData__WEBPACK_IMPORTED_MODULE_18__["SkillData"].skills);
+        this.extrinsic = _services_SaveManager__WEBPACK_IMPORTED_MODULE_14__["SaveManager"].getExtrinsic();
+        this.nodeManager = new _services_NodeManager__WEBPACK_IMPORTED_MODULE_9__["NodeManager"](_data_NodeData__WEBPACK_IMPORTED_MODULE_12__["NodeData"].Nodes, _data_SkillData__WEBPACK_IMPORTED_MODULE_17__["SkillData"].skills);
         let skills = this.nodeManager.getSkillsBySlugs(this.extrinsic.skillsCurrent);
         skills.filter(skill => skill.effects.find(effect => effect.effectType === 'tier')).forEach(this.applySkillTier);
-        console.log('s', skills);
         let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
         let allSkills = lodash__WEBPACK_IMPORTED_MODULE_0__["uniq"](skills.concat(this.nodeManager.getSkillsBySlugs(always)));
         allSkills.forEach(this.applySkill);
@@ -67749,23 +69296,24 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         this.container = new _engine_FDG_FDGContainer__WEBPACK_IMPORTED_MODULE_6__["FDGContainer"](this.canvas.innerBounds);
         this.mouseC = new _services_MouseController__WEBPACK_IMPORTED_MODULE_7__["MouseController"](this.canvas, this.container);
         this.gameC = new _engine_Mechanics_GameController__WEBPACK_IMPORTED_MODULE_10__["GameController"](this.container, this.nodeManager);
-        let nextSkillPanel = new _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_19__["SkillPanel"](this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
+        let nextSkillPanel = new _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_18__["SkillPanel"](this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
         let currentSkillPanel;
         if (this.extrinsic.skillsCurrent.length + always.length > 0) {
-            currentSkillPanel = new _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_19__["SkillPanel"](this.nodeManager.skills, this.extrinsic.skillsCurrent, always, this.extrinsic.skillTier, true);
+            currentSkillPanel = new _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_18__["SkillPanel"](this.nodeManager.skills, this.extrinsic.skillsCurrent, always, this.extrinsic.skillTier, true);
         }
         this.sidebar = new _components_domui_Sidebar__WEBPACK_IMPORTED_MODULE_11__["Sidebar"](currentSkillPanel, nextSkillPanel);
         this.keymapper = new _services_KeyMapper__WEBPACK_IMPORTED_MODULE_4__["KeyMapper"]();
-        this.bottomBar = new _components_BottomBar__WEBPACK_IMPORTED_MODULE_8__["BottomBar"](100, 100, this.extrinsic.nodes.map(slug => this.nodeManager.getNodeConfig(slug)));
+        this.bottomBar = new _components_BottomBar__WEBPACK_IMPORTED_MODULE_8__["BottomBar"](100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
         this.canvas.addChild(this.container);
         this.addChild(this.canvas);
         this.addChild(this.bottomBar);
         this.mouseC.onMove.addListener(this.onMouseMove);
-        this.container.onNodeAdded.addListener(this.sidebar.addNodeElement);
-        this.container.onNodeAdded.addListener(this.bottomBar.nodeAdded);
-        this.container.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
-        this.container.onNodeRemoved.addListener(this.gameC.removeNodeByView);
-        this.container.onNodeRemoved.addListener(this.sidebar.removeNodeElement);
+        this.gameC.onNodeAdded.addListener(this.sidebar.addNodeElement);
+        this.gameC.onNodeAdded.addListener(this.bottomBar.nodeAdded);
+        this.gameC.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
+        this.gameC.onNodeRemoved.addListener(this.sidebar.removeNodeElement);
+        this.gameC.onCrawlerAdded.addListener(this.sidebar.addNodeElement);
+        this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
         this.bottomBar.onProceedButton.addListener(this.nextStage);
         this.bottomBar.onCreateButton.addListener(this.createNewNode);
         this.bottomBar.onDeleteButton.addListener(this.mouseC.deleteNextClicked);
@@ -67785,26 +69333,29 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
             { key: 'ArrowUp', altKey: 'w', function: () => this.canvas.endPan(_components_ScrollingContainer__WEBPACK_IMPORTED_MODULE_3__["Direction"].UP) },
             { key: 'ArrowDown', altKey: 's', function: () => this.canvas.endPan(_components_ScrollingContainer__WEBPACK_IMPORTED_MODULE_3__["Direction"].DOWN) },
         ]);
-        if (_services_Debug__WEBPACK_IMPORTED_MODULE_21__["GOD_MODE"]) {
+        if (_services_Debug__WEBPACK_IMPORTED_MODULE_20__["GOD_MODE"]) {
             this.keymapper.addKeys([
                 { key: '[', function: () => this.gameSpeed = Math.max(this.gameSpeed - 1, 1) },
                 { key: ']', function: () => this.gameSpeed++ },
                 { key: 'p', function: () => this.resetGame() },
-                { key: 's', function: () => this.logSave() },
-                { key: '1', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_14__["TierSaves"][1]) },
-                { key: '1', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_14__["TierSaves"][0]) },
+                { key: '`', function: () => this.logSave() },
+                { key: '1', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][1]) },
+                { key: '2', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][2]) },
+                { key: '0', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][0]) },
+                { key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0]) },
+                { key: 'k', function: this.toggleKnowledge },
             ]);
         }
         if (level) {
-            if (level === 'empty') {
+            if (level.length === 0) {
                 this.newGame();
             }
             else {
-                this.gameC.loadSaves(JSON.parse(level));
+                this.gameC.loadSaves(level, []);
             }
         }
         else if (this.extrinsic.stageState) {
-            this.gameC.loadSaves(JSON.parse(this.extrinsic.stageState));
+            this.gameC.loadSaves(this.extrinsic.stageState, this.extrinsic.crawlers);
         }
         else
             this.newGame();
@@ -67825,9 +69376,11 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'NAVIGATE', text: 'GAME INSTANCE DESTROYED' });
     }
     newGame() {
+        console.log('new game');
         let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
-        node.position.set(600, 300);
-        node.data.powerPercent = 0.5;
+        node.view.position.set(600, 300);
+        node.power.powerPercent = 0.5;
+        // this.saveGame();
     }
 }
 
@@ -68222,17 +69775,26 @@ class MouseController {
     constructor(canvas, container) {
         this.canvas = canvas;
         this.container = container;
-        // objects: IPull[] = [];
         this.onDelete = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_0__["JMEventListener"]();
         this.onMove = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_0__["JMEventListener"]();
         this.deleteNext = false;
         this.down = false;
+        this.deleteNextClicked = (e) => {
+            if (e && e.onComplete) {
+                this.deleteNext = true;
+                this.onDelete.addOnce(e.onComplete);
+            }
+            else {
+                this.deleteNext = false;
+                this.onDelete.clear();
+            }
+        };
         this.onMouseDown = (e) => {
             let position = e.data.getLocalPosition(this.container);
             if (this.deleteNext) {
                 let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
                 if (nodeToDelete) {
-                    this.container.removeNode(nodeToDelete);
+                    nodeToDelete.flagDestroy = true;
                 }
                 this.deleteNext = false;
                 this.onDelete.publish(nodeToDelete);
@@ -68255,7 +69817,6 @@ class MouseController {
             if (this.currentPull) {
                 this.container.removePull(this.currentPull);
                 if (this.currentPull.onRelease) {
-                    // let position = e.data.getLocalPosition(this.container);
                     this.currentPull.onRelease();
                 }
                 this.currentPull = null;
@@ -68278,16 +69839,6 @@ class MouseController {
             }
             else {
                 this.onMove.publish(position);
-            }
-        };
-        this.deleteNextClicked = (e) => {
-            if (e && e.onComplete) {
-                this.deleteNext = true;
-                this.onDelete.addOnce(e.onComplete);
-            }
-            else {
-                this.deleteNext = false;
-                this.onDelete.clear();
             }
         };
         canvas.background.addListener('pointerdown', this.onMouseDown);
@@ -68320,13 +69871,38 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "NodeManager", function() { return NodeManager; });
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../data/SkillData */ "./src/data/SkillData.ts");
+/* harmony import */ var _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../engine/Mechanics/CrawlerCommands/_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
+/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../data/SkillData */ "./src/data/SkillData.ts");
+
 
 
 class NodeManager {
     constructor(data, skills) {
+        this.buildableNodes = [
+            'core',
+            'stem',
+            'generator',
+            'grove',
+            'lab',
+            'seedling',
+        ];
         this.data = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](data);
         this.skills = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](skills);
+        this.crawlerConfig = {
+            health: 1,
+            healthDrain: 0.0002,
+            speed: 0.01,
+            commands: [
+                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].WANDER,
+                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].IDLE,
+                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].EAT,
+                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].FRUSTRATED,
+                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].STARVING,
+            ],
+            preferenceList: [
+                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].WANDER,
+            ],
+        };
     }
     destroy() {
     }
@@ -68337,7 +69913,7 @@ class NodeManager {
     getSkillAlways(tier) {
         let m = [];
         for (let i = 0; i <= tier; i++) {
-            m = m.concat(_data_SkillData__WEBPACK_IMPORTED_MODULE_1__["SkillData"].skillTiers[i]);
+            m = m.concat(_data_SkillData__WEBPACK_IMPORTED_MODULE_2__["SkillData"].skillTiers[i]);
         }
         return m;
     }
@@ -68433,9 +70009,12 @@ class SaveManager {
             });
         });
     }
-    static async saveExtrinsic(extrinsic) {
+    static async saveExtrinsic(extrinsic, andSet) {
         return new Promise((resolve) => {
             extrinsic = extrinsic || SaveManager.extrinsic;
+            if (andSet) {
+                SaveManager.extrinsic = extrinsic;
+            }
             switch (SAVE_LOC) {
                 case 'virtual':
                     virtualSave.extrinsic = extrinsic;
@@ -68718,36 +70297,12 @@ function createGraphicTextures() {
             TextureCache.addTextureFromNodeGraphic(polyNames[i], j, graphic);
         }
     }
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawRect(0, 0, 100, 100);
-    // TextureCache.addTextureFromGraphic('square', graphic);
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100,75,0, -100,100,75]);
-    // TextureCache.addTextureFromGraphic('triangle', graphic);
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100, -30, -100,30,100,30,100, -30]);
-    // TextureCache.addTextureFromGraphic('thin-rect', graphic);
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([-100, -70, -100,70,100,70,100, -70]);
-    // TextureCache.addTextureFromGraphic('fat-rect', graphic);
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([100,0,100*(Math.sqrt(5)-1)/4, -100*Math.sqrt(10+2*Math.sqrt(5))/4, -100*(Math.sqrt(5)+1)/4, -100*Math.sqrt(10-2*Math.sqrt(5))/4, -100*(Math.sqrt(5)+1)/4,100*Math.sqrt(10-2*Math.sqrt(5))/4,100*(Math.sqrt(5)-1)/4,100*Math.sqrt(10+2*Math.sqrt(5))/4]);
-    // TextureCache.addTextureFromGraphic('pentagon', graphic);
-    // graphic.clear()
-    //   .lineStyle(20,0xffffff)
-    //   .beginFill(0x333333);
-    // graphic.drawPolygon([100,0,50,100*Math.sqrt(3)/ 2, -50,100*Math.sqrt(3)/ 2, -100,0, -50, -100*Math.sqrt(3)/ 2,50, -100*Math.sqrt(3)/ 2]);
-    // TextureCache.addTextureFromGraphic('hexagon', graphic);
+    graphic.clear().beginFill(0xffffff)
+        .drawCircle(0, 0, 4);
+    TextureCache.addTextureFromGraphic('crawler', graphic);
+    graphic.clear().beginFill(0xffffff)
+        .drawRect(0, 0, 2, 2);
+    TextureCache.addTextureFromGraphic('crawler-power', graphic);
     graphic = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
     graphic.beginFill(0xffffff);
     graphic.drawCircle(0, 0, 5);
