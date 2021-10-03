@@ -17,6 +17,6 @@ export class SkillBar {
     this.nextLevel = next;
     // this.element.innerHTML = `${StringManager.data.UI_SKILLTREE_RESEARCH}: ${Math.round(current)} / ${next}`;
     this.element.innerHTML = `${StringManager.data.UI_SKILLTREE_RESEARCH}: ${Math.round(current)} / ${next}
-                              <p style="font-size: 16px; margin-block-start: 0px; font-weight: normal;">Next Skillpoint at ${next} Research</p>`;
+                              <p class="sub-text">Next Skillpoint at ${next} Research</p>`;
   }
 }

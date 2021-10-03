@@ -5,6 +5,7 @@ import { PlantNode } from './PlantNode';
 
 export class PlantNodePower {
   public fruitType: NodeSlug;
+  public OVERCHARGE_PERCENT: number = 1.1;
   public fruitChain: number = 0;
   public maxFruits: number = 0;
 
@@ -36,6 +37,10 @@ export class PlantNodePower {
 
   public get powerPercentOne(): number {
     return Math.min(this.powerCurrent / this.config.powerMax, 1);
+  }
+
+  public get powerPercentOver(): number {
+    return Math.min(this.powerCurrent / this.config.powerMax, this.OVERCHARGE_PERCENT);
   }
 
   public get powerWeight(): number {
@@ -116,12 +121,12 @@ export class PlantNodePower {
     if (this.data.fruits.length > 0 && this.powerPercent >= Config.NODE.FRUIT_THRESHOLD) {
       let target: PlantNode;
       this.data.fruits.forEach(fruit => {
-        if (!target || fruit.power.powerPercentOne < target.power.powerPercent) {
+        if (!target || fruit.power.powerPercentOver < target.power.powerPercentOver) {
           target = fruit;
         }
       });
 
-      if (this.powerPercent > target.power.powerPercentOne) {
+      if (this.powerPercentOver > target.power.powerPercentOver) {
         let clump = Math.min(this.powerCurrent, this.config.fruitClump);
         this.transferPower(this.data, target, {type: 'grow', amount: clump, removeOrigin: clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1)});
         this.powerCurrent -= clump;
@@ -135,7 +140,7 @@ export class PlantNodePower {
 
       this.data.outlets.forEach(outlet => {
         if (outlet.active) {
-          if (outlet.power.powerPercentOne < this.powerPercent && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
+          if (outlet.power.powerPercentOver < this.powerPercentOver && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
             target = outlet;
           }
         }

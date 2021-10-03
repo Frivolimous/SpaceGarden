@@ -13,6 +13,7 @@ export class SkillPanel {
   private skillbar: SkillBar;
   private skillpointElement: HTMLDivElement;
   private skillMap: { element: HTMLButtonElement, skill: ISkillConfig }[] = [];
+  private negative: HTMLDivElement;
 
   private skillLevels: number = 0;
 
@@ -54,6 +55,10 @@ export class SkillPanel {
       this.skillpointElement.classList.add('skill-skillpoint');
       this.element.appendChild(this.skillpointElement);
       this.skillpointElement.innerHTML = `5 Skillpoints`;
+
+      this.negative = document.createElement('div');
+      this.negative.classList.add('skill-negative');
+      this.element.appendChild(this.negative);
 
       this.skillbar = new SkillBar();
       this.element.appendChild(this.skillbar.element);
@@ -107,6 +112,7 @@ export class SkillPanel {
         data.element.hidden = true;
       }
     });
+    if (this.negative) this.negative.innerHTML = (StringManager.data as any)['NEGATIVE_TIER_' + pageIndex];
   }
 
   public clear() {

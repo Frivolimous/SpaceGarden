@@ -11,16 +11,19 @@ export const SkillData: ISkillData = {
       cost: 1,
       effects: [
         { effectType: 'node', slug: 'core', key: 'powerGen', valueType: 'multiplicative', value: 1.5},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },
     {
       slug: 'skill-2',
       title: 'Core Links',
-      description: 'Increases Core Links by +1',
+      description: 'Increases Core Links by +1 and transfer rate by x2',
       // description: 'Increases Core Links by +{1-value}',
       cost: 1,
       effects: [
         { effectType: 'node', slug: 'core', key: 'maxLinks', valueType: 'additive', value: 1},
+        { effectType: 'node', slug: 'core', key: 'powerClump', valueType: 'multiplicative', value: 2},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },
     {
@@ -32,6 +35,7 @@ export const SkillData: ISkillData = {
       effects: [
         { effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: 4},
         { effectType: 'node', slug: 'stem', key: 'powerClump', valueType: 'multiplicative', value: 3},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },
     {
@@ -41,7 +45,8 @@ export const SkillData: ISkillData = {
       // description: 'Leaves reduce power drain of Stems by {1-value-amount}',
       cost: 2,
       effects: [
-        { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: {stat: '_PowerGen', type: 'additive', amount: -NodeBase.powerDrain / 2}},
+        { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: {stat: '_PowerGen', type: 'additive', amount: -NodeBase.stemDrain / 2}},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },
     {
@@ -53,6 +58,7 @@ export const SkillData: ISkillData = {
       effects: [
         { effectType: 'node', slug: 'lab', key: 'researchGen', valueType: 'multiplicative', value: 5},
         { effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'multiplicative', value: 2},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },
     {
@@ -63,6 +69,7 @@ export const SkillData: ISkillData = {
       cost: 3,
       effects: [
         { effectType: 'node', slug: 'generator', key: 'maxCount', valueType: 'additive', value: 2},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },
     {
@@ -94,6 +101,7 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.RESEARCH},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.RESEARCH},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.1},
       ],
     },
     {
@@ -105,6 +113,7 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.POWER},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.POWER},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.1},
       ],
     },
     {
@@ -116,6 +125,7 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.BREED},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.BREED},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.1},
       ],
     },
     {
@@ -127,6 +137,7 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.DANCE},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.DANCE},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.1},
       ],
     },
     {
@@ -138,6 +149,7 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler', key: 'healthDrain', valueType: 'multiplicative', value: 0.5},
         {effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.2},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.1},
       ],
     },
     {
@@ -148,7 +160,7 @@ export const SkillData: ISkillData = {
       cost: 2,
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 2},
-        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'multiplicative', value: 10},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 45000},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.4},
       ],
     },

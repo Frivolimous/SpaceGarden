@@ -167,7 +167,7 @@ export class Sidebar {
 
         this.notification = document.createElement('div');
         this.notification.classList.add('notification');
-        element.appendChild(this.notification);
+        button.appendChild(this.notification);
         this.notification.hidden = true;
       } else if (node.slug === 'stem') {
         if (this.areStemsHidden) {
