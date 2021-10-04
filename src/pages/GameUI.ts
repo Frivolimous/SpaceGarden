@@ -40,7 +40,6 @@ export class GameUI extends BaseUI {
   private turboSpeed: number = 3;
   private running = true;
   private exists = true;
-  private wantUpdateKnowledge = false;
 
   private extrinsic: IExtrinsicModel;
 
@@ -49,20 +48,23 @@ export class GameUI extends BaseUI {
 
     this.extrinsic = SaveManager.getExtrinsic();
 
-    this.nodeManager = new NodeManager(NodeData.Nodes, SkillData.skills);
+    this.nodeManager = new NodeManager(NodeData.Nodes, SkillData.skills, this.extrinsic.skillTier);
 
-    let skills = this.nodeManager.getSkillsBySlugs(this.extrinsic.skillsCurrent);
-    skills.filter(skill => skill.effects.find(effect => effect.effectType === 'tier')).forEach(this.applySkillTier);
+    this.nodeManager.applySkills(this.extrinsic.skillsCurrent);
 
-    let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
-    let allSkills = _.uniq(skills.concat(this.nodeManager.getSkillsBySlugs(always)));
-    allSkills.forEach(this.applySkill);
-    console.log(allSkills);
+    // let skills = this.nodeManager.getSkillsBySlugs(this.extrinsic.skillsCurrent);
+    // skills.filter(skill => skill.effects.find(effect => effect.effectType === 'tier')).forEach(this.applySkillTier);
+
+    // let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
+    // let allSkills = _.uniq(skills.concat(this.nodeManager.getSkillsBySlugs(always)));
+    // allSkills.forEach(this.applySkill);
 
     this.canvas = new ScrollingContainer(1500, 1000);
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
     this.gameC = new GameController(this.container, this.nodeManager);
+
+    let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
 
     let nextSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
     let currentSkillPanel: SkillPanel;
@@ -118,7 +120,8 @@ export class GameUI extends BaseUI {
         {key: '2', function: () => this.loadSave(TierSaves[2])},
         {key: '0', function: () => this.loadSave(TierSaves[0])},
         {key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0])},
-        {key: 'k', function: this.toggleKnowledge},
+        {key: 'r', function: this.cheatResearch},
+        // {key: 'k', function: this.toggleKnowledge},
       ]);
     }
 
@@ -198,6 +201,7 @@ export class GameUI extends BaseUI {
   }
 
   public nextStage = () => {
+    this.extrinsic.skillTier = this.nodeManager.extractTier(this.extrinsic.skillsNext, this.extrinsic.skillTier);
     this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
     this.extrinsic.skillsNext = [];
     this.resetGame();
@@ -220,9 +224,7 @@ export class GameUI extends BaseUI {
       this.bottomBar.updateSeedling(seedling);
     }
 
-    if (this.wantUpdateKnowledge) {
-      this.sidebar.updateKnowledge(this.gameC.knowledge.toString());
-    }
+    this.sidebar.updateKnowledge(this.gameC.knowledge);
   }
 
   public positionElements = (e: IResizeEvent) => {
@@ -231,61 +233,6 @@ export class GameUI extends BaseUI {
 
     this.bottomBar.resize(e.outerBounds.width);
     this.bottomBar.position.set(e.outerBounds.x, e.outerBounds.bottom - this.bottomBar.barHeight);
-  }
-
-  public applySkillTier = (skill: ISkillConfig) => {
-    skill.effects.forEach(effect => {
-      if (effect.effectType === 'tier') {
-        if (effect.valueType === 'additive') {
-          this.extrinsic.skillTier += effect.value;
-        } else if (effect.valueType === 'replace') {
-          this.extrinsic.skillTier = Math.max(this.extrinsic.skillTier, effect.value);
-        }
-      }
-    });
-  }
-
-  public applySkill = (skill: ISkillConfig) => {
-    skill.effects.forEach(effect => {
-      if (effect.effectType === 'node') {
-        let node = this.nodeManager.getNodeConfig(effect.slug);
-        if (effect.key === 'outletEffect') {
-          if (effect.valueType === 'additive') {
-            node.outletEffects = node.outletEffects || [];
-            node.outletEffects.push(_.clone(effect.value));
-          } else if (effect.valueType === 'replace') {
-            node.outletEffects = [_.clone(effect.value)];
-          }
-        } else {
-          if (effect.valueType === 'additive') {
-            (node as any)[effect.key] += effect.value;
-          } else if (effect.valueType === 'multiplicative') {
-            (node as any)[effect.key] *= effect.value;
-          } else if (effect.valueType === 'replace') {
-            (node as any)[effect.key] = effect.value;
-          }
-        }
-      } else if (effect.effectType === 'crawler') {
-        let config = this.nodeManager.crawlerConfig;
-        if (effect.key === 'commands' || effect.key === 'preferenceList') {
-          if (effect.valueType === 'additive') {
-            (config as any)[effect.key].push(effect.value);
-          }
-        } else {
-          if (effect.valueType === 'additive') {
-            (config as any)[effect.key] += effect.value;
-          } else if (effect.valueType === 'multiplicative') {
-            (config as any)[effect.key] *= effect.value;
-          } else if (effect.valueType === 'replace') {
-            (config as any)[effect.key] = effect.value;
-          }
-        }
-      } else if (effect.effectType === 'buildable') {
-        if (effect.valueType === 'additive') {
-          this.nodeManager.buildableNodes.push(effect.value);
-        }
-      }
-    });
   }
 
   public toggleTurboMode = (b: boolean) => {
@@ -417,16 +364,6 @@ export class GameUI extends BaseUI {
     }
   }
 
-  private toggleKnowledge = () => {
-    this.wantUpdateKnowledge = !this.wantUpdateKnowledge;
-    if (this.wantUpdateKnowledge) {
-      let content = this.gameC.knowledge.toString();
-      this.sidebar.addKnowledgeElement(content);
-    } else {
-      this.sidebar.removeKnowledgeElement();
-    }
-  }
-
   private logSave = () => {
     console.log(JSON.stringify(this.extrinsic));
   }
@@ -438,5 +375,13 @@ export class GameUI extends BaseUI {
       PlantNode.resetUid();
       this.navAndDestroy(new GameUI());
     });
+  }
+
+  private cheatResearch = () => {
+    let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
+
+    if (seedling) {
+      seedling.receiveResearch(1000);
+    }
   }
 }

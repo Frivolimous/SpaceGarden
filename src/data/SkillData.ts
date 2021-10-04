@@ -41,7 +41,7 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-6',
       title: 'Leafy Goodness',
-      description: 'Stem Fruits reduce power drain of Stems by -0.05 each',
+      description: 'Stem Fruits reduce power drain of Stems down to 0',
       // description: 'Leaves reduce power drain of Stems by {1-value-amount}',
       cost: 2,
       effects: [
@@ -52,12 +52,12 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-4',
       title: 'Evolution Speed',
-      description: 'Increases Lab Research Generation by x5 but power drain increased by x2',
+      description: 'Increases Lab Research Generation by x5 but power drain increased by x1.5',
       // description: 'Increases Lab Research Generation by x{1-value} but power drain increased by x{2-value}',
       cost: 3,
       effects: [
         { effectType: 'node', slug: 'lab', key: 'researchGen', valueType: 'multiplicative', value: 5},
-        { effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'multiplicative', value: 2},
+        { effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'multiplicative', value: 1.5},
         {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },

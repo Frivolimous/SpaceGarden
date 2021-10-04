@@ -27,17 +27,36 @@ body {
     overflow: auto;
 }
 
-.sidebar-title {
+#sidebar::-webkit-scrollbar {
+    width: 10px;
+}
+
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 0.75vw;
+}
+
+#sidebar .sidebar-title {
     font-size: 30px;
     font-weight: bold;
     text-align: center;
 }
 
-.node-container {
+#sidebar .node-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 5px;
+}
+
+#sidebar .tab-container {
+    display: flex;
+    flex-direction: row;
+    margin-top: 10px;
+    gap: 5px;
+    justify-content: center;
+    min-height: 40px;
 }
 
 .node-title {
@@ -72,6 +91,31 @@ body {
     cursor: pointer;
 }
 
+.skill-button:hover {
+    background: #009;
+}
+
+.tab-button {
+    position: relative;
+    width: 84px;
+    color: #000;
+    background: none;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.tab-button:hover {
+    color: #00a;
+    border: 2px solid #00a;
+}
+
+.tab-button:disabled {
+    background: #000;
+    color: #FFF;
+    cursor: default;
+}
+
 .notification {
     position: absolute;
     width: 12px;
@@ -80,10 +124,6 @@ body {
     border-radius: 5px;
     right: -5px;
     top: -5px;
-}
-
-.skill-button:hover {
-    background: #009;
 }
 
 /* Skill Panel and Skill Panel Stuff */
@@ -123,25 +163,23 @@ body {
 }
 
 .skill-panel .tier-button {
-    /* font-size: 1.4em; */
     width: 50px;
     height: 25px;
     border-radius: 5px;
+    color: #000;
     cursor: pointer;
     background: none;
-    border: 1px solid #000;
-    color: #000;
+    border: none;
 }
 
 .skill-panel .tier-button:hover {
-    border-color: #06a;
+    border: 2px solid #06a;
     color: #06a;
 }
 
 .skill-panel .tier-button:disabled {
     color: #ccc;
     background: #333;
-    border: none;
     cursor: default;
 }
 

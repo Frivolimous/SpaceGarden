@@ -5,7 +5,7 @@ export const NodeBase = {
   powerDrain: -0.1,
   stemDrain: -0.05,
   corGen: 0.4,
-  smallGen: 0.15,
+  smallGen: 0.2,
   // stemDrain: -0.05,
   // mainDrain: -0.2,
   // corGen: 0.4,

@@ -20,7 +20,7 @@ export class NodeManager {
 
   private data: INodeConfig[];
 
-  constructor(data: INodeConfig[], skills: ISkillConfig[]) {
+  constructor(data: INodeConfig[], skills: ISkillConfig[], private skillTier: number) {
     this.data = _.cloneDeep(data);
     this.skills = _.cloneDeep(skills);
 
@@ -51,6 +51,13 @@ export class NodeManager {
     return raw;
   }
 
+  public extractTier(slugs: string[], currentTier: number): number {
+    let tierSkills = this.getSkillsBySlugs(slugs).filter(skill => skill.effects.find(effect => effect.effectType === 'tier'));
+    let max = Math.max(...tierSkills.map(skill => skill.effects.find(effect => effect.effectType === 'tier').value as number), currentTier);
+
+    return max;
+  }
+
   public getSkillAlways(tier: number): string[] {
     let m: string[] = [];
     for (let i = 0; i <= tier; i++) {
@@ -62,5 +69,57 @@ export class NodeManager {
 
   public getSkillsBySlugs(slugs: string[]): ISkillConfig[] {
     return slugs.map(slug => this.skills.find(skill => skill.slug === slug));
+  }
+
+  public applySkills(slugs: string[]) {
+    let skills = this.getSkillsBySlugs(slugs);
+    let always = this.getSkillsBySlugs(this.getSkillAlways(this.skillTier));
+
+    let allSkills = _.uniq(skills.concat(always));
+
+    allSkills.forEach(this.applySkill);
+  }
+
+  public applySkill = (skill: ISkillConfig) => {
+    skill.effects.forEach(effect => {
+      if (effect.effectType === 'node') {
+        let node = this.getNodeConfig(effect.slug);
+        if (effect.key === 'outletEffect') {
+          if (effect.valueType === 'additive') {
+            node.outletEffects = node.outletEffects || [];
+            node.outletEffects.push(_.clone(effect.value));
+          } else if (effect.valueType === 'replace') {
+            node.outletEffects = [_.clone(effect.value)];
+          }
+        } else {
+          if (effect.valueType === 'additive') {
+            (node as any)[effect.key] += effect.value;
+          } else if (effect.valueType === 'multiplicative') {
+            (node as any)[effect.key] *= effect.value;
+          } else if (effect.valueType === 'replace') {
+            (node as any)[effect.key] = effect.value;
+          }
+        }
+      } else if (effect.effectType === 'crawler') {
+        let config = this.crawlerConfig;
+        if (effect.key === 'commands' || effect.key === 'preferenceList') {
+          if (effect.valueType === 'additive') {
+            (config as any)[effect.key].push(effect.value);
+          }
+        } else {
+          if (effect.valueType === 'additive') {
+            (config as any)[effect.key] += effect.value;
+          } else if (effect.valueType === 'multiplicative') {
+            (config as any)[effect.key] *= effect.value;
+          } else if (effect.valueType === 'replace') {
+            (config as any)[effect.key] = effect.value;
+          }
+        }
+      } else if (effect.effectType === 'buildable') {
+        if (effect.valueType === 'additive') {
+          this.buildableNodes.push(effect.value);
+        }
+      }
+    });
   }
 }

@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { Debug, GOD_MODE } from '../../services/_Debug';
 import { NodeSlug } from '../../data/NodeData';
 import { NodeManager } from '../../services/NodeManager';
 import { FDGContainer } from '../FDG/FDGContainer';
@@ -8,6 +9,8 @@ import { CrawlerModel } from './Parts/CrawlerModel';
 
 export class GameKnowledge {
   public nodes: PlantNode[] = [];
+  public normalNodes: PlantNode[] = [];
+  public fruitNodes: PlantNode[] = [];
   public sortedNodes: {[key in NodeSlug]: PlantNode[]} = {
     'home': [],
     'lab': [],
@@ -48,7 +51,7 @@ export class GameKnowledge {
     let drain = 0;
     let power = 0;
     let maxPower = 0;
-    this.nodes.forEach(node => {
+    this.normalNodes.forEach(node => {
       power += node.power.powerCurrent;
       maxPower += node.config.powerMax;
       if (node.power.powerGen > 0) {
@@ -69,27 +72,31 @@ export class GameKnowledge {
   }
 
   public toString(): string {
-    let m = `<div class='node-title'>Knowledge</div>`;
+    let m = `<div class='node-title'>Plant Overview</div>`;
     m += `<br>Power: ${Math.round(this.totalPower)} / ${Math.round(this.totalMaxPower)}
           <br>Gen: ${this.totalGen.toFixed(2)}, Drain: ${this.totalDrain.toFixed(2)}`;
-    m += `<br><br>Crawlers: ${this.crawlerCount}<br>`;
+    m += `<br><br>Crawlers: ${this.crawlerCount}`;
+    m += `<br>Nodes: ${this.normalNodes.length}`;
 
-    let keys = Object.keys(this.sortedNodes);
-    keys.forEach(key => {
-      let value = this.sortedNodes[key as NodeSlug].length;
-      if (value !== 0) {
-        m += `<br>${key}: ${value}`;
-      }
-    });
-    if (this.crawlerCount > 0) {
-      m += `<br>Claimed`;
-      keys = Object.keys(this.sortedNodes);
+    if (GOD_MODE) {
+      m += '<br> --- <br> DEV STUFF <br><br>';
+      let keys = Object.keys(this.sortedNodes);
       keys.forEach(key => {
-        let value = this.sortedNodes[key as NodeSlug].filter(node => node.claimedBy).length;
+        let value = this.sortedNodes[key as NodeSlug].length;
         if (value !== 0) {
           m += `<br>${key}: ${value}`;
         }
       });
+      // if (this.crawlerCount > 0) {
+      //   m += `<br>Claimed`;
+      //   keys = Object.keys(this.sortedNodes);
+      //   keys.forEach(key => {
+      //     let value = this.sortedNodes[key as NodeSlug].filter(node => node.claimedBy).length;
+      //     if (value !== 0) {
+      //       m += `<br>${key}: ${value}`;
+      //     }
+      //   });
+      // }
     }
 
     return m;
@@ -106,11 +113,21 @@ export class GameKnowledge {
   private nodeAdded = (node: PlantNode) => {
     this.sortedNodes[node.slug].push(node);
     this.nodes.push(node);
+    if (node.isFruit()) {
+      this.fruitNodes.push(node);
+    } else {
+      this.normalNodes.push(node);
+    }
   }
 
   private nodeRemoved = (node: PlantNode) => {
     _.pull(this.sortedNodes[node.slug], node);
     _.pull(this.nodes, node);
+    if (node.isFruit()) {
+      _.pull(this.fruitNodes, node);
+    } else {
+      _.pull(this.normalNodes, node);
+    }
   }
 
   private nodeClaimed = (e: {claim: boolean, node: PlantNode, claimer: CrawlerModel}) => {

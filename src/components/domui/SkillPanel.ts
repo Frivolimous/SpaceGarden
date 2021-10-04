@@ -2,6 +2,7 @@ import { StringManager } from '../../services/StringManager';
 import { ISkillConfig, SkillData } from '../../data/SkillData';
 import { SkillBar } from './SkillBar';
 import { Formula } from '../../services/Formula';
+import { JMEventListener } from 'src/JMGE/events/JMEventListener';
 
 export class SkillPanel {
   public skillsSpent: number = 0;
@@ -96,7 +97,11 @@ export class SkillPanel {
   }
 
   public set hidden(b: boolean) {
-    this.element.style.display = b ? 'none' : 'flex';
+    if (b) {
+      this.element.style.display = 'none';
+    } else {
+      this.element.style.removeProperty('display');
+    }
   }
 
   public destroy = () => {
