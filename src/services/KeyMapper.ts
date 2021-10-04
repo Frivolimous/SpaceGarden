@@ -40,10 +40,15 @@ export class KeyMapper {
     if (!this.enabled || this.keysDown === null) return;
 
     let key = e.key.toLowerCase();
+    let ctrl = e.ctrlKey;
 
+    console.log('key', e.metaKey, key, ctrl);
     for (let i = 0; i < this.keysDown.length; i++) {
       let currentKey = this.keysDown[i];
       if (currentKey.key === key || (currentKey.altKey !== null && currentKey.altKey === key)) {
+        if (currentKey.withCtrl && !ctrl) continue;
+        if (currentKey.noCtrl && ctrl) continue;
+
         if (currentKey.noHold) {
           if (this.holding.includes(key)) return;
 
@@ -80,5 +85,7 @@ export interface IKeyMap {
   key: string;
   altKey?: string;
   noHold?: boolean;
+  withCtrl?: boolean;
+  noCtrl?: boolean;
   function: () => void;
 }

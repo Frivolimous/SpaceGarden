@@ -46,7 +46,7 @@ export class CrawlerModel {
 
   private commandList: BaseCommand[] = [];
 
-  constructor(private config: ICrawler, startingNode: PlantNode, private knowledge: GameKnowledge) {
+  constructor(public config: ICrawler, startingNode: PlantNode, private knowledge: GameKnowledge) {
     _.defaults(config, dCrawler);
     this.health = config.health;
     this.healthDrain = config.healthDrain;
@@ -109,14 +109,19 @@ export class CrawlerModel {
   }
 
   public claimNode = (node: PlantNode) => {
-    this.claimedNode = node;
-    this.claimedNode.claimedBy = this;
-    this.onNodeClaimed.publish({claim: true, node, claimer: this});
+    if (node && !this.claimedNode && !node.claimedBy) {
+      this.claimedNode = node;
+      this.claimedNode.claimedBy = this;
+      this.onNodeClaimed.publish({claim: true, node, claimer: this});
+    }
   }
 
   public unclaimNode = () => {
     if (this.claimedNode) {
       this.onNodeClaimed.publish({claim: false, node: this.claimedNode, claimer: this});
+      if (this.claimedNode.outlets.length === 0 && this.claimedNode.fruits.length === 0) {
+        this.claimedNode.flagDestroy = true;
+      }
       this.claimedNode.claimedBy = null;
       this.claimedNode = null;
     }
@@ -139,6 +144,7 @@ export class CrawlerModel {
 export interface ICrawler {
   health?: number;
   healthDrain?: number;
+  breedThreshold?: number;
   speed?: number;
   commands?: CommandType[];
   preference?: CommandType;
@@ -161,6 +167,7 @@ export interface ICommandConfig {
 
 const dCrawler: ICrawler = {
   health: 1,
+  breedThreshold: 1.25,
   healthDrain: 0.0002,
   speed: 0.01,
   commands: [
@@ -188,10 +195,10 @@ const dCrawler: ICrawler = {
     idleRepeat: 3,
     frustratedRepeat: 3,
     fruitSpeed: 0.95,
-    researchRatio: 1,
+    researchRatio: 0.5,
+    eatRatio: 0.0065,
     powerRatio: 2,
-    eatRatio: 0.0075,
-    danceGen: 5,
-    danceTicks: 500,
+    danceGen: 0.25,
+    danceTicks: 420,
   },
 };

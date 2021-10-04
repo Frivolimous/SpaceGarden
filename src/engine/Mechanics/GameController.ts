@@ -27,7 +27,7 @@ export class GameController {
   }
 
   public destroy() {
-
+    this.knowledge.destroy();
   }
 
   public addNewNode(config: INodeConfig): PlantNode {
@@ -139,7 +139,7 @@ export class GameController {
     if (crawler.health <= 0) {
       this.killCrawler(crawler);
       return;
-    } else if (crawler.health > 1.5) {
+    } else if (crawler.health > crawler.config.breedThreshold) {
       crawler.health /= 2;
       this.addCrawler(_.defaults({health: crawler.health}, this.nodeManager.crawlerConfig), crawler.cLoc);
     }
@@ -188,7 +188,6 @@ export class GameController {
   public loadSaves(saves: INodeSave[], crawlerSaves: ICrawlerSave[]) {
     let nodes = saves.map(save => this.importSave(save));
     this.nodes = nodes;
-    console.log('LOAD_SAVE', saves.map(save => save.slug));
 
     nodes.forEach((node, i) => {
       this.container.addNode(node);

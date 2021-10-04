@@ -56,7 +56,10 @@ export class BaseCommand {
   }
 
   protected grabFruit = (fruit: PlantNode, onComplete: () => void) => {
-    this.crawler.unclaimNode();
+    if (!fruit) {
+      this.crawler.setCommand(CommandType.FRUSTRATED);
+      return;
+    }
     fruit.flagUnlink = true;
     fruit.active = false;
     fruit.physics.fixed = true;
@@ -67,6 +70,7 @@ export class BaseCommand {
   }
 
   protected deliverFruit(onComplete: (fruit: PlantNode) => void) {
+    this.crawler.unclaimNode();
     let fruit = this.fruit;
     this.fruit = null;
     new JMTween(fruit.view.scale, 500).easing(JMEasing.Back.In).to({x: 0, y: 0}).start().onComplete(() => {

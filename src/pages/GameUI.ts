@@ -46,23 +46,17 @@ export class GameUI extends BaseUI {
   constructor(level?: INodeSave[]) {
     super({bgColor: 0x777777});
 
+    // --- initialize components --- \\
+
     this.extrinsic = SaveManager.getExtrinsic();
 
     this.nodeManager = new NodeManager(NodeData.Nodes, SkillData.skills, this.extrinsic.skillTier);
-
-    this.nodeManager.applySkills(this.extrinsic.skillsCurrent);
-
-    // let skills = this.nodeManager.getSkillsBySlugs(this.extrinsic.skillsCurrent);
-    // skills.filter(skill => skill.effects.find(effect => effect.effectType === 'tier')).forEach(this.applySkillTier);
-
-    // let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
-    // let allSkills = _.uniq(skills.concat(this.nodeManager.getSkillsBySlugs(always)));
-    // allSkills.forEach(this.applySkill);
-
     this.canvas = new ScrollingContainer(1500, 1000);
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
     this.gameC = new GameController(this.container, this.nodeManager);
+
+    this.nodeManager.applySkills(this.extrinsic.skillsCurrent);
 
     let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
 
@@ -77,9 +71,12 @@ export class GameUI extends BaseUI {
     this.keymapper = new KeyMapper();
     this.bottomBar = new BottomBar(100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
 
+    // --- add to stage --- \\
     this.canvas.addChild(this.container);
     this.addChild(this.canvas);
     this.addChild(this.bottomBar);
+
+    // --- weave components --- \\
 
     this.mouseC.onMove.addListener(this.onMouseMove);
     this.gameC.onNodeAdded.addListener(this.sidebar.addNodeElement);
@@ -116,14 +113,19 @@ export class GameUI extends BaseUI {
         {key: ']', function: () => this.gameSpeed++},
         {key: 'p', function: () => this.resetGame()},
         {key: '`', function: () => this.logSave()},
-        {key: '1', function: () => this.loadSave(TierSaves[1])},
-        {key: '2', function: () => this.loadSave(TierSaves[2])},
-        {key: '0', function: () => this.loadSave(TierSaves[0])},
+        {key: '1', noCtrl: true, function: () => this.loadSave(TierSaves[1])},
+        {key: '2', noCtrl: true, function: () => this.loadSave(TierSaves[2])},
+        {key: '0', noCtrl: true, function: () => this.loadSave(TierSaves[0])},
+        {key: '1', withCtrl: true, function: () => this.loadSave(TierSaves[11])},
+        {key: '2', withCtrl: true, function: () => this.loadSave(TierSaves[12])},
+        {key: '0', withCtrl: true, function: () => this.loadSave(TierSaves[10])},
         {key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0])},
         {key: 'r', function: this.cheatResearch},
         // {key: 'k', function: this.toggleKnowledge},
       ]);
     }
+
+    // --- initialize game state --- \\
 
     if (level) {
       if (level.length === 0) {
@@ -174,7 +176,7 @@ export class GameUI extends BaseUI {
   public saveGameTimeout = () => {
     if (!this.exists) return;
     new InfoPopup(StringManager.data.UI_SAVE);
-    GameEvents.APP_LOG.publish({type: 'SAVE', text: 'SAVE_GAME_TIMEOUT'});
+    GameEvents.APP_LOG.publish({type: 'SAVE', text: 'SAVE GAME PERIODIC'});
 
     this.saveGame();
     window.setTimeout(this.saveGameTimeout, 30000);
@@ -183,12 +185,10 @@ export class GameUI extends BaseUI {
   public saveGame = () => {
     this.extrinsic.stageState = this.gameC.saveNodes();
     this.extrinsic.crawlers = this.gameC.saveCrawlers();
-    console.log('SAVE: ' + this.extrinsic.stageState);
     SaveManager.saveExtrinsic();
   }
 
   public newGame() {
-    console.log('new game');
     let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
     node.view.position.set(600, 300);
     node.power.powerPercent = 0.5;
@@ -370,7 +370,6 @@ export class GameUI extends BaseUI {
 
   private loadSave = (json: string) => {
     let extrinsic = JSON.parse(json);
-    console.log('extrinsic');
     SaveManager.saveExtrinsic(extrinsic, true).then(() => {
       PlantNode.resetUid();
       this.navAndDestroy(new GameUI());

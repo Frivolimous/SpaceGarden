@@ -1,8 +1,7 @@
 import _ from 'lodash';
-import { Debug, GOD_MODE } from '../../services/_Debug';
+import { GOD_MODE } from '../../services/_Debug';
 import { NodeSlug } from '../../data/NodeData';
 import { NodeManager } from '../../services/NodeManager';
-import { FDGContainer } from '../FDG/FDGContainer';
 import { PlantNode } from '../nodes/PlantNode';
 import { GameController } from './GameController';
 import { CrawlerModel } from './Parts/CrawlerModel';
@@ -37,6 +36,12 @@ export class GameKnowledge {
   public totalDrain: number = 0;
   public totalPower: number = 0;
   public totalMaxPower: number = 0;
+  public seedlingPower: number = 0;
+  public seedlingMaxPower: number = 0;
+
+  private fpsCounter: number;
+  private frames: number = 0;
+  private fps: number = 0;
 
   constructor(private gameC: GameController, private manager: NodeManager) {
     gameC.onCrawlerAdded.addListener(this.crawlerAdded);
@@ -44,16 +49,27 @@ export class GameKnowledge {
     gameC.onNodeAdded.addListener(this.nodeAdded);
     gameC.onNodeRemoved.addListener(this.nodeRemoved);
     gameC.onNodeClaimed.addListener(this.nodeClaimed);
+    this.startFpsCounter();
+  }
+
+  public destroy() {
+    window.clearTimeout(this.fpsCounter);
   }
 
   public update() {
+    this.seedlingMaxPower = 0;
     let gen = 0;
     let drain = 0;
     let power = 0;
     let maxPower = 0;
     this.normalNodes.forEach(node => {
-      power += node.power.powerCurrent;
-      maxPower += node.config.powerMax;
+      if (node.slug === 'seedling') {
+        this.seedlingPower = node.power.powerCurrent;
+        this.seedlingMaxPower = node.config.powerMax;
+      } else {
+        power += node.power.powerCurrent;
+        maxPower += node.config.powerMax;
+      }
       if (node.power.powerGen > 0) {
         gen += node.power.powerGen;
       } else {
@@ -65,6 +81,8 @@ export class GameKnowledge {
     this.totalGen = gen;
     this.totalDrain = drain;
     this.totalMaxPower = maxPower;
+
+    this.frames++;
   }
 
   public numFruitsPerNode(slug: NodeSlug) {
@@ -73,8 +91,11 @@ export class GameKnowledge {
 
   public toString(): string {
     let m = `<div class='node-title'>Plant Overview</div>`;
-    m += `<br>Power: ${Math.round(this.totalPower)} / ${Math.round(this.totalMaxPower)}
-          <br>Gen: ${this.totalGen.toFixed(2)}, Drain: ${this.totalDrain.toFixed(2)}`;
+    m += `<br>Power: ${Math.round(this.totalPower)} / ${Math.round(this.totalMaxPower)}`;
+    if (this.seedlingMaxPower) {
+      m += `<br>Seedling Power: ${Math.round(this.seedlingPower)} / ${Math.round(this.seedlingMaxPower)}`;
+    }
+    m += `<br>Gen: ${(this.totalGen * 60).toFixed(0)}/s, Drain: ${(this.totalDrain * 60).toFixed(0)}/s`;
     m += `<br><br>Crawlers: ${this.crawlerCount}`;
     m += `<br>Nodes: ${this.normalNodes.length}`;
 
@@ -87,6 +108,7 @@ export class GameKnowledge {
           m += `<br>${key}: ${value}`;
         }
       });
+      m += `<br>FPS: ${this.fps}`;
       // if (this.crawlerCount > 0) {
       //   m += `<br>Claimed`;
       //   keys = Object.keys(this.sortedNodes);
@@ -136,5 +158,13 @@ export class GameKnowledge {
     // } else {
     //   this.nodeClaims[e.node.slug]--;
     // }
+  }
+
+  private startFpsCounter() {
+    this.fpsCounter = window.setTimeout(() => {
+      this.fps = this.frames;
+      this.frames = 0;
+      this.startFpsCounter();
+    }, 1000);
   }
 }

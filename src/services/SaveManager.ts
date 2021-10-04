@@ -1,5 +1,6 @@
 import * as _ from 'lodash';
 import { IExtrinsicModel, dExtrinsicModel, CURRENT_VERSION } from '../data/SaveData';
+import { GameEvents } from './GameEvents';
 
 let SAVE_LOC: 'virtual' | 'local' | 'online' = 'local';
 const DOC_NAME = 'SG-Extrinsic';
@@ -21,7 +22,6 @@ function versionControl(version: number, extrinsic: any): IExtrinsicModel {
 
 export class SaveManager {
   public static async init(): Promise<null> {
-    console.log('init!');
     if (SAVE_LOC === 'local') {
       try {
         let extrinsicStr = window.localStorage.getItem(DOC_NAME);
@@ -31,13 +31,10 @@ export class SaveManager {
     }
     return new Promise<null>((resolve) => {
       SaveManager.loadExtrinsic().then(extrinsic => {
-        console.log('ext!', extrinsic);
         if (extrinsic) {
-          console.log('has ext');
           SaveManager.loadVersion().then(version => {
-            console.log('version loaded', version);
+            GameEvents.APP_LOG.publish({type: 'SAVE', text: `Data Version: ${version}`});
             if (version < CURRENT_VERSION) {
-              console.log('old V');
               extrinsic = versionControl(version, extrinsic);
               SaveManager.saveVersion(CURRENT_VERSION);
               SaveManager.saveExtrinsic(extrinsic);
@@ -46,7 +43,7 @@ export class SaveManager {
             resolve(null);
           });
         } else {
-          console.log('reset ext');
+          GameEvents.APP_LOG.publish({type: 'SAVE', text: 'Save Data Reset'});
           SaveManager.confirmReset();
           SaveManager.saveVersion(CURRENT_VERSION);
           SaveManager.saveExtrinsic(this.getExtrinsic());
@@ -117,7 +114,6 @@ export class SaveManager {
   private static confirmReset = () => {
     SaveManager.extrinsic = _.cloneDeep(dExtrinsicModel);
     SaveManager.saveExtrinsic();
-    console.log('reset!');
   }
 
   private static async loadExtrinsic(): Promise<IExtrinsicModel> {

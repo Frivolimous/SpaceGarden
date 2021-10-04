@@ -102,7 +102,6 @@ export class Sidebar {
   }
 
   public setCurrentTab(tab: SidebarTab) {
-    console.log('tab', tab);
     this.currentTab = tab;
 
     if (tab === 'crawler') {

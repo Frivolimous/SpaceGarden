@@ -250,17 +250,17 @@ export class PlantNode {
         m += `<br>Research Points: ${Math.round(this.power.researchCurrent)}`;
       }
       if (this.power.powerGen > 0) {
-        m += `<br>Power Gen: ${this.power.powerGen.toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+        m += `<br>Power Gen: ${(this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
       } else {
-        m += `<br>Power Drain: ${-this.power.powerGen.toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+        m += `<br>Power Drain: ${(-this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
       }
       // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
 
       if (this.power.researchGen > 0) {
-        m += `<br>Research Gen: ${this.power.researchGen.toFixed(2)}`;
+        m += `<br>Research Gen: ${(this.power.researchGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
       }
       if (this.power.fruitGen > 0) {
-        m += `<br>Fruit Gen: ${this.power.fruitGen.toFixed(2)}`;
+        m += `<br>Fruit Gen: ${(this.power.fruitGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
       }
       if (this.config.maxLinks > 1) {
         m += `<br>Connections: ${this.outlets.length} / ${this.config.maxLinks}`;
