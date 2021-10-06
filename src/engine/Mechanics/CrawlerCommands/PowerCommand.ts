@@ -16,6 +16,7 @@ export class PowerCommand extends BaseCommand {
 
   public initialize() {
     this.isComplete = false;
+    this.fruit = null;
 
     this.state = 'walk';
     this.startPath(this.hasPower, this.harvestHere, this.cancelPath, true);
@@ -33,9 +34,9 @@ export class PowerCommand extends BaseCommand {
     let closest = this.crawler.cLoc.findNode(node => node.power.powerPercent < 0.5);
 
     return Math.min(
-      seedling ? 0.25 + 0.75 * seedling.power.powerPercent : 20,
+      seedling ? 0.25 + 0.85 * seedling.power.powerPercent : 20,
       closest ? 0.5 + closest.power.powerPercent : 20)
-       - (this.crawler.preference === this.type ? 0.25 : 0);
+       - (this.crawler.preference === this.type ? 0.10 : 0);
   }
 
   public update() {

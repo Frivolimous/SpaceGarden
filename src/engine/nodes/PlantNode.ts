@@ -41,6 +41,9 @@ export class PlantNode {
   public flagCallOnRemove = true;
   public claimedBy: CrawlerModel;
 
+  // public distanceSeedling: number = 0;
+  public distanceCore: number = 0;
+
   constructor(public config: INodeConfig, transferPower: TransferPowerFunction) {
     _.defaults(config, dNodeConfig);
 
@@ -265,6 +268,7 @@ export class PlantNode {
       if (this.config.maxLinks > 1) {
         m += `<br>Connections: ${this.outlets.length} / ${this.config.maxLinks}`;
       }
+      // m += `<br>Distance to Core: ${this.distanceCore}`;
       // if (this.maxFruits > 0) {
       //   m += `<br>Fruits: ${this.fruits.length} / ${this.maxFruits}`;
       // }

@@ -137,6 +137,8 @@ export class BaseCommand {
     } else {
       let path = this.crawler.findPath(condition);
       if (!path || path.length === 0) {
+        if (this.fruit) this.fruit = null;
+        this.crawler.unclaimNode();
         onCancel(true);
       } else {
         path.shift();
@@ -174,6 +176,8 @@ export class BaseCommand {
       if (!this.nextLoc.exists) {
         this.isComplete = true;
         this.crawler.setCommand(CommandType.FRUSTRATED);
+        if (this.fruit) this.fruit = null;
+        this.crawler.unclaimNode();
         this.crawler.frustratedBy = 'Stepping ' + CommandType[this.type];
         if (this.fruit) {
           this.destroyFruit();

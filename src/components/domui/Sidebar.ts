@@ -1,7 +1,9 @@
-import { GameKnowledge } from 'src/engine/Mechanics/GameKnowledge';
+import { AchievementSlug } from '../../data/ATSData';
+import { GameKnowledge } from '../../engine/Mechanics/GameKnowledge';
 import { CrawlerModel } from '../../engine/Mechanics/Parts/CrawlerModel';
 import { PlantNode } from '../../engine/nodes/PlantNode';
 import { StringManager } from '../../services/StringManager';
+import { AchievementPanel } from './AchievementPanel';
 import { SkillPanel } from './SkillPanel';
 
 type SidebarElement = PlantNode | CrawlerModel;
@@ -35,7 +37,7 @@ export class Sidebar {
   private _AreStemsHidden: boolean = false;
   private currentTab: SidebarTab = 'node';
 
-  constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel) {
+  constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel, private achieveElement: AchievementPanel) {
     this.sidebar = document.getElementById('sidebar') as HTMLDivElement;
     this.sidebar.innerHTML = `
     <div class="tab-container" id="tab-container"></div>
@@ -93,6 +95,7 @@ export class Sidebar {
       }
     });
     this.container.prepend(this.knowledgeElement);
+    this.container.appendChild(this.achieveElement.element);
     this.setCurrentTab('node');
   }
 
@@ -110,27 +113,39 @@ export class Sidebar {
       this.knowledgeButton.disabled = false;
       this.nodeMap.forEach(data => this.hideElement(data.element, data.node.slug !== 'crawler'));
       this.hideElement(this.knowledgeElement);
+      this.hideElement(this.achieveElement.element);
     } else if (tab === 'node') {
       this.crawlerButton.disabled = false;
       this.nodeButton.disabled = true;
       this.knowledgeButton.disabled = false;
       this.nodeMap.forEach(data => this.hideElement(data.element, data.node.slug === 'crawler' || (this.areStemsHidden && data.node.slug === 'stem')));
       this.hideElement(this.knowledgeElement);
+      this.hideElement(this.achieveElement.element);
     } else if (tab === 'knowledge') {
       this.crawlerButton.disabled = false;
       this.nodeButton.disabled = false;
       this.knowledgeButton.disabled = true;
       this.nodeMap.forEach(data => this.hideElement(data.element, true));
       this.hideElement(this.knowledgeElement, false);
+      this.hideElement(this.achieveElement.element, false);
     } else if (tab === 'none') {
       this.nodeMap.forEach(data => this.hideElement(data.element, true));
       this.hideElement(this.knowledgeElement);
+      this.hideElement(this.achieveElement.element);
     }
   }
 
   public updateKnowledge(knowledge: GameKnowledge) {
     if (this.currentTab === 'knowledge') {
       this.knowledgeContent.innerHTML = knowledge.toString();
+    }
+  }
+
+  public updateAchievement = (e: {slug: AchievementSlug, unlocked?: boolean, count?: string}) => {
+    if (e.unlocked) {
+      this.achieveElement.toggleAchievement(e.slug, true);
+    } else {
+      this.achieveElement.updateAchievementCount(e.slug, e.count);
     }
   }
 

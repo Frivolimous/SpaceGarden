@@ -29,6 +29,8 @@ export const Config = {
     POWER_THRESHOLD: 0.25,
     GEN_FADE: 30,
     FRUIT_APPLY: 0.3,
+    LAUNCH_PERCENT: 1,
+    BLOB_AI: 0,
   },
 
   CRAWLER: {

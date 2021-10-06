@@ -7,7 +7,8 @@ import { TooltipReader } from './tooltip/TooltipReader';
 import { Button } from './ui/Button';
 import { NodeButton } from './ui/NodeButton';
 import { ToggleButton } from './ui/ToggleButton';
-import { PlantNode } from 'src/engine/nodes/PlantNode';
+import { PlantNode } from '../engine/nodes/PlantNode';
+import { Config } from '../Config';
 
 export class BottomBar extends PIXI.Container {
   public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent, onComplete: () => void }>();
@@ -121,21 +122,21 @@ export class BottomBar extends PIXI.Container {
     }
   }
 
-  public updateSeedling(node?: PlantNode) {
-    if (node) {
+  public updateSeedling(seedling?: PlantNode) {
+    if (seedling) {
       if (this.proceedButton.visible === false) {
         this.proceedButton.visible = true;
         this.proceedButton.highlight(true, 2.5);
       }
-      let percent = node.power.powerPercent;
+      let percent = seedling.power.powerPercent;
       this.proceedButton.addLabel(`${StringManager.data.BUTTON_PROCEED} (${Math.floor(percent * 100)}%)`);
       if (this.proceedButton.disabled) {
-        if (percent >= 1) {
+        if (percent >= Config.NODE.LAUNCH_PERCENT) {
           this.proceedButton.disabled = false;
           this.proceedButton.highlight(true, 2.5);
         }
       } else {
-        if (percent < 1) {
+        if (percent < Config.NODE.LAUNCH_PERCENT) {
           this.proceedButton.disabled = true;
         }
       }

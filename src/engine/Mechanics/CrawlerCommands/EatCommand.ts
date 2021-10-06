@@ -17,6 +17,7 @@ export class EatCommand extends BaseCommand {
 
   public initialize() {
     this.isComplete = false;
+    this.fruit = null;
 
     this.state = 'walk';
     this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);

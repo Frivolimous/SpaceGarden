@@ -9,7 +9,7 @@ import { JMTicker } from '../JMGE/events/JMTicker';
 import { FDGContainer } from '../engine/FDG/FDGContainer';
 import { MouseController } from '../services/MouseController';
 import { BottomBar } from '../components/BottomBar';
-import { NodeManager } from '../services/NodeManager';
+import { NodeManager } from '../engine/Mechanics/NodeManager';
 import { FDGLink } from '../engine/FDG/FDGLink';
 import { GameController } from '../engine/Mechanics/GameController';
 import { Sidebar } from '../components/domui/Sidebar';
@@ -23,6 +23,7 @@ import { SkillPanel } from '../components/domui/SkillPanel';
 import { StringManager } from '../services/StringManager';
 import { GOD_MODE } from '../services/_Debug';
 import { INodeSave, PlantNode } from '../engine/nodes/PlantNode';
+import { AchievementPanel } from '../components/domui/AchievementPanel';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -54,9 +55,10 @@ export class GameUI extends BaseUI {
     this.canvas = new ScrollingContainer(1500, 1000);
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
-    this.gameC = new GameController(this.container, this.nodeManager);
+    this.gameC = new GameController(this.container, this.nodeManager, this.extrinsic.scores);
 
     this.nodeManager.applySkills(this.extrinsic.skillsCurrent);
+    this.nodeManager.applyAchievements(this.extrinsic.achievements);
 
     let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
 
@@ -67,7 +69,9 @@ export class GameUI extends BaseUI {
       currentSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsCurrent, always, this.extrinsic.skillTier, true);
     }
 
-    this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel);
+    let achieveElement = new AchievementPanel(this.extrinsic.achievements, SkillData.achievements);
+
+    this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel, achieveElement);
     this.keymapper = new KeyMapper();
     this.bottomBar = new BottomBar(100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
 
@@ -89,6 +93,7 @@ export class GameUI extends BaseUI {
     this.bottomBar.onCreateButton.addListener(this.createNewNode);
     this.bottomBar.onDeleteButton.addListener(this.deleteNextClicked);
     this.bottomBar.onTurboButton.addListener(this.toggleTurboMode);
+    this.gameC.knowledge.onAchievementUpdate.addListener(this.sidebar.updateAchievement);
 
     this.keymapper.enabled = false;
     this.keymapper.setKeys([
@@ -121,6 +126,7 @@ export class GameUI extends BaseUI {
         {key: '0', withCtrl: true, function: () => this.loadSave(TierSaves[10])},
         {key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0])},
         {key: 'r', function: this.cheatResearch},
+        {key: 'o', function: () => GameEvents.ACTIVITY_LOG.publish({slug: 'PRESTIGE'})},
         // {key: 'k', function: this.toggleKnowledge},
       ]);
     }
@@ -137,8 +143,11 @@ export class GameUI extends BaseUI {
       this.gameC.loadSaves(this.extrinsic.stageState, this.extrinsic.crawlers);
     } else this.newGame();
 
+    this.gameC.knowledge.initializeAchievements();
     this.saveGameTimeout();
     GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME INSTANCE CREATED'});
+    (window as any).exportSave = this.logSave;
+    (window as any).importSave = this.loadSave;
   }
 
   public destroy() {
@@ -201,6 +210,8 @@ export class GameUI extends BaseUI {
   }
 
   public nextStage = () => {
+    GameEvents.ACTIVITY_LOG.publishSync({slug: 'PRESTIGE'});
+
     this.extrinsic.skillTier = this.nodeManager.extractTier(this.extrinsic.skillsNext, this.extrinsic.skillTier);
     this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
     this.extrinsic.skillsNext = [];

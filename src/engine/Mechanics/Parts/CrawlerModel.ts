@@ -29,10 +29,28 @@ export class CrawlerModel {
     [CommandType.STARVING]: StarvingCommand,
     [CommandType.BREED]: BreedCommand,
   };
+
+  public static generateUid() {
+    CrawlerModel.cUid++;
+
+    return this.cUid;
+  }
+
+  public static addUid(uid: number) {
+    CrawlerModel.cUid = Math.max(uid, CrawlerModel.cUid);
+  }
+
+  public static resetUid() {
+    CrawlerModel.cUid = 0;
+  }
+
+  private static cUid: number = 0;
+
   public onNodeClaimed = new JMEventListener<{claim: boolean, node: PlantNode, claimer: CrawlerModel}>();
   public claimedNode: PlantNode;
 
   public slug: 'crawler' = 'crawler';
+  public uid: number;
 
   public health: number = 1;
   public healthDrain: number;
@@ -47,7 +65,7 @@ export class CrawlerModel {
   private commandList: BaseCommand[] = [];
 
   constructor(public config: ICrawler, startingNode: PlantNode, private knowledge: GameKnowledge) {
-    _.defaults(config, dCrawler);
+    this.uid = CrawlerModel.generateUid();
     this.health = config.health;
     this.healthDrain = config.healthDrain;
     this.speed = config.speed;
@@ -110,9 +128,12 @@ export class CrawlerModel {
 
   public claimNode = (node: PlantNode) => {
     if (node && !this.claimedNode && !node.claimedBy) {
+      console.log(`${node.slug} ${node.uid} claimed by ${this.uid}`);
       this.claimedNode = node;
       this.claimedNode.claimedBy = this;
       this.onNodeClaimed.publish({claim: true, node, claimer: this});
+    } else {
+      console.log(`Claim unsuccessful. ${node ? node.slug + ' ' + node.uid.toString() : 'null'} not claimed by ${this.uid} (${!!this.claimedNode}, ${!!node.claimedBy})`);
     }
   }
 
@@ -153,7 +174,6 @@ export interface ICrawler {
 }
 
 export interface ICommandConfig {
-  breedHealthMin: number;
   wanderRepeat: number;
   idleRepeat: number;
   frustratedRepeat: number;
@@ -165,7 +185,7 @@ export interface ICommandConfig {
   danceTicks: number;
 }
 
-const dCrawler: ICrawler = {
+export const dCrawler: ICrawler = {
   health: 1,
   breedThreshold: 1.25,
   healthDrain: 0.0002,
@@ -190,7 +210,6 @@ const dCrawler: ICrawler = {
   ],
 
   commandConfig: {
-    breedHealthMin: 0.9,
     wanderRepeat: 2,
     idleRepeat: 3,
     frustratedRepeat: 3,

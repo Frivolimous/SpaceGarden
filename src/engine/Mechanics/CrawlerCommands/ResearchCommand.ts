@@ -17,6 +17,7 @@ export class ResearchCommand extends BaseCommand {
 
   public initialize() {
     this.isComplete = false;
+    this.fruit = null;
 
     this.state = 'walk';
     this.startPath(this.hasResearch, this.harvestHere, this.cancelPath, true);
@@ -33,7 +34,7 @@ export class ResearchCommand extends BaseCommand {
     }
 
     let researchRatio = Math.min(1, numResearch / (fruitPerLab * numLabs));
-    return 1 - researchRatio * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
+    return 1.15 - researchRatio * 0.5 - (this.crawler.preference === this.type ? 0.10 : 0);
   }
 
   public update() {

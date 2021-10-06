@@ -173,5 +173,3 @@ export class SaveManager {
     }
   }
 }
-
-(window as any).checkSaves = () => console.log(SaveManager.getExtrinsic());

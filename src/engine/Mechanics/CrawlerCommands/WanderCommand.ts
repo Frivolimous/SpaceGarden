@@ -22,7 +22,7 @@ export class WanderCommand extends BaseCommand {
   }
 
   public genPriority(): number {
-    return 0.9 + Math.random() * 0.3 - (this.crawler.preference === this.type ? 0.15 : 0);
+    return 1 + Math.random() * 0.15 - (this.crawler.preference === this.type ? 0.10 : 0);
   }
 
   public update() {

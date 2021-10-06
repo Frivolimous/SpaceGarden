@@ -17,6 +17,7 @@ export class BreedCommand extends BaseCommand {
 
   public initialize() {
     this.isComplete = false;
+    this.fruit = null;
 
     this.state = 'walk';
     this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);
@@ -26,8 +27,8 @@ export class BreedCommand extends BaseCommand {
     let numCrawlers = this.knowledge.crawlerCount;
     let numFood = this.knowledge.sortedNodes.food.filter(node => node.isHarvestable()).length;
 
-    if (numFood > 0 && numCrawlers < numFood) {
-      return 0.5 + numCrawlers / numFood * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
+    if (numFood > 0) {
+      return 0.65 + numCrawlers / numFood * 0.5 - (this.crawler.preference === this.type ? 0.15 : 0);
     }
 
     return 20;

@@ -6,7 +6,6 @@ import { SaveManager } from './services/SaveManager';
 import { TooltipReader } from './components/tooltip/TooltipReader';
 import { JMRect } from './JMGE/others/JMRect';
 import { ATSManager } from './services/ATSManager';
-import { genAchievements, genTutorials, genScores } from './data/ATSData';
 import { AchievementPopup } from './components/ui/AchievementPopup';
 import { TutorialPopup } from './components/ui/TutorialPopup';
 import { Fonts } from './data/Fonts';
@@ -92,14 +91,6 @@ export let Facade = new class FacadeInner {
     GameEvents.APP_LOG.publish({type: 'INITIALIZE', text: 'Post-Loader'});
     SaveManager.init().then(() => {
       GameEvents.APP_LOG.publish({type: 'INITIALIZE', text: 'Save Manager Initialized'});
-      new ATSManager({
-        Achievements: genAchievements(),
-        Tutorials: genTutorials(),
-        Scores: genScores(),
-        achievementPopup: AchievementPopup,
-        tutorialPopup: TutorialPopup,
-        canvas: this.screen,
-      });
 
       let menu = new MenuUI();
 

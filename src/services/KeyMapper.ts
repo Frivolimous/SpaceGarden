@@ -42,7 +42,6 @@ export class KeyMapper {
     let key = e.key.toLowerCase();
     let ctrl = e.ctrlKey;
 
-    console.log('key', e.metaKey, key, ctrl);
     for (let i = 0; i < this.keysDown.length; i++) {
       let currentKey = this.keysDown[i];
       if (currentKey.key === key || (currentKey.altKey !== null && currentKey.altKey === key)) {

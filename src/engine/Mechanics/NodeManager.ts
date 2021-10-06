@@ -1,8 +1,9 @@
 import * as _ from 'lodash';
-import { CommandType } from '../engine/Mechanics/CrawlerCommands/_BaseCommand';
-import { ICrawler } from '../engine/Mechanics/Parts/CrawlerModel';
-import { INodeConfig, NodeData, NodeSlug } from '../data/NodeData';
-import { ISkillConfig, SkillData } from '../data/SkillData';
+import { CommandType } from './CrawlerCommands/_BaseCommand';
+import { dCrawler, ICrawler } from './Parts/CrawlerModel';
+import { INodeConfig, NodeData, NodeSlug } from '../../data/NodeData';
+import { IAchievement, ISkillConfig, SkillData } from '../../data/SkillData';
+import { Config } from '../../Config';
 
 export class NodeManager {
   public skills: ISkillConfig[];
@@ -24,21 +25,7 @@ export class NodeManager {
     this.data = _.cloneDeep(data);
     this.skills = _.cloneDeep(skills);
 
-    this.crawlerConfig = {
-      health: 1,
-      healthDrain: 0.0002,
-      speed: 0.01,
-      commands: [
-        CommandType.WANDER,
-        CommandType.IDLE,
-        CommandType.EAT,
-        CommandType.FRUSTRATED,
-        CommandType.STARVING,
-      ],
-      preferenceList: [
-        CommandType.WANDER,
-      ],
-    };
+    this.crawlerConfig = _.cloneDeep(dCrawler);
   }
 
   public destroy() {
@@ -71,6 +58,15 @@ export class NodeManager {
     return slugs.map(slug => this.skills.find(skill => skill.slug === slug));
   }
 
+  public applyAchievements(achievements: boolean[]) {
+    achievements.forEach((state, slug) => {
+      if (state) {
+        let data = SkillData.achievements.find(a => a.slug === slug);
+        this.applySkill(data);
+      }
+    });
+  }
+
   public applySkills(slugs: string[]) {
     let skills = this.getSkillsBySlugs(slugs);
     let always = this.getSkillsBySlugs(this.getSkillAlways(this.skillTier));
@@ -80,7 +76,7 @@ export class NodeManager {
     allSkills.forEach(this.applySkill);
   }
 
-  public applySkill = (skill: ISkillConfig) => {
+  public applySkill = (skill: ISkillConfig | IAchievement) => {
     skill.effects.forEach(effect => {
       if (effect.effectType === 'node') {
         let node = this.getNodeConfig(effect.slug);
@@ -115,9 +111,26 @@ export class NodeManager {
             (config as any)[effect.key] = effect.value;
           }
         }
+      } else if (effect.effectType === 'crawler-command') {
+        let config = this.crawlerConfig.commandConfig;
+        if (effect.valueType === 'additive') {
+          (config as any)[effect.key] += effect.value;
+        } else if (effect.valueType === 'multiplicative') {
+          (config as any)[effect.key] *= effect.value;
+        } else if (effect.valueType === 'replace') {
+          (config as any)[effect.key] = effect.value;
+        }
       } else if (effect.effectType === 'buildable') {
         if (effect.valueType === 'additive') {
           this.buildableNodes.push(effect.value);
+        }
+      } else if (effect.effectType === 'config') {
+        if (effect.valueType === 'additive') {
+          (Config.NODE as any)[effect.key] += effect.value;
+        } else if (effect.valueType === 'multiplicative') {
+          (Config.NODE as any)[effect.key] *= effect.value;
+        } else if (effect.valueType === 'replace') {
+          (Config.NODE as any)[effect.key] = effect.value;
         }
       }
     });

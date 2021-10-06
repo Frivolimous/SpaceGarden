@@ -5,7 +5,7 @@ import { JMEventListener } from '../JMGE/events/JMEventListener';
 export const GameEvents = {
   ticker: JMTicker,
   WINDOW_RESIZE: new JMEventListener<IResizeEvent>(),
-  ACTION_LOG: new JMEventListener<IActionLog>(),
+  ACTIVITY_LOG: new JMEventListener<IActivityLog>(),
   APP_LOG: new JMEventListener<IAppLog>(),
 
   // SPRITE_ADDED: new JMEventListener<ISpriteAdded>(),
@@ -19,10 +19,10 @@ export interface IResizeEvent {
   innerBounds: JMRect;
 }
 
-export interface IActionLog {
-  action: string;
-  data: any;
-  text: string;
+export interface IActivityLog {
+  slug: ActivitySlug;
+  data?: any;
+  text?: string;
 }
 
 export interface IAppLog {
@@ -32,3 +32,5 @@ export interface IAppLog {
 }
 
 export type AppEvent = 'INITIALIZE' | 'SAVE' | 'NAVIGATE';
+
+export type ActivitySlug = 'PRESTIGE' | 'BLOB';

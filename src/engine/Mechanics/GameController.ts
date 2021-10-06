@@ -3,7 +3,7 @@ import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Config } from '../../Config';
 import { Colors } from '../../data/Colors';
 import { INodeConfig } from '../../data/NodeData';
-import { NodeManager } from '../../services/NodeManager';
+import { NodeManager } from './NodeManager';
 import { FDGContainer } from '../FDG/FDGContainer';
 import { FDGLink } from '../FDG/FDGLink';
 import { INodeSave, PlantNode } from '../nodes/PlantNode';
@@ -11,6 +11,7 @@ import { ITransferBlock } from '../nodes/PlantNodePower';
 import { CrawlerModel, ICrawler } from './Parts/CrawlerModel';
 import { ICrawlerSave } from 'src/data/SaveData';
 import { GameKnowledge } from './GameKnowledge';
+import { GameEvents } from '../../services/GameEvents';
 
 export class GameController {
   public onNodeAdded = new JMEventListener<PlantNode>();
@@ -18,11 +19,22 @@ export class GameController {
   public onNodeClaimed = new JMEventListener<{claim: boolean, node: PlantNode, claimer: CrawlerModel}>();
   public onCrawlerAdded: JMEventListener<CrawlerModel> = new JMEventListener();
   public onCrawlerRemoved: JMEventListener<CrawlerModel> = new JMEventListener();
+
   public nodes: PlantNode[] = [];
   public crawlers: CrawlerModel[] = [];
   public knowledge: GameKnowledge;
 
-  constructor(private container: FDGContainer, private nodeManager: NodeManager) {
+  private rBlobAI = [
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin))),
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling')))),
+  ];
+
+  private fBlobAI = [
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin))),
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.canSpawnFruit())))),
+  ];
+
+  constructor(private container: FDGContainer, private nodeManager: NodeManager, scores: number[]) {
     this.knowledge = new GameKnowledge(this, nodeManager);
   }
 
@@ -77,7 +89,29 @@ export class GameController {
     origin.linkNode(target);
     target.linkNode(origin, true);
 
+    // origin.distanceCore = target.distanceCore + 1;
+    this.setCoreDistance();
+
     return this.container.addLink(origin, target);
+  }
+
+  public setCoreDistance() {
+    let core = this.nodes.find(node => node.slug === 'core');
+    let open = [core];
+    let closed: PlantNode[] = [];
+
+    while (open.length > 0) {
+      let current = open.shift();
+
+      current.outlets.forEach(outlet => {
+        if (!closed.includes(outlet) && !open.includes(outlet)) {
+          outlet.distanceCore = current.distanceCore + 1;
+          open.push(outlet);
+        }
+      });
+
+      closed.push(current);
+    }
   }
 
   public onTick(ticks: number) {
@@ -148,6 +182,7 @@ export class GameController {
   }
 
   public killCrawler = (crawler: CrawlerModel) => {
+    crawler.destroy();
     _.pull(this.crawlers, crawler);
     crawler.view.animateDie(() => {
       this.container.removeCrawler(crawler.view);
@@ -211,6 +246,7 @@ export class GameController {
     node.power.researchCurrent = save.researchCurrent;
     node.uid = save.uid;
     node.view.position.set(save.x, save.y);
+    node.view.setIntensity(node.power.powerPercent, true);
 
     PlantNode.addUid(save.uid);
     return node;
@@ -229,14 +265,15 @@ export class GameController {
         link.flash();
       }
     } else if (block.type === 'research') {
+      GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: true});
       link.zip(origin, Colors.Node.purple, block.fade, () => {
+        GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: false});
         if (target.slug === 'seedling') {
           target.receiveResearch(block.amount);
         } else {
           block.fade--;
           if (block.fade <= 0) return;
-          let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
-          // let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling'))));
+          let target2 = this.rBlobAI[Config.NODE.BLOB_AI](origin, target);
           if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
           if (target2) {
             this.transferPower(target, target2, block);
@@ -244,14 +281,16 @@ export class GameController {
         }
       });
     } else if (block.type === 'fruit') {
+      GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: true});
       link.zip(origin, Colors.Node.orange, block.fade, () => {
+        GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: false});
         if (target.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
           target.receiveFruitPower(block.amount);
           // add research
         } else {
           block.fade--;
           if (block.fade <= 0) return;
-          let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+          let target2 = this.fBlobAI[Config.NODE.BLOB_AI](origin, target);
           if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
           if (target2) {
             this.transferPower(target, target2, block);

@@ -1,4 +1,5 @@
 import { CommandType } from '../engine/Mechanics/CrawlerCommands/_BaseCommand';
+import { AchievementSlug } from './ATSData';
 import { NodeBase, NodeSlug } from './NodeData';
 
 export const SkillData: ISkillData = {
@@ -102,7 +103,7 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.RESEARCH},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.RESEARCH},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.05},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
@@ -114,43 +115,43 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.POWER},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.POWER},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.05},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-2-4',
       title: 'Handmaidens',
       description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can over-consume Home Fruits to spawn more crawlers',
-      cost: 5,
+      cost: 3,
       skillRequirements: ['skill-2-1'],
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.BREED},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.BREED},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.05},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-2-5',
       title: 'Worshippers',
       description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can dance on the Core to charge its fruits',
-      cost: 5,
+      cost: 4,
       skillRequirements: ['skill-2-1'],
       effects: [
         {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.DANCE},
         {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.DANCE},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.05},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-2-6',
       title: 'Longevity',
       description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers lose 50% less health per second and move 20% faster.',
-      cost: 7,
+      cost: 4,
       skillRequirements: ['skill-2-1'],
       effects: [
         {effectType: 'crawler', key: 'healthDrain', valueType: 'multiplicative', value: 0.75},
         {effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.2},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.05},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
@@ -186,7 +187,7 @@ export const SkillData: ISkillData = {
     900,
     1200,
     1600,
-    2000,
+    2000, // 10 SP
     2500,
     3000, // all 6 skills 1 + 1 + 2 + 2 + 3 + 3 = 12
     4000,
@@ -196,12 +197,12 @@ export const SkillData: ISkillData = {
     10000,
     12000,
     15000, // T2 Upgrade probably goes here
-    20000,
+    20000, // 20 SP
     30000,
     40000,
     50000,
     65000,
-    80000,
+    80000, // 25 SP
   ],
 
   skillTiers: [
@@ -210,12 +211,62 @@ export const SkillData: ISkillData = {
     ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6', 'skill-tier-2'],
     ['placeholder'],
   ],
+
+  achievements: [
+    {
+      slug: AchievementSlug.PRESTIGE_10,
+      title: 'Eventuality',
+      description: 'Requirement: Launch Seedling 10 times<br>Reward: Seedling can be launched at 95% Power',
+      effects: [
+        {effectType: 'config', key: 'LAUNCH_PERCENT', valueType: 'replace', value: 0.95},
+      ],
+    },
+    {
+      slug: AchievementSlug.BLOB_15,
+      title: 'Smart Blobs',
+      description: 'Requirement: Have 15 Blobs at once<br>Reward: Blobs no longer path to dead ends',
+      effects: [
+        {effectType: 'config', key: 'BLOB_AI', valueType: 'replace', value: 1},
+      ],
+    },
+    {
+      slug: AchievementSlug.LAUNCH_DISTANCE_9,
+      title: 'Longest Stem',
+      description: 'Requirement: Launch your seedling from a distance of 9+ away from your Core<br>Reward: +1 Number of Stems',
+      effects: [
+        { effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: 1},
+      ],
+    },
+    {
+      slug: AchievementSlug.CRAWLERS_15,
+      title: 'Overpopulated',
+      description: 'Requirement: Have 15 Crawlers at once<br>Reward: Crawlers gain 10% more health when eating',
+      effects: [
+        {effectType: 'crawler-command', key: 'eatRatio', valueType: 'multiplicative', value: 1.1},
+      ],
+    },
+    {
+      slug: AchievementSlug.CRAWLERS_DIE_100,
+      title: 'Massacre',
+      description: 'Requirement: Kill 100 Crawlers in total<br>Reward: Crawlers move 10% faster',
+      effects: [
+        {effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.1},
+      ],
+    },
+  ],
 };
+
+// effectType: 'node' | 'tier' | 'crawler' | 'buildable' | 'config';
+// slug?: NodeSlug;
+// key?: string;
+// valueType: 'additive' | 'multiplicative' | 'replace';
+// value: any;
 
 interface ISkillData {
   skills: ISkillConfig[];
   skillExchange: number[];
   skillTiers: string[][];
+  achievements: IAchievement[];
 }
 
 export interface ISkillConfig {
@@ -227,8 +278,15 @@ export interface ISkillConfig {
   skillRequirements?: string[];
 }
 
+export interface IAchievement {
+  slug: AchievementSlug;
+  title: string;
+  description: string;
+  effects: ISkillEffect[];
+}
+
 export interface ISkillEffect {
-  effectType: 'node' | 'tier' | 'crawler' | 'buildable';
+  effectType: 'node' | 'tier' | 'crawler' | 'crawler-command' | 'buildable' | 'config';
   slug?: NodeSlug;
   key?: string;
   valueType: 'additive' | 'multiplicative' | 'replace';

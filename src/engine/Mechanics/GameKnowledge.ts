@@ -1,12 +1,20 @@
 import _ from 'lodash';
 import { GOD_MODE } from '../../services/_Debug';
 import { NodeSlug } from '../../data/NodeData';
-import { NodeManager } from '../../services/NodeManager';
+import { NodeManager } from './NodeManager';
 import { PlantNode } from '../nodes/PlantNode';
 import { GameController } from './GameController';
 import { CrawlerModel } from './Parts/CrawlerModel';
+import { SaveManager } from '../../services/SaveManager';
+import { IExtrinsicModel } from '../../data/SaveData';
+import { AchievementSlug, ScoreType } from '../../data/ATSData';
+import { GameEvents, IActivityLog } from '../../services/GameEvents';
+import { SkillData } from '../../data/SkillData';
+import { InfoPopup } from '../../components/domui/InfoPopup';
+import { JMEventListener } from '../../JMGE/events/JMEventListener';
 
 export class GameKnowledge {
+  public onAchievementUpdate = new JMEventListener<{slug: AchievementSlug, unlocked?: boolean, count?: string}>();
   public nodes: PlantNode[] = [];
   public normalNodes: PlantNode[] = [];
   public fruitNodes: PlantNode[] = [];
@@ -43,17 +51,33 @@ export class GameKnowledge {
   private frames: number = 0;
   private fps: number = 0;
 
+  private numBlobs: number = 0;
+
+  private extrinsic: IExtrinsicModel;
+
   constructor(private gameC: GameController, private manager: NodeManager) {
     gameC.onCrawlerAdded.addListener(this.crawlerAdded);
     gameC.onCrawlerRemoved.addListener(this.crawlerRemoved);
     gameC.onNodeAdded.addListener(this.nodeAdded);
     gameC.onNodeRemoved.addListener(this.nodeRemoved);
     gameC.onNodeClaimed.addListener(this.nodeClaimed);
+    GameEvents.ACTIVITY_LOG.addListener(this.onActivityEvent);
     this.startFpsCounter();
+
+    this.extrinsic = SaveManager.getExtrinsic();
   }
 
   public destroy() {
     window.clearTimeout(this.fpsCounter);
+    GameEvents.ACTIVITY_LOG.removeListener(this.onActivityEvent);
+  }
+
+  public initializeAchievements() {
+    this.checkP10();
+    this.checkBlob15();
+    this.checkLaunch9Placement();
+    this.checkCrawler15();
+    this.checkCrawlerDie100();
   }
 
   public update() {
@@ -126,10 +150,13 @@ export class GameKnowledge {
 
   private crawlerAdded = (crawler: CrawlerModel) => {
     this.crawlerCount++;
+    this.checkCrawler15();
   }
 
   private crawlerRemoved = (crawler: CrawlerModel) => {
     this.crawlerCount--;
+    this.extrinsic.scores[ScoreType.CRAWLERS_DEAD]++;
+    this.checkCrawlerDie100();
   }
 
   private nodeAdded = (node: PlantNode) => {
@@ -140,6 +167,7 @@ export class GameKnowledge {
     } else {
       this.normalNodes.push(node);
     }
+    this.checkLaunch9Placement();
   }
 
   private nodeRemoved = (node: PlantNode) => {
@@ -150,6 +178,7 @@ export class GameKnowledge {
     } else {
       _.pull(this.normalNodes, node);
     }
+    this.checkLaunch9Placement();
   }
 
   private nodeClaimed = (e: {claim: boolean, node: PlantNode, claimer: CrawlerModel}) => {
@@ -166,5 +195,96 @@ export class GameKnowledge {
       this.frames = 0;
       this.startFpsCounter();
     }, 1000);
+  }
+
+  private onActivityEvent = (e: IActivityLog) => {
+    switch (e.slug) {
+      case 'PRESTIGE':
+        this.extrinsic.scores[ScoreType.PRESTIGES] = (this.extrinsic.scores[ScoreType.PRESTIGES] + 1) || 1;
+        this.checkP10();
+        this.checkLaunch9Launch();
+        break;
+      case 'BLOB':
+        if (e.data) {
+          this.numBlobs++;
+        } else {
+          this.numBlobs--;
+        }
+        this.checkBlob15();
+        break;
+    }
+  }
+
+  private achieveAchievement(slug: AchievementSlug) {
+    if (!this.extrinsic.achievements[slug]) {
+      this.extrinsic.achievements[slug] = true;
+      let achievement = SkillData.achievements.find(data => data.slug === slug);
+      this.manager.applySkill(achievement);
+      new InfoPopup(`Achievement Unlocked: ${achievement.title}`);
+      this.onAchievementUpdate.publish({slug, unlocked: true});
+    }
+  }
+
+  private checkP10 = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.PRESTIGE_10]) {
+      if (this.extrinsic.scores[ScoreType.PRESTIGES] >= 10) {
+        this.achieveAchievement(AchievementSlug.PRESTIGE_10);
+      } else {
+        let count = `Current Launches: ${this.extrinsic.scores[ScoreType.PRESTIGES]} / 10`;
+        this.onAchievementUpdate.publish({slug: AchievementSlug.PRESTIGE_10, count});
+      }
+    }
+  }
+
+  private checkBlob15 = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.BLOB_15]) {
+      if (this.numBlobs >= 15) {
+        this.achieveAchievement(AchievementSlug.BLOB_15);
+      } else {
+        let count = `Current Blobs: ${this.numBlobs} / 15`;
+        this.onAchievementUpdate.publish({slug: AchievementSlug.BLOB_15, count});
+      }
+    }
+  }
+
+  private checkCrawler15 = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.CRAWLERS_15]) {
+      if (this.crawlerCount >= 15) {
+        this.achieveAchievement(AchievementSlug.CRAWLERS_15);
+      } else {
+        let count = `Current Crawlers: ${this.crawlerCount} / 15`;
+        this.onAchievementUpdate.publish({slug: AchievementSlug.CRAWLERS_15, count});
+      }
+    }
+  }
+  private checkCrawlerDie100 = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.CRAWLERS_DIE_100]) {
+      if (this.extrinsic.scores[ScoreType.CRAWLERS_DEAD] >= 100) {
+        this.achieveAchievement(AchievementSlug.CRAWLERS_DIE_100);
+      } else {
+        let count = `Current Deaths: ${this.extrinsic.scores[ScoreType.CRAWLERS_DEAD]} / 100`;
+        this.onAchievementUpdate.publish({slug: AchievementSlug.CRAWLERS_DIE_100, count});
+      }
+    }
+  }
+
+  private checkLaunch9Placement = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.LAUNCH_DISTANCE_9]) {
+      let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
+      if (seedling) {
+        this.onAchievementUpdate.publish({slug: AchievementSlug.LAUNCH_DISTANCE_9, count: `Current Distance: ${seedling.distanceCore} / 9`});
+      } else {
+        this.onAchievementUpdate.publish({slug: AchievementSlug.LAUNCH_DISTANCE_9, count: ' '});
+      }
+    }
+  }
+
+  private checkLaunch9Launch = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.LAUNCH_DISTANCE_9]) {
+      let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
+      if (seedling.distanceCore >= 9) {
+        this.achieveAchievement(AchievementSlug.LAUNCH_DISTANCE_9);
+      }
+    }
   }
 }

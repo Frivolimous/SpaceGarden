@@ -7,22 +7,22 @@ export const StoreManager = {
   //   onComplete({success: true});
   // },
 
-  purchaseAttempt: (value: number, currency: CurrencySlug, onComplete: (result: IPurchaseResult) => void) => {
-    let current = SaveManager.getExtrinsic().currency[currency];
-    if (current >= value) {
-      if (value > Infinity) {
-        onComplete({success: false, confirmation: () => {
-          SaveManager.getExtrinsic().currency[currency] = current - value;
-          onComplete({success: true});
-        }});
-      } else {
-        SaveManager.getExtrinsic().currency[currency] = current - value;
-        onComplete({success: true});
-      }
-    } else {
-      onComplete({success: false});
-    }
-  },
+  // purchaseAttempt: (value: number, currency: CurrencySlug, onComplete: (result: IPurchaseResult) => void) => {
+  //   let current = SaveManager.getExtrinsic().currency[currency];
+  //   if (current >= value) {
+  //     if (value > Infinity) {
+  //       onComplete({success: false, confirmation: () => {
+  //         SaveManager.getExtrinsic().currency[currency] = current - value;
+  //         onComplete({success: true});
+  //       }});
+  //     } else {
+  //       SaveManager.getExtrinsic().currency[currency] = current - value;
+  //       onComplete({success: true});
+  //     }
+  //   } else {
+  //     onComplete({success: false});
+  //   }
+  // },
 };
 
 export interface IPurchaseResult {
