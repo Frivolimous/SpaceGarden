@@ -117,8 +117,8 @@ export class BaseCommand {
 
   }
 
-  protected updateIdle(onComplete: () => void) {
-    this.magnitude += this.crawler.speed / this.crawler.cLoc.view.radius * 50 * (this.return ? -1 : 1);
+  protected updateIdle(onComplete: () => void, speed: number = 1) {
+    this.magnitude += this.crawler.speed * speed / this.crawler.cLoc.view.radius * 50 * (this.return ? -1 : 1);
     if (this.magnitude > this.targetMagnitude) {
       this.magnitude = this.targetMagnitude;
       this.return = true;

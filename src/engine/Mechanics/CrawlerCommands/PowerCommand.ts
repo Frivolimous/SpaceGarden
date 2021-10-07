@@ -54,7 +54,7 @@ export class PowerCommand extends BaseCommand {
   }
 
   private isDeliverable(node: PlantNode): boolean {
-    return node.slug !== 'stem' && node.power.powerPercent < 0.5 || (node.slug === 'seedling' && node.power.powerPercent <= 1.2);
+    return node.slug !== 'stem' && node.power.powerPercent < 0.7 || (node.slug === 'seedling' && node.power.powerPercent <= 1.2);
   }
 
   private harvestHere = () => {

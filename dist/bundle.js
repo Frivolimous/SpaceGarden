@@ -62977,12 +62977,21 @@ module.exports = function(module) {
 /*!***********************!*\
   !*** ./src/Config.ts ***!
   \***********************/
-/*! exports provided: Config */
+/*! exports provided: dConfigNode, Config */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dConfigNode", function() { return dConfigNode; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Config", function() { return Config; });
+const dConfigNode = {
+    FRUIT_THRESHOLD: 0.6,
+    POWER_THRESHOLD: 0.25,
+    GEN_FADE: 30,
+    FRUIT_APPLY: 0.3,
+    LAUNCH_PERCENT: 1,
+    BLOB_AI: 0,
+};
 const Config = {
     INIT: {
         SCREEN_WIDTH: 800,
@@ -63012,6 +63021,8 @@ const Config = {
         POWER_THRESHOLD: 0.25,
         GEN_FADE: 30,
         FRUIT_APPLY: 0.3,
+        LAUNCH_PERCENT: 1,
+        BLOB_AI: 0,
     },
     CRAWLER: {
         BREED_AT: 1.5,
@@ -64159,6 +64170,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _ui_Button__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./ui/Button */ "./src/components/ui/Button.ts");
 /* harmony import */ var _ui_NodeButton__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./ui/NodeButton */ "./src/components/ui/NodeButton.ts");
 /* harmony import */ var _ui_ToggleButton__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./ui/ToggleButton */ "./src/components/ui/ToggleButton.ts");
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../Config */ "./src/Config.ts");
+
 
 
 
@@ -64203,7 +64216,21 @@ class BottomBar extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
         this.graphic.beginFill(0xf1f1f1, 0.7)
             .drawRect(0, 0, barWidth, barHeight);
         configs.forEach(config => {
-            let button = new _ui_NodeButton__WEBPACK_IMPORTED_MODULE_6__["NodeButton"]({ label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => this.onCreateButton.publish({ config, e }) });
+            let button = new _ui_NodeButton__WEBPACK_IMPORTED_MODULE_6__["NodeButton"]({ label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => {
+                    button.selected = !button.selected;
+                    if (button.selected) {
+                        this.buttons.forEach(otherButton => {
+                            if (otherButton !== button) {
+                                otherButton.selected = false;
+                            }
+                        });
+                        this.deleteButton.selected = false;
+                        this.onCreateButton.publish({ config, e, onComplete: () => button.selected = false });
+                    }
+                    else {
+                        this.onCreateButton.publish(null);
+                    }
+                } });
             _tooltip_TooltipReader__WEBPACK_IMPORTED_MODULE_4__["TooltipReader"].addTooltip(button, { title: _services_StringManager__WEBPACK_IMPORTED_MODULE_3__["StringManager"].data[`TOOLTIP_${config.slug}_TITLE`], description: _services_StringManager__WEBPACK_IMPORTED_MODULE_3__["StringManager"].data[`TOOLTIP_${config.slug}_DESC`] });
             this.addChild(button);
             this.buttons.push(button);
@@ -64211,6 +64238,7 @@ class BottomBar extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
         this.deleteButton = new _ui_ToggleButton__WEBPACK_IMPORTED_MODULE_7__["ToggleButton"]({
             label: _services_StringManager__WEBPACK_IMPORTED_MODULE_3__["StringManager"].data.BUTTON_DELETE, width: 50, height: 50, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: (b) => {
                 if (b) {
+                    this.buttons.forEach(button => button.selected = false);
                     this.onDeleteButton.publish({
                         onComplete: () => {
                             this.deleteButton.selected = false;
@@ -64244,22 +64272,22 @@ class BottomBar extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
         this.proceedButton.position.set(barWidth - this.proceedButton.getWidth() - 5, 25);
         this.turboButton.position.set(this.proceedButton.x - this.turboButton.getWidth() - 10, 25);
     }
-    updateSeedling(node) {
-        if (node) {
+    updateSeedling(seedling) {
+        if (seedling) {
             if (this.proceedButton.visible === false) {
                 this.proceedButton.visible = true;
                 this.proceedButton.highlight(true, 2.5);
             }
-            let percent = node.power.powerPercent;
+            let percent = seedling.power.powerPercent;
             this.proceedButton.addLabel(`${_services_StringManager__WEBPACK_IMPORTED_MODULE_3__["StringManager"].data.BUTTON_PROCEED} (${Math.floor(percent * 100)}%)`);
             if (this.proceedButton.disabled) {
-                if (percent >= 1) {
+                if (percent >= _Config__WEBPACK_IMPORTED_MODULE_8__["Config"].NODE.LAUNCH_PERCENT) {
                     this.proceedButton.disabled = false;
                     this.proceedButton.highlight(true, 2.5);
                 }
             }
             else {
-                if (percent < 1) {
+                if (percent < _Config__WEBPACK_IMPORTED_MODULE_8__["Config"].NODE.LAUNCH_PERCENT) {
                     this.proceedButton.disabled = true;
                 }
             }
@@ -64477,6 +64505,87 @@ class Starfield extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"] {
 
 /***/ }),
 
+/***/ "./src/components/domui/AchievementPanel.ts":
+/*!**************************************************!*\
+  !*** ./src/components/domui/AchievementPanel.ts ***!
+  \**************************************************/
+/*! exports provided: AchievementPanel */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AchievementPanel", function() { return AchievementPanel; });
+class AchievementPanel {
+    constructor(states, rawAchievements) {
+        this.rawAchievements = rawAchievements;
+        this.achievements = [];
+        this.element = document.createElement('div');
+        this.element.classList.add('achievement-panel');
+        this.element.innerHTML = '<div class="achievement-title">Achievements</div>';
+        // document.body.appendChild(this.element);
+        this.contentElement = document.createElement('div');
+        this.contentElement.classList.add('achievement-content');
+        // <div class="node-content">${content}</div>
+        this.element.appendChild(this.contentElement);
+        rawAchievements.forEach(data => {
+            let block = this.createAchievementBlock(data);
+            this.contentElement.appendChild(block);
+            if (states[data.slug]) {
+                this.toggleAchievement(data.slug);
+            }
+        });
+        // let button = document.createElement('button');
+        // button.classList.add('close-button');
+        // this.element.appendChild(button);
+        // button.innerHTML = 'X';
+        // button.addEventListener('click', () => this.hidden = true);
+    }
+    get hidden() {
+        return this.element.style.display === 'none';
+    }
+    set hidden(b) {
+        if (b) {
+            this.element.style.display = 'none';
+        }
+        else {
+            this.element.style.removeProperty('display');
+        }
+    }
+    // public destroy = () => {
+    //   document.body.removeChild(this.element);
+    // }
+    toggleAchievement(slug, state = true) {
+        let data = this.achievements.find(block => block.slug === slug);
+        if (state) {
+            data.element.classList.add('highlight');
+            let countElement = data.element.getElementsByClassName('achievement-block-cost')[0];
+            countElement.innerHTML = '';
+            let titleElement = data.element.getElementsByClassName('achievement-block-title')[0];
+            titleElement.innerHTML += ' <span style="font-size:0.6em; color:#550;">[ACHIEVED]</span>';
+        }
+        else {
+            data.element.classList.remove('highlight');
+        }
+    }
+    updateAchievementCount(slug, count) {
+        let data = this.achievements.find(block => block.slug === slug);
+        let countElement = data.element.getElementsByClassName('achievement-block-cost')[0];
+        countElement.innerHTML = count;
+    }
+    createAchievementBlock(data) {
+        let element = document.createElement('div');
+        element.classList.add('achievement-block');
+        element.innerHTML = `<div class="achievement-block-title">${data.title}</div>
+    <div class="achievement-block-content">${data.description}</div>
+    <div class="achievement-block-cost"></div>`;
+        this.achievements.push({ slug: data.slug, element });
+        return element;
+    }
+}
+
+
+/***/ }),
+
 /***/ "./src/components/domui/InfoPopup.ts":
 /*!*******************************************!*\
   !*** ./src/components/domui/InfoPopup.ts ***!
@@ -64516,15 +64625,28 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_StringManager__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../services/StringManager */ "./src/services/StringManager.ts");
 
 class Sidebar {
-    constructor(currentSkillPanel, nextSkillPanel) {
+    constructor(currentSkillPanel, nextSkillPanel, achieveElement) {
         this.currentSkillPanel = currentSkillPanel;
         this.nextSkillPanel = nextSkillPanel;
+        this.achieveElement = achieveElement;
         this.nodeMap = [];
+        this._AreStemsHidden = false;
+        this.currentTab = 'node';
+        this.updateAchievement = (e) => {
+            if (e.unlocked) {
+                this.achieveElement.toggleAchievement(e.slug, true);
+            }
+            else {
+                this.achieveElement.updateAchievementCount(e.slug, e.count);
+            }
+        };
         this.addNodeElement = (node) => {
-            if (node.slug === 'crawler')
-                this.addShowCrawlersButton();
+            if (node.slug === 'crawler' && this.isElementHidden(this.crawlerButton)) {
+                this.hideElement(this.crawlerButton, false);
+                this.setCurrentTab('crawler');
+            }
             if (!node.isFruit()) {
-                let atStart = (node.slug === 'seedling' || node.slug === 'crawler');
+                let atStart = (node.slug === 'seedling');
                 let element = this.addElement(node.toString(), atStart);
                 element.addEventListener('pointerover', () => {
                     this.highlightNode(node, true);
@@ -64543,23 +64665,8 @@ class Sidebar {
                     element.appendChild(button);
                     this.notification = document.createElement('div');
                     this.notification.classList.add('notification');
-                    element.appendChild(this.notification);
+                    button.appendChild(this.notification);
                     this.notification.hidden = true;
-                }
-                else if (node.slug === 'stem') {
-                    if (this.areStemsHidden) {
-                        element.style.display = 'none';
-                    }
-                }
-                if (this.isCrawlerMode) {
-                    if (node.slug !== 'crawler') {
-                        element.style.display = 'none';
-                    }
-                }
-                else {
-                    if (node.slug === 'crawler') {
-                        element.style.display = 'none';
-                    }
                 }
                 if (node.slug === 'core' && this.currentSkillPanel) {
                     let button = document.createElement('button');
@@ -64570,6 +64677,7 @@ class Sidebar {
                     });
                     element.appendChild(button);
                 }
+                this.setCurrentTab(this.currentTab);
             }
         };
         this.removeNodeElement = (node) => {
@@ -64582,22 +64690,33 @@ class Sidebar {
                 this.nodeMap.splice(index, 1);
             }
         };
+        this.sidebar = document.getElementById('sidebar');
+        this.sidebar.innerHTML = `
+    <div class="tab-container" id="tab-container"></div>
+    <hr width=80% color=black>
+      <div class="node-container" id="node-container"></div>
+    `;
+        this.tabContainer = document.getElementById('tab-container');
         this.container = document.getElementById('node-container');
-        this.hideStemButton = document.createElement('button');
-        this.hideStemButton.classList.add('skill-button');
-        this.hideStemButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_HIDE_STEMS;
-        this.hideStemButton.style.position = 'absolute';
-        this.hideStemButton.style.right = '5px';
-        this.hideStemButton.style.top = '0px';
-        this.hideStemButton.addEventListener('click', () => {
-            this.areStemsHidden = !this.areStemsHidden;
-            if (this.areStemsHidden) {
-                this.hideStemButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_SHOW_STEMS;
-            }
-            else {
-                this.hideStemButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_HIDE_STEMS;
-            }
-        });
+        this.knowledgeButton = this.makeButton('Overview', 'tab-button', () => this.setCurrentTab('knowledge'));
+        this.tabContainer.appendChild(this.knowledgeButton);
+        this.nodeButton = this.makeButton('Nodes', 'tab-button', () => this.setCurrentTab('node'));
+        this.tabContainer.appendChild(this.nodeButton);
+        this.crawlerButton = this.makeButton('Crawlers', 'tab-button', () => this.setCurrentTab('crawler'));
+        this.tabContainer.appendChild(this.crawlerButton);
+        this.hideElement(this.crawlerButton);
+        this.addKnowledgeElement('');
+        // this.hideStemButton = this.makeButton(StringManager.data.UI_SIDEBAR_HIDE_STEMS, 'skill-button', () => {
+        //   this.areStemsHidden = !this.areStemsHidden;
+        //   if (this.areStemsHidden) {
+        //     this.hideStemButton.innerHTML = StringManager.data.UI_SIDEBAR_SHOW_STEMS;
+        //   } else {
+        //     this.hideStemButton.innerHTML = StringManager.data.UI_SIDEBAR_HIDE_STEMS;
+        //   }
+        // });
+        // this.hideStemButton.style.position = 'absolute';
+        // this.hideStemButton.style.right = '5px';
+        // this.hideStemButton.style.top = '0px';
     }
     static genAid() {
         Sidebar.aid++;
@@ -64608,44 +64727,7 @@ class Sidebar {
     }
     set areStemsHidden(b) {
         this._AreStemsHidden = b;
-        if (b) {
-            this.nodeMap.forEach(data => {
-                if (data.node.slug === 'stem') {
-                    data.element.style.display = 'none';
-                }
-            });
-        }
-        else {
-            this.nodeMap.forEach(data => {
-                data.element.style.removeProperty('display');
-            });
-        }
-    }
-    get isCrawlerMode() {
-        return this._IsCrawlerMode;
-    }
-    set isCrawlerMode(b) {
-        this._IsCrawlerMode = b;
-        if (b) {
-            this.nodeMap.forEach(data => {
-                if (data.node.slug === 'crawler') {
-                    data.element.style.removeProperty('display');
-                }
-                else {
-                    data.element.style.display = 'none';
-                }
-            });
-        }
-        else {
-            this.nodeMap.forEach(data => {
-                if (data.node.slug === 'crawler') {
-                    data.element.style.display = 'none';
-                }
-                else {
-                    data.element.style.removeProperty('display');
-                }
-            });
-        }
+        this.setCurrentTab(this.currentTab);
     }
     destroy() {
         this.currentSkillPanel && this.currentSkillPanel.destroy();
@@ -64653,8 +64735,6 @@ class Sidebar {
     }
     navIn() {
         this.container.innerHTML = '';
-        this.container.appendChild(this.hideStemButton);
-        this.showCrawlersButton && this.container.appendChild(this.showCrawlersButton);
         this.nodeMap.forEach(data => {
             if (data.atStart) {
                 this.container.prepend(data.element);
@@ -64663,26 +64743,49 @@ class Sidebar {
                 this.container.appendChild(data.element);
             }
         });
+        this.container.prepend(this.knowledgeElement);
+        this.container.appendChild(this.achieveElement.element);
+        this.setCurrentTab('node');
     }
     navOut() {
         this.container.innerHTML = '';
+        this.knowledgeElement = null;
     }
-    addKnowledgeElement(content) {
-        if (this.knowledgeElement)
-            return;
-        let element = this.addElement(content, true);
-        this.knowledgeElement = element;
-    }
-    removeKnowledgeElement() {
-        if (this.knowledgeElement) {
-            this.container.removeChild(this.knowledgeElement);
-            this.knowledgeElement = null;
+    setCurrentTab(tab) {
+        this.currentTab = tab;
+        if (tab === 'crawler') {
+            this.crawlerButton.disabled = true;
+            this.nodeButton.disabled = false;
+            this.knowledgeButton.disabled = false;
+            this.nodeMap.forEach(data => this.hideElement(data.element, data.node.slug !== 'crawler'));
+            this.hideElement(this.knowledgeElement);
+            this.hideElement(this.achieveElement.element);
+        }
+        else if (tab === 'node') {
+            this.crawlerButton.disabled = false;
+            this.nodeButton.disabled = true;
+            this.knowledgeButton.disabled = false;
+            this.nodeMap.forEach(data => this.hideElement(data.element, data.node.slug === 'crawler' || (this.areStemsHidden && data.node.slug === 'stem')));
+            this.hideElement(this.knowledgeElement);
+            this.hideElement(this.achieveElement.element);
+        }
+        else if (tab === 'knowledge') {
+            this.crawlerButton.disabled = false;
+            this.nodeButton.disabled = false;
+            this.knowledgeButton.disabled = true;
+            this.nodeMap.forEach(data => this.hideElement(data.element, true));
+            this.hideElement(this.knowledgeElement, false);
+            this.hideElement(this.achieveElement.element, false);
+        }
+        else if (tab === 'none') {
+            this.nodeMap.forEach(data => this.hideElement(data.element, true));
+            this.hideElement(this.knowledgeElement);
+            this.hideElement(this.achieveElement.element);
         }
     }
-    updateKnowledge(content) {
-        if (this.knowledgeElement) {
-            let contentElement = this.knowledgeElement.querySelector('.node-content');
-            contentElement.innerHTML = content;
+    updateKnowledge(knowledge) {
+        if (this.currentTab === 'knowledge') {
+            this.knowledgeContent.innerHTML = knowledge.toString();
         }
     }
     updateNodes() {
@@ -64691,7 +64794,7 @@ class Sidebar {
             contentElement.innerHTML = data.node.toString();
             if (data.node.slug === 'seedling') {
                 this.nextSkillPanel.updateSkillpoints(data.node.power.researchCurrent);
-                this.notification.hidden = (this.nextSkillPanel.skillpoints === 0 || !this.nextSkillPanel.hidden);
+                this.notification.hidden = !this.nextSkillPanel.hidden || !this.nextSkillPanel.hasSkillToLevel;
             }
         });
     }
@@ -64712,25 +64815,11 @@ class Sidebar {
             }
         }
     }
-    addShowCrawlersButton() {
-        if (this.showCrawlersButton)
+    addKnowledgeElement(content) {
+        if (this.knowledgeElement)
             return;
-        this.showCrawlersButton = document.createElement('button');
-        this.showCrawlersButton.classList.add('skill-button');
-        this.showCrawlersButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_CRAWLER_MODE;
-        this.showCrawlersButton.style.position = 'absolute';
-        this.showCrawlersButton.style.left = '5px';
-        this.showCrawlersButton.style.top = '0px';
-        this.showCrawlersButton.addEventListener('click', () => {
-            this.isCrawlerMode = !this.isCrawlerMode;
-            if (this.isCrawlerMode) {
-                this.showCrawlersButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_NODE_MODE;
-            }
-            else {
-                this.showCrawlersButton.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SIDEBAR_CRAWLER_MODE;
-            }
-        });
-        this.container.appendChild(this.showCrawlersButton);
+        this.knowledgeElement = this.addElement(content, true);
+        this.knowledgeContent = this.knowledgeElement.querySelector('.node-content');
     }
     addElement(content, start) {
         let element = document.createElement('div');
@@ -64744,6 +64833,24 @@ class Sidebar {
             this.container.appendChild(element);
         }
         return element;
+    }
+    makeButton(innerHTML, className, onClick) {
+        let button = document.createElement('button');
+        button.classList.add(className);
+        button.innerHTML = innerHTML;
+        button.addEventListener('click', onClick);
+        return button;
+    }
+    hideElement(element, hidden = true) {
+        if (hidden) {
+            element.style.display = 'none';
+        }
+        else {
+            element.style.removeProperty('display');
+        }
+    }
+    isElementHidden(element) {
+        return element.style.display === 'none';
     }
 }
 Sidebar.aid = 0;
@@ -64774,7 +64881,9 @@ class SkillBar {
     updateText(current, next) {
         this.current = current;
         this.nextLevel = next;
-        this.element.innerHTML = `${_services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SKILLTREE_RESEARCH}: ${Math.round(current)} / ${next}`;
+        // this.element.innerHTML = `${StringManager.data.UI_SKILLTREE_RESEARCH}: ${Math.round(current)} / ${next}`;
+        this.element.innerHTML = `${_services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SKILLTREE_RESEARCH}: ${Math.round(current)} / ${next}
+                              <p class="sub-text">Next Skillpoint at ${next} Research</p>`;
     }
 }
 
@@ -64794,6 +64903,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_StringManager__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../services/StringManager */ "./src/services/StringManager.ts");
 /* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../data/SkillData */ "./src/data/SkillData.ts");
 /* harmony import */ var _SkillBar__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./SkillBar */ "./src/components/domui/SkillBar.ts");
+/* harmony import */ var _services_Formula__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../services/Formula */ "./src/services/Formula.ts");
+
 
 
 
@@ -64803,6 +64914,7 @@ class SkillPanel {
         this.always = always;
         this.disabled = disabled;
         this.skillsSpent = 0;
+        this.hasSkillToLevel = false;
         this.skillMap = [];
         this.skillLevels = 0;
         this.destroy = () => {
@@ -64818,14 +64930,16 @@ class SkillPanel {
                     data.element.hidden = true;
                 }
             });
+            if (this.negative)
+                this.negative.innerHTML = _services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data['NEGATIVE_TIER_' + pageIndex];
         };
-        this.updateSkillpoints = (skillpoints) => {
+        this.updateSkillpoints = (research) => {
             if (this.disabled)
                 return;
             let oldpoints = this.skillpoints;
-            this.skillLevels = _data_SkillData__WEBPACK_IMPORTED_MODULE_1__["SkillData"].skillExchange.findIndex(cost => cost > skillpoints);
-            let nextCost = _data_SkillData__WEBPACK_IMPORTED_MODULE_1__["SkillData"].skillExchange[this.skillLevels];
-            this.skillbar.updateText(skillpoints, nextCost);
+            this.skillLevels = _services_Formula__WEBPACK_IMPORTED_MODULE_3__["Formula"].getNextSkillLevel(research);
+            let nextCost = _services_Formula__WEBPACK_IMPORTED_MODULE_3__["Formula"].getSkillCost(this.skillLevels);
+            this.skillbar.updateText(research, nextCost);
             this.skillpointElement.innerHTML = `${Math.round(this.skillpoints)} ${_services_StringManager__WEBPACK_IMPORTED_MODULE_0__["StringManager"].data.UI_SKILLTREE_SKILLPOINTS}`;
             if (oldpoints !== this.skillpoints) {
                 this.updateHighlights();
@@ -64884,6 +64998,9 @@ class SkillPanel {
             this.skillpointElement.classList.add('skill-skillpoint');
             this.element.appendChild(this.skillpointElement);
             this.skillpointElement.innerHTML = `5 Skillpoints`;
+            this.negative = document.createElement('div');
+            this.negative.classList.add('skill-negative');
+            this.element.appendChild(this.negative);
             this.skillbar = new _SkillBar__WEBPACK_IMPORTED_MODULE_2__["SkillBar"]();
             this.element.appendChild(this.skillbar.element);
         }
@@ -64916,7 +65033,12 @@ class SkillPanel {
         return this.element.style.display === 'none';
     }
     set hidden(b) {
-        this.element.style.display = b ? 'none' : 'flex';
+        if (b) {
+            this.element.style.display = 'none';
+        }
+        else {
+            this.element.style.removeProperty('display');
+        }
     }
     clear() {
         while (this.leveled.length > 0)
@@ -64926,9 +65048,11 @@ class SkillPanel {
     }
     updateHighlights() {
         let sp = this.skillpoints;
+        this.hasSkillToLevel = false;
         this.skillMap.forEach((data, i) => {
             if (data.skill.cost <= sp && !data.element.disabled && !data.element.classList.contains('greyed')) {
                 data.element.classList.add('highlight');
+                this.hasSkillToLevel = true;
             }
             else {
                 data.element.classList.remove('highlight');
@@ -64957,8 +65081,8 @@ class SkillPanel {
                     this.skillsSpent += skill.cost;
                     this.leveled.push(skill.slug);
                     element.disabled = true;
-                    this.updateHighlights();
                     this.skillMap.forEach(this.checkRequirements);
+                    this.updateHighlights();
                 }
             });
             this.checkRequirements({ element, skill });
@@ -65216,47 +65340,6 @@ class TooltipReader {
             let rect = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Rectangle"](position.x, position.y, width, height);
             this.currentTooltip.reposition(rect, this.borders);
         }
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/components/ui/AchievementPopup.ts":
-/*!***********************************************!*\
-  !*** ./src/components/ui/AchievementPopup.ts ***!
-  \***********************************************/
-/*! exports provided: AchievementPopup */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AchievementPopup", function() { return AchievementPopup; });
-/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/dist/esm/pixi.js");
-/* harmony import */ var _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../JMGE/JMTween */ "./src/JMGE/JMTween.ts");
-/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
-/* harmony import */ var _data_Fonts__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../data/Fonts */ "./src/data/Fonts.ts");
-
-
-
-
-class AchievementPopup extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
-    constructor(title, text, tier = 0) {
-        super();
-        this.x = _Config__WEBPACK_IMPORTED_MODULE_2__["Config"].INIT.SCREEN_WIDTH / 2 - 150;
-        this.y = 50;
-        let background = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
-        background.beginFill(0xffffff, 0.2);
-        background.lineStyle(2, 0xffffff);
-        background.drawRect(0, 0, 300, 100);
-        let titleField = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Text"](title, { fill: 0xffffff, fontFamily: _data_Fonts__WEBPACK_IMPORTED_MODULE_3__["Fonts"].UI, fontWeight: 'bold', fontSize: 12 });
-        let field = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Text"](text, { fill: 0xffffff, fontFamily: _data_Fonts__WEBPACK_IMPORTED_MODULE_3__["Fonts"].UI, fontSize: 11 });
-        this.addChild(background, titleField, field);
-        titleField.position.set((300 - titleField.width) / 2, 5);
-        field.position.set(5, 20);
-        new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_1__["JMTween"](this, 200).from({ alpha: 0 }).start().chain(this, 1000).to({ alpha: 0 }).wait(5000).onComplete(() => {
-            this.destroy();
-        });
     }
 }
 
@@ -65562,6 +65645,11 @@ class NodeButton extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
             this.inner.addChild(this.numberText);
             this.count = 0;
         }
+        else {
+            this.numberText = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Text"]('∞', style);
+            this.inner.addChild(this.numberText);
+            this.count = Infinity;
+        }
         this.interactive = true;
         this.buttonMode = true;
         this.addListener('mouseover', () => {
@@ -65581,19 +65669,21 @@ class NodeButton extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
                 return;
             this.background.tint = Object(_JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_2__["colorLuminance"])(this.color, 0.8);
             this.inner.scale.set(1);
+            config.onUp && config.onUp(e);
         });
         this.addListener('touchend', (e) => {
             if (this.disabled)
                 return;
             this.background.tint = this.color;
             this.inner.scale.set(1);
+            config.onUp && config.onUp(e);
         });
         this.addListener('pointerdown', e => {
             if (this.disabled)
                 return;
             this.background.tint = Object(_JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_2__["colorLuminance"])(this.color, 0.8);
             this.inner.scale.set(1 - this.config.hoverScale);
-            config.onDown(e);
+            config.onDown && config.onDown(e);
             // SoundData.playSound(SoundIndex.CLICK);
         });
     }
@@ -65617,21 +65707,37 @@ class NodeButton extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
     }
     set selected(b) {
         this._Selected = b;
-        this.interactive = !b;
+        // this.interactive = !b;
         if (b) {
-            this.color = this.selectedColor;
+            if (!this._Highlight) {
+                this._Highlight = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
+                this._Highlight.lineStyle(3, 0xffff00);
+                this._Highlight.drawRoundedRect(0, 0, this.getWidth(), this.getHeight(), this.config.rounding);
+                this.inner.addChild(this._Highlight);
+            }
+            // this.color = this.selectedColor;
         }
         else {
-            this.color = this.defaultColor;
+            if (this._Highlight) {
+                this._Highlight.destroy();
+                this._Highlight = null;
+            }
+            // this.color = this.defaultColor;
         }
-        this.background.tint = this.color;
+        // this.background.tint = this.color;
     }
     get selected() {
         return this._Selected;
     }
     set count(n) {
-        this._Count = n;
-        this.numberText.text = `${n}/${this.config.maxNodes}`;
+        if (n === Infinity) {
+            this._Count = Infinity;
+            this.numberText.text = ' ∞ ';
+        }
+        else {
+            this._Count = n;
+            this.numberText.text = `${n}/${this.config.maxNodes}`;
+        }
         this.numberText.width = this.config.width / 3;
         this.numberText.scale.y = this.numberText.scale.x;
         this.numberText.x = this.config.width * 2 / 3 - 2;
@@ -65817,34 +65923,6 @@ class ToggleButton extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
 
 /***/ }),
 
-/***/ "./src/components/ui/TutorialPopup.ts":
-/*!********************************************!*\
-  !*** ./src/components/ui/TutorialPopup.ts ***!
-  \********************************************/
-/*! exports provided: TutorialPopup */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "TutorialPopup", function() { return TutorialPopup; });
-/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/dist/esm/pixi.js");
-/* harmony import */ var _data_Fonts__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../data/Fonts */ "./src/data/Fonts.ts");
-
-
-class TutorialPopup extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
-    constructor(text) {
-        super();
-        let background = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
-        background.beginFill(0xffffff);
-        background.drawRect(0, 0, 300, 100);
-        let field = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Text"](text, { fontFamily: _data_Fonts__WEBPACK_IMPORTED_MODULE_1__["Fonts"].UI });
-        this.addChild(background, field);
-    }
-}
-
-
-/***/ }),
-
 /***/ "./src/components/ui/modals/OptionModal.ts":
 /*!*************************************************!*\
   !*** ./src/components/ui/modals/OptionModal.ts ***!
@@ -65963,191 +66041,30 @@ class BaseModal extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
 /*!*****************************!*\
   !*** ./src/data/ATSData.ts ***!
   \*****************************/
-/*! exports provided: genAchievements, genTutorials, genScores */
+/*! exports provided: ScoreType, AchievementSlug */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "genAchievements", function() { return genAchievements; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "genTutorials", function() { return genTutorials; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "genScores", function() { return genScores; });
-// Achievement Tutorial Score Datas
-// enum AchievementId {
-//   SOLDIER_BRONZE, SOLDIER_SILVER, SOLDIER_GOLD,
-//   CONQUEROR_BRONZE, CONQUEROR_SILVER, CONQUEROR_GOLD,
-//   DEFENDER_BRONZE, DEFENDER_SILVER, DEFENDER_GOLD,
-//   PERFECTION_BRONZE, PERFECTION_SILVER, PERFECTION_GOLD,
-//   RIDDLER_BRONZE, RIDDLER_SILVER, RIDDLER_GOLD,
-//   EXPLORER_BRONZE, EXPLORER_SILVER, EXPLORER_GOLD,
-// }
-// enum ScoreId {
-//   KILL_ENEMY,
-//   PLAYER_DEATH,
-// }
-function genAchievements() {
-    let ACHIEVEMENTS = [
-    // {
-    //   id: AchievementId.SOLDIER_BRONZE,
-    //   title: 'Bronze Soldier',
-    //   caption: 'Destroy 10 enemy ships!',
-    //   emitter: GameEvents.NOTIFY_ENEMY_DESTROYED,
-    //   condition: extrinsic => extrinsic.data.scores.kills >= 10,
-    // },
-    // {
-    //   id: AchievementId.SOLDIER_SILVER,
-    //   prev: AchievementId.SOLDIER_BRONZE,
-    //   title: 'Silver Soldier',
-    //   caption: 'Destroy 100 enemy ships!',
-    //   emitter: GameEvents.NOTIFY_ENEMY_DESTROYED,
-    //   condition: extrinsic => extrinsic.data.scores.kills >= 100,
-    // },
-    // {
-    //   id: AchievementId.SOLDIER_GOLD,
-    //   prev: AchievementId.SOLDIER_SILVER,
-    //   title: 'Gold Soldier',
-    //   caption: 'Destroy 1000 enemy ships!',
-    //   emitter: GameEvents.NOTIFY_ENEMY_DESTROYED,
-    //   condition: extrinsic => extrinsic.data.scores.kills >= 1000,
-    // },
-    // {
-    //   id: AchievementId.CONQUEROR_BRONZE,
-    //   title: 'Bronze Conqueror',
-    //   caption: 'Complete level 1',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (e.win && e.levelIndex >= 0),
-    // },
-    // {
-    //   id: AchievementId.CONQUEROR_SILVER,
-    //   prev: AchievementId.CONQUEROR_BRONZE,
-    //   title: 'Silver Conqueror',
-    //   caption: 'Complete level 6',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (e.win && e.levelIndex >= 5),
-    // },
-    // {
-    //   id: AchievementId.CONQUEROR_GOLD,
-    //   prev: AchievementId.CONQUEROR_SILVER,
-    //   title: 'Gold Conqueror',
-    //   caption: 'Complete the game',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (e.win && e.levelIndex >= 11),
-    // },
-    // {
-    //   id: AchievementId.DEFENDER_BRONZE,
-    //   title: 'Bronze Defender',
-    //   caption: 'Complete any level with perfect health',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (e.win && !e.levelInstance.healthLost),
-    // },
-    // {
-    //   id: AchievementId.DEFENDER_SILVER,
-    //   prev: AchievementId.DEFENDER_BRONZE,
-    //   title: 'Silver Defender',
-    //   caption: 'Complete 3 levels with perfect health',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (_.filter(extrinsic.data.levels, {healthBadge: 3}).length >= 3),
-    // },
-    // {
-    //   id: AchievementId.DEFENDER_GOLD,
-    //   prev: AchievementId.DEFENDER_SILVER,
-    //   title: 'Gold Defender',
-    //   caption: 'Completed 10 levels with perfect health',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (_.filter(extrinsic.data.levels, {healthBadge: 3}).length >= 10),
-    // },
-    // {
-    //   id: AchievementId.PERFECTION_BRONZE,
-    //   title: 'Bronze Perfection',
-    //   caption: 'Complete any level with perfect score',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (e.win && e.levelInstance.enemiesKilled >= e.levelInstance.totalEnemies),
-    // },
-    // {
-    //   id: AchievementId.PERFECTION_SILVER,
-    //   prev: AchievementId.PERFECTION_BRONZE,
-    //   title: 'Silver Perfection',
-    //   caption: 'Complete 3 levels with perfect score',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (_.filter(extrinsic.data.levels, {killBadge: 3}).length >= 3),
-    // },
-    // {
-    //   id: AchievementId.PERFECTION_GOLD,
-    //   prev: AchievementId.PERFECTION_SILVER,
-    //   title: 'Gold Perfection',
-    //   caption: 'Complete 10 levels with perfect score',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic, e: ILevelEvent) => (_.filter(extrinsic.data.levels, {killBadge: 3}).length >= 10),
-    // },
-    // {
-    //   id: AchievementId.RIDDLER_BRONZE,
-    //   title: 'Bronze Riddler',
-    //   caption: "It's a bird, it's a plane, it's...",
-    //   emitter: GameEvents.NOTIFY_WORD_COMPLETED,
-    //   condition: (extrinsic, e: IWordEvent) => e.word === 'superman',
-    // },
-    // {
-    //   id: AchievementId.RIDDLER_SILVER,
-    //   prev: AchievementId.RIDDLER_BRONZE,
-    //   title: 'Silver Riddler',
-    //   caption: "Boy George's Karma ...",
-    //   emitter: GameEvents.NOTIFY_WORD_COMPLETED,
-    //   condition: (extrinsic, e: IWordEvent) => e.word === 'chameleon',
-    // },
-    // {
-    //   id: AchievementId.RIDDLER_GOLD,
-    //   prev: AchievementId.RIDDLER_SILVER,
-    //   title: 'Gold Riddler',
-    //   caption: "Fighter Pilot's Suicide",
-    //   emitter: GameEvents.NOTIFY_WORD_COMPLETED,
-    //   condition: (extrinsic, e: IWordEvent) => e.word === 'kamikaze',
-    // },
-    // {
-    //   id: AchievementId.EXPLORER_BRONZE,
-    //   title: 'Bronze Explorer',
-    //   caption: 'Complete the Typing Test',
-    //   emitter: GameEvents.NOTIFY_TEST_COMPLETE,
-    //   condition: (extrinsic, e: ITestEvent) => true,
-    // },
-    // {
-    //   id: AchievementId.EXPLORER_SILVER,
-    //   title: 'Silver Explorer',
-    //   caption: 'Pause the game without clicking',
-    //   emitter: GameEvents.NOTIFY_WORD_COMPLETED,
-    //   condition: (extrinsic, e: IWordEvent) => e.word === 'pause',
-    // },
-    // {
-    //   id: AchievementId.EXPLORER_GOLD,
-    //   title: 'Gold Explorer',
-    //   caption: 'See who made the game',
-    //   emitter: GameEvents.NOTIFY_CREDITS_VIEWED,
-    //   condition: (extrinsic, e: null) => true,
-    // },
-    ];
-    return ACHIEVEMENTS;
-}
-function genTutorials() {
-    let m = [];
-    return m;
-}
-function genScores() {
-    let m = [
-    // {
-    //   id: ScoreId.KILL_ENEMY,
-    //   type: '++',
-    //   prop: 'scores.kills',
-    //   emitter: GameEvents.NOTIFY_ENEMY_DESTROYED,
-    //   condition: () => true,
-    // },
-    // {
-    //   id: ScoreId.PLAYER_DEATH,
-    //   type: '++',
-    //   prop: 'scores.deaths',
-    //   emitter: GameEvents.NOTIFY_LEVEL_COMPLETED,
-    //   condition: (extrinsic: ExtrinsicModel, e: ILevelEvent) => !e.win,
-    // },
-    ];
-    return m;
-}
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ScoreType", function() { return ScoreType; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AchievementSlug", function() { return AchievementSlug; });
+var ScoreType;
+(function (ScoreType) {
+    ScoreType[ScoreType["PRESTIGES"] = 0] = "PRESTIGES";
+    ScoreType[ScoreType["CRAWLERS_DEAD"] = 1] = "CRAWLERS_DEAD";
+    // NODES_MADE,
+    // NODES_DELETED,
+    // CRAWLERS_BORN,
+    // SKILLPOINTS_SPENT,
+})(ScoreType || (ScoreType = {}));
+var AchievementSlug;
+(function (AchievementSlug) {
+    AchievementSlug[AchievementSlug["PRESTIGE_10"] = 0] = "PRESTIGE_10";
+    AchievementSlug[AchievementSlug["BLOB_15"] = 1] = "BLOB_15";
+    AchievementSlug[AchievementSlug["LAUNCH_DISTANCE_9"] = 2] = "LAUNCH_DISTANCE_9";
+    AchievementSlug[AchievementSlug["CRAWLERS_15"] = 3] = "CRAWLERS_15";
+    AchievementSlug[AchievementSlug["CRAWLERS_DIE_100"] = 4] = "CRAWLERS_DIE_100";
+})(AchievementSlug || (AchievementSlug = {}));
 
 
 /***/ }),
@@ -66228,9 +66145,14 @@ __webpack_require__.r(__webpack_exports__);
 
 const NodeBase = {
     powerMax: 100,
-    powerDrain: -0.05,
-    corGen: 0.45,
-    smallGen: 0.15,
+    powerDrain: -0.1,
+    stemDrain: -0.05,
+    corGen: 0.4,
+    smallGen: 0.2,
+    // stemDrain: -0.05,
+    // mainDrain: -0.2,
+    // corGen: 0.4,
+    // smallGen: 0.2,
     powerDelay: 20,
     powerClump: 10,
     powerClumpSub: 5,
@@ -66242,20 +66164,21 @@ const NodeData = {
             slug: 'core', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.yellow, shape: 'circle',
             radius: 30, mass: 30, force: 30, maxLinks: 1, maxCount: 1,
             powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.corGen, powerWeight: 1.5,
+            // powerMax: NodeBase.powerMax * 3 / 0.75, powerGen: NodeBase.corGen, powerWeight: 1.5,
             powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump * 1.5,
             fruitType: 'battery', fruitChain: 3, maxFruits: 2, fruitClump: NodeBase.fruitClump,
         },
         {
             slug: 'seedling', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.darkgreen, shape: 'hexagon',
             radius: 30, mass: 30, force: 30, maxLinks: 1, maxCount: 1,
-            powerMax: NodeBase.powerMax * 50, powerGen: 0, powerWeight: 2,
+            powerMax: NodeBase.powerMax * 20, powerGen: 0, powerWeight: 2,
             powerDelay: NodeBase.powerDelay, powerClump: 0,
             fruitChain: 0,
         },
         {
             slug: 'stem', type: 'normal', color: _Colors__WEBPACK_IMPORTED_MODULE_0__["Colors"].Node.green, shape: 'circle',
             radius: 10, mass: 1, force: 1, maxLinks: 3, maxCount: 4,
-            powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain, powerWeight: 1.1,
+            powerMax: NodeBase.powerMax, powerGen: NodeBase.stemDrain, powerWeight: 1.1,
             powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump,
             fruitType: 'leaf', fruitChain: 1, maxFruits: 2, fruitClump: NodeBase.fruitClump,
         },
@@ -66350,16 +66273,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CURRENT_VERSION", function() { return CURRENT_VERSION; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dExtrinsicModel", function() { return dExtrinsicModel; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "TierSaves", function() { return TierSaves; });
-const CURRENT_VERSION = 23;
+const CURRENT_VERSION = 24;
 const dExtrinsicModel = {
     achievements: [],
-    currency: {
-        gold: 0,
-        tokens: 0,
-        refresh: 0,
-        suns: 0,
-        souls: 0,
-    },
+    scores: [0, 0],
     crawlers: [],
     options: {
         autoFill: false,
@@ -66369,9 +66286,19 @@ const dExtrinsicModel = {
     skillTier: 0,
 };
 const TierSaves = [
-    '{"achievements":[],"currency":{"gold":0,"tokens":0,"refresh":0,"suns":0,"souls":0},"options":{"autoFill":false},"skillsCurrent":[],"skillsNext":[],"skillTier":0,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":281,"researchCurrent":0,"outlets":[2],"x":621,"y":309},{"uid":2,"slug":"stem","powerCurrent":91,"researchCurrent":0,"outlets":[4,8],"x":549,"y":299},{"uid":4,"slug":"stem","powerCurrent":95,"researchCurrent":0,"outlets":[5,6],"x":511,"y":314},{"uid":5,"slug":"stem","powerCurrent":84,"researchCurrent":0,"outlets":[7],"x":477,"y":307},{"uid":6,"slug":"generator","powerCurrent":79,"researchCurrent":0,"outlets":[],"x":483,"y":347},{"uid":7,"slug":"generator","powerCurrent":78,"researchCurrent":0,"outlets":[],"x":437,"y":293},{"uid":8,"slug":"seedling","powerCurrent":80,"researchCurrent":0,"outlets":[],"x":520,"y":237}]}',
-    '{"achievements":[],"currency":{"gold":0,"tokens":0,"refresh":0,"suns":0,"souls":0},"options":{"autoFill":false},"skillsCurrent":[],"skillsNext":[],"skillTier":1,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":300,"researchCurrent":0,"outlets":[8,9,10,17],"x":589,"y":269},{"uid":8,"slug":"battery","powerCurrent":25,"researchCurrent":0,"outlets":[24],"x":625,"y":279},{"uid":9,"slug":"stem","powerCurrent":51,"researchCurrent":0,"outlets":[13,16,21,25],"x":582,"y":341},{"uid":10,"slug":"stem","powerCurrent":80,"researchCurrent":0,"outlets":[15,20,42,79],"x":601,"y":194},{"uid":13,"slug":"generator","powerCurrent":58,"researchCurrent":0,"outlets":[26,36,37],"x":616,"y":364},{"uid":15,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":615,"y":187},{"uid":16,"slug":"stem","powerCurrent":80,"researchCurrent":0,"outlets":[19,31,33,43],"x":567,"y":379},{"uid":17,"slug":"battery","powerCurrent":64,"researchCurrent":0,"outlets":[35],"x":552,"y":272},{"uid":19,"slug":"generator","powerCurrent":66,"researchCurrent":0,"outlets":[23,27,39],"x":591,"y":411},{"uid":20,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":616,"y":200},{"uid":21,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":576,"y":355},{"uid":23,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":611,"y":417},{"uid":24,"slug":"battery","powerCurrent":0,"researchCurrent":0,"outlets":[34],"x":636,"y":282},{"uid":25,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":567,"y":346},{"uid":26,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":636,"y":365},{"uid":27,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":606,"y":426},{"uid":31,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":553,"y":374},{"uid":33,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":554,"y":386},{"uid":34,"slug":"battery","powerCurrent":20,"researchCurrent":0,"outlets":[],"x":647,"y":284},{"uid":35,"slug":"battery","powerCurrent":0,"researchCurrent":0,"outlets":[38],"x":541,"y":273},{"uid":36,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":634,"y":374},{"uid":37,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":627,"y":381},{"uid":38,"slug":"battery","powerCurrent":20,"researchCurrent":0,"outlets":[],"x":530,"y":273},{"uid":39,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":596,"y":431},{"uid":42,"slug":"seedling","powerCurrent":4484,"researchCurrent":481.65477692913043,"outlets":[],"x":604,"y":119},{"uid":43,"slug":"stem","powerCurrent":78,"researchCurrent":0,"outlets":[45,46,50,52],"x":546,"y":411},{"uid":45,"slug":"stem","powerCurrent":48,"researchCurrent":0,"outlets":[47,51,53,78],"x":553,"y":445},{"uid":46,"slug":"stem","powerCurrent":50,"researchCurrent":0,"outlets":[57,58,59,77],"x":514,"y":426},{"uid":47,"slug":"generator","powerCurrent":75,"researchCurrent":0,"outlets":[54,56,60],"x":572,"y":481},{"uid":50,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":533,"y":404},{"uid":51,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":567,"y":451},{"uid":52,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":537,"y":423},{"uid":53,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":540,"y":454},{"uid":54,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":590,"y":491},{"uid":56,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":581,"y":499},{"uid":57,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":512,"y":441},{"uid":58,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":499,"y":427},{"uid":59,"slug":"stem","powerCurrent":93,"researchCurrent":0,"outlets":[62,63,68,76],"x":487,"y":447},{"uid":60,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":569,"y":501},{"uid":62,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":489,"y":462},{"uid":63,"slug":"stem","powerCurrent":104,"researchCurrent":0,"outlets":[67,70,73,75],"x":466,"y":473},{"uid":67,"slug":"lab","powerCurrent":187,"researchCurrent":0,"outlets":[71],"x":431,"y":489},{"uid":68,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":471,"y":446},{"uid":70,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":466,"y":489},{"uid":71,"slug":"research","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":413,"y":498},{"uid":73,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":451,"y":473},{"uid":75,"slug":"lab","powerCurrent":180,"researchCurrent":0,"outlets":[],"x":461,"y":512},{"uid":76,"slug":"lab","powerCurrent":143,"researchCurrent":0,"outlets":[],"x":448,"y":440},{"uid":77,"slug":"lab","powerCurrent":169,"researchCurrent":0,"outlets":[],"x":481,"y":406},{"uid":78,"slug":"lab","powerCurrent":148,"researchCurrent":0,"outlets":[],"x":533,"y":479},{"uid":79,"slug":"lab","powerCurrent":182,"researchCurrent":0,"outlets":[],"x":641,"y":196}]}',
-    '{"achievements":[],"currency":{"gold":0,"tokens":0,"refresh":0,"suns":0,"souls":0},"options":{"autoFill":false},"skillsCurrent":["skill-2-1","skill-2-2","skill-2-4","skill-2-3","skill-2-6","skill-2-5","skill-tier-2"],"skillsNext":[],"skillTier":2,"crawlers":[{"preference":1,"health":0.4593562500005972,"location":158},{"preference":5,"health":0.8301250000007385,"location":79},{"preference":5,"health":0.7856000000005192,"location":1},{"preference":5,"health":0.785212500000722,"location":1},{"preference":6,"health":1.0930281250004885,"location":3},{"preference":9,"health":1.0932281250004885,"location":79}],"stageState":[{"uid":1,"slug":"core","powerCurrent":318,"researchCurrent":0,"outlets":[3,13,34,36],"x":512,"y":287},{"uid":3,"slug":"stem","powerCurrent":93,"researchCurrent":0,"outlets":[5,30,40,79],"x":584,"y":275},{"uid":5,"slug":"stem","powerCurrent":85,"researchCurrent":0,"outlets":[7,15,19,142],"x":626,"y":274},{"uid":7,"slug":"stem","powerCurrent":60,"researchCurrent":0,"outlets":[24,28,83,158],"x":665,"y":274},{"uid":13,"slug":"stem","powerCurrent":75,"researchCurrent":0,"outlets":[46,47,62,86],"x":440,"y":259},{"uid":15,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":641,"y":271},{"uid":19,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":638,"y":283},{"uid":24,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":672,"y":260},{"uid":28,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":680,"y":277},{"uid":30,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":595,"y":266},{"uid":34,"slug":"battery","powerCurrent":120878,"researchCurrent":0,"outlets":[38],"x":534,"y":256},{"uid":36,"slug":"battery","powerCurrent":120356,"researchCurrent":0,"outlets":[48],"x":517,"y":249},{"uid":38,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[41],"x":540,"y":247},{"uid":40,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":584,"y":259},{"uid":41,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[],"x":546,"y":238},{"uid":46,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":441,"y":244},{"uid":47,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":450,"y":248},{"uid":48,"slug":"battery","powerCurrent":51,"researchCurrent":0,"outlets":[51],"x":518,"y":238},{"uid":51,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[],"x":520,"y":227},{"uid":62,"slug":"seedling","powerCurrent":49927,"researchCurrent":2297.8443574963953,"outlets":[],"x":376,"y":218},{"uid":79,"slug":"stem","powerCurrent":70,"researchCurrent":0,"outlets":[81,87,96,312],"x":606,"y":254},{"uid":81,"slug":"home","powerCurrent":87,"researchCurrent":0,"outlets":[],"x":609,"y":221},{"uid":83,"slug":"stem","powerCurrent":61,"researchCurrent":0,"outlets":[84,85,88,104],"x":696,"y":254},{"uid":84,"slug":"generator","powerCurrent":84,"researchCurrent":0,"outlets":[110,117,122],"x":736,"y":258},{"uid":85,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":706,"y":265},{"uid":86,"slug":"generator","powerCurrent":115,"researchCurrent":0,"outlets":[95,105,137],"x":421,"y":296},{"uid":87,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":610,"y":238},{"uid":88,"slug":"stem","powerCurrent":85,"researchCurrent":0,"outlets":[89,91,94,99],"x":714,"y":224},{"uid":89,"slug":"grove","powerCurrent":78,"researchCurrent":0,"outlets":[],"x":705,"y":195},{"uid":91,"slug":"generator","powerCurrent":85,"researchCurrent":0,"outlets":[102,108,124],"x":744,"y":197},{"uid":94,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":720,"y":211},{"uid":95,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":411,"y":314},{"uid":96,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":619,"y":248},{"uid":99,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":702,"y":215},{"uid":102,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":764,"y":193},{"uid":104,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":692,"y":239},{"uid":105,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":422,"y":316},{"uid":108,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":759,"y":183},{"uid":110,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":753,"y":270},{"uid":117,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":757,"y":260},{"uid":122,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":755,"y":249},{"uid":124,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":748,"y":177},{"uid":137,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":404,"y":307},{"uid":142,"slug":"grove","powerCurrent":95,"researchCurrent":0,"outlets":[379],"x":644,"y":249},{"uid":158,"slug":"stem","powerCurrent":66,"researchCurrent":0,"outlets":[159,171,172,215],"x":688,"y":301},{"uid":159,"slug":"generator","powerCurrent":66,"researchCurrent":0,"outlets":[175,186,204],"x":721,"y":325},{"uid":171,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":702,"y":297},{"uid":172,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":677,"y":311},{"uid":175,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":741,"y":326},{"uid":186,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":737,"y":337},{"uid":204,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":727,"y":344},{"uid":215,"slug":"home","powerCurrent":51,"researchCurrent":0,"outlets":[366,369,380],"x":686,"y":333},{"uid":312,"slug":"lab","powerCurrent":168,"researchCurrent":0,"outlets":[378],"x":601,"y":295},{"uid":366,"slug":"food","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":692,"y":347},{"uid":369,"slug":"food","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":680,"y":347},{"uid":378,"slug":"research","powerCurrent":85,"researchCurrent":0,"outlets":[],"x":609,"y":313},{"uid":379,"slug":"gen","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":649,"y":234},{"uid":380,"slug":"food","powerCurrent":30,"researchCurrent":0,"outlets":[],"x":670,"y":328}]}',
+    '{"achievements":[false],"scores":[0, 0],"options":{"autoFill":false},"skillsCurrent":[],"skillsNext":[],"skillTier":0,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":281,"researchCurrent":0,"outlets":[2],"x":621,"y":309},{"uid":2,"slug":"stem","powerCurrent":91,"researchCurrent":0,"outlets":[4,8],"x":549,"y":299},{"uid":4,"slug":"stem","powerCurrent":95,"researchCurrent":0,"outlets":[5,6],"x":511,"y":314},{"uid":5,"slug":"stem","powerCurrent":84,"researchCurrent":0,"outlets":[7],"x":477,"y":307},{"uid":6,"slug":"generator","powerCurrent":79,"researchCurrent":0,"outlets":[],"x":483,"y":347},{"uid":7,"slug":"generator","powerCurrent":78,"researchCurrent":0,"outlets":[],"x":437,"y":293},{"uid":8,"slug":"seedling","powerCurrent":80,"researchCurrent":0,"outlets":[],"x":520,"y":237}]}',
+    '{"achievements":[false],"scores":[0, 0],"options":{"autoFill":false},"skillsCurrent":[],"skillsNext":[],"skillTier":1,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":300,"researchCurrent":0,"outlets":[8,9,10,17],"x":589,"y":269},{"uid":8,"slug":"battery","powerCurrent":25,"researchCurrent":0,"outlets":[24],"x":625,"y":279},{"uid":9,"slug":"stem","powerCurrent":51,"researchCurrent":0,"outlets":[13,16,21,25],"x":582,"y":341},{"uid":10,"slug":"stem","powerCurrent":80,"researchCurrent":0,"outlets":[15,20,42,79],"x":601,"y":194},{"uid":13,"slug":"generator","powerCurrent":58,"researchCurrent":0,"outlets":[26,36,37],"x":616,"y":364},{"uid":15,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":615,"y":187},{"uid":16,"slug":"stem","powerCurrent":80,"researchCurrent":0,"outlets":[19,31,33,43],"x":567,"y":379},{"uid":17,"slug":"battery","powerCurrent":64,"researchCurrent":0,"outlets":[35],"x":552,"y":272},{"uid":19,"slug":"generator","powerCurrent":66,"researchCurrent":0,"outlets":[23,27,39],"x":591,"y":411},{"uid":20,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":616,"y":200},{"uid":21,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":576,"y":355},{"uid":23,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":611,"y":417},{"uid":24,"slug":"battery","powerCurrent":0,"researchCurrent":0,"outlets":[34],"x":636,"y":282},{"uid":25,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":567,"y":346},{"uid":26,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":636,"y":365},{"uid":27,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":606,"y":426},{"uid":31,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":553,"y":374},{"uid":33,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":554,"y":386},{"uid":34,"slug":"battery","powerCurrent":20,"researchCurrent":0,"outlets":[],"x":647,"y":284},{"uid":35,"slug":"battery","powerCurrent":0,"researchCurrent":0,"outlets":[38],"x":541,"y":273},{"uid":36,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":634,"y":374},{"uid":37,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":627,"y":381},{"uid":38,"slug":"battery","powerCurrent":20,"researchCurrent":0,"outlets":[],"x":530,"y":273},{"uid":39,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":596,"y":431},{"uid":42,"slug":"seedling","powerCurrent":4484,"researchCurrent":481.65477692913043,"outlets":[],"x":604,"y":119},{"uid":43,"slug":"stem","powerCurrent":78,"researchCurrent":0,"outlets":[45,46,50,52],"x":546,"y":411},{"uid":45,"slug":"stem","powerCurrent":48,"researchCurrent":0,"outlets":[47,51,53,78],"x":553,"y":445},{"uid":46,"slug":"stem","powerCurrent":50,"researchCurrent":0,"outlets":[57,58,59,77],"x":514,"y":426},{"uid":47,"slug":"generator","powerCurrent":75,"researchCurrent":0,"outlets":[54,56,60],"x":572,"y":481},{"uid":50,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":533,"y":404},{"uid":51,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":567,"y":451},{"uid":52,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":537,"y":423},{"uid":53,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":540,"y":454},{"uid":54,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":590,"y":491},{"uid":56,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":581,"y":499},{"uid":57,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":512,"y":441},{"uid":58,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":499,"y":427},{"uid":59,"slug":"stem","powerCurrent":93,"researchCurrent":0,"outlets":[62,63,68,76],"x":487,"y":447},{"uid":60,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":569,"y":501},{"uid":62,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":489,"y":462},{"uid":63,"slug":"stem","powerCurrent":104,"researchCurrent":0,"outlets":[67,70,73,75],"x":466,"y":473},{"uid":67,"slug":"lab","powerCurrent":187,"researchCurrent":0,"outlets":[71],"x":431,"y":489},{"uid":68,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":471,"y":446},{"uid":70,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":466,"y":489},{"uid":71,"slug":"research","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":413,"y":498},{"uid":73,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":451,"y":473},{"uid":75,"slug":"lab","powerCurrent":180,"researchCurrent":0,"outlets":[],"x":461,"y":512},{"uid":76,"slug":"lab","powerCurrent":143,"researchCurrent":0,"outlets":[],"x":448,"y":440},{"uid":77,"slug":"lab","powerCurrent":169,"researchCurrent":0,"outlets":[],"x":481,"y":406},{"uid":78,"slug":"lab","powerCurrent":148,"researchCurrent":0,"outlets":[],"x":533,"y":479},{"uid":79,"slug":"lab","powerCurrent":182,"researchCurrent":0,"outlets":[],"x":641,"y":196}]}',
+    '{"achievements":[true, true, true],"scores":[0, 0],"options":{"autoFill":false},"skillsCurrent":["skill-2-1","skill-2-2","skill-2-4","skill-2-3","skill-2-6","skill-2-5","skill-tier-2"],"skillsNext":[],"skillTier":2,"crawlers":[{"preference":1,"health":0.4593562500005972,"location":158},{"preference":5,"health":0.8301250000007385,"location":79},{"preference":5,"health":0.7856000000005192,"location":1},{"preference":5,"health":0.785212500000722,"location":1},{"preference":6,"health":1.0930281250004885,"location":3},{"preference":9,"health":1.0932281250004885,"location":79}],"stageState":[{"uid":1,"slug":"core","powerCurrent":318,"researchCurrent":0,"outlets":[3,13,34,36],"x":512,"y":287},{"uid":3,"slug":"stem","powerCurrent":93,"researchCurrent":0,"outlets":[5,30,40,79],"x":584,"y":275},{"uid":5,"slug":"stem","powerCurrent":85,"researchCurrent":0,"outlets":[7,15,19,142],"x":626,"y":274},{"uid":7,"slug":"stem","powerCurrent":60,"researchCurrent":0,"outlets":[24,28,83,158],"x":665,"y":274},{"uid":13,"slug":"stem","powerCurrent":75,"researchCurrent":0,"outlets":[46,47,62,86],"x":440,"y":259},{"uid":15,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":641,"y":271},{"uid":19,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":638,"y":283},{"uid":24,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":672,"y":260},{"uid":28,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":680,"y":277},{"uid":30,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":595,"y":266},{"uid":34,"slug":"battery","powerCurrent":120878,"researchCurrent":0,"outlets":[38],"x":534,"y":256},{"uid":36,"slug":"battery","powerCurrent":120356,"researchCurrent":0,"outlets":[48],"x":517,"y":249},{"uid":38,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[41],"x":540,"y":247},{"uid":40,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":584,"y":259},{"uid":41,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[],"x":546,"y":238},{"uid":46,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":441,"y":244},{"uid":47,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":450,"y":248},{"uid":48,"slug":"battery","powerCurrent":51,"researchCurrent":0,"outlets":[51],"x":518,"y":238},{"uid":51,"slug":"battery","powerCurrent":50,"researchCurrent":0,"outlets":[],"x":520,"y":227},{"uid":62,"slug":"seedling","powerCurrent":49927,"researchCurrent":2297.8443574963953,"outlets":[],"x":376,"y":218},{"uid":79,"slug":"stem","powerCurrent":70,"researchCurrent":0,"outlets":[81,87,96,312],"x":606,"y":254},{"uid":81,"slug":"home","powerCurrent":87,"researchCurrent":0,"outlets":[],"x":609,"y":221},{"uid":83,"slug":"stem","powerCurrent":61,"researchCurrent":0,"outlets":[84,85,88,104],"x":696,"y":254},{"uid":84,"slug":"generator","powerCurrent":84,"researchCurrent":0,"outlets":[110,117,122],"x":736,"y":258},{"uid":85,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":706,"y":265},{"uid":86,"slug":"generator","powerCurrent":115,"researchCurrent":0,"outlets":[95,105,137],"x":421,"y":296},{"uid":87,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":610,"y":238},{"uid":88,"slug":"stem","powerCurrent":85,"researchCurrent":0,"outlets":[89,91,94,99],"x":714,"y":224},{"uid":89,"slug":"grove","powerCurrent":78,"researchCurrent":0,"outlets":[],"x":705,"y":195},{"uid":91,"slug":"generator","powerCurrent":85,"researchCurrent":0,"outlets":[102,108,124],"x":744,"y":197},{"uid":94,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":720,"y":211},{"uid":95,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":411,"y":314},{"uid":96,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":619,"y":248},{"uid":99,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":702,"y":215},{"uid":102,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":764,"y":193},{"uid":104,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":692,"y":239},{"uid":105,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":422,"y":316},{"uid":108,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":759,"y":183},{"uid":110,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":753,"y":270},{"uid":117,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":757,"y":260},{"uid":122,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":755,"y":249},{"uid":124,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":748,"y":177},{"uid":137,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":404,"y":307},{"uid":142,"slug":"grove","powerCurrent":95,"researchCurrent":0,"outlets":[379],"x":644,"y":249},{"uid":158,"slug":"stem","powerCurrent":66,"researchCurrent":0,"outlets":[159,171,172,215],"x":688,"y":301},{"uid":159,"slug":"generator","powerCurrent":66,"researchCurrent":0,"outlets":[175,186,204],"x":721,"y":325},{"uid":171,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":702,"y":297},{"uid":172,"slug":"leaf","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":677,"y":311},{"uid":175,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":741,"y":326},{"uid":186,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":737,"y":337},{"uid":204,"slug":"burr","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":727,"y":344},{"uid":215,"slug":"home","powerCurrent":51,"researchCurrent":0,"outlets":[366,369,380],"x":686,"y":333},{"uid":312,"slug":"lab","powerCurrent":168,"researchCurrent":0,"outlets":[378],"x":601,"y":295},{"uid":366,"slug":"food","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":692,"y":347},{"uid":369,"slug":"food","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":680,"y":347},{"uid":378,"slug":"research","powerCurrent":85,"researchCurrent":0,"outlets":[],"x":609,"y":313},{"uid":379,"slug":"gen","powerCurrent":100,"researchCurrent":0,"outlets":[],"x":649,"y":234},{"uid":380,"slug":"food","powerCurrent":30,"researchCurrent":0,"outlets":[],"x":670,"y":328}]}',
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    '{"achievements":[false],"scores":[0, 0],"options":{"autoFill":false},"skillsCurrent":["skill-1","skill-2","skill-3","skill-6","skill-4","skill-5"],"skillsNext":[],"skillTier":0,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":150,"researchCurrent":0,"outlets":[],"x":600,"y":300}]}',
+    '{"achievements":[false],"scores":[0, 0],"options":{"autoFill":false},"skillsCurrent":["skill-2-1","skill-2-2","skill-2-3","skill-2-4","skill-2-5","skill-2-6"],"skillsNext":[],"skillTier":1,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":150,"researchCurrent":0,"outlets":[],"x":600,"y":300}]}',
+    '{"achievements":[false],"scores":[0, 0],"options":{"autoFill":false},"skillsCurrent":[],"skillsNext":[],"skillTier":2,"crawlers":[],"stageState":[{"uid":1,"slug":"core","powerCurrent":150,"researchCurrent":0,"outlets":[],"x":600,"y":300}]}',
 ];
 
 
@@ -66388,71 +66315,80 @@ const TierSaves = [
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SkillData", function() { return SkillData; });
 /* harmony import */ var _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../engine/Mechanics/CrawlerCommands/_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
-/* harmony import */ var _NodeData__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./NodeData */ "./src/data/NodeData.ts");
+/* harmony import */ var _ATSData__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ATSData */ "./src/data/ATSData.ts");
+/* harmony import */ var _NodeData__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./NodeData */ "./src/data/NodeData.ts");
+
 
 
 const SkillData = {
     skills: [
         {
             slug: 'skill-1',
-            title: 'Core Power',
+            title: 'Build your Core',
             description: 'Increases core power generation by x1.5',
             // description: 'Increases core power generation by x{1-value}',
             cost: 1,
             effects: [
                 { effectType: 'node', slug: 'core', key: 'powerGen', valueType: 'multiplicative', value: 1.5 },
+                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500 },
             ],
         },
         {
             slug: 'skill-2',
-            title: 'Core Links',
-            description: 'Increases Core Links by +1',
+            title: 'Second Path',
+            description: 'Increases Core Links by +1 and transfer rate by x1.5',
             // description: 'Increases Core Links by +{1-value}',
             cost: 1,
             effects: [
                 { effectType: 'node', slug: 'core', key: 'maxLinks', valueType: 'additive', value: 1 },
+                { effectType: 'node', slug: 'core', key: 'powerClump', valueType: 'multiplicative', value: 1.5 },
+                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500 },
             ],
         },
         {
             slug: 'skill-3',
-            title: 'Stem Efficiency',
+            title: 'Long Stemmed',
             description: 'Increases Stem count by +4 and transfer rate by x3',
             // description: 'Increases Stem count by +{1-value} and transfer rate by x{2-value}',
             cost: 2,
             effects: [
                 { effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: 4 },
                 { effectType: 'node', slug: 'stem', key: 'powerClump', valueType: 'multiplicative', value: 3 },
+                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500 },
             ],
         },
         {
             slug: 'skill-6',
             title: 'Leafy Goodness',
-            description: 'Stem Fruits reduce power drain of Stems by -0.05 each',
+            description: 'Stem Fruits reduce power drain of Stems down to 0',
             // description: 'Leaves reduce power drain of Stems by {1-value-amount}',
             cost: 2,
             effects: [
-                { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: { stat: '_PowerGen', type: 'additive', amount: -_NodeData__WEBPACK_IMPORTED_MODULE_1__["NodeBase"].powerDrain / 2 } },
+                { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: { stat: '_PowerGen', type: 'additive', amount: -_NodeData__WEBPACK_IMPORTED_MODULE_2__["NodeBase"].stemDrain / 2 } },
+                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500 },
             ],
         },
         {
             slug: 'skill-4',
-            title: 'Evolution Speed',
-            description: 'Increases Lab Research Generation by x5 but power drain increased by x2',
+            title: 'Rapid Evolution',
+            description: 'Increases Lab Research Generation by x5 but power drain increased by x1.5',
             // description: 'Increases Lab Research Generation by x{1-value} but power drain increased by x{2-value}',
             cost: 3,
             effects: [
                 { effectType: 'node', slug: 'lab', key: 'researchGen', valueType: 'multiplicative', value: 5 },
-                { effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'multiplicative', value: 2 },
+                { effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'multiplicative', value: 1.5 },
+                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500 },
             ],
         },
         {
             slug: 'skill-5',
-            title: 'Generator Count',
+            title: 'More Power',
             description: 'Increases number of generators by +2',
             // description: 'Increases number of generators by +{1-value}',
             cost: 3,
             effects: [
                 { effectType: 'node', slug: 'generator', key: 'maxCount', valueType: 'additive', value: 2 },
+                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500 },
             ],
         },
         {
@@ -66471,63 +66407,69 @@ const SkillData = {
             title: 'Crawlers',
             description: 'Unlock the "Home" Node which spawns Crawlers.',
             cost: 1,
+            skillRequirements: ['skill-tier-1'],
             effects: [
                 { effectType: 'buildable', valueType: 'additive', value: 'home' },
             ],
         },
         {
             slug: 'skill-2-2',
-            title: 'Crawler Smarts',
+            title: 'Librarians',
             description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can bring Lab Fruits to the Seedling produce research',
             cost: 2,
             skillRequirements: ['skill-2-1'],
             effects: [
                 { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].RESEARCH },
                 { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].RESEARCH },
+                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02 },
             ],
         },
         {
             slug: 'skill-2-3',
             title: 'Woodcutters',
             description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can use Grove Fruits to power the Seedling or low power nodes',
-            cost: 2,
+            cost: 3,
             skillRequirements: ['skill-2-1'],
             effects: [
                 { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].POWER },
                 { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].POWER },
+                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02 },
             ],
         },
         {
             slug: 'skill-2-4',
-            title: 'More Crawlers!',
+            title: 'Handmaidens',
             description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can over-consume Home Fruits to spawn more crawlers',
             cost: 3,
             skillRequirements: ['skill-2-1'],
             effects: [
                 { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].BREED },
                 { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].BREED },
+                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02 },
             ],
         },
         {
             slug: 'skill-2-5',
-            title: 'Worship',
+            title: 'Worshippers',
             description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can dance on the Core to charge its fruits',
-            cost: 3,
+            cost: 4,
             skillRequirements: ['skill-2-1'],
             effects: [
                 { effectType: 'crawler', key: 'commands', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].DANCE },
                 { effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].DANCE },
+                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02 },
             ],
         },
         {
             slug: 'skill-2-6',
-            title: 'Longevity.',
-            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers lose half as much health per second and move 20% faster.',
-            cost: 3,
+            title: 'Longevity',
+            description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers lose 50% less health per second and move 20% faster.',
+            cost: 4,
             skillRequirements: ['skill-2-1'],
             effects: [
-                { effectType: 'crawler', key: 'healthDrain', valueType: 'multiplicative', value: 0.5 },
+                { effectType: 'crawler', key: 'healthDrain', valueType: 'multiplicative', value: 0.75 },
                 { effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.2 },
+                { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02 },
             ],
         },
         {
@@ -66538,14 +66480,14 @@ const SkillData = {
             cost: 2,
             effects: [
                 { effectType: 'tier', valueType: 'replace', value: 2 },
-                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'multiplicative', value: 10 },
+                { effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 45000 },
                 { effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.4 },
             ],
         },
         {
             slug: 'placeholder',
             title: 'You win!',
-            description: 'You beat the game!  For now... more content will be coming soon!',
+            description: 'You beat the game!  For now... more content will be coming soon™!',
             cost: 99,
             effects: [],
         },
@@ -66575,14 +66517,55 @@ const SkillData = {
         40000,
         50000,
         65000,
-        80000,
-        100000,
+        80000, // 25 SP
     ],
     skillTiers: [
         [],
         ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6', 'skill-tier-1'],
         ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6', 'skill-tier-2'],
         ['placeholder'],
+    ],
+    achievements: [
+        {
+            slug: _ATSData__WEBPACK_IMPORTED_MODULE_1__["AchievementSlug"].PRESTIGE_10,
+            title: 'Eventuality',
+            description: 'Requirement: Launch Seedling 10 times<br>Reward: Seedling can be launched at 95% Power',
+            effects: [
+                { effectType: 'config', key: 'LAUNCH_PERCENT', valueType: 'replace', value: 0.95 },
+            ],
+        },
+        {
+            slug: _ATSData__WEBPACK_IMPORTED_MODULE_1__["AchievementSlug"].BLOB_15,
+            title: 'Smart Blobs',
+            description: 'Requirement: Have 15 Blobs at once<br>Reward: Blobs no longer path to dead ends',
+            effects: [
+                { effectType: 'config', key: 'BLOB_AI', valueType: 'replace', value: 1 },
+            ],
+        },
+        {
+            slug: _ATSData__WEBPACK_IMPORTED_MODULE_1__["AchievementSlug"].LAUNCH_DISTANCE_9,
+            title: 'Longest Stem',
+            description: 'Requirement: Launch your seedling from a distance of 9+ away from your Core<br>Reward: +1 Number of Stems',
+            effects: [
+                { effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: 1 },
+            ],
+        },
+        {
+            slug: _ATSData__WEBPACK_IMPORTED_MODULE_1__["AchievementSlug"].CRAWLERS_15,
+            title: 'Overpopulation',
+            description: 'Requirement: Have 15 Crawlers at once<br>Reward: Crawlers gain 10% more health when eating',
+            effects: [
+                { effectType: 'crawler-command', key: 'eatRatio', valueType: 'multiplicative', value: 1.1 },
+            ],
+        },
+        {
+            slug: _ATSData__WEBPACK_IMPORTED_MODULE_1__["AchievementSlug"].CRAWLERS_DIE_100,
+            title: 'Massacre',
+            description: 'Requirement: Kill 100 Crawlers in total<br>Reward: Crawlers move 10% faster',
+            effects: [
+                { effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.1 },
+            ],
+        },
     ],
 };
 
@@ -66601,6 +66584,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "EnglishStringData", function() { return EnglishStringData; });
 const EnglishStringData = {
     GAME_TITLE: 'Space Garden',
+    NEGATIVE_TIER_1: 'Each skill purchased increases seedling Max Power by 500',
+    NEGATIVE_TIER_2: 'Each skill purchased increases seedling power drain by 1.2/s',
+    NEGATIVE_TIER_3: 'Each skill purchased will do something terrifying!',
     UI_SKILLTREE_TITLE: 'Evolution Tree',
     UI_SKILLTREE_SUBTITLE_INACTIVE: 'Currently active skills',
     UI_SKILLTREE_SUBTITLE_ACTIVE: 'Your skills will be applied only on the next plant',
@@ -66977,14 +66963,15 @@ class BreedCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_2__["BaseComman
     }
     initialize() {
         this.isComplete = false;
+        this.fruit = null;
         this.state = 'walk';
         this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);
     }
     genPriority() {
         let numCrawlers = this.knowledge.crawlerCount;
         let numFood = this.knowledge.sortedNodes.food.filter(node => node.isHarvestable()).length;
-        if (numFood > 0 && numCrawlers < numFood) {
-            return 0.5 + numCrawlers / numFood * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
+        if (numFood > 0) {
+            return 0.65 + numCrawlers / numFood * 0.5 - (this.crawler.preference === this.type ? 0.15 : 0);
         }
         return 20;
     }
@@ -67077,7 +67064,7 @@ class DanceCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseComman
         let core = this.crawler.cLoc.findCore();
         if (!core)
             return 20;
-        return 0.25 + 0.85 * core.power.powerPercent - (this.crawler.preference === this.type ? 0.25 : 0);
+        return 0.2 + 0.85 * core.power.powerPercent - (this.crawler.preference === this.type ? 0.15 : 0);
     }
     update() {
         if (this.isComplete)
@@ -67163,6 +67150,7 @@ class EatCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["BaseCommand"
     }
     initialize() {
         this.isComplete = false;
+        this.fruit = null;
         this.state = 'walk';
         this.startPath(this.hasFood, this.eatHere, this.cancelPath, true);
     }
@@ -67269,7 +67257,7 @@ class IdleCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCommand
         this.color = _data_Colors__WEBPACK_IMPORTED_MODULE_1__["Colors"].Node.green;
     }
     genPriority() {
-        return 0.9 + Math.random() * 0.3;
+        return 1 + Math.random() * 0.15;
     }
     initialize() {
         this.isComplete = false;
@@ -67313,13 +67301,18 @@ class PowerCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseComman
             });
         };
         this.cancelPath = (prepath) => {
-            this.isComplete = true;
-            if (this.fruit) {
-                this.fruit.flagDestroy = true;
-                this.fruit = null;
+            if (prepath && this.fruit) {
+                this.deliverHere();
             }
-            this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].FRUSTRATED);
-            this.crawler.frustratedBy = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"][this.type];
+            else {
+                this.isComplete = true;
+                if (this.fruit) {
+                    this.fruit.flagDestroy = true;
+                    this.fruit = null;
+                }
+                this.crawler.setCommand(_BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"].FRUSTRATED);
+                this.crawler.frustratedBy = _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["CommandType"][this.type];
+            }
         };
         this.deliverHere = () => {
             this.state = 'deliver';
@@ -67333,6 +67326,7 @@ class PowerCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseComman
     }
     initialize() {
         this.isComplete = false;
+        this.fruit = null;
         this.state = 'walk';
         this.startPath(this.hasPower, this.harvestHere, this.cancelPath, true);
     }
@@ -67344,8 +67338,8 @@ class PowerCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseComman
         }
         let seedling = this.crawler.cLoc.findNode(node => node.slug === 'seedling');
         let closest = this.crawler.cLoc.findNode(node => node.power.powerPercent < 0.5);
-        return Math.min(seedling ? 0.25 + 0.75 * seedling.power.powerPercent : 20, closest ? 0.5 + closest.power.powerPercent : 20)
-            - (this.crawler.preference === this.type ? 0.25 : 0);
+        return Math.min(seedling ? 0.25 + 0.85 * seedling.power.powerPercent : 20, closest ? 0.5 + closest.power.powerPercent : 20)
+            - (this.crawler.preference === this.type ? 0.10 : 0);
     }
     update() {
         if (this.isComplete)
@@ -67362,7 +67356,7 @@ class PowerCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseComman
         return node.power.fruitType === 'gen' && node.hasHarvestableFruit();
     }
     isDeliverable(node) {
-        return node.slug !== 'stem' && node.power.powerPercent < 0.5 || node.slug === 'seedling';
+        return node.slug !== 'stem' && node.power.powerPercent < 0.7 || (node.slug === 'seedling' && node.power.powerPercent <= 1.2);
     }
 }
 
@@ -67416,6 +67410,7 @@ class ResearchCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCom
     }
     initialize() {
         this.isComplete = false;
+        this.fruit = null;
         this.state = 'walk';
         this.startPath(this.hasResearch, this.harvestHere, this.cancelPath, true);
     }
@@ -67427,7 +67422,7 @@ class ResearchCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_0__["BaseCom
             return 20;
         }
         let researchRatio = Math.min(1, numResearch / (fruitPerLab * numLabs));
-        return 1 - researchRatio * 0.5 - (this.crawler.preference === this.type ? 0.25 : 0);
+        return 1.15 - researchRatio * 0.5 - (this.crawler.preference === this.type ? 0.10 : 0);
     }
     update() {
         if (this.isComplete)
@@ -67557,12 +67552,12 @@ class WanderCommand extends _BaseCommand__WEBPACK_IMPORTED_MODULE_1__["BaseComma
         this.startPath(node => node !== start, this.finishCommand, this.cancelPath);
     }
     genPriority() {
-        return 0.9 + Math.random() * 0.3 - (this.crawler.preference === this.type ? 0.15 : 0);
+        return 1 + Math.random() * 0.15 - (this.crawler.preference === this.type ? 0.10 : 0);
     }
     update() {
         if (this.isComplete)
             return;
-        this.updatePath();
+        this.updatePath(0.5);
     }
 }
 
@@ -67603,7 +67598,10 @@ class BaseCommand {
         this.isComplete = false;
         this.return = false;
         this.grabFruit = (fruit, onComplete) => {
-            this.crawler.unclaimNode();
+            if (!fruit) {
+                this.crawler.setCommand(CommandType.FRUSTRATED);
+                return;
+            }
             fruit.flagUnlink = true;
             fruit.active = false;
             fruit.physics.fixed = true;
@@ -67616,6 +67614,9 @@ class BaseCommand {
                 if (!this.nextLoc.exists) {
                     this.isComplete = true;
                     this.crawler.setCommand(CommandType.FRUSTRATED);
+                    if (this.fruit)
+                        this.fruit = null;
+                    this.crawler.unclaimNode();
                     this.crawler.frustratedBy = 'Stepping ' + CommandType[this.type];
                     if (this.fruit) {
                         this.destroyFruit();
@@ -67643,6 +67644,7 @@ class BaseCommand {
     update() {
     }
     deliverFruit(onComplete) {
+        this.crawler.unclaimNode();
         let fruit = this.fruit;
         this.fruit = null;
         new _JMGE_JMTween__WEBPACK_IMPORTED_MODULE_0__["JMTween"](fruit.view.scale, 500).easing(_JMGE_JMTween__WEBPACK_IMPORTED_MODULE_0__["JMEasing"].Back.In).to({ x: 0, y: 0 }).start().onComplete(() => {
@@ -67681,8 +67683,8 @@ class BaseCommand {
         this.magnitude = Math.sqrt(dX * dX + dY * dY) / 50;
         this.angle = Math.atan2(dY, dX);
     }
-    updateIdle(onComplete) {
-        this.magnitude += this.crawler.speed / this.crawler.cLoc.view.radius * 50 * (this.return ? -1 : 1);
+    updateIdle(onComplete, speed = 1) {
+        this.magnitude += this.crawler.speed * speed / this.crawler.cLoc.view.radius * 50 * (this.return ? -1 : 1);
         if (this.magnitude > this.targetMagnitude) {
             this.magnitude = this.targetMagnitude;
             this.return = true;
@@ -67701,6 +67703,9 @@ class BaseCommand {
         else {
             let path = this.crawler.findPath(condition);
             if (!path || path.length === 0) {
+                if (this.fruit)
+                    this.fruit = null;
+                this.crawler.unclaimNode();
                 onCancel(true);
             }
             else {
@@ -67715,12 +67720,12 @@ class BaseCommand {
             }
         }
     }
-    updatePath() {
+    updatePath(speed = 1) {
         if (!this.nextLoc.exists) {
             this.crawler.killMe();
             return;
         }
-        this.magnitude += this.crawler.speed;
+        this.magnitude += this.crawler.speed * speed;
         if (this.magnitude > 1) {
             this.magnitude = 0;
             this.crawler.cLoc = this.nextLoc;
@@ -67754,6 +67759,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_PlantNode__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/PlantNode */ "./src/engine/nodes/PlantNode.ts");
 /* harmony import */ var _Parts_CrawlerModel__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Parts/CrawlerModel */ "./src/engine/Mechanics/Parts/CrawlerModel.ts");
 /* harmony import */ var _GameKnowledge__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./GameKnowledge */ "./src/engine/Mechanics/GameKnowledge.ts");
+/* harmony import */ var _services_GameEvents__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../services/GameEvents */ "./src/services/GameEvents.ts");
+
 
 
 
@@ -67762,7 +67769,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 class GameController {
-    constructor(container, nodeManager) {
+    constructor(container, nodeManager, scores) {
         this.container = container;
         this.nodeManager = nodeManager;
         this.onNodeAdded = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
@@ -67772,6 +67779,14 @@ class GameController {
         this.onCrawlerRemoved = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"]();
         this.nodes = [];
         this.crawlers = [];
+        this.rBlobAI = [
+            (origin, target) => lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin))),
+            (origin, target) => lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling')))),
+        ];
+        this.fBlobAI = [
+            (origin, target) => lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin))),
+            (origin, target) => lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.canSpawnFruit())))),
+        ];
         this.removeNode = (node) => {
             lodash__WEBPACK_IMPORTED_MODULE_0__["pull"](this.nodes, node);
             this.crawlers.forEach(crawler => {
@@ -67831,13 +67846,14 @@ class GameController {
                 this.killCrawler(crawler);
                 return;
             }
-            else if (crawler.health > 1.5) {
+            else if (crawler.health > crawler.config.breedThreshold) {
                 crawler.health /= 2;
                 this.addCrawler(lodash__WEBPACK_IMPORTED_MODULE_0__["defaults"]({ health: crawler.health }, this.nodeManager.crawlerConfig), crawler.cLoc);
             }
             crawler.update();
         };
         this.killCrawler = (crawler) => {
+            crawler.destroy();
             lodash__WEBPACK_IMPORTED_MODULE_0__["pull"](this.crawlers, crawler);
             crawler.view.animateDie(() => {
                 this.container.removeCrawler(crawler.view);
@@ -67857,7 +67873,9 @@ class GameController {
                 }
             }
             else if (block.type === 'research') {
+                _services_GameEvents__WEBPACK_IMPORTED_MODULE_7__["GameEvents"].ACTIVITY_LOG.publish({ slug: 'BLOB', data: true });
                 link.zip(origin, _data_Colors__WEBPACK_IMPORTED_MODULE_3__["Colors"].Node.purple, block.fade, () => {
+                    _services_GameEvents__WEBPACK_IMPORTED_MODULE_7__["GameEvents"].ACTIVITY_LOG.publish({ slug: 'BLOB', data: false });
                     if (target.slug === 'seedling') {
                         target.receiveResearch(block.amount);
                     }
@@ -67865,8 +67883,7 @@ class GameController {
                         block.fade--;
                         if (block.fade <= 0)
                             return;
-                        let target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
-                        // let target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling'))));
+                        let target2 = this.rBlobAI[_Config__WEBPACK_IMPORTED_MODULE_2__["Config"].NODE.BLOB_AI](origin, target);
                         if (!target2)
                             target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active)));
                         if (target2) {
@@ -67876,7 +67893,9 @@ class GameController {
                 });
             }
             else if (block.type === 'fruit') {
+                _services_GameEvents__WEBPACK_IMPORTED_MODULE_7__["GameEvents"].ACTIVITY_LOG.publish({ slug: 'BLOB', data: true });
                 link.zip(origin, _data_Colors__WEBPACK_IMPORTED_MODULE_3__["Colors"].Node.orange, block.fade, () => {
+                    _services_GameEvents__WEBPACK_IMPORTED_MODULE_7__["GameEvents"].ACTIVITY_LOG.publish({ slug: 'BLOB', data: false });
                     if (target.canSpawnFruit() && Math.random() < _Config__WEBPACK_IMPORTED_MODULE_2__["Config"].NODE.FRUIT_APPLY) {
                         target.receiveFruitPower(block.amount);
                         // add research
@@ -67885,7 +67904,7 @@ class GameController {
                         block.fade--;
                         if (block.fade <= 0)
                             return;
-                        let target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active && outlet !== origin)));
+                        let target2 = this.fBlobAI[_Config__WEBPACK_IMPORTED_MODULE_2__["Config"].NODE.BLOB_AI](origin, target);
                         if (!target2)
                             target2 = lodash__WEBPACK_IMPORTED_MODULE_0__["sample"](target.outlets.filter(outlet => (outlet.active)));
                         if (target2) {
@@ -67898,6 +67917,7 @@ class GameController {
         this.knowledge = new _GameKnowledge__WEBPACK_IMPORTED_MODULE_6__["GameKnowledge"](this, nodeManager);
     }
     destroy() {
+        this.knowledge.destroy();
     }
     addNewNode(config) {
         let node = new _nodes_PlantNode__WEBPACK_IMPORTED_MODULE_4__["PlantNode"](config, this.transferPower);
@@ -67923,7 +67943,24 @@ class GameController {
     linkNodes(origin, target) {
         origin.linkNode(target);
         target.linkNode(origin, true);
+        // origin.distanceCore = target.distanceCore + 1;
+        this.setCoreDistance();
         return this.container.addLink(origin, target);
+    }
+    setCoreDistance() {
+        let core = this.nodes.find(node => node.slug === 'core');
+        let open = [core];
+        let closed = [];
+        while (open.length > 0) {
+            let current = open.shift();
+            current.outlets.forEach(outlet => {
+                if (!closed.includes(outlet) && !open.includes(outlet)) {
+                    outlet.distanceCore = current.distanceCore + 1;
+                    open.push(outlet);
+                }
+            });
+            closed.push(current);
+        }
     }
     onTick(ticks) {
         this.crawlers.forEach(this.updateCrawler);
@@ -67934,7 +67971,7 @@ class GameController {
     }
     saveNodes() {
         let saves = this.nodes.filter(node => (node.slug === 'core' || node.outlets.length > 0)).map(node => {
-            let outlets = node.outlets.map(node2 => node2.uid);
+            let outlets = this.container.links.filter(l => l.origin === node).map(l => l.target.uid);
             return {
                 uid: node.uid,
                 slug: node.slug,
@@ -67960,7 +67997,6 @@ class GameController {
     loadSaves(saves, crawlerSaves) {
         let nodes = saves.map(save => this.importSave(save));
         this.nodes = nodes;
-        console.log('LOAD_SAVE', saves.map(save => save.slug));
         nodes.forEach((node, i) => {
             this.container.addNode(node);
             this.onNodeAdded.publish(node);
@@ -67979,6 +68015,7 @@ class GameController {
         node.power.researchCurrent = save.researchCurrent;
         node.uid = save.uid;
         node.view.position.set(save.x, save.y);
+        node.view.setIntensity(node.power.powerPercent, true);
         _nodes_PlantNode__WEBPACK_IMPORTED_MODULE_4__["PlantNode"].addUid(save.uid);
         return node;
     }
@@ -67999,11 +68036,29 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GameKnowledge", function() { return GameKnowledge; });
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _services_Debug__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../services/_Debug */ "./src/services/_Debug.ts");
+/* harmony import */ var _services_SaveManager__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../services/SaveManager */ "./src/services/SaveManager.ts");
+/* harmony import */ var _data_ATSData__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../data/ATSData */ "./src/data/ATSData.ts");
+/* harmony import */ var _services_GameEvents__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../services/GameEvents */ "./src/services/GameEvents.ts");
+/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../data/SkillData */ "./src/data/SkillData.ts");
+/* harmony import */ var _components_domui_InfoPopup__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../components/domui/InfoPopup */ "./src/components/domui/InfoPopup.ts");
+/* harmony import */ var _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../JMGE/events/JMEventListener */ "./src/JMGE/events/JMEventListener.ts");
+
+
+
+
+
+
+
 
 class GameKnowledge {
     constructor(gameC, manager) {
         this.gameC = gameC;
         this.manager = manager;
+        this.onAchievementUpdate = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_7__["JMEventListener"]();
+        this.nodes = [];
+        this.normalNodes = [];
+        this.fruitNodes = [];
         this.sortedNodes = {
             'home': [],
             'lab': [],
@@ -68024,17 +68079,45 @@ class GameKnowledge {
             'leaf': [],
         };
         this.crawlerCount = 0;
+        this.totalGen = 0;
+        this.totalDrain = 0;
+        this.totalPower = 0;
+        this.totalMaxPower = 0;
+        this.seedlingPower = 0;
+        this.seedlingMaxPower = 0;
+        this.frames = 0;
+        this.fps = 0;
+        this.numBlobs = 0;
         this.crawlerAdded = (crawler) => {
             this.crawlerCount++;
+            this.checkCrawler15();
         };
         this.crawlerRemoved = (crawler) => {
             this.crawlerCount--;
+            this.extrinsic.scores[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["ScoreType"].CRAWLERS_DEAD]++;
+            this.checkCrawlerDie100();
         };
         this.nodeAdded = (node) => {
             this.sortedNodes[node.slug].push(node);
+            this.nodes.push(node);
+            if (node.isFruit()) {
+                this.fruitNodes.push(node);
+            }
+            else {
+                this.normalNodes.push(node);
+            }
+            this.checkLaunch9Placement();
         };
         this.nodeRemoved = (node) => {
             lodash__WEBPACK_IMPORTED_MODULE_0___default.a.pull(this.sortedNodes[node.slug], node);
+            lodash__WEBPACK_IMPORTED_MODULE_0___default.a.pull(this.nodes, node);
+            if (node.isFruit()) {
+                lodash__WEBPACK_IMPORTED_MODULE_0___default.a.pull(this.fruitNodes, node);
+            }
+            else {
+                lodash__WEBPACK_IMPORTED_MODULE_0___default.a.pull(this.normalNodes, node);
+            }
+            this.checkLaunch9Placement();
         };
         this.nodeClaimed = (e) => {
             // if (e.claim) {
@@ -68043,34 +68126,333 @@ class GameKnowledge {
             //   this.nodeClaims[e.node.slug]--;
             // }
         };
+        this.onActivityEvent = (e) => {
+            switch (e.slug) {
+                case 'PRESTIGE':
+                    this.extrinsic.scores[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["ScoreType"].PRESTIGES] = (this.extrinsic.scores[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["ScoreType"].PRESTIGES] + 1) || 1;
+                    this.checkP10();
+                    this.checkLaunch9Launch();
+                    break;
+                case 'BLOB':
+                    if (e.data) {
+                        this.numBlobs++;
+                    }
+                    else {
+                        this.numBlobs--;
+                    }
+                    this.checkBlob15();
+                    break;
+            }
+        };
+        this.checkP10 = () => {
+            if (!this.extrinsic.achievements[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].PRESTIGE_10]) {
+                if (this.extrinsic.scores[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["ScoreType"].PRESTIGES] >= 10) {
+                    this.achieveAchievement(_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].PRESTIGE_10);
+                }
+                else {
+                    let count = `Current Launches: ${this.extrinsic.scores[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["ScoreType"].PRESTIGES]} / 10`;
+                    this.onAchievementUpdate.publish({ slug: _data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].PRESTIGE_10, count });
+                }
+            }
+        };
+        this.checkBlob15 = () => {
+            if (!this.extrinsic.achievements[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].BLOB_15]) {
+                if (this.numBlobs >= 15) {
+                    this.achieveAchievement(_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].BLOB_15);
+                }
+                else {
+                    let count = `Current Blobs: ${this.numBlobs} / 15`;
+                    this.onAchievementUpdate.publish({ slug: _data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].BLOB_15, count });
+                }
+            }
+        };
+        this.checkCrawler15 = () => {
+            if (!this.extrinsic.achievements[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].CRAWLERS_15]) {
+                if (this.crawlerCount >= 15) {
+                    this.achieveAchievement(_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].CRAWLERS_15);
+                }
+                else {
+                    let count = `Current Crawlers: ${this.crawlerCount} / 15`;
+                    this.onAchievementUpdate.publish({ slug: _data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].CRAWLERS_15, count });
+                }
+            }
+        };
+        this.checkCrawlerDie100 = () => {
+            if (!this.extrinsic.achievements[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].CRAWLERS_DIE_100]) {
+                if (this.extrinsic.scores[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["ScoreType"].CRAWLERS_DEAD] >= 100) {
+                    this.achieveAchievement(_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].CRAWLERS_DIE_100);
+                }
+                else {
+                    let count = `Current Deaths: ${this.extrinsic.scores[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["ScoreType"].CRAWLERS_DEAD]} / 100`;
+                    this.onAchievementUpdate.publish({ slug: _data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].CRAWLERS_DIE_100, count });
+                }
+            }
+        };
+        this.checkLaunch9Placement = () => {
+            if (!this.extrinsic.achievements[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].LAUNCH_DISTANCE_9]) {
+                let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
+                if (seedling) {
+                    this.onAchievementUpdate.publish({ slug: _data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].LAUNCH_DISTANCE_9, count: `Current Distance: ${seedling.distanceCore} / 9` });
+                }
+                else {
+                    this.onAchievementUpdate.publish({ slug: _data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].LAUNCH_DISTANCE_9, count: ' ' });
+                }
+            }
+        };
+        this.checkLaunch9Launch = () => {
+            if (!this.extrinsic.achievements[_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].LAUNCH_DISTANCE_9]) {
+                let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
+                if (seedling.distanceCore >= 9) {
+                    this.achieveAchievement(_data_ATSData__WEBPACK_IMPORTED_MODULE_3__["AchievementSlug"].LAUNCH_DISTANCE_9);
+                }
+            }
+        };
         gameC.onCrawlerAdded.addListener(this.crawlerAdded);
         gameC.onCrawlerRemoved.addListener(this.crawlerRemoved);
         gameC.onNodeAdded.addListener(this.nodeAdded);
         gameC.onNodeRemoved.addListener(this.nodeRemoved);
         gameC.onNodeClaimed.addListener(this.nodeClaimed);
+        _services_GameEvents__WEBPACK_IMPORTED_MODULE_4__["GameEvents"].ACTIVITY_LOG.addListener(this.onActivityEvent);
+        this.startFpsCounter();
+        this.extrinsic = _services_SaveManager__WEBPACK_IMPORTED_MODULE_2__["SaveManager"].getExtrinsic();
+    }
+    destroy() {
+        window.clearTimeout(this.fpsCounter);
+        _services_GameEvents__WEBPACK_IMPORTED_MODULE_4__["GameEvents"].ACTIVITY_LOG.removeListener(this.onActivityEvent);
+    }
+    initializeAchievements() {
+        this.checkP10();
+        this.checkBlob15();
+        this.checkLaunch9Placement();
+        this.checkCrawler15();
+        this.checkCrawlerDie100();
+    }
+    update() {
+        this.seedlingMaxPower = 0;
+        let gen = 0;
+        let drain = 0;
+        let power = 0;
+        let maxPower = 0;
+        this.normalNodes.forEach(node => {
+            if (node.slug === 'seedling') {
+                this.seedlingPower = node.power.powerCurrent;
+                this.seedlingMaxPower = node.config.powerMax;
+            }
+            else {
+                power += node.power.powerCurrent;
+                maxPower += node.config.powerMax;
+            }
+            if (node.power.powerGen > 0) {
+                gen += node.power.powerGen;
+            }
+            else {
+                drain -= node.power.powerGen;
+            }
+        });
+        this.totalPower = power;
+        this.totalGen = gen;
+        this.totalDrain = drain;
+        this.totalMaxPower = maxPower;
+        this.frames++;
     }
     numFruitsPerNode(slug) {
         return this.manager.getNodeConfig(slug).maxFruits;
     }
     toString() {
-        let m = `<div class='node-title'>Knowledge</div>`;
-        m += `<br>Crawlers: ${this.crawlerCount}`;
-        let keys = Object.keys(this.sortedNodes);
-        keys.forEach(key => {
-            let value = this.sortedNodes[key].length;
-            if (value !== 0) {
-                m += `<br>${key}: ${value}`;
-            }
-        });
-        m += `<br>Claimed`;
-        keys = Object.keys(this.sortedNodes);
-        keys.forEach(key => {
-            let value = this.sortedNodes[key].filter(node => node.claimedBy).length;
-            if (value !== 0) {
-                m += `<br>${key}: ${value}`;
-            }
-        });
+        let m = `<div class='node-title'>Plant Overview</div>`;
+        m += `<br>Power: ${Math.round(this.totalPower)} / ${Math.round(this.totalMaxPower)}`;
+        if (this.seedlingMaxPower) {
+            m += `<br>Seedling Power: ${Math.round(this.seedlingPower)} / ${Math.round(this.seedlingMaxPower)}`;
+        }
+        m += `<br>Gen: ${(this.totalGen * 60).toFixed(0)}/s, Drain: ${(this.totalDrain * 60).toFixed(0)}/s`;
+        m += `<br><br>Crawlers: ${this.crawlerCount}`;
+        m += `<br>Nodes: ${this.normalNodes.length}`;
+        if (_services_Debug__WEBPACK_IMPORTED_MODULE_1__["GOD_MODE"]) {
+            m += '<br> --- <br> DEV STUFF <br><br>';
+            let keys = Object.keys(this.sortedNodes);
+            keys.forEach(key => {
+                let value = this.sortedNodes[key].length;
+                if (value !== 0) {
+                    m += `<br>${key}: ${value}`;
+                }
+            });
+            m += `<br>FPS: ${this.fps}`;
+            // if (this.crawlerCount > 0) {
+            //   m += `<br>Claimed`;
+            //   keys = Object.keys(this.sortedNodes);
+            //   keys.forEach(key => {
+            //     let value = this.sortedNodes[key as NodeSlug].filter(node => node.claimedBy).length;
+            //     if (value !== 0) {
+            //       m += `<br>${key}: ${value}`;
+            //     }
+            //   });
+            // }
+        }
         return m;
+    }
+    startFpsCounter() {
+        this.fpsCounter = window.setTimeout(() => {
+            this.fps = this.frames;
+            this.frames = 0;
+            this.startFpsCounter();
+        }, 1000);
+    }
+    achieveAchievement(slug) {
+        if (!this.extrinsic.achievements[slug]) {
+            this.extrinsic.achievements[slug] = true;
+            let achievement = _data_SkillData__WEBPACK_IMPORTED_MODULE_5__["SkillData"].achievements.find(data => data.slug === slug);
+            this.manager.applySkill(achievement);
+            new _components_domui_InfoPopup__WEBPACK_IMPORTED_MODULE_6__["InfoPopup"](`Achievement Unlocked: ${achievement.title}`);
+            this.onAchievementUpdate.publish({ slug, unlocked: true });
+        }
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/engine/Mechanics/NodeManager.ts":
+/*!*********************************************!*\
+  !*** ./src/engine/Mechanics/NodeManager.ts ***!
+  \*********************************************/
+/*! exports provided: NodeManager */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "NodeManager", function() { return NodeManager; });
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _Parts_CrawlerModel__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Parts/CrawlerModel */ "./src/engine/Mechanics/Parts/CrawlerModel.ts");
+/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../data/SkillData */ "./src/data/SkillData.ts");
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../Config */ "./src/Config.ts");
+
+
+
+
+class NodeManager {
+    constructor(data, skills, skillTier) {
+        this.skillTier = skillTier;
+        this.buildableNodes = [
+            'core',
+            'stem',
+            'generator',
+            'grove',
+            'lab',
+            'seedling',
+        ];
+        this.applySkill = (skill) => {
+            skill.effects.forEach(effect => {
+                if (effect.effectType === 'node') {
+                    let node = this.getNodeConfig(effect.slug);
+                    if (effect.key === 'outletEffect') {
+                        if (effect.valueType === 'additive') {
+                            node.outletEffects = node.outletEffects || [];
+                            node.outletEffects.push(lodash__WEBPACK_IMPORTED_MODULE_0__["clone"](effect.value));
+                        }
+                        else if (effect.valueType === 'replace') {
+                            node.outletEffects = [lodash__WEBPACK_IMPORTED_MODULE_0__["clone"](effect.value)];
+                        }
+                    }
+                    else {
+                        if (effect.valueType === 'additive') {
+                            node[effect.key] += effect.value;
+                        }
+                        else if (effect.valueType === 'multiplicative') {
+                            node[effect.key] *= effect.value;
+                        }
+                        else if (effect.valueType === 'replace') {
+                            node[effect.key] = effect.value;
+                        }
+                    }
+                }
+                else if (effect.effectType === 'crawler') {
+                    let config = this.crawlerConfig;
+                    if (effect.key === 'commands' || effect.key === 'preferenceList') {
+                        if (effect.valueType === 'additive') {
+                            config[effect.key].push(effect.value);
+                        }
+                    }
+                    else {
+                        if (effect.valueType === 'additive') {
+                            config[effect.key] += effect.value;
+                        }
+                        else if (effect.valueType === 'multiplicative') {
+                            config[effect.key] *= effect.value;
+                        }
+                        else if (effect.valueType === 'replace') {
+                            config[effect.key] = effect.value;
+                        }
+                    }
+                }
+                else if (effect.effectType === 'crawler-command') {
+                    let config = this.crawlerConfig.commandConfig;
+                    if (effect.valueType === 'additive') {
+                        config[effect.key] += effect.value;
+                    }
+                    else if (effect.valueType === 'multiplicative') {
+                        config[effect.key] *= effect.value;
+                    }
+                    else if (effect.valueType === 'replace') {
+                        config[effect.key] = effect.value;
+                    }
+                }
+                else if (effect.effectType === 'buildable') {
+                    if (effect.valueType === 'additive') {
+                        this.buildableNodes.push(effect.value);
+                    }
+                }
+                else if (effect.effectType === 'config') {
+                    if (effect.valueType === 'additive') {
+                        _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].NODE[effect.key] += effect.value;
+                    }
+                    else if (effect.valueType === 'multiplicative') {
+                        _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].NODE[effect.key] *= effect.value;
+                    }
+                    else if (effect.valueType === 'replace') {
+                        _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].NODE[effect.key] = effect.value;
+                    }
+                }
+            });
+        };
+        this.data = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](data);
+        this.skills = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](skills);
+        this.crawlerConfig = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](_Parts_CrawlerModel__WEBPACK_IMPORTED_MODULE_1__["dCrawler"]);
+    }
+    destroy() {
+    }
+    getNodeConfig(slug) {
+        let raw = this.data.find(config => config.slug === slug);
+        return raw;
+    }
+    extractTier(slugs, currentTier) {
+        let tierSkills = this.getSkillsBySlugs(slugs).filter(skill => skill.effects.find(effect => effect.effectType === 'tier'));
+        let max = Math.max(...tierSkills.map(skill => skill.effects.find(effect => effect.effectType === 'tier').value), currentTier);
+        return max;
+    }
+    getSkillAlways(tier) {
+        let m = [];
+        for (let i = 0; i <= tier; i++) {
+            m = m.concat(_data_SkillData__WEBPACK_IMPORTED_MODULE_2__["SkillData"].skillTiers[i]);
+        }
+        return m;
+    }
+    getSkillsBySlugs(slugs) {
+        return slugs.map(slug => this.skills.find(skill => skill.slug === slug));
+    }
+    applyAchievements(achievements) {
+        achievements.forEach((state, slug) => {
+            if (state) {
+                let data = _data_SkillData__WEBPACK_IMPORTED_MODULE_2__["SkillData"].achievements.find(a => a.slug === slug);
+                this.applySkill(data);
+            }
+        });
+    }
+    applySkills(slugs) {
+        let skills = this.getSkillsBySlugs(slugs);
+        let always = this.getSkillsBySlugs(this.getSkillAlways(this.skillTier));
+        let allSkills = lodash__WEBPACK_IMPORTED_MODULE_0__["uniq"](skills.concat(always));
+        allSkills.forEach(this.applySkill);
     }
 }
 
@@ -68081,12 +68463,13 @@ class GameKnowledge {
 /*!****************************************************!*\
   !*** ./src/engine/Mechanics/Parts/CrawlerModel.ts ***!
   \****************************************************/
-/*! exports provided: CrawlerModel */
+/*! exports provided: CrawlerModel, dCrawler */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CrawlerModel", function() { return CrawlerModel; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dCrawler", function() { return dCrawler; });
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _CrawlerCommands_IdleCommand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../CrawlerCommands/IdleCommand */ "./src/engine/Mechanics/CrawlerCommands/IdleCommand.ts");
@@ -68138,18 +68521,28 @@ class CrawlerModel {
             this.health = -100;
         };
         this.claimNode = (node) => {
-            this.claimedNode = node;
-            this.claimedNode.claimedBy = this;
-            this.onNodeClaimed.publish({ claim: true, node, claimer: this });
+            if (node && !this.claimedNode && !node.claimedBy) {
+                console.log(`${node.slug} ${node.uid} claimed by ${this.uid}`);
+                this.claimedNode = node;
+                this.claimedNode.claimedBy = this;
+                this.onNodeClaimed.publish({ claim: true, node, claimer: this });
+            }
+            else {
+                console.log(`Claim unsuccessful. ${node ? node.slug + ' ' + node.uid.toString() : 'null'} not claimed by ${this.uid} (${!!this.claimedNode}, ${!!node.claimedBy})`);
+            }
         };
         this.unclaimNode = () => {
             if (this.claimedNode) {
                 this.onNodeClaimed.publish({ claim: false, node: this.claimedNode, claimer: this });
+                if (this.claimedNode.outlets.length === 0 && this.claimedNode.fruits.length === 0) {
+                    this.claimedNode.flagDestroy = true;
+                }
+                console.log(`${this.claimedNode.slug + ' ' + this.claimedNode.uid.toString()} unclaimed by ${this.uid}`);
                 this.claimedNode.claimedBy = null;
                 this.claimedNode = null;
             }
         };
-        lodash__WEBPACK_IMPORTED_MODULE_0___default.a.defaults(config, dCrawler);
+        this.uid = CrawlerModel.generateUid();
         this.health = config.health;
         this.healthDrain = config.healthDrain;
         this.speed = config.speed;
@@ -68161,8 +68554,19 @@ class CrawlerModel {
         });
         this.setCommand(_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].IDLE);
     }
+    static generateUid() {
+        CrawlerModel.cUid++;
+        return this.cUid;
+    }
+    static addUid(uid) {
+        CrawlerModel.cUid = Math.max(uid, CrawlerModel.cUid);
+    }
+    static resetUid() {
+        CrawlerModel.cUid = 0;
+    }
     destroy() {
         this.unclaimNode();
+        console.log(`Crawler ${this.uid} destroyed`);
     }
     selectNextCommand() {
         this.currentCommand = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.sortBy(this.commandList, command => command.genPriority())[0];
@@ -68212,8 +68616,10 @@ CrawlerModel.commandMap = {
     [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].STARVING]: _CrawlerCommands_StarvingCommand__WEBPACK_IMPORTED_MODULE_13__["StarvingCommand"],
     [_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_4__["CommandType"].BREED]: _CrawlerCommands_BreedCommand__WEBPACK_IMPORTED_MODULE_12__["BreedCommand"],
 };
+CrawlerModel.cUid = 0;
 const dCrawler = {
     health: 1,
+    breedThreshold: 1.25,
     healthDrain: 0.0002,
     speed: 0.01,
     commands: [
@@ -68235,16 +68641,15 @@ const dCrawler = {
         // CommandType.POWER,
     ],
     commandConfig: {
-        breedHealthMin: 0.9,
-        wanderRepeat: 3,
+        wanderRepeat: 2,
         idleRepeat: 3,
         frustratedRepeat: 3,
         fruitSpeed: 0.95,
-        researchRatio: 1,
+        researchRatio: 0.5,
+        eatRatio: 0.0065,
         powerRatio: 2,
-        eatRatio: 0.0075,
-        danceGen: 5,
-        danceTicks: 500,
+        danceGen: 0.25,
+        danceTicks: 420,
     },
 };
 
@@ -68328,6 +68733,8 @@ class PlantNode {
         this.flagUnlink = false;
         this.flagDestroy = false;
         this.flagCallOnRemove = true;
+        // public distanceSeedling: number = 0;
+        this.distanceCore = 0;
         this.receiveFruitPower = (amount) => {
             if (this.fruits.length < this.config.maxFruits) {
                 this.power.fruitSpawn += amount;
@@ -68383,6 +68790,7 @@ class PlantNode {
     destroy() {
         this.exists = false;
         this.view.destroy();
+        console.log(`${this.slug} ${this.uid} destroyed`);
     }
     isFruit() {
         return this.config.type === 'fruit';
@@ -68518,21 +68926,22 @@ class PlantNode {
                 m += `<br>Research Points: ${Math.round(this.power.researchCurrent)}`;
             }
             if (this.power.powerGen > 0) {
-                m += `<br>Power Gen: ${this.power.powerGen.toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+                m += `<br>Power Gen: ${(this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
             }
             else {
-                m += `<br>Power Drain: ${-this.power.powerGen.toFixed(2)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay).toFixed(2)}/s)`;
+                m += `<br>Power Drain: ${(-this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
             }
             // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
             if (this.power.researchGen > 0) {
-                m += `<br>Research Gen: ${this.power.researchGen.toFixed(2)}`;
+                m += `<br>Research Gen: ${(this.power.researchGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
             }
             if (this.power.fruitGen > 0) {
-                m += `<br>Fruit Gen: ${this.power.fruitGen.toFixed(2)}`;
+                m += `<br>Fruit Gen: ${(this.power.fruitGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
             }
             if (this.config.maxLinks > 1) {
                 m += `<br>Connections: ${this.outlets.length} / ${this.config.maxLinks}`;
             }
+            // m += `<br>Distance to Core: ${this.distanceCore}`;
             // if (this.maxFruits > 0) {
             //   m += `<br>Fruits: ${this.fruits.length} / ${this.maxFruits}`;
             // }
@@ -68634,6 +69043,7 @@ class PlantNodePower {
         this.config = config;
         this.data = data;
         this.transferPower = transferPower;
+        this.OVERCHARGE_PERCENT = 1;
         this.fruitChain = 0;
         this.maxFruits = 0;
         this.powerCurrent = 0;
@@ -68649,27 +69059,34 @@ class PlantNodePower {
         this.powerTick = config.powerDelay;
     }
     get powerPercent() {
-        return Math.min(this.powerCurrent / this.config.powerMax, 1);
+        return this.powerCurrent / this.config.powerMax;
+        // return Math.min(this.powerCurrent / this.config.powerMax, 1);
     }
     set powerPercent(n) {
         this.powerCurrent = this.config.powerMax * n;
+    }
+    get powerPercentOne() {
+        return Math.min(this.powerCurrent / this.config.powerMax, 1);
+    }
+    get powerPercentOver() {
+        return Math.min(this.powerCurrent / this.config.powerMax, this.OVERCHARGE_PERCENT);
     }
     get powerWeight() {
         return this.powerCurrent / this.config.powerMax / this.config.powerWeight;
     }
     get powerGen() {
         if (this._PowerGen > 0) {
-            return this._PowerGen * this.powerPercent;
+            return this._PowerGen * this.powerPercentOne;
         }
         else {
             return this._PowerGen * this.powerPercent;
         }
     }
     get fruitGen() {
-        return (this.config.fruitGen || 0) * this.powerPercent;
+        return (this.config.fruitGen || 0) * this.powerPercentOne;
     }
     get researchGen() {
-        return (this.config.researchGen || 0) * this.powerPercent;
+        return (this.config.researchGen || 0) * this.powerPercentOne;
     }
     onTick() {
         if (this.powerGen > 0) {
@@ -68724,11 +69141,11 @@ class PlantNodePower {
         if (this.data.fruits.length > 0 && this.powerPercent >= _Config__WEBPACK_IMPORTED_MODULE_1__["Config"].NODE.FRUIT_THRESHOLD) {
             let target;
             this.data.fruits.forEach(fruit => {
-                if (!target || fruit.power.powerPercent < target.power.powerPercent) {
+                if (!target || fruit.power.powerPercentOver < target.power.powerPercentOver) {
                     target = fruit;
                 }
             });
-            if (this.powerPercent > target.power.powerPercent) {
+            if (this.powerPercentOver > target.power.powerPercentOver) {
                 let clump = Math.min(this.powerCurrent, this.config.fruitClump);
                 this.transferPower(this.data, target, { type: 'grow', amount: clump, removeOrigin: clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1) });
                 this.powerCurrent -= clump;
@@ -68740,7 +69157,7 @@ class PlantNodePower {
             let target;
             this.data.outlets.forEach(outlet => {
                 if (outlet.active) {
-                    if (outlet.power.powerPercent < this.powerPercent && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
+                    if (outlet.power.powerPercentOver < this.powerPercentOver && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
                         target = outlet;
                     }
                 }
@@ -68780,18 +69197,24 @@ class PlantNodeView extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
         super();
         this.color = color;
         this.radius = radius;
+        // public INTENSITY_V: number = 0.01;
+        this.INTENSITY_V = 0.005;
         this.text = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Text"]('2/2', { fontSize: 12, fontFamily: _data_Fonts__WEBPACK_IMPORTED_MODULE_2__["Fonts"].FLYING, stroke: 0, strokeThickness: 1, fill: 0xffffff });
         this.targetIntensity = 1;
         this.adjustIntensity = () => {
             if (this._Intensity !== this.targetIntensity) {
                 if (this._Intensity < this.targetIntensity) {
-                    this._Intensity = Math.min(this._Intensity + 0.01, this.targetIntensity);
+                    // this._Intensity = Math.min(Math.max(this._Intensity * (1 + this.INTENSITY_V), 0.1), this.targetIntensity);
+                    this._Intensity = Math.min(Math.max(this._Intensity + this.INTENSITY_V, 0.1), this.targetIntensity);
                 }
                 else if (this._Intensity > this.targetIntensity) {
-                    this._Intensity = Math.max(this._Intensity - 0.01, this.targetIntensity);
+                    // this._Intensity = Math.max(this._Intensity * (1 - this.INTENSITY_V), this.targetIntensity);
+                    this._Intensity = Math.max(this._Intensity - this.INTENSITY_V, this.targetIntensity);
                 }
-                this.sprite.tint = Object(_JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_3__["colorLuminance"])(this.color, this._Intensity);
-                this.sprite.scale.set(this._Intensity);
+                let value = this.intensityInterpolation(this._Intensity);
+                this.sprite.tint = Object(_JMGE_others_Colors__WEBPACK_IMPORTED_MODULE_3__["colorLuminance"])(this.color, value);
+                this.sprite.scale.set(value);
+                // this.sprite.scale.set(this._Intensity);
             }
         };
         this.sprite = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Sprite"](texture);
@@ -68812,9 +69235,10 @@ class PlantNodeView extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
         this._Highlight.visible = b;
     }
     setIntensity(n, instant) {
-        this.targetIntensity = Math.min(0.3 + 0.7 * n, 1);
-        if (!this._Intensity || instant)
-            this._Intensity = this.targetIntensity * 0.9;
+        this.targetIntensity = Math.min(Math.max(n, 0.2), 1);
+        if (!this._Intensity || instant) {
+            this._Intensity = this.targetIntensity - 0.01;
+        }
     }
     pulse(color) {
         let pulseCircle = new pixi_js__WEBPACK_IMPORTED_MODULE_0__["Graphics"]();
@@ -68845,6 +69269,14 @@ class PlantNodeView extends pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"] {
             }
         }
     }
+    intensityInterpolation(k) {
+        if (k <= 0.7) {
+            return 0.2 + k / 0.7 * 0.3;
+        }
+        else {
+            return 0.5 + (k - 0.7) / 0.3 * 0.5;
+        }
+    }
 }
 
 
@@ -68869,21 +69301,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_SaveManager__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./services/SaveManager */ "./src/services/SaveManager.ts");
 /* harmony import */ var _components_tooltip_TooltipReader__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./components/tooltip/TooltipReader */ "./src/components/tooltip/TooltipReader.ts");
 /* harmony import */ var _JMGE_others_JMRect__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./JMGE/others/JMRect */ "./src/JMGE/others/JMRect.ts");
-/* harmony import */ var _services_ATSManager__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./services/ATSManager */ "./src/services/ATSManager.ts");
-/* harmony import */ var _data_ATSData__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./data/ATSData */ "./src/data/ATSData.ts");
-/* harmony import */ var _components_ui_AchievementPopup__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./components/ui/AchievementPopup */ "./src/components/ui/AchievementPopup.ts");
-/* harmony import */ var _components_ui_TutorialPopup__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./components/ui/TutorialPopup */ "./src/components/ui/TutorialPopup.ts");
-/* harmony import */ var _data_Fonts__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./data/Fonts */ "./src/data/Fonts.ts");
-/* harmony import */ var _services_TextureCache__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./services/TextureCache */ "./src/services/TextureCache.ts");
-/* harmony import */ var _services_GameEvents__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./services/GameEvents */ "./src/services/GameEvents.ts");
-/* harmony import */ var _services_Debug__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./services/_Debug */ "./src/services/_Debug.ts");
-/* harmony import */ var _pages_BaseUI__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./pages/_BaseUI */ "./src/pages/_BaseUI.ts");
-/* harmony import */ var _JMGE_effects_ScreenCover__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./JMGE/effects/ScreenCover */ "./src/JMGE/effects/ScreenCover.ts");
+/* harmony import */ var _data_Fonts__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./data/Fonts */ "./src/data/Fonts.ts");
+/* harmony import */ var _services_TextureCache__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./services/TextureCache */ "./src/services/TextureCache.ts");
+/* harmony import */ var _services_GameEvents__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./services/GameEvents */ "./src/services/GameEvents.ts");
+/* harmony import */ var _services_Debug__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./services/_Debug */ "./src/services/_Debug.ts");
+/* harmony import */ var _pages_BaseUI__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pages/_BaseUI */ "./src/pages/_BaseUI.ts");
+/* harmony import */ var _JMGE_effects_ScreenCover__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./JMGE/effects/ScreenCover */ "./src/JMGE/effects/ScreenCover.ts");
 var _a;
-
-
-
-
 
 
 
@@ -68902,17 +69326,9 @@ let Facade = new (_a = class FacadeInner {
         constructor() {
             this.init = () => {
                 // this will happen after 'preloader'
-                _services_GameEvents__WEBPACK_IMPORTED_MODULE_13__["GameEvents"].APP_LOG.publish({ type: 'INITIALIZE', text: 'Post-Loader' });
+                _services_GameEvents__WEBPACK_IMPORTED_MODULE_9__["GameEvents"].APP_LOG.publish({ type: 'INITIALIZE', text: 'Post-Loader' });
                 _services_SaveManager__WEBPACK_IMPORTED_MODULE_4__["SaveManager"].init().then(() => {
-                    _services_GameEvents__WEBPACK_IMPORTED_MODULE_13__["GameEvents"].APP_LOG.publish({ type: 'INITIALIZE', text: 'Save Manager Initialized' });
-                    new _services_ATSManager__WEBPACK_IMPORTED_MODULE_7__["ATSManager"]({
-                        Achievements: Object(_data_ATSData__WEBPACK_IMPORTED_MODULE_8__["genAchievements"])(),
-                        Tutorials: Object(_data_ATSData__WEBPACK_IMPORTED_MODULE_8__["genTutorials"])(),
-                        Scores: Object(_data_ATSData__WEBPACK_IMPORTED_MODULE_8__["genScores"])(),
-                        achievementPopup: _components_ui_AchievementPopup__WEBPACK_IMPORTED_MODULE_9__["AchievementPopup"],
-                        tutorialPopup: _components_ui_TutorialPopup__WEBPACK_IMPORTED_MODULE_10__["TutorialPopup"],
-                        canvas: this.screen,
-                    });
+                    _services_GameEvents__WEBPACK_IMPORTED_MODULE_9__["GameEvents"].APP_LOG.publish({ type: 'INITIALIZE', text: 'Save Manager Initialized' });
                     let menu = new _pages_MenuUI__WEBPACK_IMPORTED_MODULE_2__["MenuUI"]();
                     this.currentPage = menu;
                     this.screen.addChild(menu);
@@ -68943,7 +69359,7 @@ let Facade = new (_a = class FacadeInner {
                     this.border.position.set(this.screen.x, this.screen.y);
                 }
                 this.previousResize = { outerBounds: this.stageBorders, innerBounds: this.innerBorders };
-                _services_GameEvents__WEBPACK_IMPORTED_MODULE_13__["GameEvents"].WINDOW_RESIZE.publish(this.previousResize);
+                _services_GameEvents__WEBPACK_IMPORTED_MODULE_9__["GameEvents"].WINDOW_RESIZE.publish(this.previousResize);
             };
             console.warn = (a) => { };
             if (FacadeInner.exists)
@@ -68979,20 +69395,20 @@ let Facade = new (_a = class FacadeInner {
             this.innerBorders = new _JMGE_others_JMRect__WEBPACK_IMPORTED_MODULE_6__["JMRect"](0, 0, _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].STAGE.SCREEN_WIDTH, _Config__WEBPACK_IMPORTED_MODULE_3__["Config"].STAGE.SCREEN_HEIGHT);
             // Initialize Libraries
             new _components_tooltip_TooltipReader__WEBPACK_IMPORTED_MODULE_5__["TooltipReader"](this.screen, this.stageBorders, {});
-            _services_TextureCache__WEBPACK_IMPORTED_MODULE_12__["TextureCache"].initialize(this.app);
-            _services_Debug__WEBPACK_IMPORTED_MODULE_14__["Debug"].initialize(this.app);
+            _services_TextureCache__WEBPACK_IMPORTED_MODULE_8__["TextureCache"].initialize(this.app);
+            _services_Debug__WEBPACK_IMPORTED_MODULE_10__["Debug"].initialize(this.app);
             // Resize Event (for full screen mode / scaling)
             let finishResize = lodash__WEBPACK_IMPORTED_MODULE_1__["debounce"](this.finishResize, 500);
             window.addEventListener('resize', finishResize);
-            let fonts = lodash__WEBPACK_IMPORTED_MODULE_1__["map"](_data_Fonts__WEBPACK_IMPORTED_MODULE_11__["Fonts"]);
+            let fonts = lodash__WEBPACK_IMPORTED_MODULE_1__["map"](_data_Fonts__WEBPACK_IMPORTED_MODULE_7__["Fonts"]);
             // load fonts then preloader!
-            _services_GameEvents__WEBPACK_IMPORTED_MODULE_13__["GameEvents"].APP_LOG.publish({ type: 'INITIALIZE', text: 'Primary Setup' });
+            _services_GameEvents__WEBPACK_IMPORTED_MODULE_9__["GameEvents"].APP_LOG.publish({ type: 'INITIALIZE', text: 'Primary Setup' });
             // window.requestAnimationFrame(() => FontLoader.load(fonts).then(this.init));
             window.requestAnimationFrame(() => this.init());
         }
         setCurrentPage(nextPage, fadeTiming, andDestroy) {
-            fadeTiming = lodash__WEBPACK_IMPORTED_MODULE_1__["defaults"](fadeTiming || {}, _pages_BaseUI__WEBPACK_IMPORTED_MODULE_15__["dFadeTiming"]);
-            let screen = new _JMGE_effects_ScreenCover__WEBPACK_IMPORTED_MODULE_16__["ScreenCover"](this.previousResize.outerBounds, fadeTiming.color).onFadeComplete(() => {
+            fadeTiming = lodash__WEBPACK_IMPORTED_MODULE_1__["defaults"](fadeTiming || {}, _pages_BaseUI__WEBPACK_IMPORTED_MODULE_11__["dFadeTiming"]);
+            let screen = new _JMGE_effects_ScreenCover__WEBPACK_IMPORTED_MODULE_12__["ScreenCover"](this.previousResize.outerBounds, fadeTiming.color).onFadeComplete(() => {
                 this.currentPage.navOut();
                 _services_SaveManager__WEBPACK_IMPORTED_MODULE_4__["SaveManager"].saveCurrent().then(() => {
                     this.screen.removeChild(this.currentPage);
@@ -69004,7 +69420,7 @@ let Facade = new (_a = class FacadeInner {
                     if (this.previousResize) {
                         nextPage.onResize(this.previousResize);
                     }
-                    let screen2 = new _JMGE_effects_ScreenCover__WEBPACK_IMPORTED_MODULE_16__["ScreenCover"](this.previousResize.outerBounds, fadeTiming.color).fadeOut(fadeTiming.fadeOut);
+                    let screen2 = new _JMGE_effects_ScreenCover__WEBPACK_IMPORTED_MODULE_12__["ScreenCover"](this.previousResize.outerBounds, fadeTiming.color).fadeOut(fadeTiming.fadeOut);
                     nextPage.addChild(screen2);
                 });
             }).fadeIn(fadeTiming.fadeIn, fadeTiming.delay, fadeTiming.delayBlank);
@@ -69037,7 +69453,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _engine_FDG_FDGContainer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../engine/FDG/FDGContainer */ "./src/engine/FDG/FDGContainer.ts");
 /* harmony import */ var _services_MouseController__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../services/MouseController */ "./src/services/MouseController.ts");
 /* harmony import */ var _components_BottomBar__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../components/BottomBar */ "./src/components/BottomBar.ts");
-/* harmony import */ var _services_NodeManager__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../services/NodeManager */ "./src/services/NodeManager.ts");
+/* harmony import */ var _engine_Mechanics_NodeManager__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../engine/Mechanics/NodeManager */ "./src/engine/Mechanics/NodeManager.ts");
 /* harmony import */ var _engine_Mechanics_GameController__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../engine/Mechanics/GameController */ "./src/engine/Mechanics/GameController.ts");
 /* harmony import */ var _components_domui_Sidebar__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../components/domui/Sidebar */ "./src/components/domui/Sidebar.ts");
 /* harmony import */ var _data_NodeData__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../data/NodeData */ "./src/data/NodeData.ts");
@@ -69050,6 +69466,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_StringManager__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../services/StringManager */ "./src/services/StringManager.ts");
 /* harmony import */ var _services_Debug__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ../services/_Debug */ "./src/services/_Debug.ts");
 /* harmony import */ var _engine_nodes_PlantNode__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ../engine/nodes/PlantNode */ "./src/engine/nodes/PlantNode.ts");
+/* harmony import */ var _components_domui_AchievementPanel__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ../components/domui/AchievementPanel */ "./src/components/domui/AchievementPanel.ts");
+
 
 
 
@@ -69079,7 +69497,6 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         this.turboSpeed = 3;
         this.running = true;
         this.exists = true;
-        this.wantUpdateKnowledge = false;
         this.navIn = () => {
             _JMGE_events_JMTicker__WEBPACK_IMPORTED_MODULE_5__["JMTicker"].add(this.onTick);
             this.keymapper.enabled = true;
@@ -69097,14 +69514,13 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
             if (!this.exists)
                 return;
             new _components_domui_InfoPopup__WEBPACK_IMPORTED_MODULE_16__["InfoPopup"](_services_StringManager__WEBPACK_IMPORTED_MODULE_19__["StringManager"].data.UI_SAVE);
-            _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'SAVE', text: 'SAVE_GAME_TIMEOUT' });
+            _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'SAVE', text: 'SAVE GAME PERIODIC' });
             this.saveGame();
             window.setTimeout(this.saveGameTimeout, 30000);
         };
         this.saveGame = () => {
             this.extrinsic.stageState = this.gameC.saveNodes();
             this.extrinsic.crawlers = this.gameC.saveCrawlers();
-            console.log('SAVE: ' + this.extrinsic.stageState);
             _services_SaveManager__WEBPACK_IMPORTED_MODULE_14__["SaveManager"].saveExtrinsic();
         };
         this.resetGame = () => {
@@ -69112,6 +69528,8 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
             this.navAndDestroy(new GameUI([]));
         };
         this.nextStage = () => {
+            _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].ACTIVITY_LOG.publishSync({ slug: 'PRESTIGE' });
+            this.extrinsic.skillTier = this.nodeManager.extractTier(this.extrinsic.skillsNext, this.extrinsic.skillTier);
             this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
             this.extrinsic.skillsNext = [];
             this.resetGame();
@@ -69122,83 +69540,19 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
                 return;
             this.container.onTick(this.gameSpeed);
             this.gameC.onTick(this.gameSpeed);
+            this.gameC.knowledge.update();
             this.sidebar.updateNodes();
             let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
             if (seedling) {
                 this.bottomBar.updateSeedling(seedling);
             }
-            if (this.wantUpdateKnowledge) {
-                this.sidebar.updateKnowledge(this.gameC.knowledge.toString());
-            }
+            this.sidebar.updateKnowledge(this.gameC.knowledge);
         };
         this.positionElements = (e) => {
             this.canvas.position.set(e.outerBounds.x, e.outerBounds.y);
             this.canvas.outerBounds = e.outerBounds;
             this.bottomBar.resize(e.outerBounds.width);
             this.bottomBar.position.set(e.outerBounds.x, e.outerBounds.bottom - this.bottomBar.barHeight);
-        };
-        this.applySkillTier = (skill) => {
-            skill.effects.forEach(effect => {
-                if (effect.effectType === 'tier') {
-                    if (effect.valueType === 'additive') {
-                        this.extrinsic.skillTier += effect.value;
-                    }
-                    else if (effect.valueType === 'replace') {
-                        this.extrinsic.skillTier = Math.max(this.extrinsic.skillTier, effect.value);
-                    }
-                }
-            });
-        };
-        this.applySkill = (skill) => {
-            skill.effects.forEach(effect => {
-                if (effect.effectType === 'node') {
-                    let node = this.nodeManager.getNodeConfig(effect.slug);
-                    if (effect.key === 'outletEffect') {
-                        if (effect.valueType === 'additive') {
-                            node.outletEffects = node.outletEffects || [];
-                            node.outletEffects.push(lodash__WEBPACK_IMPORTED_MODULE_0__["clone"](effect.value));
-                        }
-                        else if (effect.valueType === 'replace') {
-                            node.outletEffects = [lodash__WEBPACK_IMPORTED_MODULE_0__["clone"](effect.value)];
-                        }
-                    }
-                    else {
-                        if (effect.valueType === 'additive') {
-                            node[effect.key] += effect.value;
-                        }
-                        else if (effect.valueType === 'multiplicative') {
-                            node[effect.key] *= effect.value;
-                        }
-                        else if (effect.valueType === 'replace') {
-                            node[effect.key] = effect.value;
-                        }
-                    }
-                }
-                else if (effect.effectType === 'crawler') {
-                    let config = this.nodeManager.crawlerConfig;
-                    if (effect.key === 'commands' || effect.key === 'preferenceList') {
-                        if (effect.valueType === 'additive') {
-                            config[effect.key].push(effect.value);
-                        }
-                    }
-                    else {
-                        if (effect.valueType === 'additive') {
-                            config[effect.key] += effect.value;
-                        }
-                        else if (effect.valueType === 'multiplicative') {
-                            config[effect.key] *= effect.value;
-                        }
-                        else if (effect.valueType === 'replace') {
-                            config[effect.key] = effect.value;
-                        }
-                    }
-                }
-                else if (effect.effectType === 'buildable') {
-                    if (effect.valueType === 'additive') {
-                        this.nodeManager.buildableNodes.push(effect.value);
-                    }
-                }
-            });
         };
         this.toggleTurboMode = (b) => {
             this.gameSpeed = b ? this.turboSpeed : 1;
@@ -69210,67 +69564,113 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
             }
         };
         this.createNewNode = (e) => {
-            let position = e.e.data.getLocalPosition(this.container);
-            let node = this.gameC.addNewNode(e.config);
+            if (!e) {
+                this.mouseC.clearNextClickEvent();
+                this.container.showConnectionCount(false);
+                return;
+            }
             let link;
-            node.ghostMode = true;
-            node.active = false;
-            node.view.position.set(position.x, position.y);
             this.container.showConnectionCount();
-            this.mouseC.startDrag({ x: position.x, y: position.y - 100, minD: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_MIND, force: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_FORCE, node,
-                onRelease: () => {
-                    this.container.showConnectionCount(false);
-                    if (node.outlets.length > 0) {
-                        node.ghostMode = false;
-                        node.active = true;
-                        node.view.setIntensity(node.power.powerPercent, true);
-                        if (link)
-                            link.active = true;
-                    }
-                    else {
-                        this.gameC.removeNode(node);
-                    }
-                },
-                onMove: (position2) => {
-                    this.gameC.disconnectNode(node);
+            let dragCreate = false;
+            let timeout = window.setTimeout(() => {
+                dragCreate = true;
+                this.mouseC.clearNextClickEvent();
+                let position = e.e.data.getLocalPosition(this.container);
+                let node = this.gameC.addNewNode(e.config);
+                node.ghostMode = true;
+                node.active = false;
+                node.view.position.set(position.x, position.y);
+                let initialNearest = this.container.getClosestObject({ x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true });
+                if (initialNearest) {
+                    node.ghostMode = false;
+                    link = this.gameC.linkNodes(initialNearest, node);
+                    link.active = false;
+                }
+                this.mouseC.startDrag({ x: position.x, y: position.y - 100, minD: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_MIND, force: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_FORCE, node,
+                    onRelease: () => {
+                        this.container.showConnectionCount(false);
+                        if (node.outlets.length > 0) {
+                            node.ghostMode = false;
+                            node.active = true;
+                            node.view.setIntensity(node.power.powerPercent, true);
+                            if (link)
+                                link.active = true;
+                        }
+                        else {
+                            this.gameC.removeNode(node);
+                        }
+                        e.onComplete();
+                    },
+                    onMove: (position2) => {
+                        this.gameC.disconnectNode(node);
+                        node.ghostMode = true;
+                        let nearest = this.container.getClosestObject({ x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true });
+                        if (nearest) {
+                            node.ghostMode = false;
+                            link = this.gameC.linkNodes(nearest, node);
+                            link.active = false;
+                        }
+                    },
+                });
+            }, 150);
+            this.mouseC.onUp.addOnce(() => {
+                if (!dragCreate) {
+                    window.clearTimeout(timeout);
+                }
+            });
+            this.mouseC.setNextClickEvent({ onDown: position => {
+                    let node = this.gameC.addNewNode(e.config);
                     node.ghostMode = true;
-                    let nearest = this.container.getClosestObject({ x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true });
-                    if (nearest) {
+                    node.active = false;
+                    node.view.position.set(position.x, position.y);
+                    let initialNearest = this.container.getClosestObject({ x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true });
+                    if (initialNearest) {
                         node.ghostMode = false;
-                        link = this.gameC.linkNodes(nearest, node);
+                        link = this.gameC.linkNodes(initialNearest, node);
                         link.active = false;
                     }
-                    // let nearest2 = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
-                    // if (nearest2) {
-                    //   if (!nearest) {
-                    //     node.ghostMode = false;
-                    //     link = this.container.linkNodes(nearest2, node);
-                    //     link.active = false;
-                    //     nearest = nearest2;
-                    //   } else if (nearest2 !== nearest) {
-                    //     this.container.removeAllLinksFor(node, true);
-                    //     link = this.container.linkNodes(nearest2, node);
-                    //     link.active = false;
-                    //     nearest = nearest2;
-                    //   }
-                    // } else {
-                    //   if (nearest) {
-                    //     node.ghostMode = true;
-                    //     this.container.removeAllLinksFor(node, true);
-                    //     nearest = null;
-                    //   }
-                    // }
-                },
-            });
+                    this.mouseC.startDrag({ x: position.x, y: position.y, minD: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_MIND, force: _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].PHYSICS.NEW_FORCE, node,
+                        onRelease: () => {
+                            this.container.showConnectionCount(false);
+                            if (node.outlets.length > 0) {
+                                node.ghostMode = false;
+                                node.active = true;
+                                node.view.setIntensity(node.power.powerPercent, true);
+                                if (link)
+                                    link.active = true;
+                            }
+                            else {
+                                this.gameC.removeNode(node);
+                            }
+                            e.onComplete();
+                        },
+                        onMove: (position2) => {
+                            this.gameC.disconnectNode(node);
+                            node.ghostMode = true;
+                            let nearest = this.container.getClosestObject({ x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true });
+                            if (nearest) {
+                                node.ghostMode = false;
+                                link = this.gameC.linkNodes(nearest, node);
+                                link.active = false;
+                            }
+                        },
+                    });
+                } });
         };
-        this.toggleKnowledge = () => {
-            this.wantUpdateKnowledge = !this.wantUpdateKnowledge;
-            if (this.wantUpdateKnowledge) {
-                let content = this.gameC.knowledge.toString();
-                this.sidebar.addKnowledgeElement(content);
+        this.deleteNextClicked = (e) => {
+            if (e) {
+                this.container.showConnectionCount();
+                this.mouseC.setNextClickEvent({ onDown: position => {
+                        let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
+                        if (nodeToDelete) {
+                            nodeToDelete.flagDestroy = true;
+                        }
+                        e.onComplete && e.onComplete();
+                    } });
             }
             else {
-                this.sidebar.removeKnowledgeElement();
+                this.mouseC.clearNextClickEvent();
+                this.container.showConnectionCount(false);
             }
         };
         this.logSave = () => {
@@ -69278,35 +69678,42 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         };
         this.loadSave = (json) => {
             let extrinsic = JSON.parse(json);
-            console.log('extrinsic');
             _services_SaveManager__WEBPACK_IMPORTED_MODULE_14__["SaveManager"].saveExtrinsic(extrinsic, true).then(() => {
                 _engine_nodes_PlantNode__WEBPACK_IMPORTED_MODULE_21__["PlantNode"].resetUid();
                 this.navAndDestroy(new GameUI());
             });
         };
+        this.cheatResearch = () => {
+            let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
+            if (seedling) {
+                seedling.receiveResearch(1000);
+            }
+        };
+        // --- initialize components --- \\
+        _Config__WEBPACK_IMPORTED_MODULE_15__["Config"].NODE = lodash__WEBPACK_IMPORTED_MODULE_0__["clone"](_Config__WEBPACK_IMPORTED_MODULE_15__["dConfigNode"]);
         this.extrinsic = _services_SaveManager__WEBPACK_IMPORTED_MODULE_14__["SaveManager"].getExtrinsic();
-        this.nodeManager = new _services_NodeManager__WEBPACK_IMPORTED_MODULE_9__["NodeManager"](_data_NodeData__WEBPACK_IMPORTED_MODULE_12__["NodeData"].Nodes, _data_SkillData__WEBPACK_IMPORTED_MODULE_17__["SkillData"].skills);
-        let skills = this.nodeManager.getSkillsBySlugs(this.extrinsic.skillsCurrent);
-        skills.filter(skill => skill.effects.find(effect => effect.effectType === 'tier')).forEach(this.applySkillTier);
-        let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
-        let allSkills = lodash__WEBPACK_IMPORTED_MODULE_0__["uniq"](skills.concat(this.nodeManager.getSkillsBySlugs(always)));
-        allSkills.forEach(this.applySkill);
-        console.log(allSkills);
+        this.nodeManager = new _engine_Mechanics_NodeManager__WEBPACK_IMPORTED_MODULE_9__["NodeManager"](_data_NodeData__WEBPACK_IMPORTED_MODULE_12__["NodeData"].Nodes, _data_SkillData__WEBPACK_IMPORTED_MODULE_17__["SkillData"].skills, this.extrinsic.skillTier);
         this.canvas = new _components_ScrollingContainer__WEBPACK_IMPORTED_MODULE_3__["ScrollingContainer"](1500, 1000);
         this.container = new _engine_FDG_FDGContainer__WEBPACK_IMPORTED_MODULE_6__["FDGContainer"](this.canvas.innerBounds);
         this.mouseC = new _services_MouseController__WEBPACK_IMPORTED_MODULE_7__["MouseController"](this.canvas, this.container);
-        this.gameC = new _engine_Mechanics_GameController__WEBPACK_IMPORTED_MODULE_10__["GameController"](this.container, this.nodeManager);
+        this.gameC = new _engine_Mechanics_GameController__WEBPACK_IMPORTED_MODULE_10__["GameController"](this.container, this.nodeManager, this.extrinsic.scores);
+        this.nodeManager.applySkills(this.extrinsic.skillsCurrent);
+        this.nodeManager.applyAchievements(this.extrinsic.achievements);
+        let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
         let nextSkillPanel = new _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_18__["SkillPanel"](this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
         let currentSkillPanel;
         if (this.extrinsic.skillsCurrent.length + always.length > 0) {
             currentSkillPanel = new _components_domui_SkillPanel__WEBPACK_IMPORTED_MODULE_18__["SkillPanel"](this.nodeManager.skills, this.extrinsic.skillsCurrent, always, this.extrinsic.skillTier, true);
         }
-        this.sidebar = new _components_domui_Sidebar__WEBPACK_IMPORTED_MODULE_11__["Sidebar"](currentSkillPanel, nextSkillPanel);
+        let achieveElement = new _components_domui_AchievementPanel__WEBPACK_IMPORTED_MODULE_22__["AchievementPanel"](this.extrinsic.achievements, _data_SkillData__WEBPACK_IMPORTED_MODULE_17__["SkillData"].achievements);
+        this.sidebar = new _components_domui_Sidebar__WEBPACK_IMPORTED_MODULE_11__["Sidebar"](currentSkillPanel, nextSkillPanel, achieveElement);
         this.keymapper = new _services_KeyMapper__WEBPACK_IMPORTED_MODULE_4__["KeyMapper"]();
         this.bottomBar = new _components_BottomBar__WEBPACK_IMPORTED_MODULE_8__["BottomBar"](100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
+        // --- add to stage --- \\
         this.canvas.addChild(this.container);
         this.addChild(this.canvas);
         this.addChild(this.bottomBar);
+        // --- weave components --- \\
         this.mouseC.onMove.addListener(this.onMouseMove);
         this.gameC.onNodeAdded.addListener(this.sidebar.addNodeElement);
         this.gameC.onNodeAdded.addListener(this.bottomBar.nodeAdded);
@@ -69316,8 +69723,9 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
         this.bottomBar.onProceedButton.addListener(this.nextStage);
         this.bottomBar.onCreateButton.addListener(this.createNewNode);
-        this.bottomBar.onDeleteButton.addListener(this.mouseC.deleteNextClicked);
+        this.bottomBar.onDeleteButton.addListener(this.deleteNextClicked);
         this.bottomBar.onTurboButton.addListener(this.toggleTurboMode);
+        this.gameC.knowledge.onAchievementUpdate.addListener(this.sidebar.updateAchievement);
         this.keymapper.enabled = false;
         this.keymapper.setKeys([
             { key: 'ArrowLeft', altKey: 'a', function: () => this.canvas.startPan(_components_ScrollingContainer__WEBPACK_IMPORTED_MODULE_3__["Direction"].LEFT) },
@@ -69339,13 +69747,19 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
                 { key: ']', function: () => this.gameSpeed++ },
                 { key: 'p', function: () => this.resetGame() },
                 { key: '`', function: () => this.logSave() },
-                { key: '1', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][1]) },
-                { key: '2', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][2]) },
-                { key: '0', function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][0]) },
+                { key: '1', noCtrl: true, function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][1]) },
+                { key: '2', noCtrl: true, function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][2]) },
+                { key: '0', noCtrl: true, function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][0]) },
+                { key: '1', withCtrl: true, function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][11]) },
+                { key: '2', withCtrl: true, function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][12]) },
+                { key: '0', withCtrl: true, function: () => this.loadSave(_data_SaveData__WEBPACK_IMPORTED_MODULE_13__["TierSaves"][10]) },
                 { key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0]) },
-                { key: 'k', function: this.toggleKnowledge },
+                { key: 'r', function: this.cheatResearch },
+                { key: 'o', function: () => _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].ACTIVITY_LOG.publish({ slug: 'PRESTIGE' }) },
+                // {key: 'k', function: this.toggleKnowledge},
             ]);
         }
+        // --- initialize game state --- \\
         if (level) {
             if (level.length === 0) {
                 this.newGame();
@@ -69359,8 +69773,11 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         }
         else
             this.newGame();
+        this.gameC.knowledge.initializeAchievements();
         this.saveGameTimeout();
         _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'NAVIGATE', text: 'GAME INSTANCE CREATED' });
+        window.exportSave = this.logSave;
+        window.importSave = this.loadSave;
     }
     destroy() {
         super.destroy();
@@ -69376,10 +69793,10 @@ class GameUI extends _BaseUI__WEBPACK_IMPORTED_MODULE_1__["BaseUI"] {
         _services_GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'NAVIGATE', text: 'GAME INSTANCE DESTROYED' });
     }
     newGame() {
-        console.log('new game');
         let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
         node.view.position.set(600, 300);
         node.power.powerPercent = 0.5;
+        node.view.setIntensity(0.5, true);
         // this.saveGame();
     }
 }
@@ -69549,97 +69966,38 @@ const dFadeTiming = {
 
 /***/ }),
 
-/***/ "./src/services/ATSManager.ts":
-/*!************************************!*\
-  !*** ./src/services/ATSManager.ts ***!
-  \************************************/
-/*! exports provided: ATSManager */
+/***/ "./src/services/Formula.ts":
+/*!*********************************!*\
+  !*** ./src/services/Formula.ts ***!
+  \*********************************/
+/*! exports provided: Formula */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ATSManager", function() { return ATSManager; });
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _SaveManager__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./SaveManager */ "./src/services/SaveManager.ts");
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Formula", function() { return Formula; });
+/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../data/SkillData */ "./src/data/SkillData.ts");
 
-
-class ATSManager {
-    constructor(config) {
-        this.config = config;
-        this.extrinsic = _SaveManager__WEBPACK_IMPORTED_MODULE_1__["SaveManager"].getExtrinsic();
-        // config.Achievements.forEach(achievement => {
-        //   if (!this.extrinsic.data.badges[achievement.id]) {
-        //     let listener = (e: any) => this.testAchievement(achievement, e);
-        //     achievement.listener = listener;
-        //     achievement.emitter.addListener(listener);
-        //     achievement.active = true;
-        //   }
-        // });
-        // config.Tutorials.forEach(tutorial => {
-        //   if (!this.extrinsic.data.tutorials[tutorial.id]) {
-        //     let listener = (e: any) => this.testTutorial(tutorial, e);
-        //     tutorial.listener = listener;
-        //     tutorial.emitter.addListener(listener);
-        //     tutorial.active = true;
-        //   }
-        // });
-        // config.Scores.forEach(score => {
-        //   let listener = (e: any) => this.testScore(score, e);
-        //   score.listener = listener;
-        //   score.emitter.addListener(listener);
-        // });
-        // GameEvents.REQUEST_PAUSE_GAME.addListener(this.onPause);
-    }
-    // private testAchievement = (achievement: IAchievement, e: any) => {
-    //   if (achievement.condition(this.extrinsic, e)) {
-    //     let popup = new this.config.achievementPopup(achievement.title, achievement.caption);
-    //     this.config.canvas.addChild(popup);
-    //     this.extrinsic.data.badges[achievement.id] = true;
-    //     SaveManager.saveExtrinsic();
-    //     achievement.emitter.removeListener(achievement.listener);
-    //     achievement.active = false;
-    //   }
-    // }
-    // private testTutorial = (tutorial: ITutorial, e: any) => {
-    //   if (tutorial.condition(this.extrinsic, e)) {
-    //     // GameEvents.REQUEST_PAUSE_GAME.publish({paused: true});
-    //     let popup = new this.config.tutorialPopup(tutorial.title, tutorial.caption);
-    //     this.currentTutorial = popup;
-    //     this.config.canvas.addChild(popup);
-    //     this.extrinsic.data.tutorials[tutorial.id] = true;
-    //     SaveManager.saveExtrinsic();
-    //     tutorial.emitter.removeListener(tutorial.listener);
-    //     tutorial.active = false;
-    //   }
-    // }
-    // private testScore = (score: IScore, e: any) => {
-    //   if (score.condition(this.extrinsic, e)) {
-    //     switch (score.type) {
-    //       case '++': this.incrementExtrinsicValue(score.prop, 1); break;
-    //       case '=': this.setExtrinsicValue(score.prop, e); break;
-    //     }
-    //   }
-    // }
-    setExtrinsicValue(prop, value) {
-        let cProp = this.extrinsic;
-        let propArray = lodash__WEBPACK_IMPORTED_MODULE_0__["split"](prop, '.');
-        while (propArray.length > 1) {
-            let key = propArray.shift();
-            cProp = cProp[key];
+class Formula {
+    static getNextSkillLevel(research) {
+        let i = 0;
+        while (true) {
+            let iCost = Formula.getSkillCost(i);
+            if (iCost > research)
+                return i;
+            i++;
         }
-        cProp[propArray.shift()] = value;
-        _SaveManager__WEBPACK_IMPORTED_MODULE_1__["SaveManager"].saveExtrinsic();
+        // let nextSkill = SkillData.skillExchange.findIndex(cost => cost > research);
+        // return nextSkill;
     }
-    incrementExtrinsicValue(prop, value) {
-        let cProp = this.extrinsic;
-        let propArray = lodash__WEBPACK_IMPORTED_MODULE_0__["split"](prop, '.');
-        while (propArray.length > 1) {
-            let key = propArray.shift();
-            cProp = cProp[key];
+    static getSkillCost(skillpoints) {
+        if (skillpoints > _data_SkillData__WEBPACK_IMPORTED_MODULE_0__["SkillData"].skillExchange.length - 1) {
+            let diff = skillpoints - _data_SkillData__WEBPACK_IMPORTED_MODULE_0__["SkillData"].skillExchange.length;
+            let mult = Math.ceil((diff + 1) / 9);
+            let index = _data_SkillData__WEBPACK_IMPORTED_MODULE_0__["SkillData"].skillExchange.length - 9 + diff % 9;
+            return _data_SkillData__WEBPACK_IMPORTED_MODULE_0__["SkillData"].skillExchange[index] * Math.pow(10, mult);
         }
-        cProp[propArray.shift()] += value;
-        _SaveManager__WEBPACK_IMPORTED_MODULE_1__["SaveManager"].saveExtrinsic();
+        return _data_SkillData__WEBPACK_IMPORTED_MODULE_0__["SkillData"].skillExchange[skillpoints];
     }
 }
 
@@ -69663,7 +70021,7 @@ __webpack_require__.r(__webpack_exports__);
 const GameEvents = {
     ticker: _JMGE_events_JMTicker__WEBPACK_IMPORTED_MODULE_0__["JMTicker"],
     WINDOW_RESIZE: new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"](),
-    ACTION_LOG: new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"](),
+    ACTIVITY_LOG: new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"](),
     APP_LOG: new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_1__["JMEventListener"](),
     // SPRITE_ADDED: new JMEventListener<ISpriteAdded>(),
     // SPRITE_REMOVED: new JMEventListener<SpriteModel>(),
@@ -69694,9 +70052,14 @@ class KeyMapper {
             if (!this.enabled || this.keysDown === null)
                 return;
             let key = e.key.toLowerCase();
+            let ctrl = e.ctrlKey;
             for (let i = 0; i < this.keysDown.length; i++) {
                 let currentKey = this.keysDown[i];
                 if (currentKey.key === key || (currentKey.altKey !== null && currentKey.altKey === key)) {
+                    if (currentKey.withCtrl && !ctrl)
+                        continue;
+                    if (currentKey.noCtrl && ctrl)
+                        continue;
                     if (currentKey.noHold) {
                         if (this.holding.includes(key))
                             return;
@@ -69775,30 +70138,25 @@ class MouseController {
     constructor(canvas, container) {
         this.canvas = canvas;
         this.container = container;
-        this.onDelete = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_0__["JMEventListener"]();
+        this.onUp = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_0__["JMEventListener"]();
         this.onMove = new _JMGE_events_JMEventListener__WEBPACK_IMPORTED_MODULE_0__["JMEventListener"]();
-        this.deleteNext = false;
         this.down = false;
-        this.deleteNextClicked = (e) => {
-            if (e && e.onComplete) {
-                this.deleteNext = true;
-                this.onDelete.addOnce(e.onComplete);
-            }
-            else {
-                this.deleteNext = false;
-                this.onDelete.clear();
-            }
+        this.setNextClickEvent = (data) => {
+            this.nextClickEvent = data;
+        };
+        this.clearNextClickEvent = () => {
+            this.nextClickEvent = null;
         };
         this.onMouseDown = (e) => {
             let position = e.data.getLocalPosition(this.container);
-            if (this.deleteNext) {
-                let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
-                if (nodeToDelete) {
-                    nodeToDelete.flagDestroy = true;
+            if (this.nextClickEvent) {
+                if (this.nextClickEvent.onDown) {
+                    this.nextClickEvent.onDown(position);
+                    if (!this.nextClickEvent.onUp) {
+                        this.nextClickEvent = null;
+                    }
+                    return;
                 }
-                this.deleteNext = false;
-                this.onDelete.publish(nodeToDelete);
-                return;
             }
             if (this.down)
                 return;
@@ -69814,6 +70172,14 @@ class MouseController {
             }
         };
         this.onMouseUp = () => {
+            this.onUp.publish();
+            if (this.nextClickEvent) {
+                if (this.nextClickEvent.onUp) {
+                    this.nextClickEvent.onUp();
+                    this.nextClickEvent = null;
+                    return;
+                }
+            }
             if (this.currentPull) {
                 this.container.removePull(this.currentPull);
                 if (this.currentPull.onRelease) {
@@ -69859,72 +70225,6 @@ class MouseController {
 
 /***/ }),
 
-/***/ "./src/services/NodeManager.ts":
-/*!*************************************!*\
-  !*** ./src/services/NodeManager.ts ***!
-  \*************************************/
-/*! exports provided: NodeManager */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "NodeManager", function() { return NodeManager; });
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../engine/Mechanics/CrawlerCommands/_BaseCommand */ "./src/engine/Mechanics/CrawlerCommands/_BaseCommand.ts");
-/* harmony import */ var _data_SkillData__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../data/SkillData */ "./src/data/SkillData.ts");
-
-
-
-class NodeManager {
-    constructor(data, skills) {
-        this.buildableNodes = [
-            'core',
-            'stem',
-            'generator',
-            'grove',
-            'lab',
-            'seedling',
-        ];
-        this.data = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](data);
-        this.skills = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](skills);
-        this.crawlerConfig = {
-            health: 1,
-            healthDrain: 0.0002,
-            speed: 0.01,
-            commands: [
-                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].WANDER,
-                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].IDLE,
-                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].EAT,
-                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].FRUSTRATED,
-                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].STARVING,
-            ],
-            preferenceList: [
-                _engine_Mechanics_CrawlerCommands_BaseCommand__WEBPACK_IMPORTED_MODULE_1__["CommandType"].WANDER,
-            ],
-        };
-    }
-    destroy() {
-    }
-    getNodeConfig(slug) {
-        let raw = this.data.find(config => config.slug === slug);
-        return raw;
-    }
-    getSkillAlways(tier) {
-        let m = [];
-        for (let i = 0; i <= tier; i++) {
-            m = m.concat(_data_SkillData__WEBPACK_IMPORTED_MODULE_2__["SkillData"].skillTiers[i]);
-        }
-        return m;
-    }
-    getSkillsBySlugs(slugs) {
-        return slugs.map(slug => this.skills.find(skill => skill.slug === slug));
-    }
-}
-
-
-/***/ }),
-
 /***/ "./src/services/SaveManager.ts":
 /*!*************************************!*\
   !*** ./src/services/SaveManager.ts ***!
@@ -69939,6 +70239,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _data_SaveData__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../data/SaveData */ "./src/data/SaveData.ts");
+/* harmony import */ var _GameEvents__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./GameEvents */ "./src/services/GameEvents.ts");
+
 
 
 let SAVE_LOC = 'local';
@@ -69957,7 +70259,6 @@ function versionControl(version, extrinsic) {
 }
 class SaveManager {
     static async init() {
-        console.log('init!');
         if (SAVE_LOC === 'local') {
             try {
                 let extrinsicStr = window.localStorage.getItem(DOC_NAME);
@@ -69968,13 +70269,10 @@ class SaveManager {
         }
         return new Promise((resolve) => {
             SaveManager.loadExtrinsic().then(extrinsic => {
-                console.log('ext!', extrinsic);
                 if (extrinsic) {
-                    console.log('has ext');
                     SaveManager.loadVersion().then(version => {
-                        console.log('version loaded', version);
+                        _GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'SAVE', text: `Data Version: ${version}` });
                         if (version < _data_SaveData__WEBPACK_IMPORTED_MODULE_1__["CURRENT_VERSION"]) {
-                            console.log('old V');
                             extrinsic = versionControl(version, extrinsic);
                             SaveManager.saveVersion(_data_SaveData__WEBPACK_IMPORTED_MODULE_1__["CURRENT_VERSION"]);
                             SaveManager.saveExtrinsic(extrinsic);
@@ -69984,7 +70282,7 @@ class SaveManager {
                     });
                 }
                 else {
-                    console.log('reset ext');
+                    _GameEvents__WEBPACK_IMPORTED_MODULE_2__["GameEvents"].APP_LOG.publish({ type: 'SAVE', text: 'Save Data Reset' });
                     SaveManager.confirmReset();
                     SaveManager.saveVersion(_data_SaveData__WEBPACK_IMPORTED_MODULE_1__["CURRENT_VERSION"]);
                     SaveManager.saveExtrinsic(this.getExtrinsic());
@@ -70110,9 +70408,7 @@ SaveManager.null = () => {
 SaveManager.confirmReset = () => {
     SaveManager.extrinsic = lodash__WEBPACK_IMPORTED_MODULE_0__["cloneDeep"](_data_SaveData__WEBPACK_IMPORTED_MODULE_1__["dExtrinsicModel"]);
     SaveManager.saveExtrinsic();
-    console.log('reset!');
 };
-window.checkSaves = () => console.log(SaveManager.getExtrinsic());
 
 
 /***/ }),
@@ -70333,12 +70629,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _GameEvents__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./GameEvents */ "./src/services/GameEvents.ts");
 
 const DEBUG_MODE = true;
-const GOD_MODE = true;
+const GOD_MODE = false;
 class Debug {
     static initialize(app) {
         if (DEBUG_MODE) {
-            _GameEvents__WEBPACK_IMPORTED_MODULE_0__["GameEvents"].ACTION_LOG.addListener(e => {
-                console.log('ACTION:', e.text);
+            _GameEvents__WEBPACK_IMPORTED_MODULE_0__["GameEvents"].ACTIVITY_LOG.addListener(e => {
+                // console.log('ACTION:', e.slug, ' : ', e.text || ' ');
             });
             _GameEvents__WEBPACK_IMPORTED_MODULE_0__["GameEvents"].APP_LOG.addListener(e => {
                 console.log('APP:', e.type, ' : ', e.text);

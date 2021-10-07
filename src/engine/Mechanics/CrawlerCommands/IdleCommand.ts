@@ -27,7 +27,7 @@ export class IdleCommand extends BaseCommand {
   public update() {
     if (this.isComplete) return;
 
-    this.updateIdle(this.idleComplete);
+    this.updateIdle(this.idleComplete, 0.5);
   }
 
   public idleComplete = () => {

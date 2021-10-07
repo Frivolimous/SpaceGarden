@@ -83,6 +83,7 @@ export class CrawlerModel {
 
   public destroy() {
     this.unclaimNode();
+    console.log(`Crawler ${this.uid} destroyed`);
   }
 
   public isFruit = () => false;
@@ -143,6 +144,7 @@ export class CrawlerModel {
       if (this.claimedNode.outlets.length === 0 && this.claimedNode.fruits.length === 0) {
         this.claimedNode.flagDestroy = true;
       }
+      console.log(`${this.claimedNode.slug + ' ' + this.claimedNode.uid.toString()} unclaimed by ${this.uid}`);
       this.claimedNode.claimedBy = null;
       this.claimedNode = null;
     }

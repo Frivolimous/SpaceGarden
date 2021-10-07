@@ -16,7 +16,7 @@ import { Sidebar } from '../components/domui/Sidebar';
 import { INodeConfig, NodeData } from '../data/NodeData';
 import { IExtrinsicModel, TierSaves } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
-import { Config } from '../Config';
+import { Config, dConfigNode } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
 import { ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
@@ -48,6 +48,8 @@ export class GameUI extends BaseUI {
     super({bgColor: 0x777777});
 
     // --- initialize components --- \\
+
+    Config.NODE = _.clone(dConfigNode);
 
     this.extrinsic = SaveManager.getExtrinsic();
 
@@ -201,6 +203,7 @@ export class GameUI extends BaseUI {
     let node = this.gameC.addNewNode(this.nodeManager.getNodeConfig('core'));
     node.view.position.set(600, 300);
     node.power.powerPercent = 0.5;
+    node.view.setIntensity(0.5, true);
     // this.saveGame();
   }
 

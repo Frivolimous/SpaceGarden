@@ -5,7 +5,7 @@ import { PlantNode } from './PlantNode';
 
 export class PlantNodePower {
   public fruitType: NodeSlug;
-  public OVERCHARGE_PERCENT: number = 1.1;
+  public OVERCHARGE_PERCENT: number = 1;
   public fruitChain: number = 0;
   public maxFruits: number = 0;
 

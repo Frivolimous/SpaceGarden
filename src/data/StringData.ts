@@ -1,8 +1,8 @@
 export const EnglishStringData = {
   GAME_TITLE: 'Space Garden',
-  NEGATIVE_TIER_1: 'Each skillpoint spent increases seedling Max Power by 500',
-  NEGATIVE_TIER_2: 'Each skillpoint spent increases seedling power drain by 1.2/s',
-  NEGATIVE_TIER_3: 'Each skillpoint spent will do something terrifying!',
+  NEGATIVE_TIER_1: 'Each skill purchased increases seedling Max Power by 500',
+  NEGATIVE_TIER_2: 'Each skill purchased increases seedling power drain by 1.2/s',
+  NEGATIVE_TIER_3: 'Each skill purchased will do something terrifying!',
 
   UI_SKILLTREE_TITLE: 'Evolution Tree',
   UI_SKILLTREE_SUBTITLE_INACTIVE: 'Currently active skills',

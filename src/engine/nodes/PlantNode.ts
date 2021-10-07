@@ -76,6 +76,7 @@ export class PlantNode {
   public destroy() {
     this.exists = false;
     this.view.destroy();
+    console.log(`${this.slug} ${this.uid} destroyed`);
   }
 
   public isFruit(): boolean {

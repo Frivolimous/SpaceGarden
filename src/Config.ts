@@ -1,3 +1,12 @@
+export const dConfigNode = {
+  FRUIT_THRESHOLD: 0.6,
+  POWER_THRESHOLD: 0.25,
+  GEN_FADE: 30,
+  FRUIT_APPLY: 0.3,
+  LAUNCH_PERCENT: 1,
+  BLOB_AI: 0,
+};
+
 export const Config = {
   INIT: {
     SCREEN_WIDTH: 800,
