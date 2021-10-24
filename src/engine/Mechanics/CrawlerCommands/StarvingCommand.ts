@@ -2,8 +2,10 @@ import _ from 'lodash';
 import { Colors } from '../../../data/Colors';
 import { PlantNode } from '../../nodes/PlantNode';
 import { GameKnowledge } from '../GameKnowledge';
-import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
-import { BaseCommand, CommandType } from './_BaseCommand';
+import { CrawlerModel } from '../Parts/CrawlerModel';
+import { ICommandConfig } from '../../../data/CrawlerData';
+import { BaseCommand } from './_BaseCommand';
+import { CommandType } from './_CommandTypes';
 
 export class StarvingCommand extends BaseCommand {
   private state: 'idle' | 'walk';

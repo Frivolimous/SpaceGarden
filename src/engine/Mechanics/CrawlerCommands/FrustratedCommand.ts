@@ -1,6 +1,8 @@
-import { BaseCommand, CommandType } from './_BaseCommand';
+import { BaseCommand } from './_BaseCommand';
+import { CommandType } from './_CommandTypes';
 import { Colors } from '../../../data/Colors';
-import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
+import { CrawlerModel } from '../Parts/CrawlerModel';
+import { ICommandConfig } from '../../../data/CrawlerData';
 import { GameKnowledge } from '../GameKnowledge';
 
 export class FrustratedCommand extends BaseCommand {

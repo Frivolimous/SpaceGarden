@@ -1,14 +1,11 @@
 import * as _ from 'lodash';
-import { CommandType } from './CrawlerCommands/_BaseCommand';
-import { dCrawler, ICrawler } from './Parts/CrawlerModel';
 import { INodeConfig, NodeData, NodeSlug } from '../../data/NodeData';
-import { IAchievement, ISkillConfig, SkillData } from '../../data/SkillData';
+import { IAchievement, ISkillConfig, ISkillEffect, SkillData } from '../../data/SkillData';
 import { Config } from '../../Config';
+import { CrawlerData, CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
 
 export class NodeManager {
   public skills: ISkillConfig[];
-
-  public crawlerConfig: ICrawler;
 
   public buildableNodes: NodeSlug[] = [
     'core',
@@ -19,13 +16,18 @@ export class NodeManager {
     'seedling',
   ];
 
+  public availableCrawlers: CrawlerSlug[] = [
+    'crawler',
+    // 'shaman',
+  ];
+
   private data: INodeConfig[];
+  private crawlers: ICrawlerConfig[];
 
-  constructor(data: INodeConfig[], skills: ISkillConfig[], private skillTier: number) {
-    this.data = _.cloneDeep(data);
-    this.skills = _.cloneDeep(skills);
-
-    this.crawlerConfig = _.cloneDeep(dCrawler);
+  constructor(private skillTier: number) {
+    this.data = _.cloneDeep(NodeData.Nodes);
+    this.skills = _.cloneDeep(SkillData.skills);
+    this.crawlers = _.cloneDeep(CrawlerData.data);
   }
 
   public destroy() {
@@ -58,6 +60,13 @@ export class NodeManager {
     return slugs.map(slug => this.skills.find(skill => skill.slug === slug));
   }
 
+  public getCrawlerConfig(slug: CrawlerSlug = 'crawler'): ICrawlerConfig {
+    if (slug === 'chieftain') {
+      return _.defaults(_.clone(this.crawlers.find(data => data.slug === 'chieftain')), this.getCrawlerConfig('crawler'));
+    }
+    return this.crawlers.find(data => data.slug === slug);
+  }
+
   public applyAchievements(achievements: boolean[]) {
     achievements.forEach((state, slug) => {
       if (state) {
@@ -79,60 +88,69 @@ export class NodeManager {
   public applySkill = (skill: ISkillConfig | IAchievement) => {
     skill.effects.forEach(effect => {
       if (effect.effectType === 'node') {
-        let node = this.getNodeConfig(effect.slug);
-        if (effect.key === 'outletEffect') {
-          if (effect.valueType === 'additive') {
-            node.outletEffects = node.outletEffects || [];
-            node.outletEffects.push(_.clone(effect.value));
-          } else if (effect.valueType === 'replace') {
-            node.outletEffects = [_.clone(effect.value)];
-          }
+        let config = this.getNodeConfig(effect.slug);
+        if (effect.key === 'outletEffects') {
+          this.finishArrayEffect(config, effect);
         } else {
-          if (effect.valueType === 'additive') {
-            (node as any)[effect.key] += effect.value;
-          } else if (effect.valueType === 'multiplicative') {
-            (node as any)[effect.key] *= effect.value;
-          } else if (effect.valueType === 'replace') {
-            (node as any)[effect.key] = effect.value;
-          }
+          this.finishNumberEffect(config, effect);
         }
       } else if (effect.effectType === 'crawler') {
-        let config = this.crawlerConfig;
-        if (effect.key === 'commands' || effect.key === 'preferenceList') {
-          if (effect.valueType === 'additive') {
-            (config as any)[effect.key].push(effect.value);
-          }
+        if (effect.slug === 'all') {
+          this.crawlers.forEach(config => {
+            if (effect.key === 'commands' || effect.key === 'preferenceList') {
+              this.finishArrayEffect(config, effect);
+            } else {
+              this.finishNumberEffect(config, effect);
+            }
+          });
         } else {
-          if (effect.valueType === 'additive') {
-            (config as any)[effect.key] += effect.value;
-          } else if (effect.valueType === 'multiplicative') {
-            (config as any)[effect.key] *= effect.value;
-          } else if (effect.valueType === 'replace') {
-            (config as any)[effect.key] = effect.value;
+          let config = this.getCrawlerConfig(effect.slug);
+          if (effect.key === 'commands' || effect.key === 'preferenceList') {
+            this.finishArrayEffect(config, effect);
+          } else {
+            this.finishNumberEffect(config, effect);
           }
         }
       } else if (effect.effectType === 'crawler-command') {
-        let config = this.crawlerConfig.commandConfig;
-        if (effect.valueType === 'additive') {
-          (config as any)[effect.key] += effect.value;
-        } else if (effect.valueType === 'multiplicative') {
-          (config as any)[effect.key] *= effect.value;
-        } else if (effect.valueType === 'replace') {
-          (config as any)[effect.key] = effect.value;
+        if (effect.slug === 'all') {
+          this.crawlers.forEach(config => {
+            this.finishNumberEffect(config.commandConfig, effect);
+          });
+        } else {
+          let config = this.getCrawlerConfig(effect.slug);
+          this.finishNumberEffect(config.commandConfig, effect);
         }
       } else if (effect.effectType === 'buildable') {
-        if (effect.valueType === 'additive') {
-          this.buildableNodes.push(effect.value);
-        }
+        this.finishArrayEffect(this.buildableNodes, effect);
+      } else if (effect.effectType === 'crawler-available') {
+        this.finishArrayEffect(this.availableCrawlers, effect);
       } else if (effect.effectType === 'config') {
-        if (effect.valueType === 'additive') {
-          (Config.NODE as any)[effect.key] += effect.value;
-        } else if (effect.valueType === 'multiplicative') {
-          (Config.NODE as any)[effect.key] *= effect.value;
-        } else if (effect.valueType === 'replace') {
-          (Config.NODE as any)[effect.key] = effect.value;
-        }
+        this.finishNumberEffect(Config.NODE, effect);
       }
     });
+  }
+
+  private finishNumberEffect(config: any, effect: ISkillEffect) {
+    if (effect.valueType === 'additive') {
+      config[effect.key] += effect.value;
+    } else if (effect.valueType === 'multiplicative') {
+      config[effect.key] *= effect.value;
+    } else if (effect.valueType === 'replace') {
+      config[effect.key] = effect.value;
+    }
+  }
+
+  private finishArrayEffect(config: any, effect: ISkillEffect) {
+    if (effect.key) {
+      if (!config[effect.key]) {
+        config[effect.key] = [];
+      }
+      config = config[effect.key];
+    }
+    if (effect.valueType === 'additive') {
+      config.push(effect.value);
+    } else if (effect.valueType === 'replace') {
+      config = [effect.value];
+    }
   }
 }

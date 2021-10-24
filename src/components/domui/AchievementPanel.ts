@@ -4,54 +4,27 @@ import { SkillBar } from './SkillBar';
 import { Formula } from '../../services/Formula';
 import { JMEventListener } from 'src/JMGE/events/JMEventListener';
 import { AchievementSlug } from '../../data/ATSData';
+import { SidebarElement } from './SidebarElement';
 
-export class AchievementPanel {
-  public element: HTMLDivElement;
-  private contentElement: HTMLDivElement;
+export class AchievementPanel extends SidebarElement {
   private achievements: {slug: AchievementSlug, element: HTMLDivElement}[] = [];
 
   constructor(states: boolean[], private rawAchievements: IAchievement[]) {
-    this.element = document.createElement('div');
-    this.element.classList.add('achievement-panel');
-    this.element.innerHTML = '<div class="achievement-title">Achievements</div>';
-    // document.body.appendChild(this.element);
-
-    this.contentElement = document.createElement('div');
-    this.contentElement.classList.add('achievement-content');
-    // <div class="node-content">${content}</div>
-    this.element.appendChild(this.contentElement);
+    super(null, 'achievement-panel', 'achievement-content');
+    let title = document.createElement('div');
+    title.classList.add('achievement-title');
+    title.innerText = 'Achievements';
+    this.element.prepend(title);
 
     rawAchievements.forEach(data => {
       let block = this.createAchievementBlock(data);
-      this.contentElement.appendChild(block);
+      this.content.appendChild(block);
 
       if (states[data.slug]) {
         this.toggleAchievement(data.slug);
       }
     });
-
-    // let button = document.createElement('button');
-    // button.classList.add('close-button');
-    // this.element.appendChild(button);
-    // button.innerHTML = 'X';
-    // button.addEventListener('click', () => this.hidden = true);
   }
-
-  public get hidden(): boolean {
-    return this.element.style.display === 'none';
-  }
-
-  public set hidden(b: boolean) {
-    if (b) {
-      this.element.style.display = 'none';
-    } else {
-      this.element.style.removeProperty('display');
-    }
-  }
-
-  // public destroy = () => {
-  //   document.body.removeChild(this.element);
-  // }
 
   public toggleAchievement(slug: AchievementSlug, state: boolean = true) {
     let data = this.achievements.find(block => block.slug === slug);
@@ -85,17 +58,4 @@ export class AchievementPanel {
 
     return element;
   }
-
-  // private updateHighlights() {
-  //   let sp = this.skillpoints;
-  //   this.hasSkillToLevel = false;
-  //   this.skillMap.forEach((data, i) => {
-  //     if (data.skill.cost <= sp && !data.element.disabled && !data.element.classList.contains('greyed')) {
-  //       data.element.classList.add('highlight');
-  //       this.hasSkillToLevel = true;
-  //     } else {
-  //       data.element.classList.remove('highlight');
-  //     }
-  //   });
-  // }
 }

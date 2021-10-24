@@ -11,6 +11,7 @@ export const Colors = {
     lightblue: 0x60A3FC,
     darkblue: 0x004296,
     purple: 0x9370E0,
+    white: 0xffffff,
   },
   // Node: {
   //   red: 0x200505,

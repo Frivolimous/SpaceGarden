@@ -3,8 +3,10 @@ import { Config } from '../../../Config';
 import { Colors } from '../../../data/Colors';
 import { PlantNode } from '../../nodes/PlantNode';
 import { GameKnowledge } from '../GameKnowledge';
-import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
-import { BaseCommand, CommandType } from './_BaseCommand';
+import { CrawlerModel } from '../Parts/CrawlerModel';
+import { ICommandConfig } from '../../../data/CrawlerData';
+import { CommandType } from './_CommandTypes';
+import { BaseCommand } from './_BaseCommand';
 
 export class BreedCommand extends BaseCommand {
   private state: 'eat' | 'walk';

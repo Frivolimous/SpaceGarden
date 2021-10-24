@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { Colors } from '../data/Colors';
 
 type TextureName = 'circle' | 'square' | 'triangle' |'thin-rect' | 'fat-rect' | 'pentagon' | 'hexagon' | 'firework' |
-    'crawler-power' | 'crawler';
+    'crawler-power' | 'crawler' | 'chieftain' | 'shaman';
 
 export const enum TextureUrl {
   GHOST = 'www.nowhere.com/ghost.png',
@@ -136,6 +136,15 @@ function createGraphicTextures() {
     graphic.clear().beginFill(0xffffff)
       .drawCircle(0, 0, 4);
     TextureCache.addTextureFromGraphic('crawler', graphic);
+    graphic.clear().beginFill(0xeeeeee)
+      .drawCircle(0, 0, 5);
+    TextureCache.addTextureFromGraphic('chieftain', graphic);
+    graphic.clear().beginFill(0xffffff)
+      .drawCircle(0, 0, 4)
+      .beginFill(0xcccccc)
+      .moveTo(0, -6).lineTo(-6, -1).lineTo(6, -1);
+      // .drawRect(-3, -3, 6, 6);
+    TextureCache.addTextureFromGraphic('shaman', graphic);
 
     graphic.clear().beginFill(0xffffff)
       .drawRect(0, 0, 2, 2);

@@ -53,7 +53,7 @@ export class GameUI extends BaseUI {
 
     this.extrinsic = SaveManager.getExtrinsic();
 
-    this.nodeManager = new NodeManager(NodeData.Nodes, SkillData.skills, this.extrinsic.skillTier);
+    this.nodeManager = new NodeManager(this.extrinsic.skillTier);
     this.canvas = new ScrollingContainer(1500, 1000);
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
@@ -126,7 +126,7 @@ export class GameUI extends BaseUI {
         {key: '1', withCtrl: true, function: () => this.loadSave(TierSaves[11])},
         {key: '2', withCtrl: true, function: () => this.loadSave(TierSaves[12])},
         {key: '0', withCtrl: true, function: () => this.loadSave(TierSaves[10])},
-        {key: 'z', function: () => this.gameC.addCrawler(this.nodeManager.crawlerConfig, this.gameC.nodes[0])},
+        {key: 'z', function: () => this.gameC.addCrawler(null, this.gameC.nodes[0])},
         {key: 'r', function: this.cheatResearch},
         {key: 'o', function: () => GameEvents.ACTIVITY_LOG.publish({slug: 'PRESTIGE'})},
         // {key: 'k', function: this.toggleKnowledge},

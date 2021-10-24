@@ -22,24 +22,27 @@ export class SkillPanel {
     this.element = document.createElement('div');
     this.element.classList.add('skill-panel');
     document.body.appendChild(this.element);
+    let top = document.createElement('div');
+    top.classList.add('top');
+    this.element.appendChild(top);
     if (disabled) {
-      this.element.innerHTML = `
+      top.innerHTML = `
       <div class="skill-title">${StringManager.data.UI_SKILLTREE_TITLE}</div>
       <div class="skill-subtitle">${StringManager.data.UI_SKILLTREE_SUBTITLE_INACTIVE}</div>`;
     } else {
-      this.element.innerHTML = `
+      top.innerHTML = `
       <div class="skill-title">${StringManager.data.UI_SKILLTREE_TITLE}</div>
       <div class="skill-subtitle">${StringManager.data.UI_SKILLTREE_SUBTITLE_ACTIVE}</div>`;
     }
     if (tier > 0) {
       this.tierContainer = document.createElement('div');
       this.tierContainer.classList.add('tier-content');
-      this.element.appendChild(this.tierContainer);
+      top.appendChild(this.tierContainer);
     }
 
     this.contentElement = document.createElement('div');
     this.contentElement.classList.add('skill-content');
-    this.element.appendChild(this.contentElement);
+    top.appendChild(this.contentElement);
     skills.forEach((skill) => {
       let block = this.createSkillBlock(skill);
       this.contentElement.appendChild(block);
@@ -52,17 +55,20 @@ export class SkillPanel {
     button.addEventListener('click', () => this.hidden = true);
 
     if (!disabled) {
+      let skillElement = document.createElement('div');
+
       this.skillpointElement = document.createElement('div');
       this.skillpointElement.classList.add('skill-skillpoint');
-      this.element.appendChild(this.skillpointElement);
+      skillElement.appendChild(this.skillpointElement);
       this.skillpointElement.innerHTML = `5 Skillpoints`;
 
       this.negative = document.createElement('div');
       this.negative.classList.add('skill-negative');
-      this.element.appendChild(this.negative);
+      skillElement.appendChild(this.negative);
 
       this.skillbar = new SkillBar();
-      this.element.appendChild(this.skillbar.element);
+      skillElement.appendChild(this.skillbar.element);
+      this.element.appendChild(skillElement);
     }
 
     this.hidden = true;

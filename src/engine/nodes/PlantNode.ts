@@ -26,6 +26,7 @@ export class PlantNode {
   private static cUid: number = 0;
 
   public uid: number;
+  public type: 'normal' | 'fruit';
   public outlets: PlantNode[] = [];
   public fruits: PlantNode[] = [];
 
@@ -48,6 +49,7 @@ export class PlantNode {
     _.defaults(config, dNodeConfig);
 
     this.uid = PlantNode.generateUid();
+    this.type = config.type;
 
     let texture = TextureCache.getNodeGraphicTexture(config.shape, config.radius);
     this.view = new PlantNodeView(texture, config.color, config.radius);
@@ -80,7 +82,7 @@ export class PlantNode {
   }
 
   public isFruit(): boolean {
-    return this.config.type === 'fruit';
+    return this.type === 'fruit';
   }
 
   public canSpawnFruit(): boolean {

@@ -1,5 +1,6 @@
-import { CommandType } from '../engine/Mechanics/CrawlerCommands/_BaseCommand';
+import { CommandType } from '../engine/Mechanics/CrawlerCommands/_CommandTypes';
 import { AchievementSlug } from './ATSData';
+import { CrawlerSlug } from './CrawlerData';
 import { NodeBase, NodeSlug } from './NodeData';
 
 export const SkillData: ISkillData = {
@@ -46,7 +47,7 @@ export const SkillData: ISkillData = {
       // description: 'Leaves reduce power drain of Stems by {1-value-amount}',
       cost: 2,
       effects: [
-        { effectType: 'node', slug: 'leaf', key: 'outletEffect', valueType: 'additive', value: {stat: '_PowerGen', type: 'additive', amount: -NodeBase.stemDrain / 2}},
+        { effectType: 'node', slug: 'leaf', key: 'outletEffects', valueType: 'additive', value: {stat: '_PowerGen', type: 'additive', amount: -NodeBase.stemDrain / 2}},
         {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 500},
       ],
     },
@@ -76,7 +77,7 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-tier-1',
       title: 'Tier 2',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 1 skills to unlock</p> Permanently unlock all Tier 1 skills but increases Seedling Power Drain to 0.4/s',
+      description: '<p class="skill-block-subtitle">Requires all Tier 1 skills to unlock</p> Permanently unlock all Tier 1 skills but increases Seedling Power Drain to 0.4/s',
       cost: 2,
       skillRequirements: ['skill-1', 'skill-2', 'skill-3', 'skill-4', 'skill-5', 'skill-6'],
       effects: [
@@ -97,67 +98,67 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-2-2',
       title: 'Librarians',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can bring Lab Fruits to the Seedling produce research',
+      description: '<p class="skill-block-subtitle">Requires Crawlers to unlock</p>Crawlers can bring Lab Fruits to the Seedling produce research',
       cost: 2,
       skillRequirements: ['skill-2-1'],
       effects: [
-        {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.RESEARCH},
-        {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.RESEARCH},
+        {effectType: 'crawler', slug: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.RESEARCH},
+        {effectType: 'crawler', slug: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.RESEARCH},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-2-3',
       title: 'Woodcutters',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can use Grove Fruits to power the Seedling or low power nodes',
+      description: '<p class="skill-block-subtitle">Requires Crawlers to unlock</p>Crawlers can use Grove Fruits to power the Seedling or low power nodes',
       cost: 3,
       skillRequirements: ['skill-2-1'],
       effects: [
-        {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.POWER},
-        {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.POWER},
+        {effectType: 'crawler', slug: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.POWER},
+        {effectType: 'crawler', slug: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.POWER},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-2-4',
       title: 'Handmaidens',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can over-consume Home Fruits to spawn more crawlers',
+      description: '<p class="skill-block-subtitle">Requires Crawlers to unlock</p>Crawlers can over-consume Home Fruits to spawn more crawlers',
       cost: 3,
       skillRequirements: ['skill-2-1'],
       effects: [
-        {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.BREED},
-        {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.BREED},
+        {effectType: 'crawler', slug: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.BREED},
+        {effectType: 'crawler', slug: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.BREED},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-2-5',
       title: 'Worshippers',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers can dance on the Core to charge its fruits',
+      description: '<p class="skill-block-subtitle">Requires Crawlers to unlock</p>Crawlers can dance on the Core to charge its fruits',
       cost: 4,
       skillRequirements: ['skill-2-1'],
       effects: [
-        {effectType: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.DANCE},
-        {effectType: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.DANCE},
+        {effectType: 'crawler', slug: 'crawler', key: 'commands', valueType: 'additive', value: CommandType.DANCE},
+        {effectType: 'crawler', slug: 'crawler', key: 'preferenceList', valueType: 'additive', value: CommandType.DANCE},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-2-6',
       title: 'Longevity',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires Crawlers to unlock</p>Crawlers lose 50% less health per second and move 20% faster.',
+      description: '<p class="skill-block-subtitle">Requires Crawlers to unlock</p>Crawlers lose 50% less health per second and move 20% faster.',
       cost: 4,
       skillRequirements: ['skill-2-1'],
       effects: [
-        {effectType: 'crawler', key: 'healthDrain', valueType: 'multiplicative', value: 0.75},
-        {effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.2},
+        {effectType: 'crawler', slug: 'all', key: 'healthDrain', valueType: 'multiplicative', value: 0.75},
+        {effectType: 'crawler', slug: 'all', key: 'speed', valueType: 'multiplicative', value: 1.2},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-tier-2',
       title: 'Tier 3',
-      description: '<p style="margin: 3px; font-style: italic; font-size: 11px;">Requires all Tier 2 skills to unlock</p> Permanently unlock Tier 2 but increases Seedling Max Power by x10 and Power Drain by +0.4/s',
+      description: '<p class="skill-block-subtitle">Requires all Tier 2 skills to unlock</p> Permanently unlock Tier 2 but increases Seedling Max Power by x10 and Power Drain by +0.4/s',
       skillRequirements: ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6'],
       cost: 2,
       effects: [
@@ -242,7 +243,7 @@ export const SkillData: ISkillData = {
       title: 'Overpopulation',
       description: 'Requirement: Have 15 Crawlers at once<br>Reward: Crawlers gain 10% more health when eating',
       effects: [
-        {effectType: 'crawler-command', key: 'eatRatio', valueType: 'multiplicative', value: 1.1},
+        {effectType: 'crawler-command', slug: 'crawler', key: 'eatRatio', valueType: 'multiplicative', value: 1.1},
       ],
     },
     {
@@ -250,17 +251,11 @@ export const SkillData: ISkillData = {
       title: 'Massacre',
       description: 'Requirement: Kill 100 Crawlers in total<br>Reward: Crawlers move 10% faster',
       effects: [
-        {effectType: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.1},
+        {effectType: 'crawler', slug: 'crawler', key: 'speed', valueType: 'multiplicative', value: 1.1},
       ],
     },
   ],
 };
-
-// effectType: 'node' | 'tier' | 'crawler' | 'buildable' | 'config';
-// slug?: NodeSlug;
-// key?: string;
-// valueType: 'additive' | 'multiplicative' | 'replace';
-// value: any;
 
 interface ISkillData {
   skills: ISkillConfig[];
@@ -285,10 +280,29 @@ export interface IAchievement {
   effects: ISkillEffect[];
 }
 
-export interface ISkillEffect {
-  effectType: 'node' | 'tier' | 'crawler' | 'crawler-command' | 'buildable' | 'config';
-  slug?: NodeSlug;
-  key?: string;
-  valueType: 'additive' | 'multiplicative' | 'replace';
+export type ISkillEffect = ISkillEffectNode | ISkillEffectCrawler | ISkillEffectSimple;
+
+export interface ISkillEffectNode {
+  effectType: 'node';
+  slug: NodeSlug;
+  key: string;
+  valueType: EffectValueType;
   value: any;
 }
+
+export interface ISkillEffectCrawler {
+  effectType: 'crawler' | 'crawler-command';
+  slug: CrawlerSlug | 'all';
+  key: string;
+  valueType: EffectValueType;
+  value: any;
+}
+
+export interface ISkillEffectSimple {
+  effectType: 'tier' | 'config' | 'buildable' | 'crawler-available';
+  key?: string;
+  valueType: EffectValueType;
+  value: any;
+}
+
+export type EffectValueType = 'additive' | 'multiplicative' | 'replace';

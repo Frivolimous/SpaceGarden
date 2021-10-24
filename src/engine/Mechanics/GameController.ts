@@ -8,10 +8,11 @@ import { FDGContainer } from '../FDG/FDGContainer';
 import { FDGLink } from '../FDG/FDGLink';
 import { INodeSave, PlantNode } from '../nodes/PlantNode';
 import { ITransferBlock } from '../nodes/PlantNodePower';
-import { CrawlerModel, ICrawler } from './Parts/CrawlerModel';
+import { CrawlerModel } from './Parts/CrawlerModel';
 import { ICrawlerSave } from 'src/data/SaveData';
 import { GameKnowledge } from './GameKnowledge';
 import { GameEvents } from '../../services/GameEvents';
+import { CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
 
 export class GameController {
   public onNodeAdded = new JMEventListener<PlantNode>();
@@ -69,7 +70,10 @@ export class GameController {
     if (node.flagCallOnRemove) this.onNodeRemoved.publish(node);
   }
 
-  public addCrawler(config: ICrawler, node: PlantNode): CrawlerModel {
+  public addCrawler(config: ICrawlerConfig, node: PlantNode): CrawlerModel {
+    if (!config) {
+      config = this.determineNextCrawler();
+    }
     let crawler = new CrawlerModel(config, node, this.knowledge);
     crawler.onNodeClaimed.addListener(this.onNodeClaimed.publish);
     this.crawlers.push(crawler);
@@ -147,7 +151,7 @@ export class GameController {
       fruit.view.position.set(node.view.x, node.view.y);
 
       if (node.slug === 'home' && this.crawlers.length < this.nodes.filter(node2 => node2.slug === 'home').length) {
-        this.addCrawler(this.nodeManager.crawlerConfig, node);
+        this.addCrawler(null, node);
       }
     }
   }
@@ -175,7 +179,7 @@ export class GameController {
       return;
     } else if (crawler.health > crawler.config.breedThreshold) {
       crawler.health /= 2;
-      this.addCrawler(_.defaults({health: crawler.health}, this.nodeManager.crawlerConfig), crawler.cLoc);
+      this.addCrawler(_.defaults({health: crawler.health}, this.determineNextCrawler()), crawler.cLoc);
     }
 
     crawler.update();
@@ -211,6 +215,7 @@ export class GameController {
   public saveCrawlers(): ICrawlerSave[] {
     let saves: ICrawlerSave[] = this.crawlers.map(crawler => {
       return {
+        slug: crawler.slug,
         preference: crawler.preference,
         health: crawler.health,
         location: crawler.cLoc.uid,
@@ -234,7 +239,7 @@ export class GameController {
     });
 
     crawlerSaves.forEach((save, i) => {
-      this.addCrawler(_.defaults({health: save.health, preference: save.preference}, this.nodeManager.crawlerConfig), nodes.find(node2 => node2.uid === save.location));
+      this.addCrawler(_.defaults({health: save.health, preference: save.preference}, this.nodeManager.getCrawlerConfig(save.slug)), nodes.find(node2 => node2.uid === save.location));
     });
   }
 
@@ -297,6 +302,24 @@ export class GameController {
           }
         }
       });
+    }
+  }
+
+  private determineNextCrawler(): ICrawlerConfig {
+    if (false && this.knowledge.sortedCrawlers.chieftain.length === 0) {
+      return this.nodeManager.getCrawlerConfig('chieftain');
+    } else {
+      let available = this.nodeManager.availableCrawlers.filter(slug => {
+        let config = this.nodeManager.getCrawlerConfig(slug);
+        if (!config.maxCount || this.knowledge.sortedCrawlers[slug].length < config.maxCount) {
+          return true;
+        }
+
+        return false;
+      });
+      if (available.length > 0) {
+        return this.nodeManager.getCrawlerConfig(_.sample(available));
+      }
     }
   }
 }

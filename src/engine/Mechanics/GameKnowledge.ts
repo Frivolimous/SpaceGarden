@@ -12,6 +12,7 @@ import { GameEvents, IActivityLog } from '../../services/GameEvents';
 import { SkillData } from '../../data/SkillData';
 import { InfoPopup } from '../../components/domui/InfoPopup';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
+import { CrawlerSlug } from '../../data/CrawlerData';
 
 export class GameKnowledge {
   public onAchievementUpdate = new JMEventListener<{slug: AchievementSlug, unlocked?: boolean, count?: string}>();
@@ -36,6 +37,12 @@ export class GameKnowledge {
     'big-evil': [],
     'small-evil': [],
     'leaf': [],
+  };
+
+  public sortedCrawlers: {[key in CrawlerSlug]: CrawlerModel[]} = {
+    crawler: [],
+    chieftain: [],
+    shaman: [],
   };
 
   public crawlerCount: number = 0;
@@ -149,11 +156,13 @@ export class GameKnowledge {
   }
 
   private crawlerAdded = (crawler: CrawlerModel) => {
+    this.sortedCrawlers[crawler.slug].push(crawler);
     this.crawlerCount++;
     this.checkCrawler15();
   }
 
   private crawlerRemoved = (crawler: CrawlerModel) => {
+    _.pull(this.sortedCrawlers[crawler.slug], crawler);
     this.crawlerCount--;
     this.extrinsic.scores[ScoreType.CRAWLERS_DEAD]++;
     this.checkCrawlerDie100();

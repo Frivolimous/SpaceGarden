@@ -3,8 +3,10 @@ import { Colors } from '../../../data/Colors';
 import { JMTween } from '../../../JMGE/JMTween';
 import { PlantNode } from '../../nodes/PlantNode';
 import { GameKnowledge } from '../GameKnowledge';
-import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
-import { BaseCommand, CommandType } from './_BaseCommand';
+import { CrawlerModel } from '../Parts/CrawlerModel';
+import { ICommandConfig } from '../../../data/CrawlerData';
+import { BaseCommand } from './_BaseCommand';
+import { CommandType } from './_CommandTypes';
 
 export class EatCommand extends BaseCommand {
   private state: 'eat' | 'walk';

@@ -2,14 +2,15 @@ import * as PIXI from 'pixi.js';
 import { JMTween } from '../../../JMGE/JMTween';
 import { Colors } from '../../../data/Colors';
 import { TextureCache } from '../../../services/TextureCache';
+import { CrawlerSlug } from '../../../data/CrawlerData';
 
 export class CrawlerView extends PIXI.Container {
   public sprite: PIXI.Sprite;
   public _Highlight: PIXI.Graphics;
 
-  constructor() {
+  constructor(private slug: CrawlerSlug) {
     super();
-    this.sprite = new PIXI.Sprite(TextureCache.getGraphicTexture('crawler'));
+    this.sprite = new PIXI.Sprite(TextureCache.getGraphicTexture(slug));
     this.sprite.tint = Colors.Node.orange;
     this.sprite.anchor.set(0.5);
 

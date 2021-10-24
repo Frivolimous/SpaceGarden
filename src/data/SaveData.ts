@@ -1,6 +1,6 @@
-import { CommandType } from '../engine/Mechanics/CrawlerCommands/_BaseCommand';
+import { CommandType } from '../engine/Mechanics/CrawlerCommands/_CommandTypes';
 import { INodeSave } from '../engine/nodes/PlantNode';
-import { NodeSlug } from './NodeData';
+import { CrawlerSlug } from './CrawlerData';
 
 export type CurrencySlug = 'gold' | 'tokens' | 'refresh' | 'suns' | 'souls';
 
@@ -27,6 +27,7 @@ export interface IExtrinsicModel {
 }
 
 export interface ICrawlerSave {
+  slug: CrawlerSlug;
   preference: CommandType;
   health: number;
   location: number;

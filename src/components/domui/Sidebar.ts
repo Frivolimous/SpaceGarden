@@ -4,35 +4,28 @@ import { CrawlerModel } from '../../engine/Mechanics/Parts/CrawlerModel';
 import { PlantNode } from '../../engine/nodes/PlantNode';
 import { StringManager } from '../../services/StringManager';
 import { AchievementPanel } from './AchievementPanel';
+import { SidebarButton } from './SidebarButton';
+import { SidebarElement } from './SidebarElement';
 import { SkillPanel } from './SkillPanel';
 
-type SidebarElement = PlantNode | CrawlerModel;
+type SidebarSource = PlantNode | CrawlerModel;
 type SidebarTab = 'node' | 'crawler' | 'knowledge' | 'none';
 
 export class Sidebar {
-  private static aid: number = 0;
+  private knowledgeElement: SidebarElement;
 
-  private static genAid(): string {
-    Sidebar.aid++;
+  private nodeMap: SidebarElement[] = [];
+  private seedlingElement: SidebarElement;
+  private currentHighlight: SidebarElement;
+  private hideStemButton: SidebarButton;
 
-    return `id-${Sidebar.aid}`;
-  }
-
-  private knowledgeElement: HTMLDivElement;
-  private knowledgeContent: HTMLDivElement;
-
-  private nodeMap: { element: HTMLDivElement, node: SidebarElement, atStart?: boolean }[] = [];
-  private currentHighlight: { element: HTMLDivElement, node: SidebarElement};
-  private hideStemButton: HTMLButtonElement;
-
-  private knowledgeButton: HTMLButtonElement;
-  private nodeButton: HTMLButtonElement;
-  private crawlerButton: HTMLButtonElement;
+  private knowledgeButton: SidebarButton;
+  private nodeButton: SidebarButton;
+  private crawlerButton: SidebarButton;
 
   private sidebar: HTMLDivElement;
   private tabContainer: HTMLDivElement;
   private container: HTMLDivElement;
-  private notification: HTMLElement;
 
   private _AreStemsHidden: boolean = false;
   private currentTab: SidebarTab = 'node';
@@ -47,17 +40,16 @@ export class Sidebar {
     this.tabContainer = document.getElementById('tab-container') as HTMLDivElement;
     this.container = document.getElementById('node-container') as HTMLDivElement;
 
-    this.knowledgeButton = this.makeButton('Overview', 'tab-button', () => this.setCurrentTab('knowledge'));
-    this.tabContainer.appendChild(this.knowledgeButton);
-    this.nodeButton = this.makeButton('Nodes', 'tab-button', () => this.setCurrentTab('node'));
-    this.tabContainer.appendChild(this.nodeButton);
-    this.crawlerButton = this.makeButton('Crawlers', 'tab-button', () => this.setCurrentTab('crawler'));
-    this.tabContainer.appendChild(this.crawlerButton);
-    this.hideElement(this.crawlerButton);
+    this.knowledgeButton = new SidebarButton('Overview', 'tab-button', () => this.setCurrentTab('knowledge'));
+    this.tabContainer.appendChild(this.knowledgeButton.element);
+    this.nodeButton = new SidebarButton('Nodes', 'tab-button', () => this.setCurrentTab('node'));
+    this.tabContainer.appendChild(this.nodeButton.element);
+    this.crawlerButton = new SidebarButton('Crawlers', 'tab-button', () => this.setCurrentTab('crawler'));
+    this.tabContainer.appendChild(this.crawlerButton.element);
+    this.crawlerButton.isHidden = true;
+    this.knowledgeElement = new SidebarElement();
 
-    this.addKnowledgeElement('');
-
-    // this.hideStemButton = this.makeButton(StringManager.data.UI_SIDEBAR_HIDE_STEMS, 'skill-button', () => {
+    // this.hideStemButton = new SidebarButton(StringManager.data.UI_SIDEBAR_HIDE_STEMS, 'skill-button', () => {
     //   this.areStemsHidden = !this.areStemsHidden;
     //   if (this.areStemsHidden) {
     //     this.hideStemButton.innerHTML = StringManager.data.UI_SIDEBAR_SHOW_STEMS;
@@ -88,13 +80,9 @@ export class Sidebar {
     this.container.innerHTML = '';
 
     this.nodeMap.forEach(data => {
-      if (data.atStart) {
-        this.container.prepend(data.element);
-      } else {
-        this.container.appendChild(data.element);
-      }
+      this.container.appendChild(data.element);
     });
-    this.container.prepend(this.knowledgeElement);
+    this.container.prepend(this.knowledgeElement.element);
     this.container.appendChild(this.achieveElement.element);
     this.setCurrentTab('node');
   }
@@ -111,33 +99,33 @@ export class Sidebar {
       this.crawlerButton.disabled = true;
       this.nodeButton.disabled = false;
       this.knowledgeButton.disabled = false;
-      this.nodeMap.forEach(data => this.hideElement(data.element, data.node.slug !== 'crawler'));
-      this.hideElement(this.knowledgeElement);
-      this.hideElement(this.achieveElement.element);
+      this.nodeMap.forEach(data => data.isHidden = data.source.type !== 'crawler');
+      this.knowledgeElement.isHidden = true;
+      this.achieveElement.isHidden = true;
     } else if (tab === 'node') {
       this.crawlerButton.disabled = false;
       this.nodeButton.disabled = true;
       this.knowledgeButton.disabled = false;
-      this.nodeMap.forEach(data => this.hideElement(data.element, data.node.slug === 'crawler' || (this.areStemsHidden && data.node.slug === 'stem')));
-      this.hideElement(this.knowledgeElement);
-      this.hideElement(this.achieveElement.element);
+      this.nodeMap.forEach(data => data.isHidden = data.source.type === 'crawler' || (this.areStemsHidden && data.source.slug === 'stem'));
+      this.knowledgeElement.isHidden = true;
+      this.achieveElement.isHidden = true;
     } else if (tab === 'knowledge') {
       this.crawlerButton.disabled = false;
       this.nodeButton.disabled = false;
       this.knowledgeButton.disabled = true;
-      this.nodeMap.forEach(data => this.hideElement(data.element, true));
-      this.hideElement(this.knowledgeElement, false);
-      this.hideElement(this.achieveElement.element, false);
+      this.nodeMap.forEach(data => data.isHidden = true);
+      this.knowledgeElement.isHidden = false;
+      this.achieveElement.isHidden = false;
     } else if (tab === 'none') {
-      this.nodeMap.forEach(data => this.hideElement(data.element, true));
-      this.hideElement(this.knowledgeElement);
-      this.hideElement(this.achieveElement.element);
+      this.nodeMap.forEach(data => data.isHidden = true);
+      this.knowledgeElement.isHidden = true;
+      this.achieveElement.isHidden = true;
     }
   }
 
   public updateKnowledge(knowledge: GameKnowledge) {
     if (this.currentTab === 'knowledge') {
-      this.knowledgeContent.innerHTML = knowledge.toString();
+      this.knowledgeElement.content.innerHTML = knowledge.toString();
     }
   }
 
@@ -149,131 +137,73 @@ export class Sidebar {
     }
   }
 
-  public addNodeElement = (node: SidebarElement) => {
-    if (node.slug === 'crawler' && this.isElementHidden(this.crawlerButton)) {
-      this.hideElement(this.crawlerButton, false);
+  public addNodeElement = (node: SidebarSource) => {
+    if (node.isFruit()) return;
+
+    let element = new SidebarElement(node);
+    this.container.appendChild(element.element);
+
+    element.element.addEventListener('pointerover', () => {
+      this.highlightNode(node, true);
+    });
+
+    element.element.addEventListener('pointerout', () => {
+      this.highlightNode(null);
+    });
+
+    this.nodeMap.push(element);
+
+    if (node.slug === 'seedling') {
+      element.addButton(StringManager.data.UI_SIDEBAR_SKILLTREE_NEXT, () => {
+        this.nextSkillPanel.hidden = false;
+      });
+      this.seedlingElement = element;
+    } else if (node.slug === 'core' && this.currentSkillPanel) {
+      element.addButton(StringManager.data.UI_SIDEBAR_SKILLTREE_CURRENT, () => {
+        this.currentSkillPanel.hidden = false;
+      });
+    }
+
+    if (node.type === 'crawler' && this.crawlerButton.isHidden) {
+      this.crawlerButton.isHidden = false;
       this.setCurrentTab('crawler');
     }
-    if (!node.isFruit()) {
-      let atStart = (node.slug === 'seedling');
-      let element = this.addElement(node.toString(), atStart);
-      element.addEventListener('pointerover', () => {
-        this.highlightNode(node, true);
-      });
 
-      element.addEventListener('pointerout', () => {
-        this.highlightNode(null);
-      });
-
-      this.nodeMap.push({ element, node, atStart });
-
-      if (node.slug === 'seedling') {
-        let button = document.createElement('button');
-        button.classList.add('skill-button');
-        button.innerHTML = StringManager.data.UI_SIDEBAR_SKILLTREE_NEXT;
-        button.addEventListener('click', () => {
-          this.nextSkillPanel.hidden = false;
-        });
-        element.appendChild(button);
-
-        this.notification = document.createElement('div');
-        this.notification.classList.add('notification');
-        button.appendChild(this.notification);
-        this.notification.hidden = true;
-      }
-
-      if (node.slug === 'core' && this.currentSkillPanel) {
-        let button = document.createElement('button');
-        button.classList.add('skill-button');
-        button.innerHTML = StringManager.data.UI_SIDEBAR_SKILLTREE_CURRENT;
-        button.addEventListener('click', () => {
-          this.currentSkillPanel.hidden = false;
-        });
-        element.appendChild(button);
-      }
-
-      this.setCurrentTab(this.currentTab);
-    }
+    this.setCurrentTab(this.currentTab);
   }
 
-  public removeNodeElement = (node: SidebarElement) => {
+  public removeNodeElement = (node: SidebarSource) => {
     if (!node.isFruit()) {
       if (node.slug === 'seedling') {
         this.nextSkillPanel.clear();
+        this.seedlingElement = null;
       }
-      let index = this.nodeMap.findIndex(map => map.node === node);
+      let index = this.nodeMap.findIndex(data => data.source === node);
       this.container.removeChild(this.nodeMap[index].element);
       this.nodeMap.splice(index, 1);
     }
   }
 
   public updateNodes() {
-    this.nodeMap.forEach(data => {
-      let contentElement = data.element.querySelector('.node-content');
-      contentElement.innerHTML = data.node.toString();
-      if (data.node.slug === 'seedling') {
-        this.nextSkillPanel.updateSkillpoints(data.node.power.researchCurrent);
-        this.notification.hidden = !this.nextSkillPanel.hidden || !this.nextSkillPanel.hasSkillToLevel;
-      }
-    });
+    this.nodeMap.forEach(data => data.updateFromSource());
+
+    if (this.seedlingElement) {
+      this.nextSkillPanel.updateSkillpoints((this.seedlingElement.source as PlantNode).power.researchCurrent);
+      this.seedlingElement.button.notify(this.nextSkillPanel.hidden && this.nextSkillPanel.hasSkillToLevel);
+    }
   }
 
-  public highlightNode(node: SidebarElement, andHighlightNode?: boolean) {
+  public highlightNode(node: SidebarSource, andHighlightNode?: boolean) {
     if (this.currentHighlight) {
-      this.currentHighlight.element.classList.remove('highlight');
-      this.currentHighlight.node.view.highlight = false;
+      this.currentHighlight.highlight(false);
       this.currentHighlight = null;
     }
     if (node) {
-      let map = this.nodeMap.find(data => data.node === node);
-      if (map) {
-        map.element.classList.add('highlight');
-        if (andHighlightNode) {
-          node.view.highlight = true;
-        }
-        this.currentHighlight = map;
+      let data = this.nodeMap.find(data2 => data2.source === node);
+      if (data) {
+        data.highlight(true, andHighlightNode);
+        this.currentHighlight = data;
       }
     }
-  }
-
-  private addKnowledgeElement(content: string) {
-    if (this.knowledgeElement) return;
-
-    this.knowledgeElement = this.addElement(content, true);
-    this.knowledgeContent = this.knowledgeElement.querySelector('.node-content');
-  }
-
-  private addElement(content: string, start: boolean): HTMLDivElement {
-    let element = document.createElement('div');
-    element.innerHTML = `<div class="node-content">${content}</div>`;
-    element.classList.add('node-block');
-    element.id = Sidebar.genAid();
-    if (start) {
-      this.container.prepend(element);
-    } else {
-      this.container.appendChild(element);
-    }
-    return element;
-  }
-
-  private makeButton(innerHTML: string, className: string, onClick: () => void): HTMLButtonElement {
-    let button = document.createElement('button');
-    button.classList.add(className);
-    button.innerHTML = innerHTML;
-    button.addEventListener('click', onClick);
-
-    return button;
-  }
-
-  private hideElement(element: HTMLElement, hidden: boolean = true) {
-    if (hidden) {
-      element.style.display = 'none';
-    } else {
-      element.style.removeProperty('display');
-    }
-  }
-
-  private isElementHidden(element: HTMLElement): boolean {
-    return element.style.display === 'none';
   }
 }

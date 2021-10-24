@@ -1,35 +1,16 @@
 import _ from 'lodash';
 import { PlantNode } from '../../../engine/nodes/PlantNode';
-import { IdleCommand } from '../CrawlerCommands/IdleCommand';
-import { EatCommand } from '../CrawlerCommands/EatCommand';
-import { WanderCommand } from '../CrawlerCommands/WanderCommand';
-import { BaseCommand, CommandType } from '../CrawlerCommands/_BaseCommand';
+import { BaseCommand } from '../CrawlerCommands/_BaseCommand';
 import { CrawlerView } from './CrawlerView';
 import { AStarPath } from '../../../JMGE/others/AStar';
 import { JMTween } from '../../../JMGE/JMTween';
-import { DanceCommand } from '../CrawlerCommands/DanceCommand';
-import { ResearchCommand } from '../CrawlerCommands/ResearchCommand';
-import { PowerCommand } from '../CrawlerCommands/PowerCommand';
-import { FrustratedCommand } from '../CrawlerCommands/FrustratedCommand';
-import { BreedCommand } from '../CrawlerCommands/BreedCommand';
-import { StarvingCommand } from '../CrawlerCommands/StarvingCommand';
 import { GameKnowledge } from '../GameKnowledge';
 import { JMEventListener } from '../../../JMGE/events/JMEventListener';
+import { CrawlerSlug, ICrawlerConfig } from '../../../data/CrawlerData';
+import { commandMap, CommandType } from '../CrawlerCommands/_CommandTypes';
+import { TextureCache } from '../../../services/TextureCache';
 
 export class CrawlerModel {
-  public static commandMap: {[key in CommandType]: typeof BaseCommand} = {
-    [CommandType.NONE]: null,
-    [CommandType.WANDER]: WanderCommand,
-    [CommandType.IDLE]: IdleCommand,
-    [CommandType.EAT]: EatCommand,
-    [CommandType.DANCE]: DanceCommand,
-    [CommandType.RESEARCH]: ResearchCommand,
-    [CommandType.POWER]: PowerCommand,
-    [CommandType.FRUSTRATED]: FrustratedCommand,
-    [CommandType.STARVING]: StarvingCommand,
-    [CommandType.BREED]: BreedCommand,
-  };
-
   public static generateUid() {
     CrawlerModel.cUid++;
 
@@ -49,8 +30,10 @@ export class CrawlerModel {
   public onNodeClaimed = new JMEventListener<{claim: boolean, node: PlantNode, claimer: CrawlerModel}>();
   public claimedNode: PlantNode;
 
-  public slug: 'crawler' = 'crawler';
+  public slug: CrawlerSlug = 'crawler';
   public uid: number;
+
+  public type = 'crawler';
 
   public health: number = 1;
   public healthDrain: number;
@@ -64,21 +47,52 @@ export class CrawlerModel {
 
   private commandList: BaseCommand[] = [];
 
-  constructor(public config: ICrawler, startingNode: PlantNode, private knowledge: GameKnowledge) {
+  constructor(public config: ICrawlerConfig, startingNode: PlantNode, private knowledge: GameKnowledge) {
     this.uid = CrawlerModel.generateUid();
+    this.view = new CrawlerView(config.slug);
+    this.cLoc = startingNode;
+
+    this.slug = config.slug || this.slug;
     this.health = config.health;
     this.healthDrain = config.healthDrain;
     this.speed = config.speed;
-    this.cLoc = startingNode;
-
     this.preference = config.preference || _.sample(config.preferenceList);
-    this.view = new CrawlerView();
-
     config.commands.forEach(type => {
-      this.commandList.push(new (CrawlerModel.commandMap[type])(this, config.commandConfig, knowledge));
+      this.commandList.push(new (commandMap[type])(this, config.commandConfig, knowledge));
     });
 
     this.setCommand(CommandType.IDLE);
+  }
+
+  public hasBuff(): boolean {
+    return false;
+  }
+
+  public addBuff(count: number) {
+
+  }
+
+  public changeConfig(config: Partial<ICrawlerConfig>) {
+    this.config = config;
+
+    if (config.slug) {
+      this.view.sprite.texture = TextureCache.getGraphicTexture(config.slug);
+      this.slug = config.slug;
+    }
+    if (config.health) this.health = config.health;
+    if (config.healthDrain) this.healthDrain = config.healthDrain;
+    if (config.speed) this.speed = config.speed;
+    if (config.preference) this.preference = config.preference;
+    else if (config.preferenceList) this.preference = _.sample(config.preferenceList);
+
+    if (config.commands) {
+      this.commandList = [];
+      config.commands.forEach(type => {
+        this.commandList.push(new (commandMap[type])(this, config.commandConfig, this.knowledge));
+      });
+
+      this.setCommand(CommandType.IDLE);
+    }
   }
 
   public destroy() {
@@ -151,75 +165,15 @@ export class CrawlerModel {
   }
 
   public toString(): string {
-    let m = `<div class='node-title'>Crawler</div>`;
+    let m = `<div class='node-title'>${this.slug}</div>`;
     m += `Health: ${Math.floor(this.health * 100)}%`;
     m += `<br>Action: ${this.currentCommand ? CommandType[this.currentCommand.type] : 'NONE'}`;
-    if (this.currentCommand.type === CommandType.FRUSTRATED && this.frustratedBy) {
-      m += ` by ${this.frustratedBy}`;
-    }
+    // if (this.currentCommand.type === CommandType.FRUSTRATED && this.frustratedBy) {
+    //   m += ` by ${this.frustratedBy}`;
+    // }
     if (this.preference) {
       m += `<br>Loves to ${CommandType[this.preference]}`;
     }
     return m;
   }
 }
-
-export interface ICrawler {
-  health?: number;
-  healthDrain?: number;
-  breedThreshold?: number;
-  speed?: number;
-  commands?: CommandType[];
-  preference?: CommandType;
-  preferenceList?: CommandType[];
-  commandConfig?: ICommandConfig;
-}
-
-export interface ICommandConfig {
-  wanderRepeat: number;
-  idleRepeat: number;
-  frustratedRepeat: number;
-  fruitSpeed: number;
-  researchRatio: number;
-  powerRatio: number;
-  eatRatio: number;
-  danceGen: number;
-  danceTicks: number;
-}
-
-export const dCrawler: ICrawler = {
-  health: 1,
-  breedThreshold: 1.25,
-  healthDrain: 0.0002,
-  speed: 0.01,
-  commands: [
-    CommandType.WANDER,
-    CommandType.IDLE,
-    CommandType.EAT,
-    // CommandType.DANCE,
-    // CommandType.RESEARCH,
-    // CommandType.POWER,
-    CommandType.FRUSTRATED,
-    CommandType.STARVING,
-    // CommandType.BREED,
-  ],
-  preferenceList: [
-    CommandType.WANDER,
-    // CommandType.BREED,
-    // CommandType.DANCE,
-    // CommandType.RESEARCH,
-    // CommandType.POWER,
-  ],
-
-  commandConfig: {
-    wanderRepeat: 2,
-    idleRepeat: 3,
-    frustratedRepeat: 3,
-    fruitSpeed: 0.95,
-    researchRatio: 0.5,
-    eatRatio: 0.0065,
-    powerRatio: 2,
-    danceGen: 0.25,
-    danceTicks: 420,
-  },
-};

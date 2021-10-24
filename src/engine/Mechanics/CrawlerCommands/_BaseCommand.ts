@@ -1,22 +1,9 @@
+import { ICommandConfig } from '../../../data/CrawlerData';
 import { PlantNode } from '../../../engine/nodes/PlantNode';
 import { JMEasing, JMTween } from '../../../JMGE/JMTween';
 import { GameKnowledge } from '../GameKnowledge';
-import { CrawlerModel, ICommandConfig } from '../Parts/CrawlerModel';
-import { IdleCommand } from './IdleCommand';
-import { WanderCommand } from './WanderCommand';
-
-export enum CommandType {
-  NONE,
-  WANDER,
-  IDLE,
-  EAT,
-  DANCE,
-  RESEARCH,
-  POWER,
-  FRUSTRATED,
-  STARVING,
-  BREED,
-}
+import { CrawlerModel } from '../Parts/CrawlerModel';
+import { CommandType } from './_CommandTypes';
 
 export class BaseCommand {
   public type: CommandType;
