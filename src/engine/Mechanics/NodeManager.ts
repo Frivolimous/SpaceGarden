@@ -7,24 +7,16 @@ import { CrawlerData, CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData
 export class NodeManager {
   public skills: ISkillConfig[];
 
-  public buildableNodes: NodeSlug[] = [
-    'core',
-    'stem',
-    'generator',
-    'grove',
-    'lab',
-    'seedling',
-  ];
+  public buildableNodes: NodeSlug[];
 
-  public availableCrawlers: CrawlerSlug[] = [
-    'crawler',
-    // 'shaman',
-  ];
+  public availableCrawlers: CrawlerSlug[];
 
   private data: INodeConfig[];
   private crawlers: ICrawlerConfig[];
 
   constructor(private skillTier: number) {
+    this.buildableNodes = _.clone(NodeData.BaseBuildable);
+    this.availableCrawlers = _.clone(CrawlerData.BaseAvailable);
     this.data = _.cloneDeep(NodeData.Nodes);
     this.skills = _.cloneDeep(SkillData.skills);
     this.crawlers = _.cloneDeep(CrawlerData.data);

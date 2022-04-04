@@ -11,7 +11,9 @@ export class PlantNodePower {
 
   public powerCurrent: number = 0;
   public fruitCurrent: number = 0;
+  public powerClump: number = 0;
   public researchCurrent: number = 0;
+  public _ResearchGen: number = 0;
   public _PowerGen: number = 0;
 
   public powerTick: number = 0;
@@ -21,8 +23,10 @@ export class PlantNodePower {
     this.fruitType = config.fruitType;
     this.fruitChain = config.fruitChain;
     this.maxFruits = config.maxFruits;
+    this.powerClump = config.powerClump
 
     this._PowerGen = config.powerGen;
+    this._ResearchGen = config.researchGen;
     this.powerTick = config.powerDelay;
   }
 
@@ -60,7 +64,7 @@ export class PlantNodePower {
   }
 
   public get researchGen() {
-    return (this.config.researchGen || 0) * this.powerPercentOne;
+    return (this._ResearchGen || 0) * this.powerPercentOne;
   }
 
   public onTick() {
@@ -135,7 +139,7 @@ export class PlantNodePower {
   }
 
   public attemptTransferPower() {
-    if (this.config.powerClump > 0 && this.data.outlets.length > 0 && this.powerPercent > Config.NODE.POWER_THRESHOLD) {
+    if (this.powerClump > 0 && this.data.outlets.length > 0 && this.powerPercent > Config.NODE.POWER_THRESHOLD) {
       let target: PlantNode;
 
       this.data.outlets.forEach(outlet => {
@@ -147,7 +151,7 @@ export class PlantNodePower {
       });
 
       if (target) {
-        let clump = Math.min(this.powerCurrent, this.config.powerClump);
+        let clump = Math.min(this.powerCurrent, this.powerClump);
         this.transferPower(this.data, target, {type: 'grow', amount: clump});
         this.powerCurrent -= clump;
       }

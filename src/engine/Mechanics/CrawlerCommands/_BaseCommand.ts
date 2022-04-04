@@ -10,6 +10,8 @@ export class BaseCommand {
   public color: number;
   public isComplete: boolean = false;
 
+  public nextLoc: PlantNode;
+
   protected fruit: PlantNode;
 
   protected currentPath: {
@@ -18,8 +20,6 @@ export class BaseCommand {
     onCancel: (prePath: boolean) => void,
     path?: PlantNode[],
   };
-
-  private nextLoc: PlantNode;
 
   private magnitude: number;
   private angle: number;
@@ -50,10 +50,15 @@ export class BaseCommand {
     fruit.flagUnlink = true;
     fruit.active = false;
     fruit.physics.fixed = true;
+    // this.crawler.claimNode(fruit);
 
     this.fruit = fruit;
 
     window.setTimeout(onComplete, 1000);
+  }
+
+  protected dragFruit() {
+    this.fruit && this.fruit.view.tickFollow(this.crawler.view, this.config.fruitSpeed);
   }
 
   protected deliverFruit(onComplete: (fruit: PlantNode) => void) {
@@ -66,13 +71,6 @@ export class BaseCommand {
     });
   }
 
-  protected dragFruit() {
-    if (this.fruit) {
-      this.fruit.view.x = this.crawler.view.x + (this.fruit.view.x - this.crawler.view.x) * this.config.fruitSpeed;
-      this.fruit.view.y = this.crawler.view.y + (this.fruit.view.y - this.crawler.view.y) * this.config.fruitSpeed;
-    }
-  }
-
   protected destroyFruit() {
     let fruit = this.fruit;
     this.fruit = null;
@@ -82,8 +80,7 @@ export class BaseCommand {
   }
 
   protected standStill() {
-    this.crawler.view.x = this.crawler.cLoc.view.x;
-    this.crawler.view.y = this.crawler.cLoc.view.y;
+    this.crawler.view.positionAt(this.crawler.cLoc.view);
   }
 
   protected startIdleLoop() {
@@ -114,8 +111,7 @@ export class BaseCommand {
       return;
     }
 
-    this.crawler.view.x = this.crawler.cLoc.view.x + this.magnitude * this.crawler.cLoc.view.radius * Math.cos(this.angle);
-    this.crawler.view.y = this.crawler.cLoc.view.y + this.magnitude * this.crawler.cLoc.view.radius * Math.sin(this.angle);
+    this.crawler.view.positionAt(this.crawler.cLoc.view, this.magnitude, this.angle);
   }
 
   protected startPath(condition: (node: PlantNode) => boolean, onComplete: () => void, onCancel: (prePath: boolean) => void, andClaimFruit?: boolean) {
@@ -152,8 +148,7 @@ export class BaseCommand {
       this.crawler.cLoc = this.nextLoc;
       this.startNextStep();
     } else {
-      this.crawler.view.x = this.crawler.cLoc.view.x + (this.nextLoc.view.x - this.crawler.cLoc.view.x) * this.magnitude;
-      this.crawler.view.y = this.crawler.cLoc.view.y + (this.nextLoc.view.y - this.crawler.cLoc.view.y) * this.magnitude;
+      this.crawler.view.positionBetween(this.crawler.cLoc.view, this.nextLoc.view, this.magnitude);
     }
   }
 

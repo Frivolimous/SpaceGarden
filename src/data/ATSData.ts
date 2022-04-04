@@ -1,6 +1,7 @@
 export enum ScoreType {
   PRESTIGES,
   CRAWLERS_DEAD,
+  RESEARCH_SAVED,
   // NODES_MADE,
   // NODES_DELETED,
   // CRAWLERS_BORN,

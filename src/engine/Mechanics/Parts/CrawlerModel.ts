@@ -44,6 +44,7 @@ export class CrawlerModel {
   public preference: CommandType;
 
   public frustratedBy: string;
+  public isBuffed = false;
 
   private commandList: BaseCommand[] = [];
 
@@ -64,12 +65,15 @@ export class CrawlerModel {
     this.setCommand(CommandType.IDLE);
   }
 
-  public hasBuff(): boolean {
-    return false;
-  }
-
-  public addBuff(count: number) {
-
+  public addBuff(mult: number, seconds: number) {
+    this.view.addBuff();
+    this.speed *= mult;
+    this.isBuffed = true;
+    new JMTween({per: 0}, seconds * 1000).to({per: 1}).start().onComplete(() => {
+      this.speed /= mult;
+      this.isBuffed = false;
+      this.view.removeBuff();
+    })
   }
 
   public changeConfig(config: Partial<ICrawlerConfig>) {
@@ -105,7 +109,7 @@ export class CrawlerModel {
   public selectNextCommand() {
     this.currentCommand = _.sortBy(this.commandList, command => command.genPriority())[0];
     this.currentCommand.initialize();
-    this.colorTo(this.currentCommand.color);
+    this.view.colorTo(this.currentCommand.color);
   }
 
   public setCommand(type: CommandType = CommandType.NONE) {
@@ -113,14 +117,10 @@ export class CrawlerModel {
     if (command) {
       this.currentCommand = command;
       command.initialize();
-      this.colorTo(command.color);
+      this.view.colorTo(command.color);
     } else {
       this.selectNextCommand();
     }
-  }
-
-  public colorTo(color: number) {
-    new JMTween(this.view.sprite, 500).colorTo({tint: color}).start();
   }
 
   public update = () => {
@@ -142,7 +142,7 @@ export class CrawlerModel {
   }
 
   public claimNode = (node: PlantNode) => {
-    if (node && !this.claimedNode && !node.claimedBy) {
+    if (node && !this.claimedNode && node.canClaim()) {
       console.log(`${node.slug} ${node.uid} claimed by ${this.uid}`);
       this.claimedNode = node;
       this.claimedNode.claimedBy = this;

@@ -45,6 +45,7 @@ export class GameController {
 
   public addNewNode(config: INodeConfig): PlantNode {
     let node = new PlantNode(config, this.transferPower);
+    
     this.container.addNode(node);
     this.nodes.push(node);
 
@@ -92,8 +93,7 @@ export class GameController {
   public linkNodes(origin: PlantNode, target: PlantNode): FDGLink {
     origin.linkNode(target);
     target.linkNode(origin, true);
-
-    // origin.distanceCore = target.distanceCore + 1;
+    
     this.setCoreDistance();
 
     return this.container.addLink(origin, target);
@@ -306,20 +306,16 @@ export class GameController {
   }
 
   private determineNextCrawler(): ICrawlerConfig {
-    if (false && this.knowledge.sortedCrawlers.chieftain.length === 0) {
-      return this.nodeManager.getCrawlerConfig('chieftain');
-    } else {
-      let available = this.nodeManager.availableCrawlers.filter(slug => {
-        let config = this.nodeManager.getCrawlerConfig(slug);
-        if (!config.maxCount || this.knowledge.sortedCrawlers[slug].length < config.maxCount) {
-          return true;
-        }
-
-        return false;
-      });
-      if (available.length > 0) {
-        return this.nodeManager.getCrawlerConfig(_.sample(available));
+    let available = this.nodeManager.availableCrawlers.filter(slug => {
+      let config = this.nodeManager.getCrawlerConfig(slug);
+      if (!config.maxCount || this.knowledge.sortedCrawlers[slug].length < config.maxCount) {
+        return true;
       }
+
+      return false;
+    });
+    if (available.length > 0) {
+      return this.nodeManager.getCrawlerConfig(_.sample(available));
     }
   }
 }

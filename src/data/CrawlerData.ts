@@ -50,8 +50,8 @@ export const CrawlerData: ICrawlerData = {
       health: 1,
       maxCount: 1,
       breedThreshold: 10,
-      healthDrain: 0.0002,
-      speed: 0.005,
+      healthDrain: 0.00013,
+      speed: 0.007,
       commands: [
         CommandType.WANDER,
         CommandType.IDLE,
@@ -66,18 +66,26 @@ export const CrawlerData: ICrawlerData = {
       ],
 
       commandConfig: {
-        wanderRepeat: 2,
-        idleRepeat: 3,
+        wanderRepeat: 1,
+        idleRepeat: 1,
         frustratedRepeat: 3,
         fruitSpeed: 0.95,
         eatRatio: 0.0065,
+        buffTime: 10,
+        buffMult: 1.5,
       },
     },
+  ],
+
+  BaseAvailable: [
+    'crawler',
+    // 'shaman',
   ],
 };
 
 export interface ICrawlerData {
   data: ICrawlerConfig[];
+  BaseAvailable: CrawlerSlug[];
 }
 
 export type CrawlerSlug = 'crawler' | 'chieftain' | 'shaman';
@@ -105,4 +113,6 @@ export interface ICommandConfig {
   powerRatio?: number;
   danceGen?: number;
   danceTicks?: number;
+  buffTime?: number;
+  buffMult?: number;
 }

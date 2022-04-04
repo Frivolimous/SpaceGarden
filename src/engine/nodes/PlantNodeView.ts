@@ -93,6 +93,11 @@ export class PlantNodeView extends PIXI.Container {
     }
   }
 
+  public tickFollow(target: {x: number, y: number}, mult: number) {
+    this.x = target.x + (this.x - target.x) * mult;
+    this.y = target.y + (this.y - target.y) * mult;
+  }
+
   private intensityInterpolation(k: number): number {
     if (k <= 0.7) {
       return 0.2 + k / 0.7 * 0.3;

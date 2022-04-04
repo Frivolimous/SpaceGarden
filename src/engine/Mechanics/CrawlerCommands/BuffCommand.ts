@@ -9,13 +9,9 @@ import { ICommandConfig } from '../../../data/CrawlerData';
 import { GameKnowledge } from '../GameKnowledge';
 
 export class BuffCommand extends BaseCommand {
-  // private state: 'buff' | 'walk' | 'return';
+  private state: 'buff' | 'end';
   // private walking = false;
   // private animating = false;
-
-  private hopping: boolean;
-
-  private danceTicks: number;
 
   constructor(crawler: CrawlerModel, protected config: ICommandConfig, knowledge: GameKnowledge) {
     super(crawler, config, knowledge);
@@ -31,20 +27,31 @@ export class BuffCommand extends BaseCommand {
   }
 
   public genPriority(): number {
-    let node = this.crawler.cLoc;
-    let numHere = this.knowledge.sortedCrawlers.crawler.filter(other => other.cLoc === node && !other.hasBuff()).length;
-    return 1.2 - numHere * 0.1 - (this.crawler.preference === this.type ? 0.15 : 0);
+    let numHere = this.knowledge.sortedCrawlers.crawler.filter(this.canBuff).length;
+    // return 1.2 - numHere * 0.1 - (this.crawler.preference === this.type ? 0.15 : 0);
+    if (numHere === 0) return 2;
+    return 1 - numHere * 0.1 - (this.crawler.preference === this.type ? 0.15 : 0);
   }
 
   public update() {
     if (this.isComplete) return;
 
-    this.standStill();
+    this.crawler.view.vibrate(this.crawler.cLoc.view);
   }
 
   public startBuff() {
-    let crawlers = this.knowledge.sortedCrawlers.crawler.filter(other => other.cLoc === this.crawler.cLoc);
+    let crawlers = this.knowledge.sortedCrawlers.crawler.filter(this.canBuff);
+    let target = _.sample(crawlers);
 
-    crawlers.forEach(crawler => crawler.addBuff(10));
+    target.addBuff(this.config.buffMult, this.config.buffTime);
+
+    new JMTween({per: 0}, 1000).to({per: 1}).start()
+      .onComplete(() => this.isComplete = true);
+  }
+
+  public canBuff = (crawler: CrawlerModel) => {
+    return (!crawler.isBuffed && 
+      (crawler.cLoc === this.crawler.cLoc || crawler.currentCommand.nextLoc === this.crawler.cLoc)
+    );
   }
 }

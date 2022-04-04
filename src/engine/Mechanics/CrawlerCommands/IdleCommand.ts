@@ -21,7 +21,7 @@ export class IdleCommand extends BaseCommand {
 
   public initialize() {
     this.isComplete = false;
-    this.repeatCount = this.config.idleRepeat;
+    this.repeatCount = Math.ceil(Math.random()*this.config.idleRepeat);
 
     this.startIdleLoop();
   }

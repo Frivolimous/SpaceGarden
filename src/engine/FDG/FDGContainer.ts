@@ -4,7 +4,6 @@ import * as _ from 'lodash';
 import { FDGLink } from './FDGLink';
 import { JMRect } from '../../JMGE/others/JMRect';
 import { NodeSlug } from '../../data/NodeData';
-import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Config } from '../../Config';
 import { CrawlerView } from '../Mechanics/Parts/CrawlerView';
 import { PlantNode } from '../nodes/PlantNode';
@@ -135,8 +134,7 @@ export class FDGContainer extends PIXI.Graphics {
 
       let dX = link.origin.view.x - link.target.view.x;
       let dY = link.origin.view.y - link.target.view.y;
-      let dist2 = dX * dX + dY * dY;
-      let dist = Math.sqrt(dist2);
+      let dist = Math.sqrt(dX * dX + dY * dY);
 
       if (dist < link.length) return;
 
@@ -192,10 +190,10 @@ export class FDGContainer extends PIXI.Graphics {
         other.physics.vY -= mult * dY * other.physics.iMass;
       }
 
-      if (node.view.x < this.borders.left) node.physics.vX += Config.PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.left);
-      if (node.view.x > this.borders.right) node.physics.vX += Config.PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.right);
-      if (node.view.y < this.borders.top) node.physics.vY += Config.PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.top);
-      if (node.view.y > this.borders.bottom) node.physics.vY += Config.PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.bottom);
+      if (node.view.x < this.borders.left) node.physics.vX += Config.PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.left)
+        else if (node.view.x > this.borders.right) node.physics.vX += Config.PHYSICS.EDGE_BOUNCE * (-node.view.x + this.borders.right);
+      if (node.view.y < this.borders.top) node.physics.vY += Config.PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.top)
+        else if (node.view.y > this.borders.bottom) node.physics.vY += Config.PHYSICS.EDGE_BOUNCE * (-node.view.y + this.borders.bottom);
 
       node.tickPhysics();
     }

@@ -86,6 +86,7 @@ export class PlantNode {
   }
 
   public canSpawnFruit(): boolean {
+    if (!this.power.fruitType) return false;
     if (this.power.fruitChain <= 0) return false;
     if (this.fruits.length < this.config.maxFruits) return true;
 
@@ -94,6 +95,10 @@ export class PlantNode {
     }
 
     return false;
+  }
+
+  public canClaim(): boolean {
+    return !this.claimedBy && this.exists && !this.flagDestroy;
   }
 
   public isConnectedToCore(): boolean {
@@ -256,9 +261,9 @@ export class PlantNode {
         m += `<br>Research Points: ${Math.round(this.power.researchCurrent)}`;
       }
       if (this.power.powerGen > 0) {
-        m += `<br>Power Gen: ${(this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
+        m += `<br>Power Gen: ${(this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
       } else {
-        m += `<br>Power Drain: ${(-this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.config.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
+        m += `<br>Power Drain: ${(-this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
       }
       // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
 

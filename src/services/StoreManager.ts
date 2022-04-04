@@ -1,5 +1,4 @@
 import { SaveManager } from './SaveManager';
-import { CurrencySlug } from '../data/SaveData';
 
 export const StoreManager = {
   // sellItem: (item: IItem, onComplete: (result: IPurchaseResult) => void) => {

@@ -25,6 +25,7 @@ export class GameKnowledge {
     'generator': [],
     'grove': [],
     'stem': [],
+    'bigstem': [],
     'core': [],
     'seedling': [],
     'enemy-core': [],
@@ -118,6 +119,13 @@ export class GameKnowledge {
 
   public numFruitsPerNode(slug: NodeSlug) {
     return this.manager.getNodeConfig(slug).maxFruits;
+  }
+
+  public getCurrentResearch() {
+    let seedling = this.sortedNodes.seedling[0];
+    if (seedling) return seedling.power.researchCurrent;
+
+    return 0;
   }
 
   public toString(): string {

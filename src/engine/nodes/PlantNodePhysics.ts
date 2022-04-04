@@ -47,4 +47,10 @@ export class PlantNodePhysics {
     if (this.view.sprite.rotation < -Math.PI) this.view.sprite.rotation += Math.PI * 2;
   }
 
+  public applySplitForce(magnitude: number, dX: number, dY: number) {
+    magnitude *= this.iMass;
+    this.vX += magnitude * dX;
+    this.vY += magnitude * dY;
+  }
+
 }

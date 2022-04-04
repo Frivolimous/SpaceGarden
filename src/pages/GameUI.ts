@@ -24,6 +24,7 @@ import { StringManager } from '../services/StringManager';
 import { GOD_MODE } from '../services/_Debug';
 import { INodeSave, PlantNode } from '../engine/nodes/PlantNode';
 import { AchievementPanel } from '../components/domui/AchievementPanel';
+import { ScoreType } from '../data/ATSData';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -87,8 +88,7 @@ export class GameUI extends BaseUI {
     this.mouseC.onMove.addListener(this.onMouseMove);
     this.gameC.onNodeAdded.addListener(this.sidebar.addNodeElement);
     this.gameC.onNodeAdded.addListener(this.bottomBar.nodeAdded);
-    this.gameC.onNodeRemoved.addListener(this.bottomBar.nodeRemoved);
-    this.gameC.onNodeRemoved.addListener(this.sidebar.removeNodeElement);
+    this.gameC.onNodeRemoved.addListener(this.nodeRemoved);
     this.gameC.onCrawlerAdded.addListener(this.sidebar.addNodeElement);
     this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
     this.bottomBar.onProceedButton.addListener(this.nextStage);
@@ -215,6 +215,7 @@ export class GameUI extends BaseUI {
   public nextStage = () => {
     GameEvents.ACTIVITY_LOG.publishSync({slug: 'PRESTIGE'});
 
+    this.extrinsic.scores[ScoreType.RESEARCH_SAVED] = this.gameC.knowledge.getCurrentResearch() * Config.NODE.SAVED_RESEARCH;
     this.extrinsic.skillTier = this.nodeManager.extractTier(this.extrinsic.skillsNext, this.extrinsic.skillTier);
     this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
     this.extrinsic.skillsNext = [];
@@ -267,8 +268,6 @@ export class GameUI extends BaseUI {
       return;
     }
 
-    let link: FDGLink;
-
     this.container.showConnectionCount();
 
     let dragCreate = false;
@@ -276,43 +275,7 @@ export class GameUI extends BaseUI {
       dragCreate = true;
       this.mouseC.clearNextClickEvent();
 
-      let position = e.e.data.getLocalPosition(this.container);
-      let node = this.gameC.addNewNode(e.config);
-      node.ghostMode = true;
-      node.active = false;
-      node.view.position.set(position.x, position.y);
-
-      let initialNearest = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
-      if (initialNearest) {
-        node.ghostMode = false;
-        link = this.gameC.linkNodes(initialNearest, node);
-        link.active = false;
-      }
-
-      this.mouseC.startDrag({x: position.x, y: position.y - 100, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
-        onRelease: () => {
-          this.container.showConnectionCount(false);
-          if (node.outlets.length > 0) {
-            node.ghostMode = false;
-            node.active = true;
-            node.view.setIntensity(node.power.powerPercent, true);
-            if (link) link.active = true;
-          } else {
-            this.gameC.removeNode(node);
-          }
-          e.onComplete();
-        },
-        onMove: (position2: {x: number, y: number}) => {
-          this.gameC.disconnectNode(node);
-          node.ghostMode = true;
-          let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
-          if (nearest) {
-            node.ghostMode = false;
-            link = this.gameC.linkNodes(nearest, node);
-            link.active = false;
-          }
-        },
-      });
+      this.finishCreateNewNode(e.e.data.getLocalPosition(this.container), e.config, e.onComplete);
     }, 150);
 
     this.mouseC.onUp.addOnce(() => {
@@ -322,43 +285,52 @@ export class GameUI extends BaseUI {
     });
 
     this.mouseC.setNextClickEvent({onDown: position => {
-      let node = this.gameC.addNewNode(e.config);
-      node.ghostMode = true;
-      node.active = false;
-      node.view.position.set(position.x, position.y);
-
-      let initialNearest = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
-      if (initialNearest) {
-        node.ghostMode = false;
-        link = this.gameC.linkNodes(initialNearest, node);
-        link.active = false;
-      }
-
-      this.mouseC.startDrag({x: position.x, y: position.y, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
-        onRelease: () => {
-          this.container.showConnectionCount(false);
-          if (node.outlets.length > 0) {
-            node.ghostMode = false;
-            node.active = true;
-            node.view.setIntensity(node.power.powerPercent, true);
-            if (link) link.active = true;
-          } else {
-            this.gameC.removeNode(node);
-          }
-          e.onComplete();
-        },
-        onMove: (position2: {x: number, y: number}) => {
-          this.gameC.disconnectNode(node);
-          node.ghostMode = true;
-          let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
-          if (nearest) {
-            node.ghostMode = false;
-            link = this.gameC.linkNodes(nearest, node);
-            link.active = false;
-          }
-        },
-      });
+      this.finishCreateNewNode(position, e.config, e.onComplete);
     }});
+  }
+
+  finishCreateNewNode(position: {x: number, y: number}, config: INodeConfig, onComplete: () => void) {
+    let link: FDGLink;
+
+    let node = this.gameC.addNewNode(config);
+    node.ghostMode = true;
+    node.active = false;
+    node.view.position.set(position.x, position.y);
+    if (node.slug === 'seedling') {
+      node.power.researchCurrent = this.extrinsic.scores[ScoreType.RESEARCH_SAVED];
+    }
+
+    let initialNearest = this.container.getClosestObject({x: position.x, y: position.y, filter: node, maxLinks: true, notFruit: true});
+    if (initialNearest) {
+      node.ghostMode = false;
+      link = this.gameC.linkNodes(initialNearest, node);
+      link.active = false;
+    }
+
+    this.mouseC.startDrag({x: position.x, y: position.y, minD: Config.PHYSICS.NEW_MIND, force: Config.PHYSICS.NEW_FORCE, node,
+      onRelease: () => {
+        this.container.showConnectionCount(false);
+        if (node.outlets.length > 0) {
+          node.ghostMode = false;
+          node.active = true;
+          node.view.setIntensity(node.power.powerPercent, true);
+          if (link) link.active = true;
+        } else {
+          this.gameC.removeNode(node);
+        }
+        onComplete();
+      },
+      onMove: (position2: {x: number, y: number}) => {
+        this.gameC.disconnectNode(node);
+        node.ghostMode = true;
+        let nearest = this.container.getClosestObject({x: position2.x, y: position2.y, filter: node, maxLinks: true, notFruit: true});
+        if (nearest) {
+          node.ghostMode = false;
+          link = this.gameC.linkNodes(nearest, node);
+          link.active = false;
+        }
+      },
+    });
   }
 
   public deleteNextClicked = (e: { onComplete: () => void }) => {
@@ -395,6 +367,14 @@ export class GameUI extends BaseUI {
 
     if (seedling) {
       seedling.receiveResearch(1000);
+    }
+  }
+
+  private nodeRemoved = (node: PlantNode) => {
+    this.bottomBar.nodeRemoved(node);
+    this.sidebar.removeNodeElement(node);
+    if (node.active && node.slug === 'seedling') {
+      this.extrinsic.scores[ScoreType.RESEARCH_SAVED] = node.power.researchCurrent * Config.NODE.SAVED_RESEARCH;
     }
   }
 }

@@ -18,7 +18,7 @@ export class WanderCommand extends BaseCommand {
 
   public initialize() {
     this.isComplete = false;
-    this.repeatCount = this.config.wanderRepeat;
+    this.repeatCount = Math.ceil(Math.random() * this.config.wanderRepeat);
     let start = this.crawler.cLoc;
     this.startPath(node => node !== start, this.finishCommand, this.cancelPath);
   }

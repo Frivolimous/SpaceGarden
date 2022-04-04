@@ -47,7 +47,7 @@ export class EatCommand extends BaseCommand {
   private eatHere = () => {
     this.state = 'eat';
     let fruit = this.crawler.claimedNode || this.crawler.cLoc.harvestFruit();
-
+    
     this.grabFruit(fruit, () => {
       this.deliverFruit(() => {
         this.isComplete = true;
