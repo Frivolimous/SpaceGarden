@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { GOD_MODE } from '../services/_Debug';
-import { INodeConfig } from '../data/NodeData';
+import { INodeConfig, NodeData } from '../data/NodeData';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
 import { StringManager } from '../services/StringManager';
 import { TooltipReader } from './tooltip/TooltipReader';
@@ -9,6 +9,7 @@ import { NodeButton } from './ui/NodeButton';
 import { ToggleButton } from './ui/ToggleButton';
 import { PlantNode } from '../engine/nodes/PlantNode';
 import { Config } from '../Config';
+import _ from 'lodash';
 
 export class BottomBar extends PIXI.Container {
   public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent, onComplete: () => void }>();
@@ -29,6 +30,8 @@ export class BottomBar extends PIXI.Container {
 
     this.graphic.beginFill(0xf1f1f1, 0.7)
       .drawRect(0, 0, barWidth, barHeight);
+
+    configs = _.sortBy(configs, config => NodeData.NodeOrder.indexOf(config.slug));
 
     configs.forEach(config => {
       let button = new NodeButton({label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => {

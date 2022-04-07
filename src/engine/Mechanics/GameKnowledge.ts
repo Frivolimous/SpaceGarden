@@ -26,6 +26,7 @@ export class GameKnowledge {
     'grove': [],
     'stem': [],
     'bigstem': [],
+    'hub': [],
     'core': [],
     'seedling': [],
     'enemy-core': [],
@@ -220,6 +221,7 @@ export class GameKnowledge {
         this.extrinsic.scores[ScoreType.PRESTIGES] = (this.extrinsic.scores[ScoreType.PRESTIGES] + 1) || 1;
         this.checkP10();
         this.checkLaunch9Launch();
+        this.checkTier3();
         break;
       case 'BLOB':
         if (e.data) {
@@ -301,6 +303,15 @@ export class GameKnowledge {
       let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
       if (seedling.distanceCore >= 9) {
         this.achieveAchievement(AchievementSlug.LAUNCH_DISTANCE_9);
+      }
+    }
+  }
+
+  private checkTier3 = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.TIER_3]) {
+      let tier = this.extrinsic.skillTier;
+      if (tier >= 2) {
+        this.achieveAchievement(AchievementSlug.TIER_3);
       }
     }
   }

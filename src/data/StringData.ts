@@ -39,6 +39,8 @@ export const EnglishStringData = {
   TOOLTIP_core_DESC: 'The central core of your plant, retaining the memories and evolutions of your previous plant.\n\nFruits produce a small amount of energy when powered.',
   TOOLTIP_seedling_TITLE: 'Seedling',
   TOOLTIP_seedling_DESC: 'WARNING: Drains a huge amount of power from your network.\n\nPower this up fully to spawn a new plant.\n\nEnhance the seedling with Research to make your next plant stronger!',
+  TOOLTIP_hub_TITLE: 'Hub',
+  TOOLTIP_hub_DESC: 'Allows you to upgrade your current plant at the cost of resources.',
 
   BUTTON_YES: 'Yes',
   BUTTON_NO: 'No',

@@ -219,6 +219,7 @@ export class GameUI extends BaseUI {
     this.extrinsic.skillTier = this.nodeManager.extractTier(this.extrinsic.skillsNext, this.extrinsic.skillTier);
     this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
     this.extrinsic.skillsNext = [];
+    console.log('tier',this.extrinsic.skillTier);
     this.resetGame();
   }
 

@@ -69,6 +69,7 @@ export class SidebarElement {
     switch (slug) {
       case 'core': case 'chieftain': order = '1'; break;
       case 'seedling': case 'shaman': order = '2'; break;
+      case 'hub': order = '3'; break;
       default: order = '5'; break;
     }
 

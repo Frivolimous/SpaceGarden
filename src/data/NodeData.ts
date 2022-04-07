@@ -77,6 +77,13 @@ export const NodeData: INodeData = {
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
       fruitType: 'gen', fruitChain: 1, maxFruits: 2, fruitClump: NodeBase.fruitClump,
     },
+    {
+      slug: 'hub', type: 'normal', color: Colors.Node.green, shape: 'hexagon',
+      radius: 25, mass: 3, force: 1, maxLinks: 6, maxCount: 1,
+      powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.stemDrain * 3, powerWeight: 1.1,
+      powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump * 0.5,
+      fruitChain: 1, maxFruits: 6, fruitClump: NodeBase.fruitClump,
+    },
     // fruits \\
     {
       slug: 'battery', type: 'fruit', color: Colors.Node.darkyellow, shape: 'circle',
@@ -132,9 +139,21 @@ export const NodeData: INodeData = {
     'lab',
     'seedling',
   ],
+  NodeOrder: [
+    'core',
+    'hub',
+    'stem',
+    'bigstem',
+    'generator',
+    'lab',
+    'home',
+    'grove',
+    'seedling',
+  ],
 };
 
-export type NodeSlug = 'home' | 'lab' | 'generator' | 'grove' | 'stem' | 'bigstem' | 'core'| 'seedling' | 'enemy-core' | 'enemy-box' |
+export type NodeSlug = 'home' | 'lab' | 'generator' | 'grove' | 'stem' | 'bigstem' | 'hub' | 'core'| 'seedling' | 
+  'enemy-core' | 'enemy-box' |
   'food' | 'research' | 'battery' | 'gen' | 'burr' | 'big-evil' | 'small-evil' | 'leaf';
 export type NodeColor = 'blue' | 'purple' | 'yellow' | 'orange' | 'green' | 'yellow';
 export type NodeShape = 'circle' | 'square' | 'triangle' | 'pentagon' | 'hexagon' | 'thin-rect' | 'fat-rect';
@@ -142,6 +161,7 @@ export type NodeShape = 'circle' | 'square' | 'triangle' | 'pentagon' | 'hexagon
 interface INodeData {
   Nodes: INodeConfig[];
   BaseBuildable: NodeSlug[];
+  NodeOrder: NodeSlug[];
 }
 
 export interface INodeConfig {

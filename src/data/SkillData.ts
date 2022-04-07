@@ -211,7 +211,7 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-3-5',
       title: 'Crawler Shaman',
-      description: 'Up to one Crawler appears as a Shaman, which has the ability to boost the movement speed of the rest of the crawlers.',
+      description: 'Up to one Crawler appears as a Shaman, which has the ability to boost the movement speed of other crawlers.',
       cost: 4,
       effects: [
         {effectType: 'crawler-available', valueType: 'additive', value: 'shaman'},
@@ -328,6 +328,14 @@ export const SkillData: ISkillData = {
         {effectType: 'crawler', slug: 'all', key: 'speed', valueType: 'multiplicative', value: 1.1},
       ],
     },
+    {
+      slug: AchievementSlug.TIER_3,
+      title: 'Expanded Evolution',
+      description: 'Requirement: Reach Tier 3<br>Reward: Unlocks the Hub Node',
+      effects: [
+        {effectType: 'buildable', valueType: 'additive', value: 'hub'},
+      ],
+    }
   ],
 };
 

@@ -14,4 +14,5 @@ export enum AchievementSlug {
   LAUNCH_DISTANCE_9,
   CRAWLERS_15,
   CRAWLERS_DIE_100,
+  TIER_3,
 }
