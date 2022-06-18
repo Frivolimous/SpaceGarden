@@ -5,9 +5,6 @@ import { Config } from './Config';
 import { SaveManager } from './services/SaveManager';
 import { TooltipReader } from './components/tooltip/TooltipReader';
 import { JMRect } from './JMGE/others/JMRect';
-import { ATSManager } from './services/ATSManager';
-import { AchievementPopup } from './components/ui/AchievementPopup';
-import { TutorialPopup } from './components/ui/TutorialPopup';
 import { Fonts } from './data/Fonts';
 import { TextureCache } from './services/TextureCache';
 import { GameEvents, IResizeEvent } from './services/GameEvents';
@@ -98,7 +95,7 @@ export let Facade = new class FacadeInner {
       this.screen.addChild(menu);
       menu.navIn();
 
-      this.finishResize();
+      window.requestAnimationFrame(() => this.finishResize());
     });
   }
 

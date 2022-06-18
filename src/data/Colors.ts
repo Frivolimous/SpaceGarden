@@ -13,14 +13,7 @@ export const Colors = {
     purple: 0x9370E0,
     white: 0xffffff,
   },
-  // Node: {
-  //   red: 0x200505,
-  //   orange: 0x201000,
-  //   yellow: 0x232310,
-  //   green: 0x012000,
-  //   blue: 0x001524,
-  //   purple: 0x151020,
-  // },
+
   GRID: 0x333333,
   BACKGROUND: 0,
 };

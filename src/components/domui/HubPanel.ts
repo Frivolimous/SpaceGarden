@@ -4,7 +4,7 @@ import { SkillBar } from './SkillBar';
 import { Formula } from '../../services/Formula';
 import { JMEventListener } from 'src/JMGE/events/JMEventListener';
 
-export class SkillPanel {
+export class HubPanel {
   public skillsSpent: number = 0;
   public hasSkillToLevel: boolean = false;
 

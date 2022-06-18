@@ -1,0 +1,31 @@
+/* core stuff - shouldn't need to ever change */
+
+body {
+  margin: 0px;
+}
+
+#main {
+  width: 100vw;
+  height: 100vh;
+}
+#game-canvas {
+  background: yellow;
+  height: 100%;
+  width: auto;
+  margin-right: 300px;
+}
+
+.info-popup {
+  position: absolute;
+  top: 0;
+  right: 30vw;
+  border: 3px auto black;
+  border-radius: 15px;
+  padding: 15px;
+  width: 100px;
+  min-height: 10px;
+  color: #fff;
+  background: #6666ff;
+  text-align: center;
+  font-weight: bold;
+}

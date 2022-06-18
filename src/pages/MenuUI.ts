@@ -1,6 +1,5 @@
 import * as PIXI from 'pixi.js';
 import { BaseUI } from './_BaseUI';
-import { MuterOverlay } from '../components/ui/MuterOverlay';
 import { SaveManager } from '../services/SaveManager';
 import { Button } from '../components/ui/Button';
 import { Fonts } from '../data/Fonts';
@@ -10,8 +9,6 @@ import { StringManager } from '../services/StringManager';
 import { OptionModal } from '../components/ui/modals/OptionModal';
 
 export class MenuUI extends BaseUI {
-  public muter: MuterOverlay;
-
   private title: PIXI.Text;
 
   private startB: Button;
@@ -34,21 +31,15 @@ export class MenuUI extends BaseUI {
     this.addChild(this.startB, this.langB);
     this.langB.visible = false;
 
-    this.muter = new MuterOverlay();
-    this.addChild(this.muter);
   }
 
   public navIn = () => {
-    this.muter.reset();
-
     let extrinsic = SaveManager.getExtrinsic();
   }
 
   public positionElements = (e: IResizeEvent) => {
     this.title.x = (e.innerBounds.width - this.title.width) / 2;
     this.title.y = 50;
-    this.muter.x = e.outerBounds.right - this.muter.getWidth();
-    this.muter.y = e.outerBounds.bottom - this.muter.getHeight();
     this.langB.addLabel(StringManager.getCurrentLanguage());
     this.langB.x = e.outerBounds.right - this.langB.width - 20;
     this.langB.y = 20;

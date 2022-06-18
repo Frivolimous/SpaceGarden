@@ -1,0 +1,168 @@
+/* Sidebar and Sidebar Stuff */
+
+#sidebar {
+  position: fixed;
+  background-color: #9999cc;
+  height: 100%;
+  width: 300px;
+  top: 0px;
+  right: 0px;
+  overflow: auto;
+}
+
+#sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+
+
+#sidebar::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 0.75vw;
+}
+
+#sidebar .sidebar-title {
+  font-size: 30px;
+  font-weight: bold;
+  text-align: center;
+}
+
+#sidebar .node-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+#sidebar .tab-container {
+  display: flex;
+  flex-direction: row;
+  margin-top: 10px;
+  gap: 5px;
+  justify-content: center;
+  min-height: 40px;
+}
+
+
+.skill-block .skill-block-title {
+  font-size: 1.4em;
+  font-weight: bold;
+}
+
+.skill-block .skill-block-subtitle {
+  margin: 3px;
+  font-style: italic;
+  font-size: 0.8em;
+}
+
+.skill-block .skill-block-content {
+  font-size: 1em;
+}
+
+.skill-block .skill-block-cost {
+  font-size: 0.6em;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+.skill-panel .skill-skillpoint {
+  font-style: italic;
+  font-size: 1.8em;
+  font-weight: bold;
+}
+
+.skillbar {
+  text-align: center;
+  font-style: italic;
+  font-size: 1.4em;
+  font-weight: bold;
+}
+
+.skillbar .sub-text {
+  font-size: 0.6em;
+  margin-block-start: 0px;
+  font-weight: normal;
+}
+
+
+
+.node-title {
+  font-weight: bold;
+  font-size: 25px;
+}
+
+.node-block {
+  border: 3px auto black;
+  border-radius: 5px;
+  padding: 10px;
+  background: #333333;
+  color: #fff;
+  width: 250px;
+  min-height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.node-block.highlight {
+  background: #660;
+}
+
+.skill-button {
+  position: relative;
+  width: 84px;
+  color: #fff;
+  background: #000;
+  border: 3px auto #777;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.skill-button:hover {
+  background: #009;
+}
+
+.tab-button {
+  position: relative;
+  width: 84px;
+  color: #000;
+  background: none;
+  border: 1px dashed #333;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tab-button:hover {
+  color: #00a;
+  border: 2px solid #00a;
+}
+
+.tab-button:disabled {
+  background: #000;
+  color: #FFF;
+  cursor: default;
+}
+
+.notification {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #e30;
+  border-radius: 5px;
+  right: -5px;
+  top: -5px;
+}
+
+.greyed {
+  border-color: #aaa;
+  color: #aaa;
+  cursor: default;
+}
+
+.greyed:disabled {
+  color: #aaa;
+}
+
+.greyed:hover {
+  border-color: #aaa;
+  color: #aaa;
+}
