@@ -5,7 +5,8 @@ import { colorLuminance } from '../../JMGE/others/Colors';
 
 export class PlantNodeView extends PIXI.Container {
   // public INTENSITY_V: number = 0.01;
-  public INTENSITY_V: number = 0.005;
+  public INTENSITY_V_INC: number = 0.01;
+  public INTENSITY_V_DEC: number = 0.005;
 
   public sprite: PIXI.Sprite;
   public _Highlight: PIXI.Graphics;
@@ -42,7 +43,12 @@ export class PlantNodeView extends PIXI.Container {
   }
 
   public setIntensity(n: number, instant?: boolean) {
-    this.targetIntensity = Math.min(Math.max(n, 0.2), 1);
+    // this.targetIntensity = Math.min(Math.max(n, 0.2), 1);
+    if (n > 1) {
+      this.targetIntensity = 1 + (n - 1) * 0.1;
+    } else {
+      this.targetIntensity = Math.max(n, 0.2);
+    }
     if (!this._Intensity || instant) {
       this._Intensity = this.targetIntensity - 0.01;
     }
@@ -52,10 +58,10 @@ export class PlantNodeView extends PIXI.Container {
     if (this._Intensity !== this.targetIntensity) {
       if (this._Intensity < this.targetIntensity) {
         // this._Intensity = Math.min(Math.max(this._Intensity * (1 + this.INTENSITY_V), 0.1), this.targetIntensity);
-        this._Intensity = Math.min(Math.max(this._Intensity + this.INTENSITY_V, 0.1), this.targetIntensity);
+        this._Intensity = Math.min(Math.max(this._Intensity + this.INTENSITY_V_INC, 0.1), this.targetIntensity);
       } else if (this._Intensity > this.targetIntensity) {
         // this._Intensity = Math.max(this._Intensity * (1 - this.INTENSITY_V), this.targetIntensity);
-        this._Intensity = Math.max(this._Intensity - this.INTENSITY_V, this.targetIntensity);
+        this._Intensity = Math.max(this._Intensity - this.INTENSITY_V_DEC, this.targetIntensity);
       }
       let value = this.intensityInterpolation(this._Intensity);
       this.sprite.tint = colorLuminance(this.color, value);

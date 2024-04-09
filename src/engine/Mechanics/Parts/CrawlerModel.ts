@@ -148,7 +148,7 @@ export class CrawlerModel {
       this.claimedNode.claimedBy = this;
       this.onNodeClaimed.publish({claim: true, node, claimer: this});
     } else {
-      console.log(`Claim unsuccessful. ${node ? node.slug + ' ' + node.uid.toString() : 'null'} not claimed by ${this.uid} (${!!this.claimedNode}, ${!!node.claimedBy})`);
+      console.log(`Claim unsuccessful. ${node ? node.slug + ' ' + node.uid.toString() : 'null'} not claimed by ${this.uid} (${!!this.claimedNode}, ${node ? !!node.claimedBy : 'null'})`);
     }
   }
 
@@ -165,7 +165,7 @@ export class CrawlerModel {
   }
 
   public toString(): string {
-    let m = `<div class='node-title'>${this.slug}</div>`;
+    let m = `<div class='node-title'>${this.slug} ${this.isBuffed ? '<span style="font-size:0.4em; color:#ff0; padding: 0.9em>[BLESSED]</span>': ''}</div>`;
     m += `Health: ${Math.floor(this.health * 100)}%`;
     m += `<br>Action: ${this.currentCommand ? CommandType[this.currentCommand.type] : 'NONE'}`;
     // if (this.currentCommand.type === CommandType.FRUSTRATED && this.frustratedBy) {

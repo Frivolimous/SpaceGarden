@@ -219,13 +219,11 @@ export const SkillData: ISkillData = {
       ],
     },
     {
-      slug: 'skill-3-1',
-      title: 'Big Stem',
-      description: 'Lets you place up to two Big Stem.',
+      slug: 'skill-3-6',
+      title: 'Useless',
+      description: 'This research does nothing, it just takes up space.',
       cost: 4,
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'bigstem'},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
@@ -238,6 +236,12 @@ export const SkillData: ISkillData = {
         {effectType: 'tier', valueType: 'replace', value: 3},
         {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 450000},
         {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -1},
+
+        // temp sandbox reward
+
+        {effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: Infinity},
+        {effectType: 'node', slug: 'generator', key: 'maxCount', valueType: 'additive', value: Infinity},
+        {effectType: 'node', slug: 'bigstem', key: 'maxCount', valueType: 'additive', value: Infinity},
       ],
     },
     {
@@ -246,7 +250,7 @@ export const SkillData: ISkillData = {
       description: 'You beat the game!  For now... more content will be coming soon™!',
       cost: 99,
       effects: [
-
+        
       ],
     },
   ],

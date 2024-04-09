@@ -165,5 +165,6 @@ export interface ITransferBlock {
   type: 'grow' | 'fruit' | 'research';
   amount: number;
   fade?: number;
+  amped?: boolean;
   removeOrigin?: boolean;
 }

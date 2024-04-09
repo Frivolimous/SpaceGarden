@@ -39,6 +39,11 @@ export class GameKnowledge {
     'big-evil': [],
     'small-evil': [],
     'leaf': [],
+    'biglab': [],
+    'wall': [],
+    'amp': [],
+    'volatile': [],
+    'biggrove': [],
   };
 
   public sortedCrawlers: {[key in CrawlerSlug]: CrawlerModel[]} = {
@@ -61,6 +66,8 @@ export class GameKnowledge {
   private fps: number = 0;
 
   private numBlobs: number = 0;
+  private numRBlobs: number = 0;
+  private numFBlobs: number = 0;
 
   private extrinsic: IExtrinsicModel;
 
@@ -141,6 +148,7 @@ export class GameKnowledge {
 
     if (GOD_MODE) {
       m += '<br> --- <br> DEV STUFF <br><br>';
+      m += `Research Blobs: ${this.numRBlobs}<br>Fruit Blobs: ${this.numFBlobs}<br>`
       let keys = Object.keys(this.sortedNodes);
       keys.forEach(key => {
         let value = this.sortedNodes[key as NodeSlug].length;
@@ -226,8 +234,18 @@ export class GameKnowledge {
       case 'BLOB':
         if (e.data) {
           this.numBlobs++;
+          if (e.data.type === 'research') {
+            this.numRBlobs++;
+          } else {
+            this.numFBlobs++;
+          }
         } else {
           this.numBlobs--;
+          if (e.data.type === 'research') {
+            this.numRBlobs--;
+          } else {
+            this.numFBlobs--;
+          }
         }
         this.checkBlob15();
         break;

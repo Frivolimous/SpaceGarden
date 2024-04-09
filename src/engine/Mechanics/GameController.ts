@@ -26,13 +26,13 @@ export class GameController {
   public knowledge: GameKnowledge;
 
   private rBlobAI = [
-    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin))),
-    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling')))),
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && outlet.slug !== 'wall'))),
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && outlet.slug !== 'wall' && (outlet.outlets.length >= 2 || outlet.config.slug === 'seedling')))),
   ];
 
   private fBlobAI = [
-    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin))),
-    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && (outlet.outlets.length >= 2 || outlet.canSpawnFruit())))),
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && outlet.slug !== 'wall'))),
+    (origin: PlantNode, target: PlantNode) => _.sample(target.outlets.filter(outlet => (outlet.active && outlet !== origin && outlet.slug !== 'wall' && (outlet.outlets.length >= 2 || outlet.canSpawnFruit())))),
   ];
 
   constructor(private container: FDGContainer, private nodeManager: NodeManager, scores: number[]) {
@@ -270,12 +270,17 @@ export class GameController {
         link.flash();
       }
     } else if (block.type === 'research') {
-      GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: true});
-      link.zip(origin, Colors.Node.purple, block.fade, () => {
-        GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: false});
+      GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: true, type: 'research'}});
+      link.zip(origin, block.amped ? Colors.Node.lightPurple : Colors.Node.purple, block.fade, block.amped, () => {
+        GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: false, type: 'research'}});
         if (target.slug === 'seedling') {
           target.receiveResearch(block.amount);
         } else {
+          if (target.slug === 'amp' && !block.amped) {
+            block.fade += 2;
+            block.amount *= 1.5;
+            block.amped = true;
+          }
           block.fade--;
           if (block.fade <= 0) return;
           let target2 = this.rBlobAI[Config.NODE.BLOB_AI](origin, target);
@@ -286,13 +291,18 @@ export class GameController {
         }
       });
     } else if (block.type === 'fruit') {
-      GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: true});
-      link.zip(origin, Colors.Node.orange, block.fade, () => {
-        GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: false});
+      GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: true, type: 'fruit'}});
+      link.zip(origin, block.amped ? Colors.Node.lightOrange : Colors.Node.orange, block.fade, block.amped, () => {
+        GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: false, type: 'fruit'}});
         if (target.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
           target.receiveFruitPower(block.amount);
           // add research
         } else {
+          if (target.slug === 'amp' && !block.amped) {
+            block.fade += 2;
+            block.amount *= 1.5;
+            block.amped = true;
+          }
           block.fade--;
           if (block.fade <= 0) return;
           let target2 = this.fBlobAI[Config.NODE.BLOB_AI](origin, target);

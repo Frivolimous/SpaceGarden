@@ -58,13 +58,17 @@ export class BaseCommand {
   }
 
   protected dragFruit() {
-    this.fruit && this.fruit.view.tickFollow(this.crawler.view, this.config.fruitSpeed);
+    this.fruit && this.fruit.exists && this.fruit.view.tickFollow(this.crawler.view, this.config.fruitSpeed);
   }
 
   protected deliverFruit(onComplete: (fruit: PlantNode) => void) {
     this.crawler.unclaimNode();
     let fruit = this.fruit;
     this.fruit = null;
+    if (!fruit.exists) {
+      console.log('NO FRUIT TO DELIVER!');
+      this.return;
+    }
     new JMTween(fruit.view.scale, 500).easing(JMEasing.Back.In).to({x: 0, y: 0}).start().onComplete(() => {
       fruit.flagDestroy = true;
       onComplete(fruit);

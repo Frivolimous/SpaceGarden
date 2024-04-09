@@ -106,7 +106,9 @@ export class NodeManager {
       } else if (effect.effectType === 'crawler-command') {
         if (effect.slug === 'all') {
           this.crawlers.forEach(config => {
-            this.finishNumberEffect(config.commandConfig, effect);
+            if (config.slug !== 'chieftain') {
+              this.finishNumberEffect(config.commandConfig, effect);
+            }
           });
         } else {
           let config = this.getCrawlerConfig(effect.slug);

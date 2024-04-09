@@ -98,7 +98,7 @@ export class BottomBar extends PIXI.Container {
   public nodeAdded = (node: PlantNode) => {
     let button = this.buttons.find(b => b.getLabel() === node.slug);
 
-    if (button && button.maxNodes > 0) {
+    if (button && button.maxNodes > 0 && button.maxNodes !== Infinity) {
       button.count++;
 
       if (button.count >= button.maxNodes) {

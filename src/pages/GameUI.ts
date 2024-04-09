@@ -276,7 +276,7 @@ export class GameUI extends BaseUI {
       dragCreate = true;
       this.mouseC.clearNextClickEvent();
 
-      this.finishCreateNewNode(e.e.data.getLocalPosition(this.container), e.config, e.onComplete);
+      this.finishCreateNewNode(e.e.getLocalPosition(this.container), e.config, e.onComplete);
     }, 150);
 
     this.mouseC.onUp.addOnce(() => {

@@ -19,6 +19,7 @@ export class FDGContainer extends PIXI.Graphics {
   constructor(private borders: JMRect) {
     super();
     this.addChild(this.nodeLayer, this.crawlerLayer);
+    this.eventMode = 'none';
   }
 
   public addPull(pull: IPull) {

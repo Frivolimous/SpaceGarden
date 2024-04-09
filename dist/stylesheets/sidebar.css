@@ -88,6 +88,8 @@
 .node-title {
   font-weight: bold;
   font-size: 25px;
+  display: flex;
+  align-items: center;
 }
 
 .node-block {

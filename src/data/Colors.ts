@@ -12,6 +12,9 @@ export const Colors = {
     darkblue: 0x004296,
     purple: 0x9370E0,
     white: 0xffffff,
+    grey: 0xcccccc,
+    lightOrange: 0xF0A000,
+    lightPurple: 0xA380F0,
   },
 
   GRID: 0x333333,

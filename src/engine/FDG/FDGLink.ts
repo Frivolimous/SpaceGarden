@@ -58,8 +58,8 @@ export class FDGLink {
     return new JMTween((this as FDGLink), 300).to({ intensity: 0 }).start();
   }
 
-  public zip(origin: PlantNode, color: number, fade: number, onComplete: () => void): JMTween {
-    let blob: IBlob = {x: origin.view.x, y: origin.view.y, color, size: 2, fade};
+  public zip(origin: PlantNode, color: number, fade: number, amped: boolean, onComplete: () => void): JMTween {
+    let blob: IBlob = {x: origin.view.x, y: origin.view.y, color, size: amped ? 3 : 2, fade};
     let target = this.other(origin);
     this.blobs.push(blob);
     return new JMTween({percent: 0}, 300).to({percent: 1}).start().onUpdate(data => {

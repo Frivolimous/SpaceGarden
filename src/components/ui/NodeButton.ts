@@ -63,7 +63,7 @@ export class NodeButton extends PIXI.Container {
     this.inner.addChild(this.label);
     this.addLabel();
 
-    if (config.maxNodes) {
+    if (config.maxNodes && config.maxNodes !== Infinity) {
       this.numberText = new PIXI.Text(' / ', style);
       this.inner.addChild(this.numberText);
       this.count = 0;

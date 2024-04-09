@@ -37,7 +37,8 @@ export class MouseController {
   }
 
   private onMouseDown = (e: PIXI.FederatedPointerEvent) => {
-    let position = e.data.getLocalPosition(this.container);
+    let position = e.getLocalPosition(this.container);
+    
     if (this.nextClickEvent) {
       if (this.nextClickEvent.onDown) {
         this.nextClickEvent.onDown(position);
@@ -87,7 +88,7 @@ export class MouseController {
   }
 
   private onMouseMove = (e: PIXI.FederatedPointerEvent) => {
-    let position = e.data.getLocalPosition(this.container);
+    let position = e.getLocalPosition(this.container);
     if (this.currentPull) {
       this.currentPull.x = position.x;
       this.currentPull.y = position.y;
