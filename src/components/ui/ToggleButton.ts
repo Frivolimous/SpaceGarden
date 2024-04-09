@@ -58,7 +58,7 @@ export class ToggleButton extends PIXI.Container {
     }
 
     this.interactive = true;
-    this.buttonMode = true;
+    this.cursor = 'pointer';
 
     this.addListener('mouseover', () => {
       this.background.tint = colorLuminance(this.color, 0.8);

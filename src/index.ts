@@ -49,7 +49,7 @@ export let Facade = new class FacadeInner {
       height: this.element.offsetHeight,
 
     });
-    this.element.append(this.app.view);
+    this.element.append(this.app.view as any);
 
     this.app.stage.scale.x = 1 / Config.INIT.RESOLUTION;
     this.app.stage.scale.y = 1 / Config.INIT.RESOLUTION;

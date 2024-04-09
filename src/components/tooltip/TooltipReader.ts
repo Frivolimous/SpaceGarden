@@ -60,7 +60,7 @@ export class TooltipReader {
     this.isMouseDown = false;
   }
 
-  private mouseMove = (e: PIXI.InteractionEvent) => {
+  private mouseMove = (e: PIXI.FederatedPointerEvent) => {
     if (this.isMouseDown) return;
 
     let target: any = e.target;

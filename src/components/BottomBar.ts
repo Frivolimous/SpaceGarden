@@ -12,7 +12,7 @@ import { Config } from '../Config';
 import _ from 'lodash';
 
 export class BottomBar extends PIXI.Container {
-  public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.InteractionEvent, onComplete: () => void }>();
+  public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.FederatedPointerEvent, onComplete: () => void }>();
   public onDeleteButton = new JMEventListener<{ onComplete: () => void }>();
   public onProceedButton = new JMEventListener<null>();
   public onTurboButton = new JMEventListener<boolean>();

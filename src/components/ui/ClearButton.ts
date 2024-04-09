@@ -4,7 +4,7 @@ import * as PIXI from 'pixi.js';
 export interface IClearButton {
   width: number;
   height: number;
-  onClick: (e?: PIXI.InteractionEvent) => void;
+  onClick: (e?: PIXI.FederatedPointerEvent) => void;
 }
 
 export class ClearButton extends PIXI.Container {
@@ -16,7 +16,7 @@ export class ClearButton extends PIXI.Container {
     graphic.beginFill(0, 0.01).drawRect(0, 0, config.width, config.height);
 
     this.interactive = true;
-    this.buttonMode = true;
+    this.cursor = 'pointer';
     this.addListener('pointerdown', () => {
       // SoundData.playSound(SoundIndex.CLICK);
       config.onClick();

@@ -18,9 +18,9 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist')
   },
-  devtool: "source-map",
   watch: true,
+  devtool: "source-map",
   devServer: {
-    contentBase: './dist',
+    static: './dist',
   }
 };

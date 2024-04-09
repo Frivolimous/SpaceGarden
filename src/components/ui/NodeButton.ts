@@ -16,8 +16,8 @@ export interface INodeButton {
   rounding?: number;
   label?: string;
   labelStyle?: any;
-  onUp?: (e: PIXI.InteractionEvent) => void;
-  onDown?: (e: PIXI.InteractionEvent) => void;
+  onUp?: (e: PIXI.FederatedPointerEvent) => void;
+  onDown?: (e: PIXI.FederatedPointerEvent) => void;
   hoverScale?: number;
   maxNodes?: number;
 }
@@ -74,7 +74,7 @@ export class NodeButton extends PIXI.Container {
     }
 
     this.interactive = true;
-    this.buttonMode = true;
+    this.cursor = 'pointer';
 
     this.addListener('mouseover', () => {
       if (this.disabled) return;
@@ -116,7 +116,7 @@ export class NodeButton extends PIXI.Container {
   public set disabled(b: boolean) {
     this._Disabled = b;
     // this.interactive = !b;
-    this.buttonMode = !b;
+    this.cursor = b ? 'auto' : 'pointer';
     if (b) {
       this.color = this.disabledColor;
     } else {

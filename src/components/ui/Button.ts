@@ -60,7 +60,7 @@ export class Button extends PIXI.Container {
     this.inner.addChild(this.label);
 
     this.interactive = true;
-    this.buttonMode = true;
+    this.cursor = 'pointer';
 
     this.addListener('mouseover', () => {
       if (this._Disabled) return;
@@ -101,7 +101,7 @@ export class Button extends PIXI.Container {
   public set disabled(b: boolean) {
     this._Disabled = b;
     // this.interactive = !b;
-    this.buttonMode = !b;
+    this.cursor = b ? 'auto' : 'pointer';
     if (b) {
       this.color = this.disabledColor;
     } else {

@@ -88,7 +88,7 @@ export class TextureCache {
     return TextureCache.paralaxes[zone];
   }
 
-  private static renderer: PIXI.Renderer | PIXI.AbstractRenderer;
+  private static renderer: PIXI.IRenderer;
   private static cache: { [key: string]: PIXI.Texture } = {};
   private static backgrounds: PIXI.Texture[][] = [];
   private static paralaxes: PIXI.Texture[] = [];

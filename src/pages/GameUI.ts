@@ -262,7 +262,7 @@ export class GameUI extends BaseUI {
     }
   }
 
-  public createNewNode = (e: {config: INodeConfig, e: PIXI.InteractionEvent, onComplete: () => void}) => {
+  public createNewNode = (e: {config: INodeConfig, e: PIXI.FederatedPointerEvent, onComplete: () => void}) => {
     if (!e) {
       this.mouseC.clearNextClickEvent();
       this.container.showConnectionCount(false);
