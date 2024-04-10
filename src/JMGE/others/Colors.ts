@@ -25,6 +25,12 @@ export class ColorGradient {
 
     return this.startColor + Math.floor(this.R * percent) * 0x010000 + Math.floor(this.G * percent) * 0x000100 + Math.floor(this.B * percent);
   }
+
+  public getHexAt = (percent: number): string => {
+    let number = this.getColorAt(percent);
+
+    return '#' + number.toString(16);
+  }
 }
 
 /**

@@ -13,6 +13,13 @@ export class PlantNodePower {
   public fruitCurrent: number = 0;
   public powerClump: number = 0;
   public researchCurrent: number = 0;
+  
+  // HUB ONLY
+  public storedPowerCurrent: number = 0;
+  public canReceiveResearch: boolean = true;
+  public canReceiveFruit: boolean = true;
+  public canStorePower: boolean = true;
+
   public _ResearchGen: number = 0;
   public _PowerGen: number = 0;
 
@@ -43,7 +50,7 @@ export class PlantNodePower {
     return Math.min(this.powerCurrent / this.config.powerMax, 1);
   }
 
-  public get powerPercentOver(): number {
+  private get powerPercentOver(): number {
     return Math.min(this.powerCurrent / this.config.powerMax, this.OVERCHARGE_PERCENT);
   }
 
@@ -76,6 +83,15 @@ export class PlantNodePower {
       if (this.powerCurrent > 0) {
         this.powerCurrent += this.powerGen;
       }
+    }
+
+    if (this.data.slug === 'hub' && this.canStorePower) {
+      this.storedPowerCurrent -= this.powerGen;
+      this.powerCurrent += this.powerGen;
+    }
+
+    if (this.powerCurrent < this.config.powerMax && this.data.isFruit()) {
+      this.powerCurrent += Config.NODE.FRUIT_GROWTH;
     }
 
     this.powerTick--;
@@ -129,8 +145,8 @@ export class PlantNodePower {
           target = fruit;
         }
       });
-
-      if (this.powerPercentOver > target.power.powerPercentOver) {
+      
+      if (this.powerPercentOver > target.power.powerPercentOver && target.power.powerPercentOver < target.power.OVERCHARGE_PERCENT) {
         let clump = Math.min(this.powerCurrent, this.config.fruitClump);
         this.transferPower(this.data, target, {type: 'grow', amount: clump, removeOrigin: clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1)});
         this.powerCurrent -= clump;
@@ -150,7 +166,7 @@ export class PlantNodePower {
         }
       });
 
-      if (target) {
+      if (target && this.powerCurrent >= this.powerClump) {
         let clump = Math.min(this.powerCurrent, this.powerClump);
         this.transferPower(this.data, target, {type: 'grow', amount: clump});
         this.powerCurrent -= clump;

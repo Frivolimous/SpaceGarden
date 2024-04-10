@@ -25,6 +25,7 @@ import { GOD_MODE } from '../services/_Debug';
 import { INodeSave, PlantNode } from '../engine/nodes/PlantNode';
 import { AchievementPanel } from '../components/domui/AchievementPanel';
 import { ScoreType } from '../data/ATSData';
+import { HubPanel } from '../components/domui/HubPanel';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -66,6 +67,7 @@ export class GameUI extends BaseUI {
     let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
 
     let nextSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
+    let hubPanel = new HubPanel();
     let currentSkillPanel: SkillPanel;
 
     if (this.extrinsic.skillsCurrent.length + always.length > 0) {
@@ -74,7 +76,7 @@ export class GameUI extends BaseUI {
 
     let achieveElement = new AchievementPanel(this.extrinsic.achievements, SkillData.achievements);
 
-    this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel, achieveElement);
+    this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel, hubPanel, achieveElement);
     this.keymapper = new KeyMapper();
     this.bottomBar = new BottomBar(100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
 

@@ -4,6 +4,7 @@ import { Colors } from '../../../data/Colors';
 import { TextureCache } from '../../../services/TextureCache';
 import { CrawlerSlug } from '../../../data/CrawlerData';
 import { PlantNodeView } from '../../nodes/PlantNodeView';
+import { ColorGradient } from '../../../JMGE/others/Colors';
 
 export class CrawlerView extends PIXI.Container {
   public sprite: PIXI.Sprite;
@@ -43,7 +44,7 @@ export class CrawlerView extends PIXI.Container {
   public addBuff() {
     if (!this._Buff) {
       this._Buff = new PIXI.Graphics();
-      this._Buff.beginFill(0xffffff, 0.5);
+      this._Buff.beginFill(0xffffff, 0.2);
       this._Buff.drawCircle(0, 0, 8);
       this.addChild(this._Buff);
     }

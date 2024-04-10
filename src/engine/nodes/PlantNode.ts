@@ -7,8 +7,12 @@ import { PlantNodeView } from './PlantNodeView';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Colors } from '../../data/Colors';
 import { CrawlerModel } from '../Mechanics/Parts/CrawlerModel';
+import { ColorGradient } from '../../JMGE/others/Colors';
 
 export class PlantNode {
+  public static powerGradient = new ColorGradient(0xcc0000, 0xffffff);
+  public static overPowerGradient = new ColorGradient(0xffffff, 0xffff00);
+
   public static generateUid() {
     PlantNode.cUid++;
 
@@ -205,13 +209,18 @@ export class PlantNode {
   }
 
   public receiveFruitPower = (amount: number) => {
-    if (this.fruits.length < this.config.maxFruits) {
-      this.power.fruitSpawn += amount;
+    if (this.slug === 'hub') {
       this.view.pulse(Colors.Node.orange);
+      this.power.fruitCurrent += amount;
     } else {
-      let fruit = this.fruits.find(fruit2 => fruit2.canSpawnFruit());
-      if (fruit) {
-        fruit.receiveFruitPower(amount);
+      if (this.fruits.length < this.config.maxFruits) {
+        this.power.fruitSpawn += amount;
+        this.view.pulse(Colors.Node.orange);
+      } else {
+        let fruit = this.fruits.find(fruit2 => fruit2.canSpawnFruit());
+        if (fruit) {
+          fruit.receiveFruitPower(amount);
+        }
       }
     }
   }
@@ -248,12 +257,12 @@ export class PlantNode {
   public tickPhysics() {
     this.physics.moveBody();
     this.view.adjustIntensity();
-
   }
 
   public toString(): string {
+    let color = this.power.powerPercent > 1 ? PlantNode.overPowerGradient.getHexAt((this.power.powerPercent - 1) * 2) : PlantNode.powerGradient.getHexAt(this.power.powerPercent);
     let m = `<div class='node-title'>${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
-        Power: ${Math.round(this.power.powerCurrent)} / ${this.config.powerMax}`;
+        Power: <span style="color: ${color}">${Math.round(this.view._Intensity * this.config.powerMax)}</span> / ${this.config.powerMax}`;
     if (!this.active) {
       m += `<p style='color: #eedd33;'>[ Drag to your network in order to connect the new node ]</p>`;
     } else {
@@ -262,9 +271,13 @@ export class PlantNode {
       }
       if (this.power.powerGen > 0) {
         m += `<br>Power Gen: ${(this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
-      } else {
-        m += `<br>Power Drain: ${(-this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
+      } else if (this.power.powerGen < 0) {
+        m += `<br>Power Drain: ${(-this.power.powerGen * 60).toFixed(0)}/s`;
+        if (this.config.maxLinks > 1) m += ` (transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
+      } else if (this.config.maxLinks > 1){
+        m += `<br>Transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s`
       }
+      
       // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
 
       if (this.power.researchGen > 0) {
@@ -305,6 +318,8 @@ export interface INodeSave {
   slug: NodeSlug;
   powerCurrent: number;
   researchCurrent: number;
+  fruitCurrent: number;
+  storedPowerCurrent: number;
   outlets: number[];
   x: number;
   y: number;

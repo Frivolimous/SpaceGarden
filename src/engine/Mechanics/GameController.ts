@@ -202,7 +202,9 @@ export class GameController {
         uid: node.uid,
         slug: node.slug,
         powerCurrent: Math.round(node.power.powerCurrent),
-        researchCurrent: node.slug === 'seedling' ? node.power.researchCurrent : 0,
+        researchCurrent: (node.slug === 'seedling' || node.slug === 'hub') ? node.power.researchCurrent : 0,
+        fruitCurrent: node.slug === 'hub' ? node.power.fruitCurrent : 0,
+        storedPowerCurrent: node.slug === 'hub' ? node.power.storedPowerCurrent : 0,
         outlets,
         x: Math.round(node.view.x),
         y: Math.round(node.view.y),
@@ -249,6 +251,8 @@ export class GameController {
     let node = new PlantNode(config, this.transferPower);
     node.power.powerCurrent = save.powerCurrent;
     node.power.researchCurrent = save.researchCurrent;
+    node.power.fruitCurrent = save.fruitCurrent;
+    node.power.storedPowerCurrent = save.storedPowerCurrent;
     node.uid = save.uid;
     node.view.position.set(save.x, save.y);
     node.view.setIntensity(node.power.powerPercent, true);
@@ -275,6 +279,8 @@ export class GameController {
         GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: false, type: 'research'}});
         if (target.slug === 'seedling') {
           target.receiveResearch(block.amount);
+        } else if (target.slug === 'hub' && target.power.canReceiveResearch) {
+          target.receiveResearch(block.amount);
         } else {
           if (target.slug === 'amp' && !block.amped) {
             block.fade += 2;
@@ -297,6 +303,8 @@ export class GameController {
         if (target.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
           target.receiveFruitPower(block.amount);
           // add research
+        } else if (target.slug === 'hub' && target.power.canReceiveFruit) {
+          target.receiveFruitPower(block.amount);
         } else {
           if (target.slug === 'amp' && !block.amped) {
             block.fade += 2;

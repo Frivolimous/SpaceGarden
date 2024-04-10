@@ -6,6 +6,7 @@ export const dConfigNode = {
   LAUNCH_PERCENT: 1,
   BLOB_AI: 0,
   SAVED_RESEARCH: 0,
+  FRUIT_GROWTH: 0,
 };
 
 export const Config = {
@@ -42,6 +43,7 @@ export const Config = {
     LAUNCH_PERCENT: 1,
     BLOB_AI: 0,
     SAVED_RESEARCH: 0,
+    FRUIT_GROWTH: 0,
   },
 
   CRAWLER: {

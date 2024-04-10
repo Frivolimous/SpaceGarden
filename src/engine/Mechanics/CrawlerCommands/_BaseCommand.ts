@@ -67,7 +67,7 @@ export class BaseCommand {
     this.fruit = null;
     if (!fruit.exists) {
       console.log('NO FRUIT TO DELIVER!');
-      this.return;
+      return;
     }
     new JMTween(fruit.view.scale, 500).easing(JMEasing.Back.In).to({x: 0, y: 0}).start().onComplete(() => {
       fruit.flagDestroy = true;

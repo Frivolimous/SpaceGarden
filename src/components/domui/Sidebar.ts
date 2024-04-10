@@ -4,6 +4,7 @@ import { CrawlerModel } from '../../engine/Mechanics/Parts/CrawlerModel';
 import { PlantNode } from '../../engine/nodes/PlantNode';
 import { StringManager } from '../../services/StringManager';
 import { AchievementPanel } from './AchievementPanel';
+import { HubPanel } from './HubPanel';
 import { SidebarButton } from './SidebarButton';
 import { SidebarElement } from './SidebarElement';
 import { SkillPanel } from './SkillPanel';
@@ -16,6 +17,7 @@ export class Sidebar {
 
   private nodeMap: SidebarElement[] = [];
   private seedlingElement: SidebarElement;
+  private hubElement: SidebarElement;
   private currentHighlight: SidebarElement;
   private hideStemButton: SidebarButton;
 
@@ -30,7 +32,7 @@ export class Sidebar {
   private _AreStemsHidden: boolean = false;
   private currentTab: SidebarTab = 'node';
 
-  constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel, private achieveElement: AchievementPanel) {
+  constructor(private currentSkillPanel: SkillPanel, private nextSkillPanel: SkillPanel, private hubPanel: HubPanel, private achieveElement: AchievementPanel) {
     this.sidebar = document.getElementById('sidebar') as HTMLDivElement;
     this.sidebar.innerHTML = `
     <div class="tab-container" id="tab-container"></div>
@@ -74,6 +76,7 @@ export class Sidebar {
   public destroy() {
     this.currentSkillPanel && this.currentSkillPanel.destroy();
     this.nextSkillPanel.destroy();
+    this.hubPanel && this.hubPanel.destroy();
   }
 
   public navIn() {
@@ -155,13 +158,24 @@ export class Sidebar {
 
     if (node.slug === 'seedling') {
       element.addButton(StringManager.data.UI_SIDEBAR_SKILLTREE_NEXT, () => {
-        this.nextSkillPanel.hidden = false;
+        this.nextSkillPanel.hidden = !this.nextSkillPanel.hidden;
+        this.currentSkillPanel.hidden = true;
+        this.hubPanel.hidden = true;
       });
       this.seedlingElement = element;
     } else if (node.slug === 'core' && this.currentSkillPanel) {
       element.addButton(StringManager.data.UI_SIDEBAR_SKILLTREE_CURRENT, () => {
-        this.currentSkillPanel.hidden = false;
+        this.currentSkillPanel.hidden = !this.currentSkillPanel.hidden;
+        this.nextSkillPanel.hidden = true;
+        this.hubPanel.hidden = true;
       });
+    } else if (node.slug === 'hub') {
+      element.addButton(StringManager.data.UI_SIDEBAR_HUB, () => {
+        this.hubPanel.hidden = !this.hubPanel.hidden;
+        this.currentSkillPanel.hidden = true;
+        this.nextSkillPanel.hidden = true;
+      });
+      this.hubElement = element;
     }
 
     if (node.type === 'crawler' && this.crawlerButton.isHidden) {
@@ -177,6 +191,10 @@ export class Sidebar {
       if (node.slug === 'seedling') {
         this.nextSkillPanel.clear();
         this.seedlingElement = null;
+      } else if (node.slug === 'hub') {
+        this.hubElement = null;
+        this.hubPanel.hidden = true;
+        this.hubPanel.clear();
       }
       let index = this.nodeMap.findIndex(data => data.source === node);
       this.container.removeChild(this.nodeMap[index].element);
@@ -190,6 +208,11 @@ export class Sidebar {
     if (this.seedlingElement) {
       this.nextSkillPanel.updateSkillpoints((this.seedlingElement.source as PlantNode).power.researchCurrent);
       this.seedlingElement.button.notify(this.nextSkillPanel.hidden && this.nextSkillPanel.hasSkillToLevel);
+    }
+
+    if (this.hubElement) {
+      let plantElement = this.hubElement.source as PlantNode;
+      this.hubPanel.updateCurrencies(plantElement.power.researchCurrent, plantElement.power.fruitCurrent, plantElement.power.storedPowerCurrent);
     }
   }
 

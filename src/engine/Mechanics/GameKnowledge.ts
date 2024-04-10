@@ -232,7 +232,7 @@ export class GameKnowledge {
         this.checkTier3();
         break;
       case 'BLOB':
-        if (e.data) {
+        if (e.data.add) {
           this.numBlobs++;
           if (e.data.type === 'research') {
             this.numRBlobs++;

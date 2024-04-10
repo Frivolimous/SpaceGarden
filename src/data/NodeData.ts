@@ -68,7 +68,7 @@ export const NodeData: INodeData = {
       radius: 10, mass: 1, force: 1, maxLinks: 1,
       powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain, powerWeight: 1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
-      fruitType: 'food', fruitChain: 2, maxFruits: 3, fruitClump: NodeBase.fruitClump,
+      fruitType: 'food', fruitChain: 1, maxFruits: 3, fruitClump: NodeBase.fruitClump,
     },
     {
       slug: 'grove', type: 'normal', color: Colors.Node.orange, shape: 'square',
@@ -108,7 +108,7 @@ export const NodeData: INodeData = {
       fruitChain: 0,
     },
     {
-      slug: 'volatile', type: 'normal', color: Colors.Node.yellow, shape: 'square',
+      slug: 'volatile', type: 'normal', color: Colors.Node.yellow, shape: 'triangle',
       radius: 20, mass: 4, force: 3, maxLinks: 1, maxCount: 1,
       powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.smallGen * 10, powerWeight: 1,
       powerDelay: NodeBase.powerDelay * 2, powerClump: NodeBase.powerMax * 2.8,
@@ -127,9 +127,9 @@ export const NodeData: INodeData = {
     {
       slug: 'battery', type: 'fruit', color: Colors.Node.darkyellow, shape: 'circle',
       radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
-      powerMax: NodeBase.powerMax / 2, powerGen: 0.01, powerWeight: 1,
+      powerMax: NodeBase.powerMax / 2, powerGen: 0.02, powerWeight: 1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerMax / 2,
-      maxFruits: 1, fruitClump: NodeBase.fruitClump * 4,
+      maxFruits: 1, fruitClump: NodeBase.fruitClump,
     },
     {
       slug: 'leaf', type: 'fruit', color: Colors.Node.darkgreen, shape: 'triangle',
@@ -197,11 +197,11 @@ export const NodeData: INodeData = {
 };
 
 if (GOD_MODE) {
-  NodeData.BaseBuildable.push('biglab');
-  NodeData.BaseBuildable.push('wall');
-  NodeData.BaseBuildable.push('amp');
-  NodeData.BaseBuildable.push('volatile');
-  NodeData.BaseBuildable.push('biggrove');
+  // NodeData.BaseBuildable.push('biglab');
+  // NodeData.BaseBuildable.push('wall');
+  // NodeData.BaseBuildable.push('amp');
+  // NodeData.BaseBuildable.push('volatile');
+  // NodeData.BaseBuildable.push('biggrove');
 }
 
 export type NodeSlug = 'home' | 'lab' | 'generator' | 'grove' | 'stem' | 'bigstem' | 'hub' | 'core'| 'seedling' | 

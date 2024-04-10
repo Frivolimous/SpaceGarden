@@ -16,6 +16,7 @@ export const EnglishStringData = {
   UI_SIDEBAR_NODE_MODE: 'Node Mode',
   UI_SIDEBAR_SKILLTREE_NEXT: 'Next Evolution',
   UI_SIDEBAR_SKILLTREE_CURRENT: 'Current Evolution',
+  UI_SIDEBAR_HUB: 'Hub Upgrades',
   UI_SAVE: 'Game Saved!',
 
   TOOLTIP_home_TITLE: 'Crawler Home',

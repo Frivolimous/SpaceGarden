@@ -14,6 +14,7 @@ export class PlantNodePhysics {
 
   constructor(private config: INodeConfig, private view: PlantNodeView) {
     this._iMass = 1 / config.mass;
+    this.view.sprite.rotation = Math.random() * Math.PI * 2 - Math.PI;
   }
 
   get force(): number {
