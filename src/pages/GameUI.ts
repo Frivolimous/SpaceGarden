@@ -18,7 +18,7 @@ import { IExtrinsicModel, TierSaves } from '../data/SaveData';
 import { SaveManager } from '../services/SaveManager';
 import { Config, dConfigNode } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
-import { ISkillConfig, SkillData } from '../data/SkillData';
+import { IHubConfig, ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
 import { StringManager } from '../services/StringManager';
 import { GOD_MODE } from '../services/_Debug';
@@ -67,7 +67,7 @@ export class GameUI extends BaseUI {
     let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
 
     let nextSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
-    let hubPanel = new HubPanel();
+    let hubPanel = new HubPanel(this.nodeManager.hubSkills, this.extrinsic.hubLevels, this.increaseHubLevel);
     let currentSkillPanel: SkillPanel;
 
     if (this.extrinsic.skillsCurrent.length + always.length > 0) {
@@ -124,6 +124,7 @@ export class GameUI extends BaseUI {
         {key: '`', function: () => this.logSave()},
         {key: '1', noCtrl: true, function: () => this.loadSave(TierSaves[1])},
         {key: '2', noCtrl: true, function: () => this.loadSave(TierSaves[2])},
+        {key: '3', noCtrl: true, function: () => this.loadSave(TierSaves[3])},
         {key: '0', noCtrl: true, function: () => this.loadSave(TierSaves[0])},
         {key: '1', withCtrl: true, function: () => this.loadSave(TierSaves[11])},
         {key: '2', withCtrl: true, function: () => this.loadSave(TierSaves[12])},
@@ -378,6 +379,33 @@ export class GameUI extends BaseUI {
     this.sidebar.removeNodeElement(node);
     if (node.active && node.slug === 'seedling') {
       this.extrinsic.scores[ScoreType.RESEARCH_SAVED] = node.power.researchCurrent * Config.NODE.SAVED_RESEARCH;
+    }
+  }
+
+  increaseHubLevel = (skill: IHubConfig) => {
+    let hub = this.gameC.nodes.find(el => el.slug === 'hub');
+
+    if (hub) {
+      let levelPair = this.extrinsic.hubLevels.find(el => el[0] === skill.slug);
+      let level = levelPair ? levelPair[1] : 0;
+
+      let cost = skill.costs[level];
+      if (skill.costType === 'research') {
+        hub.power.researchCurrent -= cost;
+      } else if (skill.costType === 'fruit') {
+        hub.power.fruitCurrent -= cost;
+      } else {
+        hub.power.storedPowerCurrent -= cost;
+      }
+
+      this.nodeManager.applyNodeEffect(skill.effect);
+
+      if (!levelPair) {
+        levelPair = [skill.slug, 0];
+        this.extrinsic.hubLevels.push(levelPair);
+      }
+
+      levelPair[1]++;
     }
   }
 }

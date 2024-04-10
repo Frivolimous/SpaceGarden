@@ -80,7 +80,7 @@ export const NodeData: INodeData = {
     },
     {
       slug: 'hub', type: 'normal', color: Colors.Node.green, shape: 'hexagon',
-      radius: 25, mass: 3, force: 1, maxLinks: 6, maxCount: 1,
+      radius: 25, mass: 3, force: 1, maxLinks: 5, maxCount: 1,
       powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.stemDrain * 3, powerWeight: 1.1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump * 0.5,
       fruitChain: 1, maxFruits: 6, fruitClump: NodeBase.fruitClump,

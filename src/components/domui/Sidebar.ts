@@ -213,6 +213,7 @@ export class Sidebar {
     if (this.hubElement) {
       let plantElement = this.hubElement.source as PlantNode;
       this.hubPanel.updateCurrencies(plantElement.power.researchCurrent, plantElement.power.fruitCurrent, plantElement.power.storedPowerCurrent);
+      this.hubElement.button.notify(this.hubPanel.hidden && this.hubPanel.hasSkillToLevel);
     }
   }
 

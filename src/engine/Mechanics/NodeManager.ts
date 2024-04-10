@@ -1,11 +1,12 @@
 import * as _ from 'lodash';
 import { INodeConfig, NodeData, NodeSlug } from '../../data/NodeData';
-import { IAchievement, ISkillConfig, ISkillEffect, SkillData } from '../../data/SkillData';
+import { IAchievement, IHubConfig, ISkillConfig, ISkillEffect, ISkillEffectNode, SkillData } from '../../data/SkillData';
 import { Config } from '../../Config';
 import { CrawlerData, CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
 
 export class NodeManager {
   public skills: ISkillConfig[];
+  public hubSkills: IHubConfig[];
 
   public buildableNodes: NodeSlug[];
 
@@ -19,6 +20,7 @@ export class NodeManager {
     this.availableCrawlers = _.clone(CrawlerData.BaseAvailable);
     this.data = _.cloneDeep(NodeData.Nodes);
     this.skills = _.cloneDeep(SkillData.skills);
+    this.hubSkills = _.cloneDeep(SkillData.hubs);
     this.crawlers = _.cloneDeep(CrawlerData.data);
   }
 
@@ -75,6 +77,15 @@ export class NodeManager {
     let allSkills = _.uniq(skills.concat(always));
 
     allSkills.forEach(this.applySkill);
+  }
+
+  applyNodeEffect(effect: ISkillEffectNode) {
+    let config = this.getNodeConfig(effect.slug);
+    if (effect.key === 'outletEffects') {
+      this.finishArrayEffect(config, effect);
+    } else {
+      this.finishNumberEffect(config, effect);
+    }
   }
 
   public applySkill = (skill: ISkillConfig | IAchievement) => {
