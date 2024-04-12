@@ -113,6 +113,11 @@ export class NodeButton extends PIXI.Container {
     return this.config.maxNodes;
   }
 
+  public set maxNodes(n: number) {
+    this.config.maxNodes = n;
+    this.count = this.count;
+  }
+
   public set disabled(b: boolean) {
     this._Disabled = b;
     // this.interactive = !b;

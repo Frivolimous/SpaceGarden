@@ -82,6 +82,15 @@ export class BottomBar extends PIXI.Container {
     this.resize(barWidth);
   }
 
+  public refreshNodeButton(config: INodeConfig) {
+    let nodeButton = this.buttons.find(el => el.getLabel() === config.slug);
+
+    if (nodeButton) {
+      nodeButton.maxNodes = config.maxCount;
+      nodeButton.disabled = nodeButton.count >= nodeButton.maxNodes;
+    }
+  }
+
   public resize(barWidth: number) {
     this.graphic.clear().beginFill(0xf1f1f1, 0.7)
       .drawRect(0, 0, barWidth, this.barHeight);

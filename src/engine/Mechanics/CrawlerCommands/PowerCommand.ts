@@ -33,11 +33,11 @@ export class PowerCommand extends BaseCommand {
     }
 
     let seedling = this.crawler.cLoc.findNode(node => node.slug === 'seedling');
-    let closest = this.crawler.cLoc.findNode(node => node.power.powerPercent < 0.5);
+    let closest = this.crawler.cLoc.findNode(node => node.power.powerPercent * node.power.powerWeight < 0.5);
 
     return Math.min(
       seedling ? 0.25 + 0.85 * seedling.power.powerPercent : 20,
-      closest ? 0.5 + closest.power.powerPercent : 20)
+      closest ? 0.5 + closest.power.powerPercent * closest.power.powerWeight : 20)
        - (this.crawler.preference === this.type ? 0.10 : 0);
   }
 
@@ -56,7 +56,7 @@ export class PowerCommand extends BaseCommand {
   }
 
   private isDeliverable(node: PlantNode): boolean {
-    return node.slug !== 'stem' && node.power.powerPercent < 0.7 || (node.slug === 'seedling' && node.power.powerPercent <= 1.2);
+    return node.slug !== 'stem' && (node.power.powerPercent * node.power.powerWeight) < 0.7 || (node.slug === 'seedling' && node.power.powerPercent <= 1.2);
   }
 
   private harvestHere = () => {

@@ -169,11 +169,11 @@ export class CrawlerModel {
 
   public toString(): string {
     let m = `<div class='node-title'>${this.slug} ${this.isBuffed ? '<span style="font-size:0.4em; color:#ff0; padding: 0.9em">[BLESSED]</span>': ''}</div>`;
-    m += `Health: <span style="color: ${CrawlerModel.healthGradient.getHexAt(this.health)}">${Math.floor(this.health * 100)}%</span>`;
+    m += `Health: <span style="color: ${CrawlerModel.healthGradient.getHexAt(this.health)}">${Math.floor(this.health * 100)}%</span> Move: ${Math.round(this.speed * 1000)}`;
     m += `<br>Action: ${this.currentCommand ? CommandType[this.currentCommand.type] : 'NONE'}`;
-    // if (this.currentCommand.type === CommandType.FRUSTRATED && this.frustratedBy) {
-    //   m += ` by ${this.frustratedBy}`;
-    // }
+    if (this.currentCommand.type === CommandType.FRUSTRATED && this.frustratedBy) {
+      m += ` by ${this.frustratedBy}`;
+    }
     if (this.preference) {
       m += `<br>Loves to ${CommandType[this.preference]}`;
     }

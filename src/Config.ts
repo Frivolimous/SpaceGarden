@@ -7,6 +7,9 @@ export const dConfigNode = {
   BLOB_AI: 0,
   SAVED_RESEARCH: 0,
   FRUIT_GROWTH: 0,
+  HUB_BUTTONS: 0,
+  AMP_AMOUNT: 2,
+  AMP_FADE_BOOST: 2,
 };
 
 export const Config = {
@@ -44,6 +47,9 @@ export const Config = {
     BLOB_AI: 0,
     SAVED_RESEARCH: 0,
     FRUIT_GROWTH: 0,
+    HUB_BUTTONS: 0,
+    AMP_AMOUNT: 2,
+    AMP_FADE_BOOST: 2,
   },
 
   CRAWLER: {

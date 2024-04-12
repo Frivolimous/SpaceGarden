@@ -26,10 +26,13 @@ import { INodeSave, PlantNode } from '../engine/nodes/PlantNode';
 import { AchievementPanel } from '../components/domui/AchievementPanel';
 import { ScoreType } from '../data/ATSData';
 import { HubPanel } from '../components/domui/HubPanel';
+import { Timer } from '../components/domui/Timer';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
 
+  private timer: Timer;
+  private sessionTime: number = 0;
   private canvas: ScrollingContainer;
   private container: FDGContainer;
   private nodeManager: NodeManager;
@@ -63,11 +66,12 @@ export class GameUI extends BaseUI {
 
     this.nodeManager.applySkills(this.extrinsic.skillsCurrent);
     this.nodeManager.applyAchievements(this.extrinsic.achievements);
+    this.nodeManager.applyHubs(this.extrinsic.hubLevels);
 
     let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
 
     let nextSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
-    let hubPanel = new HubPanel(this.nodeManager.hubSkills, this.extrinsic.hubLevels, this.increaseHubLevel);
+    let hubPanel = new HubPanel(this.nodeManager.hubSkills, this.extrinsic.hubLevels, this.increaseHubLevel, this.toggleHubCollection);
     let currentSkillPanel: SkillPanel;
 
     if (this.extrinsic.skillsCurrent.length + always.length > 0) {
@@ -79,6 +83,8 @@ export class GameUI extends BaseUI {
     this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel, hubPanel, achieveElement);
     this.keymapper = new KeyMapper();
     this.bottomBar = new BottomBar(100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
+
+    this.timer = new Timer();
 
     // --- add to stage --- \\
     this.canvas.addChild(this.container);
@@ -132,6 +138,7 @@ export class GameUI extends BaseUI {
         {key: 'z', function: () => this.gameC.addCrawler(null, this.gameC.nodes[0])},
         {key: 'r', function: this.cheatResearch},
         {key: 'o', function: () => GameEvents.ACTIVITY_LOG.publish({slug: 'PRESTIGE'})},
+        {key: 'c', function: () => this.nodeManager.hubSkills.forEach(el => el.costs = el.costs.map(el => 5))},
         // {key: 'k', function: this.toggleKnowledge},
       ]);
     }
@@ -167,6 +174,7 @@ export class GameUI extends BaseUI {
     this.bottomBar.destroy();
     this.keymapper.destroy();
     this.mouseC.destroy();
+    this.timer.destroy();
 
     GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME INSTANCE DESTROYED'});
   }
@@ -226,10 +234,13 @@ export class GameUI extends BaseUI {
     this.resetGame();
   }
 
-  public onTick = () => {
+  public onTick = (delta: number) => {
     this.canvas.onTick();
 
     if (!this.running) return;
+
+    this.sessionTime += this.gameSpeed * delta;
+    this.timer.setTime(this.sessionTime);
 
     this.container.onTick(this.gameSpeed);
     this.gameC.onTick(this.gameSpeed);
@@ -400,12 +411,43 @@ export class GameUI extends BaseUI {
 
       this.nodeManager.applyNodeEffect(skill.effect);
 
+      if (skill.effect.key === 'maxCount') {
+        let node = this.nodeManager.getNodeConfig(skill.effect.slug);
+        this.bottomBar.refreshNodeButton(node);
+      } else if (skill.effect.key === 'powerGen') {
+        this.gameC.nodes.forEach(node => {
+          if (node.slug === skill.effect.slug) {
+            node.power._PowerGen += skill.effect.value;
+          }
+        });
+      } else if (skill.effect.key === 'researchGen') {
+        this.gameC.nodes.forEach(node => {
+          if (node.slug === skill.effect.slug) {
+            node.power._ResearchGen *= skill.effect.value;
+          }
+        })
+      }
+
       if (!levelPair) {
         levelPair = [skill.slug, 0];
         this.extrinsic.hubLevels.push(levelPair);
       }
 
       levelPair[1]++;
+
+      GameEvents.ACTIVITY_LOG.publish({ slug: 'HUB', data: levelPair, text: `Level Up Hub Ability: ${levelPair[0]} to level ${levelPair[1]}`});
+    }
+  }
+
+  toggleHubCollection = (type: 'research' | 'fruit' | 'power', state: boolean) => {
+    let hub = this.gameC.nodes.find(el => el.slug === 'hub');
+
+    if (hub) {
+      switch(type) {
+        case 'research': hub.power.canReceiveResearch = state; break;
+        case 'fruit': hub.power.canReceiveFruit = state; break;
+        case 'power': hub.power.canStorePower = state; break;
+      }
     }
   }
 }

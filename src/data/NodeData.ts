@@ -80,47 +80,47 @@ export const NodeData: INodeData = {
     },
     {
       slug: 'hub', type: 'normal', color: Colors.Node.green, shape: 'hexagon',
-      radius: 25, mass: 3, force: 1, maxLinks: 5, maxCount: 1,
-      powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.stemDrain * 3, powerWeight: 1.1,
+      radius: 25, mass: 3, force: 1, maxLinks: 4, maxCount: 1,
+      powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.stemDrain * 5, powerWeight: 1.1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump * 0.5,
       fruitChain: 1, maxFruits: 6, fruitClump: NodeBase.fruitClump,
     },
     {
       slug: 'biglab', type: 'normal', color: Colors.Node.purple, shape: 'circle',
       radius: 5, mass: 0.5, force: 10, maxLinks: 1, maxCount: 1,
-      powerMax: NodeBase.powerMax * 1.5, powerGen: NodeBase.powerDrain / 2, powerWeight: 1,
+      powerMax: NodeBase.powerMax * 1.5, powerGen: NodeBase.powerDrain *2, powerWeight: 1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
-      researchGen: 0.05,
+      researchGen: 0.3,
       fruitType: 'research', fruitChain: 2, maxFruits: 5, fruitClump: NodeBase.fruitClump,
     },
     {
       slug: 'wall', type: 'normal', color: Colors.Node.grey, shape: 'square',
-      radius: 5, mass: 0.5, force: 1, maxLinks: 2, maxCount: 2,
-      powerMax: NodeBase.powerMax / 2, powerGen: NodeBase.powerDrain / 2, powerWeight: 1.1,
+      radius: 5, mass: 0.5, force: 1, maxLinks: 2, maxCount: 1,
+      powerMax: NodeBase.powerMax / 2, powerGen: NodeBase.stemDrain / 2, powerWeight: 1.1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
       fruitChain: 0,
     },
     {
       slug: 'amp', type: 'normal', color: Colors.Node.green, shape: 'thin-rect',
       radius: 10, mass: 1, force: 1, maxLinks: 2, maxCount: 1,
-      powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain * 2, powerWeight: 1,
-      powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
+      powerMax: NodeBase.powerMax, powerGen: NodeBase.powerDrain * 4, powerWeight: 1,
+      powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump,
       fruitChain: 0,
     },
     {
       slug: 'volatile', type: 'normal', color: Colors.Node.yellow, shape: 'triangle',
       radius: 20, mass: 4, force: 3, maxLinks: 1, maxCount: 1,
-      powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.smallGen * 10, powerWeight: 1,
-      powerDelay: NodeBase.powerDelay * 2, powerClump: NodeBase.powerMax * 2.8,
-      fruitType: 'battery', fruitChain: 1, maxFruits: 4, fruitClump: NodeBase.fruitClump,
+      powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.smallGen * 4, powerWeight: 0.001,
+      powerDelay: NodeBase.powerDelay * 2, powerClump: NodeBase.powerMax * 2.9,
+      fruitType: 'battery', fruitChain: 1, maxFruits: 2, fruitClump: NodeBase.fruitClump,
     },
     {
       slug: 'biggrove', type: 'normal', color: Colors.Node.lightOrange, shape: 'pentagon',
       radius: 15, mass: 2, force: 2, maxLinks: 1, maxCount: 1,
-      fruitGen: 0.5,
-      powerMax: NodeBase.powerMax * 2, powerGen: NodeBase.powerDrain * 2, powerWeight: 1,
+      fruitGen: 0.28,
+      powerMax: NodeBase.powerMax * 2, powerGen: NodeBase.powerDrain * 3, powerWeight: 1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
-      fruitType: 'food', fruitChain: 2, maxFruits: 2, fruitClump: NodeBase.fruitClump * 2,
+      fruitType: 'wood', fruitChain: 2, maxFruits: 2, fruitClump: NodeBase.fruitClump * 2,
     },
 
     // fruits \\
@@ -169,6 +169,13 @@ export const NodeData: INodeData = {
       fruitClump: NodeBase.fruitClump,
       outletEffects: [{stat: 'powerClump', type: 'multiplicative', amount: 1.1}],
     },
+    {
+      slug: 'wood', type: 'fruit', color: Colors.Node.darkblue, shape: 'square',
+      radius: 5, mass: 0.5, force: 0.2, maxLinks: 0,
+      powerMax: NodeBase.powerMax, powerGen: 0, powerWeight: 1,
+      powerDelay: NodeBase.powerDelay, powerClump: 0,
+      fruitClump: NodeBase.fruitClump, maxFruits: 3,
+    },
   ],
   BaseBuildable: [
     'core',
@@ -187,12 +194,12 @@ export const NodeData: INodeData = {
     'lab',
     'home',
     'grove',
-    'seedling',
     'biglab',
     'wall',
     'amp',
     'volatile',
     'biggrove',
+    'seedling',
   ],
 };
 
@@ -207,7 +214,7 @@ if (GOD_MODE) {
 export type NodeSlug = 'home' | 'lab' | 'generator' | 'grove' | 'stem' | 'bigstem' | 'hub' | 'core'| 'seedling' | 
   'biglab' | 'wall' | 'amp' | 'volatile' | 'biggrove' |
   'enemy-core' | 'enemy-box' |
-  'food' | 'research' | 'battery' | 'gen' | 'burr' | 'big-evil' | 'small-evil' | 'leaf';
+  'food' | 'research' | 'battery' | 'gen' | 'burr' | 'big-evil' | 'small-evil' | 'leaf' | 'wood';
 export type NodeColor = 'blue' | 'purple' | 'yellow' | 'orange' | 'green' | 'yellow';
 export type NodeShape = 'circle' | 'square' | 'triangle' | 'pentagon' | 'hexagon' | 'thin-rect' | 'fat-rect';
 

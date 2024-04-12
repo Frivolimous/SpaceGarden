@@ -124,14 +124,14 @@ export class PlantNodePower {
 
       if (target) {
         this.fruitCurrent += this.fruitGen;
-        if (this.fruitCurrent > Math.max(this.config.fruitGen * 10, 1)) {
+        if (this.fruitCurrent > 1) {
+          this.fruitCurrent--;
           if (this.data.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
-            this.data.receiveFruitPower(this.fruitCurrent);
+            this.data.receiveFruitPower(1);
           } else {
             let clump = this.fruitCurrent;
-            this.transferPower(this.data, target, {type: 'fruit', amount: clump, fade: Config.NODE.GEN_FADE});
+            this.transferPower(this.data, target, {type: 'fruit', amount: 1, fade: Config.NODE.GEN_FADE});
           }
-          this.fruitCurrent = 0;
         }
       }
     }

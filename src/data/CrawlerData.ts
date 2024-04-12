@@ -41,8 +41,9 @@ export const CrawlerData: ICrawlerData = {
     },
     {
       slug: 'chieftain',
-      healthDrain: 0.0002,
-      speed: 0.01,
+      health: 1.5,
+      healthDrain: 0.00015,
+      speed: 0.015,
       maxCount: 1,
     },
     {

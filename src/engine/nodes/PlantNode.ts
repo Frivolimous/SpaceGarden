@@ -118,6 +118,15 @@ export class PlantNode {
       for (let i = 0; i < this.fruits.length; i++) {
         if (this.fruits[i] === node) {
           this.fruits.splice(i, 1);
+          if (!this.isFruit() && node.config.outletEffects) {
+            node.config.outletEffects.forEach(effect => {
+              if (effect.type === 'additive') {
+                (this.power as any)[effect.stat] -= effect.amount;
+              } else {
+                (this.power as any)[effect.stat] /= effect.amount;
+              }
+            });
+          }
           return;
         }
       }
@@ -125,6 +134,15 @@ export class PlantNode {
       for (let i = 0; i < this.outlets.length; i++) {
         if (this.outlets[i] === node) {
           this.outlets.splice(i, 1);
+          if (!this.isFruit() && node.config.outletEffects) {
+            node.config.outletEffects.forEach(effect => {
+              if (effect.type === 'additive') {
+                (this.power as any)[effect.stat] -= effect.amount;
+              } else {
+                (this.power as any)[effect.stat] /= effect.amount;
+              }
+            });
+          }
           return;
         }
       }
@@ -260,9 +278,11 @@ export class PlantNode {
   }
 
   public toString(): string {
-    let color = this.power.powerPercent > 1 ? PlantNode.overPowerGradient.getHexAt((this.power.powerPercent - 1) * 2) : PlantNode.powerGradient.getHexAt(this.power.powerPercent);
-    let m = `<div class='node-title'>${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
-        Power: <span style="color: ${color}">${Math.round(this.view._Intensity * this.config.powerMax)}</span> / ${this.config.powerMax}`;
+    let powerColor = this.power.powerPercent > 1 ? PlantNode.overPowerGradient.getHexAt((this.power.powerPercent - 1) * 2) : PlantNode.powerGradient.getHexAt(this.power.powerPercent);
+    let nameColor = this.config.color.toString(16);
+    while (nameColor.length < 6) nameColor = '0' + nameColor;
+    let m = `<div class='node-title' style='color: #${nameColor}'>${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
+        Power: <span style="color: ${powerColor}">${Math.round(this.view._Intensity * this.config.powerMax)}</span> / ${this.config.powerMax}`;
     if (!this.active) {
       m += `<p style='color: #eedd33;'>[ Drag to your network in order to connect the new node ]</p>`;
     } else {
@@ -317,9 +337,12 @@ export interface INodeSave {
   uid: number;
   slug: NodeSlug;
   powerCurrent: number;
-  researchCurrent: number;
-  fruitCurrent: number;
-  storedPowerCurrent: number;
+  researchCurrent?: number;
+  fruitCurrent?: number;
+  storedPowerCurrent?: number;
+  receiveResearch?: boolean;
+  receiveFruit?: boolean;
+  receivePower?: boolean;
   outlets: number[];
   x: number;
   y: number;

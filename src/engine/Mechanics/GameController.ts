@@ -142,16 +142,22 @@ export class GameController {
     }
     node.tickPower();
 
-    if (node.power.fruitSpawn >= 1 && node.canSpawnFruit()) {
+    if (node.power.fruitSpawn >= 1) {
       node.power.fruitSpawn--;
+      if (node.fruits.length < node.config.maxFruits) {
+        let fruitConfig = this.nodeManager.getNodeConfig(node.power.fruitType);
+        let fruit = this.addNewNode(fruitConfig);
+        this.linkNodes(node, fruit);
+        fruit.view.position.set(node.view.x, node.view.y);
 
-      let fruitConfig = this.nodeManager.getNodeConfig(node.power.fruitType);
-      let fruit = this.addNewNode(fruitConfig);
-      this.linkNodes(node, fruit);
-      fruit.view.position.set(node.view.x, node.view.y);
-
-      if (node.slug === 'home' && this.crawlers.length < this.nodes.filter(node2 => node2.slug === 'home').length) {
-        this.addCrawler(null, node);
+        if (node.slug === 'home' && this.crawlers.length < this.nodes.filter(node2 => node2.slug === 'home').length) {
+          this.addCrawler(null, node);
+        }
+      } else {
+        let fruit = node.fruits.find(fruit2 => fruit2.canSpawnFruit());
+        if (fruit) {
+          fruit.receiveFruitPower(1);
+        }
       }
     }
   }
@@ -197,18 +203,26 @@ export class GameController {
   public saveNodes(): INodeSave[] {
     let saves: INodeSave[] = this.nodes.filter(node => (node.slug === 'core' || node.outlets.length > 0)).map(node => {
       let outlets: number[] = this.container.links.filter(l => l.origin === node).map(l => l.target.uid);
-
-      return {
+      let save: INodeSave = {
         uid: node.uid,
         slug: node.slug,
         powerCurrent: Math.round(node.power.powerCurrent),
-        researchCurrent: (node.slug === 'seedling' || node.slug === 'hub') ? node.power.researchCurrent : 0,
-        fruitCurrent: node.slug === 'hub' ? node.power.fruitCurrent : 0,
-        storedPowerCurrent: node.slug === 'hub' ? node.power.storedPowerCurrent : 0,
         outlets,
         x: Math.round(node.view.x),
         y: Math.round(node.view.y),
       };
+
+      if (node.slug === 'seedling') {
+        save.researchCurrent = node.power.researchCurrent;
+      } else if (node.slug === 'hub') {
+        save.researchCurrent = node.power.researchCurrent;
+        save.fruitCurrent = node.power.fruitCurrent;
+        save.storedPowerCurrent = node.power.storedPowerCurrent;
+        save.receiveFruit = node.power.canReceiveFruit;
+        save.receiveResearch = node.power.canReceiveResearch;
+        save.receivePower = node.power.canStorePower;
+      }
+      return save;
     });
 
     return saves;
@@ -250,12 +264,20 @@ export class GameController {
 
     let node = new PlantNode(config, this.transferPower);
     node.power.powerCurrent = save.powerCurrent;
-    node.power.researchCurrent = save.researchCurrent;
-    node.power.fruitCurrent = save.fruitCurrent;
-    node.power.storedPowerCurrent = save.storedPowerCurrent;
     node.uid = save.uid;
     node.view.position.set(save.x, save.y);
     node.view.setIntensity(node.power.powerPercent, true);
+
+    if (node.slug === 'seedling') {
+      node.power.researchCurrent = save.researchCurrent;
+    } else if (node.slug === 'hub') {
+      node.power.researchCurrent = save.researchCurrent;
+      node.power.fruitCurrent = save.fruitCurrent;
+      node.power.storedPowerCurrent = save.storedPowerCurrent;
+      node.power.canReceiveFruit = save.receiveFruit;
+      node.power.canReceiveResearch = save.receiveResearch;
+      node.power.canStorePower = save.receivePower;  
+    }
 
     PlantNode.addUid(save.uid);
     return node;
@@ -283,14 +305,15 @@ export class GameController {
           target.receiveResearch(block.amount);
         } else {
           if (target.slug === 'amp' && !block.amped) {
-            block.fade += 2;
-            block.amount *= 1.5;
+            console.log(Config.NODE.AMP_AMOUNT)
+            block.fade += Config.NODE.AMP_FADE_BOOST;
+            block.amount *= Config.NODE.AMP_AMOUNT;
             block.amped = true;
           }
           block.fade--;
           if (block.fade <= 0) return;
           let target2 = this.rBlobAI[Config.NODE.BLOB_AI](origin, target);
-          if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
+          if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet.slug !== 'wall')));
           if (target2) {
             this.transferPower(target, target2, block);
           }
@@ -314,7 +337,7 @@ export class GameController {
           block.fade--;
           if (block.fade <= 0) return;
           let target2 = this.fBlobAI[Config.NODE.BLOB_AI](origin, target);
-          if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active)));
+          if (!target2) target2 = _.sample(target.outlets.filter(outlet => (outlet.active && outlet.slug !== 'wall')));
           if (target2) {
             this.transferPower(target, target2, block);
           }

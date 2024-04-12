@@ -36,6 +36,7 @@ export class GameKnowledge {
     'battery': [],
     'gen': [],
     'burr': [],
+    'wood': [],
     'big-evil': [],
     'small-evil': [],
     'leaf': [],
@@ -69,6 +70,8 @@ export class GameKnowledge {
   private numRBlobs: number = 0;
   private numFBlobs: number = 0;
 
+  private highestHubResearch: number = 0;
+
   private extrinsic: IExtrinsicModel;
 
   constructor(private gameC: GameController, private manager: NodeManager) {
@@ -94,6 +97,7 @@ export class GameKnowledge {
     this.checkLaunch9Placement();
     this.checkCrawler15();
     this.checkCrawlerDie100();
+    this.checkHubLevel(_.maxBy(this.extrinsic.hubLevels, el => el[1]));
   }
 
   public update() {
@@ -249,6 +253,9 @@ export class GameKnowledge {
         }
         this.checkBlob15();
         break;
+      case 'HUB':
+        this.checkHubLevel(e.data);
+        break
     }
   }
 
@@ -280,6 +287,20 @@ export class GameKnowledge {
       } else {
         let count = `Current Blobs: ${this.numBlobs} / 15`;
         this.onAchievementUpdate.publish({slug: AchievementSlug.BLOB_15, count});
+      }
+    }
+  }
+
+  private checkHubLevel = (data: [string, number]) => {
+    if (!data) return;
+    
+    if (!this.extrinsic.achievements[AchievementSlug.HUB_3]) {
+      if (data[1] >= 3) {
+        this.achieveAchievement(AchievementSlug.HUB_3);
+      } else {
+        this.highestHubResearch = Math.max(this.highestHubResearch, data[1])
+        let count = `Highest Level: ${this.highestHubResearch}`;
+        this.onAchievementUpdate.publish({slug: AchievementSlug.HUB_3, count});
       }
     }
   }

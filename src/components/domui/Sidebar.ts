@@ -174,6 +174,9 @@ export class Sidebar {
         this.hubPanel.hidden = !this.hubPanel.hidden;
         this.currentSkillPanel.hidden = true;
         this.nextSkillPanel.hidden = true;
+        this.hubPanel.toggleCollection('research', node.power.canReceiveResearch);
+        this.hubPanel.toggleCollection('fruit', node.power.canReceiveFruit);
+        this.hubPanel.toggleCollection('power', node.power.canStorePower);
       });
       this.hubElement = element;
     }

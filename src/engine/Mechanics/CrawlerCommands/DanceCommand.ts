@@ -33,8 +33,9 @@ export class DanceCommand extends BaseCommand {
 
   public genPriority(): number {
     let core = this.crawler.cLoc.findCore();
+    let fruit = _.sample(core.fruits);
     if (!core) return 20;
-    return 0.2 + 0.85 * core.power.powerPercent - (this.crawler.preference === this.type ? 0.15 : 0);
+    return 0.2 + 0.85 * (fruit ? fruit.power.powerPercent : core.power.powerPercent) - (this.crawler.preference === this.type ? 0.15 : 0);
   }
 
   public update() {

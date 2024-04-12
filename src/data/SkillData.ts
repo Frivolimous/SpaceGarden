@@ -158,78 +158,77 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-tier-2',
       title: 'Tier 3',
-      description: '<p class="skill-block-subtitle">Requires all Tier 2 skills to unlock</p> Permanently unlock Tier 2 but increases Seedling Max Power by x10 and Power Drain by +0.4/s',
+      description: '<p class="skill-block-subtitle">Requires all Tier 2 skills to unlock</p> Permanently unlock Tier 2 but increases Seedling Max Power by x5',
       skillRequirements: ['skill-2-1', 'skill-2-2', 'skill-2-3', 'skill-2-4', 'skill-2-5', 'skill-2-6'],
       cost: 5,
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 2},
-        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 45000},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.05},
+        {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 20000},
       ],
     },
     {
       slug: 'skill-3-1',
       title: 'Big Stem',
       description: 'Lets you place up to two Big Stems.',
-      cost: 2,
+      cost: 5,
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'bigstem'},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.01},
-      ],
-    },
-    {
-      slug: 'skill-3-2',
-      title: 'Volatile Power',
-      description: 'Grants +1 Connection to Generators. Lets you build 1 Volatile Generator.',
-      cost: 4,
-      effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'volatile'},
-        {effectType: 'node', slug: 'generator', key: 'maxLinks', valueType: 'additive', value: 1},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.01},
-      ],
-    },
-    {
-      slug: 'skill-3-3',
-      title: 'Fruitful Multiplication',
-      description: 'All fruit gains Passive Growth. Lets you build 1 Fruit Grove.',
-      cost: 4,
-      effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'biggrove'},
-        {effectType: 'config', key: 'FRUIT_GROWTH', valueType: 'additive', value: 0.05},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.01},
-      ],
-    },
-    {
-      slug: 'skill-3-4',
-      title: 'Genetic Memory',
-      description: 'Half of your earned Research Points are saved when you delete or launch your seedling. Lets you build 1 Wild Lab.',
-      cost: 4,
-      effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'biglab'},
-        {effectType: 'config', key: 'SAVED_RESEARCH', valueType: 'replace', value: 0.5},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.01},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-3-5',
       title: 'Leadership',
       description: 'Up to one Crawler appears as a Chieftain, up to one Crawler appears as a Shaman.',
-      cost: 4,
+      cost: 5,
       effects: [
         {effectType: 'crawler-available', valueType: 'additive', value: 'shaman'},
         {effectType: 'crawler-available', valueType: 'additive', value: 'chieftain'},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.01},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+      ],
+    },
+    {
+      slug: 'skill-3-2',
+      title: 'Volatile Power',
+      description: 'Significantly increases the power of generators Generators. Lets you build 1 Volatile Generator.',
+      cost: 6,
+      effects: [
+        {effectType: 'buildable', valueType: 'additive', value: 'volatile'},
+        {effectType: 'node', slug: 'generator', key: 'powerGen', valueType: 'additive', value: 0.2},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+      ],
+    },
+    {
+      slug: 'skill-3-3',
+      title: 'Fruitful Multiplication',
+      description: 'All fruit gains Passive Growth. Lets you build 1 Lumber Grove.',
+      cost: 6,
+      effects: [
+        {effectType: 'buildable', valueType: 'additive', value: 'biggrove'},
+        {effectType: 'config', key: 'FRUIT_GROWTH', valueType: 'additive', value: 0.05},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
       slug: 'skill-3-6',
       title: 'Blobism',
       description: 'Lets you build 1 Resistor and 1 Amplifier',
-      cost: 3,
+      cost: 6,
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'wall'},
         {effectType: 'buildable', valueType: 'additive', value: 'amp'},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.01},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+      ],
+    },
+    {
+      slug: 'skill-3-4',
+      title: 'Genetic Memory',
+      description: 'Retain 25% of your earned Research Points when you delete or launch your seedling. Let\'s you build 1 Wild Lab.',
+      cost: 8,
+      effects: [
+        {effectType: 'buildable', valueType: 'additive', value: 'biglab'},
+        {effectType: 'config', key: 'SAVED_RESEARCH', valueType: 'replace', value: 0.25},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
       ],
     },
     {
@@ -237,7 +236,7 @@ export const SkillData: ISkillData = {
       title: 'Tier 4',
       description: '<p class="skill-block-subtitle">Requires all Tier 3 skills to unlock</p> Permanently unlock Tier 3 but increases Seedling Max Power by x10 and Power Drain by +1/s',
       skillRequirements: ['skill-3-1', 'skill-3-2', 'skill-3-3', 'skill-3-4', 'skill-3-5', 'skill-3-6'],
-      cost: 2,
+      cost: 10,
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 3},
         {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 450000},
@@ -287,6 +286,27 @@ export const SkillData: ISkillData = {
     50000,
     65000,
     80000, // 25 SP
+    95000,
+    115000,
+    140000,
+    165000,
+    200000,
+    250000,
+    300000,
+    350000,
+    400000,
+    500000,
+    600000,
+    700000,
+    850000,
+    1000000,
+    1250000,
+    1500000,
+    1750000,
+    2000000,
+    2500000,
+    3000000,
+    3500000, // T3 Finish (46 SP / 24h)
   ],
 
   skillTiers: [
@@ -332,7 +352,7 @@ export const SkillData: ISkillData = {
     },
     {
       slug: AchievementSlug.CRAWLERS_DIE_100,
-      title: 'Massacre',
+      title: 'Genocide',
       description: 'Requirement: Kill 100 Crawlers in total<br>Reward: Crawlers move 10% faster',
       effects: [
         {effectType: 'crawler', slug: 'all', key: 'speed', valueType: 'multiplicative', value: 1.1},
@@ -345,13 +365,21 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'hub'},
       ],
-    }
+    },
+    {
+      slug: AchievementSlug.HUB_3,
+      title: 'Toggle Toggle',
+      description: 'Requirement: Research any Tier 3 Hub Knowledge <br>Reward: Toggle Hub Collection',
+      effects: [
+        {effectType: 'config', key: 'HUB_BUTTONS', valueType: 'replace', value: 1},
+      ],
+    },
   ],
 
   hubs: [
     {
       slug: 'core-links',
-      costType: 'fruit', costs: [100, 1000, 10000, 100000],
+      costType: 'fruit', costs: [450,8100,145800,2624400,47239200],
       effect: {
         effectType: 'node', slug: 'core', key: 'maxLinks', value: 1,  valueType: 'additive', 
       }
@@ -359,24 +387,65 @@ export const SkillData: ISkillData = {
     {
       slug: 'core-gen',
       effect: {
-        effectType: 'node', slug: 'core', key: 'powerGen', value: 1.1, valueType: 'multiplicative', 
+        effectType: 'node', slug: 'core', key: 'powerGen', value: 0.2, valueType: 'additive', 
       },
-      costType: 'research', costs: [100, 1000, 10000, 100000],
+      costType: 'research', costs: [700,17500,437500,10937500,273437500],
     },
     {
       slug: 'stem-count',
       effect: {
         effectType: 'node', slug: 'stem', key: 'maxCount', value: 1, valueType: 'additive',
       },
-      
-      costType: 'fruit', costs: [100, 1000, 10000, 100000],
+      costType: 'fruit', costs: [400,7200,129600,2332800,41990400],
+    },
+    {
+      slug: 'generator-count',
+      costType: 'fruit', costs: [300,5400,97200,1749600,31492800],
+      effect: {
+        effectType: 'node', slug: 'generator', key: 'maxCount', value: 1,  valueType: 'additive', 
+      }
+    },
+    {
+      slug: 'generator-gen',
+      effect: {
+        effectType: 'node', slug: 'generator', key: 'powerGen', value: 0.03, valueType: 'additive', 
+      },
+      costType: 'research', costs: [800,20000,500000,12500000,312500000],
+    },
+    {
+      slug: 'lab-prod',
+      effect: {
+        effectType: 'node', slug: 'lab', key: 'researchGen', value: 1.1, valueType: 'multiplicative', 
+      },
+      costType: 'research', costs: [500,12500,312500,7812500,195312500],
+    },
+    {
+      slug: 'lab-fruit',
+      effect: {
+        effectType: 'node', slug: 'lab', key: 'maxFruits', value: 1, valueType: 'additive', 
+      },
+      costType: 'power', costs: [5000,90000,1800000,54000000,2160000000],
+    },
+    {
+      slug: 'grove-prod',
+      effect: {
+        effectType: 'node', slug: 'grove', key: 'fruitGen', value: 1.1, valueType: 'multiplicative', 
+      },
+      costType: 'research', costs: [600,15000,375000,9375000,234375000],
     },
     {
       slug: 'grove-fruit',
       effect: {
         effectType: 'node', slug: 'grove', key: 'maxFruits', value: 1, valueType: 'additive', 
       },
-      costType: 'power', costs: [1000, 10000, 100000, 1000000],
+      costType: 'power', costs: [3000,54000,1080000,32400000,1296000000],
+    },
+    {
+      slug: 'home-fruit',
+      effect: {
+        effectType: 'node', slug: 'home', key: 'maxFruits', value: 1, valueType: 'additive', 
+      },
+      costType: 'power', costs: [4000,72000,1440000,43200000,1728000000],
     },
   ]
 };

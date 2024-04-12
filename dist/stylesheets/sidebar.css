@@ -119,8 +119,17 @@
   cursor: pointer;
 }
 
+.skill-button.falsed {
+  background:#777;
+  color:#aaa;
+}
+
 .skill-button:hover {
   background: #009;
+}
+
+.skill-button.falsed:hover {
+  background:#77a;
 }
 
 .tab-button {

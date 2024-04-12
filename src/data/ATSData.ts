@@ -15,4 +15,5 @@ export enum AchievementSlug {
   CRAWLERS_15,
   CRAWLERS_DIE_100,
   TIER_3,
+  HUB_3,
 }

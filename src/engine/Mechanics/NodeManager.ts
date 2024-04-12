@@ -70,6 +70,15 @@ export class NodeManager {
     });
   }
 
+  public applyHubs(hubLevels: [string, number][]) {
+    hubLevels.forEach(([slug, level]) => {
+      let skill = this.hubSkills.find(el => el.slug === slug);
+      for (let i = 0; i < level; i++) {
+        this.applyNodeEffect(skill.effect);
+      }
+    });
+  }
+
   public applySkills(slugs: string[]) {
     let skills = this.getSkillsBySlugs(slugs);
     let always = this.getSkillsBySlugs(this.getSkillAlways(this.skillTier));

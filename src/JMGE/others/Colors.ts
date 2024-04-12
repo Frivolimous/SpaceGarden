@@ -28,8 +28,10 @@ export class ColorGradient {
 
   public getHexAt = (percent: number): string => {
     let number = this.getColorAt(percent);
+    let str = number.toString(16);
+    while (str.length < 6) str = '0' + str;
 
-    return '#' + number.toString(16);
+    return '#' + str;
   }
 }
 

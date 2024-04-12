@@ -50,8 +50,8 @@ export const EnglishStringData = {
   TOOLTIP_amp_DESC: 'Increases the size of all Blobs that pass through. Only applies once.',
   TOOLTIP_volatile_TITLE: 'Volatile Generator',
   TOOLTIP_volatile_DESC: 'Generates power and transfers it in huge clumps.',
-  TOOLTIP_biggrove_TITLE: 'Fruit Grove',
-  TOOLTIP_biggrove_DESC: 'Generates lots of Fruit Blobs and grows Crawler Food.',
+  TOOLTIP_biggrove_TITLE: 'Lumber Grove',
+  TOOLTIP_biggrove_DESC: 'Generates lots of Fruit Blobs\n\nGrows Wood that can be used by Crawlers to build improvements.',
 
   BUTTON_YES: 'Yes',
   BUTTON_NO: 'No',

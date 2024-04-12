@@ -67,6 +67,8 @@ export class BaseCommand {
     this.fruit = null;
     if (!fruit.exists) {
       console.log('NO FRUIT TO DELIVER!');
+      this.crawler.setCommand(CommandType.FRUSTRATED);
+      this.crawler.frustratedBy = CommandType[this.type];
       return;
     }
     new JMTween(fruit.view.scale, 500).easing(JMEasing.Back.In).to({x: 0, y: 0}).start().onComplete(() => {
