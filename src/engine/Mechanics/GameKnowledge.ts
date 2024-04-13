@@ -5,7 +5,6 @@ import { NodeManager } from './NodeManager';
 import { PlantNode } from '../nodes/PlantNode';
 import { GameController } from './GameController';
 import { CrawlerModel } from './Parts/CrawlerModel';
-import { SaveManager } from '../../services/SaveManager';
 import { IExtrinsicModel } from '../../data/SaveData';
 import { AchievementSlug, ScoreType } from '../../data/ATSData';
 import { GameEvents, IActivityLog } from '../../services/GameEvents';
@@ -13,6 +12,7 @@ import { SkillData } from '../../data/SkillData';
 import { InfoPopup } from '../../components/domui/InfoPopup';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { CrawlerSlug } from '../../data/CrawlerData';
+import { Facade } from '../..';
 
 export class GameKnowledge {
   public onAchievementUpdate = new JMEventListener<{slug: AchievementSlug, unlocked?: boolean, count?: string}>();
@@ -83,7 +83,7 @@ export class GameKnowledge {
     GameEvents.ACTIVITY_LOG.addListener(this.onActivityEvent);
     this.startFpsCounter();
 
-    this.extrinsic = SaveManager.getExtrinsic();
+    this.extrinsic = Facade.saveManager.getExtrinsic();
   }
 
   public destroy() {
@@ -259,7 +259,7 @@ export class GameKnowledge {
     }
   }
 
-  private achieveAchievement(slug: AchievementSlug) {
+  public achieveAchievement(slug: AchievementSlug) {
     if (!this.extrinsic.achievements[slug]) {
       this.extrinsic.achievements[slug] = true;
       let achievement = SkillData.achievements.find(data => data.slug === slug);

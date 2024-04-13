@@ -8,6 +8,7 @@ import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Colors } from '../../data/Colors';
 import { CrawlerModel } from '../Mechanics/Parts/CrawlerModel';
 import { ColorGradient } from '../../JMGE/others/Colors';
+import { StringManager } from '../../services/StringManager';
 
 export class PlantNode {
   public static powerGradient = new ColorGradient(0xcc0000, 0xffffff);
@@ -43,6 +44,7 @@ export class PlantNode {
 
   public flagUnlink = false;
   public flagDestroy = false;
+  public flagExplode = false;
   public flagCallOnRemove = true;
   public claimedBy: CrawlerModel;
 
@@ -82,7 +84,7 @@ export class PlantNode {
   public destroy() {
     this.exists = false;
     this.view.destroy();
-    console.log(`${this.slug} ${this.uid} destroyed`);
+    // console.log(`${this.slug} ${this.uid} destroyed`);
   }
 
   public isFruit(): boolean {
@@ -281,7 +283,7 @@ export class PlantNode {
     let powerColor = this.power.powerPercent > 1 ? PlantNode.overPowerGradient.getHexAt((this.power.powerPercent - 1) * 2) : PlantNode.powerGradient.getHexAt(this.power.powerPercent);
     let nameColor = this.config.color.toString(16);
     while (nameColor.length < 6) nameColor = '0' + nameColor;
-    let m = `<div class='node-title' style='color: #${nameColor}'>${this.config.slug.charAt(0).toUpperCase() + this.config.slug.slice(1)}</div>
+    let m = `<div class='node-title' style='color: #${nameColor}'>${(StringManager.data as any)[`NODE_NAME_LONG_${this.config.slug}`]}</div>
         Power: <span style="color: ${powerColor}">${Math.round(this.view._Intensity * this.config.powerMax)}</span> / ${this.config.powerMax}`;
     if (!this.active) {
       m += `<p style='color: #eedd33;'>[ Drag to your network in order to connect the new node ]</p>`;

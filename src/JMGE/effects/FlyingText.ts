@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { JMTween } from '../JMTween';
 import { Fonts } from '../../data/Fonts';
 

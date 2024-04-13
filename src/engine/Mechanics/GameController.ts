@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Config } from '../../Config';
 import { Colors } from '../../data/Colors';
@@ -13,6 +13,7 @@ import { ICrawlerSave } from 'src/data/SaveData';
 import { GameKnowledge } from './GameKnowledge';
 import { GameEvents } from '../../services/GameEvents';
 import { CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
+import { Firework } from '../../JMGE/effects/Firework';
 
 export class GameController {
   public onNodeAdded = new JMEventListener<PlantNode>();
@@ -54,7 +55,7 @@ export class GameController {
     return node;
   }
 
-  public removeNode = (node: PlantNode) => {
+  public removeNode = (node: PlantNode, explosionSize: number = 0) => {
     _.pull(this.nodes, node);
 
     this.crawlers.forEach(crawler => {
@@ -66,6 +67,23 @@ export class GameController {
     this.disconnectNode(node);
 
     this.container.removeNode(node);
+
+    if (explosionSize > 0) {
+      Firework.makeExplosion(this.container, {x: node.view.x, y: node.view.y, tint: node.config.color, mag_min: 0.5, mag_max: 2, count: node.config.radius});
+      // interface IExplosion {
+      //   x: number;
+      //   y: number;
+      //   count?: number;
+      //   angle_min?: number;
+      //   angle_max?: number;
+      //   mag_min?: number;
+      //   mag_max?: number;
+      //   fade?: number;
+      //   size_min?: number;
+      //   size_max?: number;
+      //   tint?: number;
+      // }
+    }
 
     node.destroy();
     if (node.flagCallOnRemove) this.onNodeRemoved.publish(node);
@@ -129,7 +147,7 @@ export class GameController {
 
   public updateNode = (node: PlantNode) => {
     if (node.flagDestroy) {
-      this.removeNode(node);
+      this.removeNode(node, node.flagExplode ? 1 : 0);
       return;
     } else if (node.flagUnlink) {
       node.flagUnlink = false;
@@ -168,13 +186,13 @@ export class GameController {
     while (node.fruits.length > 0) {
       let fruit = node.fruits.shift();
       fruit.removeNode(node);
-      this.removeNode(fruit);
+      this.removeNode(fruit, 1);
     }
     while (node.outlets.length > 0) {
       let outlet = node.outlets.shift();
       outlet.removeNode(node);
       if (!outlet.isConnectedToCore()) {
-        this.removeNode(outlet);
+        this.removeNode(outlet, 5);
       }
     }
   }
@@ -305,7 +323,6 @@ export class GameController {
           target.receiveResearch(block.amount);
         } else {
           if (target.slug === 'amp' && !block.amped) {
-            console.log(Config.NODE.AMP_AMOUNT)
             block.fade += Config.NODE.AMP_FADE_BOOST;
             block.amount *= Config.NODE.AMP_AMOUNT;
             block.amped = true;

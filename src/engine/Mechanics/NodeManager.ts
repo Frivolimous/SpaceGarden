@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { INodeConfig, NodeData, NodeSlug } from '../../data/NodeData';
 import { IAchievement, IHubConfig, ISkillConfig, ISkillEffect, ISkillEffectNode, SkillData } from '../../data/SkillData';
 import { Config } from '../../Config';

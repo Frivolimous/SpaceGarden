@@ -34,7 +34,7 @@ export class ScrollingContainer extends PIXI.Container {
     this.innerBounds.height = height;
 
     this.background = new Starfield(this.innerBounds.width, this.innerBounds.height, this.numStars);
-    this.background.interactive = true;
+    this.background.eventMode = 'dynamic';
     this.addChild(this.background);
   }
 

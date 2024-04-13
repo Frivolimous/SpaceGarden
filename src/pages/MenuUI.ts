@@ -1,12 +1,12 @@
 import * as PIXI from 'pixi.js';
 import { BaseUI } from './_BaseUI';
-import { SaveManager } from '../services/SaveManager';
 import { Button } from '../components/ui/Button';
 import { Fonts } from '../data/Fonts';
 import { IResizeEvent } from '../services/GameEvents';
 import { GameUI } from './GameUI';
 import { StringManager } from '../services/StringManager';
 import { OptionModal } from '../components/ui/modals/OptionModal';
+import { Facade } from '..';
 
 export class MenuUI extends BaseUI {
   private title: PIXI.Text;
@@ -34,7 +34,7 @@ export class MenuUI extends BaseUI {
   }
 
   public navIn = () => {
-    let extrinsic = SaveManager.getExtrinsic();
+    // let extrinsic = Facade.saveManager.getExtrinsic();
   }
 
   public positionElements = (e: IResizeEvent) => {
@@ -50,7 +50,7 @@ export class MenuUI extends BaseUI {
   }
 
   private resetGame = () => {
-    let dialogue = new OptionModal(StringManager.data.MENU_CONFIRM_RESET, [{label: StringManager.data.BUTTON_YES, color: 0x00ff00, onClick: SaveManager.resetData()}, {label: StringManager.data.BUTTON_NO, color: 0xff0000}]);
+    let dialogue = new OptionModal(StringManager.data.MENU_CONFIRM_RESET, [{label: StringManager.data.BUTTON_YES, color: 0x00ff00, onClick: Facade.saveManager.resetData()}, {label: StringManager.data.BUTTON_NO, color: 0xff0000}]);
     this.addDialogueWindow(dialogue);
   }
 

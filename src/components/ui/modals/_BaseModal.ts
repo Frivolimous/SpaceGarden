@@ -9,7 +9,7 @@ export abstract class BaseModal extends PIXI.Container {
 
   constructor() {
     super();
-    this.interactive = true;
+    this.eventMode = 'dynamic';
   }
 
   public updatePosition(borders: PIXI.Rectangle) {

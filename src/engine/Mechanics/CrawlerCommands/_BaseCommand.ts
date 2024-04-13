@@ -66,7 +66,6 @@ export class BaseCommand {
     let fruit = this.fruit;
     this.fruit = null;
     if (!fruit.exists) {
-      console.log('NO FRUIT TO DELIVER!');
       this.crawler.setCommand(CommandType.FRUSTRATED);
       this.crawler.frustratedBy = CommandType[this.type];
       return;

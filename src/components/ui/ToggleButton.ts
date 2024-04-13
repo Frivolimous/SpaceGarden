@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { colorLuminance } from '../../JMGE/others/Colors';
 import { Fonts } from '../../data/Fonts';
 // import { SoundData, SoundIndex } from '../../utils/SoundData';
@@ -57,7 +57,7 @@ export class ToggleButton extends PIXI.Container {
       this.inner.addChild(this.label);
     }
 
-    this.interactive = true;
+    this.eventMode = 'dynamic';
     this.cursor = 'pointer';
 
     this.addListener('mouseover', () => {

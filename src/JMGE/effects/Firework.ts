@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { JMTicker } from '../events/JMTicker';
 import { TextureCache } from '../../services/TextureCache';
 

@@ -1,4 +1,5 @@
 import { CommandType } from '../engine/Mechanics/CrawlerCommands/_CommandTypes';
+import { Colors } from './Colors';
 
 export const CrawlerData: ICrawlerData = {
   data: [
@@ -116,4 +117,18 @@ export interface ICommandConfig {
   danceTicks?: number;
   buffTime?: number;
   buffMult?: number;
+}
+
+export const CrawlerCommandColors: {[key in CommandType]: number} = {
+  [CommandType.NONE]: Colors.Node.grey,
+  [CommandType.WANDER]: Colors.Node.green,
+  [CommandType.IDLE]: Colors.Node.darkgreen,
+  [CommandType.EAT]: Colors.Node.blue,
+  [CommandType.DANCE]: Colors.Node.lightyellow,
+  [CommandType.RESEARCH]: Colors.Node.purple,
+  [CommandType.POWER]: Colors.Node.yellow,
+  [CommandType.FRUSTRATED]: Colors.Node.red,
+  [CommandType.STARVING]: Colors.Node.darkblue,
+  [CommandType.BREED]: Colors.Node.lightblue,
+  [CommandType.BUFF]: Colors.Node.white,
 }

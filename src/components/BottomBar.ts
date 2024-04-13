@@ -34,7 +34,7 @@ export class BottomBar extends PIXI.Container {
     configs = _.sortBy(configs, config => NodeData.NodeOrder.indexOf(config.slug));
 
     configs.forEach(config => {
-      let button = new NodeButton({label: config.slug, width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => {
+      let button = new NodeButton({label: (StringManager.data as any)[`NODE_NAME_SHORT_${config.slug}`], width: 50, height: 50, maxNodes: config.maxCount, color: config.color, onDown: e => {
         button.selected = !button.selected;
         if (button.selected) {
           this.buttons.forEach(otherButton => {
@@ -48,7 +48,7 @@ export class BottomBar extends PIXI.Container {
           this.onCreateButton.publish(null);
         }
       }});
-      TooltipReader.addTooltip(button, {title: (StringManager.data as any)[`TOOLTIP_${config.slug}_TITLE`], description: (StringManager.data as any)[`TOOLTIP_${config.slug}_DESC`]});
+      TooltipReader.addTooltip(button, {title: (StringManager.data as any)[`NODE_NAME_LONG_${config.slug}`], description: (StringManager.data as any)[`NODE_DESC_${config.slug}`]});
       this.addChild(button);
       this.buttons.push(button);
     });
@@ -105,7 +105,8 @@ export class BottomBar extends PIXI.Container {
   }
 
   public nodeAdded = (node: PlantNode) => {
-    let button = this.buttons.find(b => b.getLabel() === node.slug);
+    let name = (StringManager.data as any)[`NODE_NAME_SHORT_${node.slug}`];
+    let button = this.buttons.find(b => b.getLabel() === name);
 
     if (button && button.maxNodes > 0 && button.maxNodes !== Infinity) {
       button.count++;
@@ -121,7 +122,8 @@ export class BottomBar extends PIXI.Container {
   }
 
   public nodeRemoved = (node: PlantNode) => {
-    let button = this.buttons.find(b => b.getLabel() === node.slug);
+    let name = (StringManager.data as any)[`NODE_NAME_SHORT_${node.slug}`];
+    let button = this.buttons.find(b => b.getLabel() === name);
 
     if (button && button.maxNodes > 0) {
       button.count--;

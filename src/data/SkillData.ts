@@ -476,11 +476,12 @@ export interface IAchievement {
 
 export interface IHubConfig {
   slug: string;
-  costType: 'research' | 'fruit' | 'power';
+  costType: HubCostType;
   costs: number[];
   effect: ISkillEffectNode;
 }
 
+export type HubCostType = 'research' | 'fruit' | 'power';
 export type ISkillEffect = ISkillEffectNode | ISkillEffectCrawler | ISkillEffectSimple;
 
 export interface ISkillEffectNode {

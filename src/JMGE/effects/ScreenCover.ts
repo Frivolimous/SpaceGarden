@@ -8,7 +8,7 @@ export class ScreenCover extends PIXI.Graphics {
     super();
     this.beginFill(color);
     this.drawRect(rect.x, rect.y, rect.width, rect.height);
-    this.interactive = true;
+    this.eventMode = 'dynamic';
   }
 
   public onFadeComplete = (callback: () => void) => {

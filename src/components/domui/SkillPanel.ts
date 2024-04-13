@@ -137,7 +137,7 @@ export class SkillPanel {
     let oldpoints = this.skillpoints;
     this.skillLevels = Formula.getNextSkillLevel(research);
     let nextCost = Formula.getSkillCost(this.skillLevels);
-    this.skillbar.updateText(research, nextCost);
+    this.skillbar.updateText(research, nextCost, Formula.getSkillCost(this.skillLevels - 1));
     this.skillpointElement.innerHTML = `${Math.round(this.skillpoints)} ${StringManager.data.UI_SKILLTREE_SKILLPOINTS}`;
     if (oldpoints !== this.skillpoints) {
       this.updateHighlights();

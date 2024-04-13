@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { JMTween, JMEasing } from '../../JMGE/JMTween';
 
 const defaultConfig: IGauge = { width: 100, height: 30, rounding: 15, bgColor: 0x333333, color: 0x888888 };

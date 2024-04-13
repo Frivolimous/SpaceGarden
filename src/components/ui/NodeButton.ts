@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { colorLuminance } from '../../JMGE/others/Colors';
 import { Fonts } from '../../data/Fonts';
 import { JMTween } from '../../JMGE/JMTween';
@@ -49,6 +49,8 @@ export class NodeButton extends PIXI.Container {
 
     this.hitArea = new PIXI.Rectangle(0, 0, config.width, config.height);
 
+    this.eventMode = 'dynamic';
+
     this.inner = new PIXI.Container();
     this.inner.pivot.set(config.width / 2, config.height / 2);
     this.inner.position.set(config.width / 2, config.height / 2);
@@ -73,7 +75,6 @@ export class NodeButton extends PIXI.Container {
       this.count = Infinity;
     }
 
-    this.interactive = true;
     this.cursor = 'pointer';
 
     this.addListener('mouseover', () => {

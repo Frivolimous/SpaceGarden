@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 export class JMEventListener<T = any> {
   public listeners: ((event: T) => void)[] = [];

@@ -6,10 +6,12 @@ import { AStarPath } from '../../../JMGE/others/AStar';
 import { JMTween } from '../../../JMGE/JMTween';
 import { GameKnowledge } from '../GameKnowledge';
 import { JMEventListener } from '../../../JMGE/events/JMEventListener';
-import { CrawlerSlug, ICrawlerConfig } from '../../../data/CrawlerData';
+import { CrawlerCommandColors, CrawlerSlug, ICrawlerConfig } from '../../../data/CrawlerData';
 import { commandMap, CommandType } from '../CrawlerCommands/_CommandTypes';
 import { TextureCache } from '../../../services/TextureCache';
 import { ColorGradient } from '../../../JMGE/others/Colors';
+import { StringManager } from '../../../services/StringManager';
+import { Formula } from '../../../services/Formula';
 
 export class CrawlerModel {
   public static healthGradient = new ColorGradient(0xcc0000, 0xffffff);
@@ -104,7 +106,7 @@ export class CrawlerModel {
 
   public destroy() {
     this.unclaimNode();
-    console.log(`Crawler ${this.uid} destroyed`);
+    // console.log(`Crawler ${this.uid} destroyed`);
   }
 
   public isFruit = () => false;
@@ -146,12 +148,12 @@ export class CrawlerModel {
 
   public claimNode = (node: PlantNode) => {
     if (node && !this.claimedNode && node.canClaim()) {
-      console.log(`${node.slug} ${node.uid} claimed by ${this.uid}`);
+      // console.log(`${node.slug} ${node.uid} claimed by ${this.uid}`);
       this.claimedNode = node;
       this.claimedNode.claimedBy = this;
       this.onNodeClaimed.publish({claim: true, node, claimer: this});
     } else {
-      console.log(`Claim unsuccessful. ${node ? node.slug + ' ' + node.uid.toString() : 'null'} not claimed by ${this.uid} (${!!this.claimedNode}, ${node ? !!node.claimedBy : 'null'})`);
+      // console.log(`Claim unsuccessful. ${node ? node.slug + ' ' + node.uid.toString() : 'null'} not claimed by ${this.uid} (${!!this.claimedNode}, ${node ? !!node.claimedBy : 'null'})`);
     }
   }
 
@@ -161,21 +163,21 @@ export class CrawlerModel {
       if (this.claimedNode.outlets.length === 0 && this.claimedNode.fruits.length === 0) {
         this.claimedNode.flagDestroy = true;
       }
-      console.log(`${this.claimedNode.slug + ' ' + this.claimedNode.uid.toString()} unclaimed by ${this.uid}`);
+      // console.log(`${this.claimedNode.slug + ' ' + this.claimedNode.uid.toString()} unclaimed by ${this.uid}`);
       this.claimedNode.claimedBy = null;
       this.claimedNode = null;
     }
   }
 
   public toString(): string {
-    let m = `<div class='node-title'>${this.slug} ${this.isBuffed ? '<span style="font-size:0.4em; color:#ff0; padding: 0.9em">[BLESSED]</span>': ''}</div>`;
+    let m = `<div class='node-title' style = "color: ${Formula.colorToHex(CrawlerCommandColors[this.preference])}">${(StringManager.data as any)[`CRAWLER_NAME_${this.slug}`]} ${this.isBuffed ? '<span style="font-size:0.4em; color:#ff0; padding: 0.9em">[BLESSED]</span>': ''}</div>`;
     m += `Health: <span style="color: ${CrawlerModel.healthGradient.getHexAt(this.health)}">${Math.floor(this.health * 100)}%</span> Move: ${Math.round(this.speed * 1000)}`;
-    m += `<br>Action: ${this.currentCommand ? CommandType[this.currentCommand.type] : 'NONE'}`;
+    m += `<br>Action: <span style="color: ${Formula.colorToHex(CrawlerCommandColors[this.currentCommand.type])}"> ${this.currentCommand ? CommandType[this.currentCommand.type] : 'NONE'}</span>`;
     if (this.currentCommand.type === CommandType.FRUSTRATED && this.frustratedBy) {
       m += ` by ${this.frustratedBy}`;
     }
     if (this.preference) {
-      m += `<br>Loves to ${CommandType[this.preference]}`;
+      m += `<br>Loves to <span style="color: ${Formula.colorToHex(CrawlerCommandColors[this.preference])}">${CommandType[this.preference]}</span>`;
     }
     return m;
   }

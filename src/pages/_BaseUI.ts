@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { ScreenCover } from '../JMGE/effects/ScreenCover';
 import { BaseModal } from '../components/ui/modals/_BaseModal';
 import { GameEvents, IResizeEvent } from '../services/GameEvents';

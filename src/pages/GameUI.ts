@@ -1,10 +1,10 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 import * as PIXI from 'pixi.js';
 import { BaseUI } from './_BaseUI';
 import { Fonts } from '../data/Fonts';
 import { GameEvents, IResizeEvent } from '../services/GameEvents';
 import { Direction, ScrollingContainer } from '../components/ScrollingContainer';
-import { KeyMapper } from '../services/KeyMapper';
+import { KeyMapper } from '../JMGE/KeyMapper';
 import { JMTicker } from '../JMGE/events/JMTicker';
 import { FDGContainer } from '../engine/FDG/FDGContainer';
 import { MouseController } from '../services/MouseController';
@@ -15,24 +15,23 @@ import { GameController } from '../engine/Mechanics/GameController';
 import { Sidebar } from '../components/domui/Sidebar';
 import { INodeConfig, NodeData } from '../data/NodeData';
 import { IExtrinsicModel, TierSaves } from '../data/SaveData';
-import { SaveManager } from '../services/SaveManager';
 import { Config, dConfigNode } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
-import { IHubConfig, ISkillConfig, SkillData } from '../data/SkillData';
+import { HubCostType, IHubConfig, ISkillConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
 import { StringManager } from '../services/StringManager';
 import { GOD_MODE } from '../services/_Debug';
 import { INodeSave, PlantNode } from '../engine/nodes/PlantNode';
 import { AchievementPanel } from '../components/domui/AchievementPanel';
-import { ScoreType } from '../data/ATSData';
+import { AchievementSlug, ScoreType } from '../data/ATSData';
 import { HubPanel } from '../components/domui/HubPanel';
 import { Timer } from '../components/domui/Timer';
+import { Facade } from '..';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
 
   private timer: Timer;
-  private sessionTime: number = 0;
   private canvas: ScrollingContainer;
   private container: FDGContainer;
   private nodeManager: NodeManager;
@@ -56,7 +55,7 @@ export class GameUI extends BaseUI {
 
     Config.NODE = _.clone(dConfigNode);
 
-    this.extrinsic = SaveManager.getExtrinsic();
+    this.extrinsic = Facade.saveManager.getExtrinsic();
 
     this.nodeManager = new NodeManager(this.extrinsic.skillTier);
     this.canvas = new ScrollingContainer(1500, 1000);
@@ -72,6 +71,7 @@ export class GameUI extends BaseUI {
 
     let nextSkillPanel = new SkillPanel(this.nodeManager.skills, this.extrinsic.skillsNext, always, this.extrinsic.skillTier);
     let hubPanel = new HubPanel(this.nodeManager.hubSkills, this.extrinsic.hubLevels, this.increaseHubLevel, this.toggleHubCollection);
+    hubPanel.toggleToggleButtons(false);
     let currentSkillPanel: SkillPanel;
 
     if (this.extrinsic.skillsCurrent.length + always.length > 0) {
@@ -139,6 +139,7 @@ export class GameUI extends BaseUI {
         {key: 'r', function: this.cheatResearch},
         {key: 'o', function: () => GameEvents.ACTIVITY_LOG.publish({slug: 'PRESTIGE'})},
         {key: 'c', function: () => this.nodeManager.hubSkills.forEach(el => el.costs = el.costs.map(el => 5))},
+        {key: 'z', function: () => this.gameC.knowledge.achieveAchievement(AchievementSlug.HUB_3)},
         // {key: 'k', function: this.toggleKnowledge},
       ]);
     }
@@ -207,7 +208,7 @@ export class GameUI extends BaseUI {
   public saveGame = () => {
     this.extrinsic.stageState = this.gameC.saveNodes();
     this.extrinsic.crawlers = this.gameC.saveCrawlers();
-    SaveManager.saveExtrinsic();
+    Facade.saveManager.saveExtrinsic();
   }
 
   public newGame() {
@@ -230,7 +231,7 @@ export class GameUI extends BaseUI {
     this.extrinsic.skillTier = this.nodeManager.extractTier(this.extrinsic.skillsNext, this.extrinsic.skillTier);
     this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
     this.extrinsic.skillsNext = [];
-    console.log('tier',this.extrinsic.skillTier);
+    this.extrinsic.prestigeTime = 0;
     this.resetGame();
   }
 
@@ -239,8 +240,9 @@ export class GameUI extends BaseUI {
 
     if (!this.running) return;
 
-    this.sessionTime += this.gameSpeed * delta;
-    this.timer.setTime(this.sessionTime);
+    this.extrinsic.totalTime += this.gameSpeed * delta;
+    this.extrinsic.prestigeTime += this.gameSpeed * delta;
+    this.timer.setTime(this.extrinsic.prestigeTime);
 
     this.container.onTick(this.gameSpeed);
     this.gameC.onTick(this.gameSpeed);
@@ -355,6 +357,7 @@ export class GameUI extends BaseUI {
         let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
         if (nodeToDelete) {
           nodeToDelete.flagDestroy = true;
+          nodeToDelete.flagExplode = true;
         }
 
         e.onComplete && e.onComplete();
@@ -371,7 +374,7 @@ export class GameUI extends BaseUI {
 
   private loadSave = (json: string) => {
     let extrinsic = JSON.parse(json);
-    SaveManager.saveExtrinsic(extrinsic, true).then(() => {
+    Facade.saveManager.saveExtrinsic(extrinsic, true).then(() => {
       PlantNode.resetUid();
       this.navAndDestroy(new GameUI());
     });
@@ -439,7 +442,7 @@ export class GameUI extends BaseUI {
     }
   }
 
-  toggleHubCollection = (type: 'research' | 'fruit' | 'power', state: boolean) => {
+  toggleHubCollection = (type: HubCostType, state: boolean) => {
     let hub = this.gameC.nodes.find(el => el.slug === 'hub');
 
     if (hub) {

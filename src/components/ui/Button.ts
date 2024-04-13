@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { colorLuminance } from '../../JMGE/others/Colors';
 import { Fonts } from '../../data/Fonts';
 import { JMTween } from '../../JMGE/JMTween';
@@ -59,7 +59,7 @@ export class Button extends PIXI.Container {
     this.addLabel();
     this.inner.addChild(this.label);
 
-    this.interactive = true;
+    this.eventMode = 'static';
     this.cursor = 'pointer';
 
     this.addListener('mouseover', () => {
@@ -100,7 +100,6 @@ export class Button extends PIXI.Container {
 
   public set disabled(b: boolean) {
     this._Disabled = b;
-    // this.interactive = !b;
     this.cursor = b ? 'auto' : 'pointer';
     if (b) {
       this.color = this.disabledColor;
@@ -116,7 +115,7 @@ export class Button extends PIXI.Container {
 
   public set selected(b: boolean) {
     this._Selected = b;
-    this.interactive = !b;
+    // this.interactive = !b;
     if (b) {
       this.color = this.selectedColor;
     } else {

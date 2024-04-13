@@ -1,4 +1,4 @@
-import * as WebFont from 'webfontloader';
+import WebFont from 'webfontloader';
 
 export class FontLoader {
   public static load(fonts: string[]): Promise<void> {

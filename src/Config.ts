@@ -19,6 +19,7 @@ export const Config = {
     RESOLUTION: 1,
     MOUSE_HOLD: 200,
     BORDER: false,
+    GAME_DATA_VERSION: 28,
   },
   STAGE: {
     SCREEN_WIDTH: 800,

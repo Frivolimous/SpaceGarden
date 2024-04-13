@@ -9,7 +9,9 @@ export interface ITooltip {
 
 export class TooltipReader {
   public static addTooltip(object: PIXI.DisplayObject, tooltip: ITooltip | (() => ITooltip)) {
-    object.interactive = true;
+    if (object.eventMode !== 'static' && object.eventMode !== 'dynamic') {
+      console.log("ERROR! Object is not active and tooltipable", object);
+    }
     (object as any).tooltip = tooltip;
   }
 
@@ -30,7 +32,6 @@ export class TooltipReader {
     stage.addListener('pointermove', this.mouseMove);
     stage.addListener('pointerdown', this.mouseDown);
     window.addEventListener('pointerup', this.mouseUp);
-    stage.interactive = true;
     TooltipReader.instance = this;
   }
 

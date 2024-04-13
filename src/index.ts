@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { MenuUI } from './pages/MenuUI';
 import { Config } from './Config';
-import { SaveManager } from './services/SaveManager';
+import { SaveManager } from './JMGE/SaveManager';
 import { TooltipReader } from './components/tooltip/TooltipReader';
 import { JMRect } from './JMGE/others/JMRect';
 import { Fonts } from './data/Fonts';
@@ -12,6 +12,7 @@ import { Debug } from './services/_Debug';
 import { BaseUI, IFadeTiming, dFadeTiming } from './pages/_BaseUI';
 import { ScreenCover } from './JMGE/effects/ScreenCover';
 import { FontLoader } from './services/FontLoader';
+import { IExtrinsicModel, dExtrinsicModel } from './data/SaveData';
 
 export let interactionMode: 'desktop'|'mobile' = 'desktop';
 
@@ -22,13 +23,14 @@ export let Facade = new class FacadeInner {
   public innerBorders: JMRect;
   public screen: PIXI.Container;
   public border: PIXI.Graphics;
-
+  public saveManager: SaveManager<IExtrinsicModel>;
+  
   private element: HTMLCanvasElement;
   private previousResize: IResizeEvent;
   private currentPage: BaseUI;
 
   constructor() {
-    console.warn = (a: any) => {};
+    // console.warn = (a: any) => {};
     if (FacadeInner.exists) throw new Error('Cannot instatiate more than one Facade Singleton.');
     FacadeInner.exists = true;
     try {
@@ -47,15 +49,14 @@ export let Facade = new class FacadeInner {
       resolution: Config.INIT.RESOLUTION,
       width: this.element.offsetWidth,
       height: this.element.offsetHeight,
-
     });
     this.element.append(this.app.view as any);
 
     this.app.stage.scale.x = 1 / Config.INIT.RESOLUTION;
     this.app.stage.scale.y = 1 / Config.INIT.RESOLUTION;
 
-    this.app.stage.interactive = true;
     this.screen = new PIXI.Container();
+    this.screen.eventMode = 'dynamic';
     this.app.stage.addChild(this.screen);
     if (Config.INIT.BORDER) {
       this.border = new PIXI.Graphics();
@@ -69,7 +70,7 @@ export let Facade = new class FacadeInner {
     // Initialize Libraries
     new TooltipReader(this.screen, this.stageBorders, {});
     TextureCache.initialize(this.app);
-    Debug.initialize(this.app);
+    this.saveManager = new SaveManager({CurrentVersion: Config.INIT.GAME_DATA_VERSION, DocName: 'SG-Extrinsic', VerName: 'SG-Version', SaveLoc: 'local'}, dExtrinsicModel);
 
     // Resize Event (for full screen mode / scaling)
     let finishResize = _.debounce(this.finishResize, 500);
@@ -85,8 +86,10 @@ export let Facade = new class FacadeInner {
 
   public init = () => {
     // this will happen after 'preloader'
+    Debug.initialize(this.app);
+
     GameEvents.APP_LOG.publish({type: 'INITIALIZE', text: 'Post-Loader'});
-    SaveManager.init().then(() => {
+    this.saveManager.init().then(() => {
       GameEvents.APP_LOG.publish({type: 'INITIALIZE', text: 'Save Manager Initialized'});
 
       let menu = new MenuUI();
@@ -104,7 +107,7 @@ export let Facade = new class FacadeInner {
 
     let screen = new ScreenCover(this.previousResize.outerBounds, fadeTiming.color).onFadeComplete(() => {
       this.currentPage.navOut();
-      SaveManager.saveCurrent().then(() => {
+      this.saveManager.saveCurrent().then(() => {
         this.screen.removeChild(this.currentPage);
         if (andDestroy) this.currentPage.destroy();
 

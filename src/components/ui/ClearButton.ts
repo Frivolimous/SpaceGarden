@@ -15,7 +15,7 @@ export class ClearButton extends PIXI.Container {
     this.addChild(graphic);
     graphic.beginFill(0, 0.01).drawRect(0, 0, config.width, config.height);
 
-    this.interactive = true;
+    this.eventMode = 'dynamic';
     this.cursor = 'pointer';
     this.addListener('pointerdown', () => {
       // SoundData.playSound(SoundIndex.CLICK);

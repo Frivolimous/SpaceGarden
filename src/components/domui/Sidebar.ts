@@ -1,3 +1,4 @@
+import { Config } from '../../Config';
 import { AchievementSlug } from '../../data/ATSData';
 import { GameKnowledge } from '../../engine/Mechanics/GameKnowledge';
 import { CrawlerModel } from '../../engine/Mechanics/Parts/CrawlerModel';
@@ -217,6 +218,7 @@ export class Sidebar {
       let plantElement = this.hubElement.source as PlantNode;
       this.hubPanel.updateCurrencies(plantElement.power.researchCurrent, plantElement.power.fruitCurrent, plantElement.power.storedPowerCurrent);
       this.hubElement.button.notify(this.hubPanel.hidden && this.hubPanel.hasSkillToLevel);
+      this.hubPanel.toggleToggleButtons(Boolean(Config.NODE.HUB_BUTTONS));
     }
   }
 

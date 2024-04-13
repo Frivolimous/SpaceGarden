@@ -66,7 +66,6 @@ export class PlantNodeView extends PIXI.Container {
       }
       let value = this.intensityInterpolation(this._Intensity);
       this.sprite.tint = colorLuminance(this.color, value);
-      if (value > 10) console.log(value);
       this.sprite.scale.set(value);
     }
   }

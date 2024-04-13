@@ -1,4 +1,5 @@
-import { IHubConfig } from '../../data/SkillData';
+import { DomManager } from '../../JMGE/DomManager';
+import { HubCostType, IHubConfig } from '../../data/SkillData';
 
 export class HubPanel {
   public skillsSpent: number = 0;
@@ -15,55 +16,31 @@ export class HubPanel {
 
   private toggleCollectionButtons: HTMLButtonElement[] = [];
 
-  constructor(private skills: IHubConfig[], private leveled: [string, number][], private onHubLevel: (hub: IHubConfig) => void, private onToggleCollection: (type: 'research' | 'fruit' | 'power', state: boolean) => void) {
-    this.element = document.createElement('div');
-    this.element.classList.add('skill-panel');
-    document.body.appendChild(this.element);
-    let top = document.createElement('div');
-    top.classList.add('top');
-    this.element.appendChild(top);
+  constructor(private skills: IHubConfig[], private leveled: [string, number][], private onHubLevel: (hub: IHubConfig) => void, private onToggleCollection: (type: HubCostType, state: boolean) => void) {
+    this.element = DomManager.makeDiv('skill-panel', document.body);
+    let top = DomManager.makeDiv('top', this.element);
+
     top.innerHTML = `
     <div class="skill-title">Evolution Hub</div>
     <div class="skill-subtitle">Improvements made here will only affect the current plant.</div>`;
     
-    this.contentElement = document.createElement('div');
-    this.contentElement.classList.add('skill-content');
-    top.appendChild(this.contentElement);
+    this.contentElement = DomManager.makeDiv('skill-content', top);
+
     skills.forEach((skill) => {
       let block = this.createSkillBlock(skill);
       this.contentElement.appendChild(block);
     });
 
-    let button = document.createElement('button');
-    button.classList.add('close-button');
-    this.element.appendChild(button);
-    button.innerHTML = 'X';
-    button.addEventListener('click', () => this.hidden = true);
-
-    let skillElement = document.createElement('div');
-
-    this.skillpointElement = document.createElement('div');
-    this.skillpointElement.classList.add('skill-skillpoint');
-    skillElement.appendChild(this.skillpointElement);
+    DomManager.makeButton('X', 'close-button', e => this.hidden = true, this.element);
+    let skillElement = DomManager.makeDiv(null, this.element);
+    this.skillpointElement = DomManager.makeDiv('skill-skillpoint', skillElement);
     this.skillpointElement.innerHTML = `5 Skillpoints`;
 
-    this.element.appendChild(skillElement);
+    let buttonContainer = DomManager.makeDiv(null, this.element);
 
-    let buttonContainer = document.createElement('div');
-
-    this.element.appendChild(buttonContainer);
-    for (let i = 0; i < 3; i++) {
-      let b2 = document.createElement('button');
-      b2.classList.add('skill-button');
-      this.toggleCollectionButtons.push(b2);
-      buttonContainer.appendChild(b2);
-    }
-    this.toggleCollectionButtons[0].innerHTML = 'Research Collection';
-    this.toggleCollectionButtons[0].addEventListener('click', () => this.toggleCollection('research'));
-    this.toggleCollectionButtons[1].innerHTML = 'Fruit Collection';
-    this.toggleCollectionButtons[1].addEventListener('click', () => this.toggleCollection('fruit'));
-    this.toggleCollectionButtons[2].innerHTML = 'Power Collection';
-    this.toggleCollectionButtons[2].addEventListener('click', () => this.toggleCollection('power'));
+    this.toggleCollectionButtons.push(DomManager.makeButton('Research Collection', 'skill-button', () => this.toggleCollection('research'), buttonContainer))
+    this.toggleCollectionButtons.push(DomManager.makeButton('Fruit Collection', 'skill-button', () => this.toggleCollection('fruit'), buttonContainer))
+    this.toggleCollectionButtons.push(DomManager.makeButton('Power Collection', 'skill-button', () => this.toggleCollection('power'), buttonContainer))
 
     this.hidden = true;
   }
@@ -85,9 +62,6 @@ export class HubPanel {
   }
 
   public clear() {
-    // while (this.leveled.length > 0) this.leveled.shift();
-    // this.skillsSpent = 0;
-    // this.skillMap.forEach(data => data.element.disabled = false);
   }
 
   public updateCurrencies = (research: number, fruit: number, power: number) => {
@@ -142,18 +116,28 @@ export class HubPanel {
     let levelPair = this.leveled.find(el => el[0] === skill.slug);
     let level = levelPair ? levelPair[1] : 0;
 
+    element.innerHTML = '';
+    let skillName = DomManager.makeDiv('skill-block-title', element);
+    skillName.innerHTML = `${skill.effect.slug} ${skill.effect.key}: ${skill.effect.valueType === 'multiplicative' ? 'x' : '+'}${skill.effect.value}`;
+    let levelElement = DomManager.makeDiv('skill-block-content', element);
+
     if (level >= skill.costs.length) {
-      element.innerHTML = `<div class="skill-block-title">${skill.effect.slug} ${skill.effect.key}: ${skill.effect.valueType === 'multiplicative' ? 'x' : '+'}${skill.effect.value}</div>
-      <div class="skill-block-content">Max Level</div>`;
+      levelElement.innerHTML = 'Max Level';
       element.disabled = true;
     } else {
-      element.innerHTML = `<div class="skill-block-title">${skill.effect.slug} ${skill.effect.key}: ${skill.effect.valueType === 'multiplicative' ? 'x' : '+'}${skill.effect.value}</div>
-      <div class="skill-block-content">Level ${level}</div>
-      <div class="skill-block-cost">${skill.costs[level]} ${skill.costType}</div>`;
+      levelElement.innerHTML = `Level ${level}`;
+      let costElement = DomManager.makeDiv('skill-block-cost', element);
+      costElement.innerHTML = `${skill.costs[level]} ${skill.costType}`;
     }
   }
 
-  public toggleCollection(type: 'research' | 'fruit' | 'power', state ?: boolean) {
+  public toggleToggleButtons(state: boolean) {
+    this.toggleCollectionButtons.forEach(button => {
+      button.hidden = !state;
+    })
+  }
+
+  public toggleCollection(type: HubCostType, state ?: boolean) {
     let index = type === 'research' ? 0 : type === 'fruit' ? 1 : 2;
 
     if (state === undefined) {

@@ -38,7 +38,7 @@ export class TooltipPopup extends PIXI.Container {
   constructor(title: string, description: string, config: ITooltipPopup) {
     super();
 
-    // this.interactive = true;
+    this.eventMode = 'none';
 
     let titleField = new PIXI.Text(title, fontStyles.b);
 
@@ -106,10 +106,12 @@ export class TooltipPopup extends PIXI.Container {
   }
 
   public drawOver(x: number, y: number, width: number, height: number, blank?: boolean) {
+    return; // This is to frame and highlight each element for positioning checks
+    
     if (blank) {
-      // this.over.lineStyle(1, 0x00ffff).drawRect(x, y, 10, height);
+      this.over.lineStyle(1, 0x00ffff).drawRect(x, y, 10, height);
     } else {
-      // this.over.lineStyle(1, 0xff00ff).drawRect(x, y, width, height);
+      this.over.lineStyle(1, 0xff00ff).drawRect(x, y, width, height);
     }
   }
 
