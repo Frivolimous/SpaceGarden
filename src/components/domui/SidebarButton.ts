@@ -1,3 +1,5 @@
+import { DomManager } from '../../JMGE/DomManager';
+
 export class SidebarButton {
   public element: HTMLButtonElement;
   public content: HTMLDivElement;
@@ -5,10 +7,7 @@ export class SidebarButton {
   private notification: HTMLDivElement;
 
   constructor(content: string, className: string, onClick: () => void) {
-    this.element = document.createElement('button');
-    this.element.classList.add(className);
-    this.element.innerHTML = content;
-    this.element.addEventListener('click', onClick);
+    this.element = DomManager.makeButton(content, className, onClick);
   }
 
   public get isHidden() {
@@ -33,9 +32,7 @@ export class SidebarButton {
 
   public notify(b?: boolean) {
     if (!this.notification) {
-      this.notification = document.createElement('div');
-      this.notification.classList.add('notification');
-      this.element.appendChild(this.notification);
+      this.notification = DomManager.makeDiv('notification',this.element);
     }
 
     this.notification.hidden = !b;

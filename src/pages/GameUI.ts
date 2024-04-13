@@ -27,6 +27,8 @@ import { AchievementSlug, ScoreType } from '../data/ATSData';
 import { HubPanel } from '../components/domui/HubPanel';
 import { Timer } from '../components/domui/Timer';
 import { Facade } from '..';
+import { SimpleModal } from '../components/ui/modals/SimpleModal';
+import { PointingArrow } from '../JMGE/effects/PointingArrow';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -47,6 +49,8 @@ export class GameUI extends BaseUI {
   private exists = true;
 
   private extrinsic: IExtrinsicModel;
+
+  private pointingArrow: PointingArrow;
 
   constructor(level?: INodeSave[]) {
     super({bgColor: 0x777777});
@@ -185,7 +189,6 @@ export class GameUI extends BaseUI {
     this.keymapper.enabled = true;
     this.sidebar.navIn();
     GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME NAV IN'});
-
   }
 
   public navOut = () => {
@@ -257,6 +260,44 @@ export class GameUI extends BaseUI {
     }
 
     this.sidebar.updateKnowledge(this.gameC.knowledge);
+
+    if (!this.extrinsic.tutorialStep) {
+      this.extrinsic.tutorialStep = 1;
+      let modal = new SimpleModal('Wecome to your Space Garden.  This is a slow paced game, where your goal is to grow a magical space plant and evolve its seedling.', () => this.extrinsic.tutorialStep = 2);
+      this.addDialogueWindow(modal, 500);
+    } else if (this.extrinsic.tutorialStep === 2) {
+      this.extrinsic.tutorialStep = 3;
+      this.pointingArrow = new PointingArrow();
+      this.pointingArrow.x = 25;
+      this.bottomBar.getButton('stem').addChild(this.pointingArrow);
+      this.pointingArrow.visible = false;
+      let modal = new SimpleModal('To start with, try adding a Stem to your Core by dragging it from the button here.', null);
+      modal.onAppearComplete = () => this.pointingArrow.visible = true;
+      this.addDialogueWindow(modal, 500);
+      modal.position.set(0, this.bottomBar.y - 200);
+    } else if (this.extrinsic.tutorialStep === 3) {
+      let stem = this.gameC.nodes.find(el => el.slug === 'stem');
+      if (stem) {
+        this.extrinsic.tutorialStep = 4;
+        this.pointingArrow && this.pointingArrow.destroy();
+        this.pointingArrow = null;
+        (this.dialogueWindow as SimpleModal).closeModal();
+      }
+    } else if (this.extrinsic.tutorialStep === 4) {
+      let stem = this.gameC.nodes.find(el => el.slug === 'stem');
+      if (!stem) {
+        this.extrinsic.tutorialStep = 2;
+      } else {
+        if (stem.active) {
+          this.extrinsic.tutorialStep = 5;
+        }
+      }
+    } else if (this.extrinsic.tutorialStep === 5) {
+      this.extrinsic.tutorialStep = 6;
+      let modal = new SimpleModal('Keep building your plant to discover all the mysteries that the Space Garden holds!', () => this.extrinsic.tutorialStep = 6);
+      this.addDialogueWindow(modal, 500);
+
+    }
   }
 
   public positionElements = (e: IResizeEvent) => {

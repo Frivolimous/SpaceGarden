@@ -4,7 +4,6 @@ import { Colors } from '../../../data/Colors';
 import { TextureCache } from '../../../services/TextureCache';
 import { CrawlerSlug } from '../../../data/CrawlerData';
 import { PlantNodeView } from '../../nodes/PlantNodeView';
-import { ColorGradient } from '../../../JMGE/others/Colors';
 
 export class CrawlerView extends PIXI.Container {
   public sprite: PIXI.Sprite;

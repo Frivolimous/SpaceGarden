@@ -83,6 +83,7 @@
 }
 
 .skill-panel .skill-content {
+  height: inherit;
   display: flex;
   flex-flow: wrap;
   gap: 2vh;

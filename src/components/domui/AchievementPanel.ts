@@ -1,24 +1,19 @@
-import { StringManager } from '../../services/StringManager';
 import { IAchievement } from '../../data/SkillData';
-import { SkillBar } from './SkillBar';
-import { Formula } from '../../services/Formula';
-import { JMEventListener } from 'src/JMGE/events/JMEventListener';
 import { AchievementSlug } from '../../data/ATSData';
 import { SidebarElement } from './SidebarElement';
+import { DomManager } from '../../JMGE/DomManager';
 
 export class AchievementPanel extends SidebarElement {
   private achievements: {slug: AchievementSlug, element: HTMLDivElement}[] = [];
 
   constructor(states: boolean[], private rawAchievements: IAchievement[]) {
     super(null, 'achievement-panel', 'achievement-content');
-    let title = document.createElement('div');
-    title.classList.add('achievement-title');
+    let title = DomManager.makeDiv('achievement-title');
     title.innerText = 'Achievements';
     this.element.prepend(title);
 
     rawAchievements.forEach(data => {
-      let block = this.createAchievementBlock(data);
-      this.content.appendChild(block);
+      this.createAchievementBlock(data);
 
       if (states[data.slug]) {
         this.toggleAchievement(data.slug);
@@ -48,8 +43,7 @@ export class AchievementPanel extends SidebarElement {
   }
 
   private createAchievementBlock(data: IAchievement): HTMLElement {
-    let element = document.createElement('div');
-    element.classList.add('achievement-block');
+    let element = DomManager.makeDiv('achievement-block', this.content);
     element.innerHTML = `<div class="achievement-block-title">${data.title}</div>
     <div class="achievement-block-content">${data.description}</div>
     <div class="achievement-block-cost"></div>`;

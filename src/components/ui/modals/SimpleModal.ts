@@ -5,7 +5,7 @@ import { JMTween, JMEasing } from '../../../JMGE/JMTween';
 import { Fonts } from '../../../data/Fonts';
 
 const COLOR_BACK = 0x333333;
-const COLOR_FRONT = 0x666666;
+const COLOR_FRONT = 0xdddddd;
 const CLOSE_TEXT = 'Close';
 const HEIGHT = 300;
 const WIDTH = 400;

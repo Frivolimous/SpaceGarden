@@ -1,11 +1,12 @@
+import { DomManager } from '../../JMGE/DomManager';
+
 export class InfoPopup {
   private element: HTMLDivElement;
 
   constructor(content: string) {
-    this.element = document.createElement('div');
-    this.element.classList.add('info-popup');
+    this.element = DomManager.makeDiv('info-popup', document.body);
+
     this.element.innerHTML = content;
-    document.body.appendChild(this.element);
     window.setTimeout(this.destroy, 1500);
   }
 

@@ -20,6 +20,7 @@ export interface IExtrinsicModel {
 
   firstVersion?: number;
   logins?: number;
+  tutorialStep: number
 
   crawlers: ICrawlerSave[];
 
@@ -49,6 +50,7 @@ export const dExtrinsicModel: IExtrinsicModel = {
   skillsNext: [],
   hubLevels: [],
   skillTier: 0,
+  tutorialStep: 0,
 
   prestigeTime: 0,
   totalTime: 0,

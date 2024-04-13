@@ -1,3 +1,4 @@
+import { DomManager } from '../../JMGE/DomManager';
 import { CrawlerModel } from '../../engine/Mechanics/Parts/CrawlerModel';
 import { PlantNode } from '../../engine/nodes/PlantNode';
 import { SidebarButton } from './SidebarButton';
@@ -10,16 +11,11 @@ export class SidebarElement {
   public order: string;
 
   constructor(public source?: PlantNode | CrawlerModel, mainClass: string = 'node-block', contentClass: string = 'node-content') {
-    this.element = document.createElement('div');
-    this.element.classList.add(mainClass);
-
-    this.content = document.createElement('div');
-    this.content.classList.add(contentClass);
+    this.element = DomManager.makeDiv(mainClass);
+    this.content = DomManager.makeDiv(contentClass, this.element);
     this.content.innerHTML = source ? source.toString() : '';
 
     if (source) this.setOrder(source.slug);
-
-    this.element.appendChild(this.content);
   }
 
   public get isHidden() {

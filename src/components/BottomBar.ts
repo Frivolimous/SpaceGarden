@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { GOD_MODE } from '../services/_Debug';
-import { INodeConfig, NodeData } from '../data/NodeData';
+import { INodeConfig, NodeData, NodeSlug } from '../data/NodeData';
 import { JMEventListener } from '../JMGE/events/JMEventListener';
 import { StringManager } from '../services/StringManager';
 import { TooltipReader } from './tooltip/TooltipReader';
@@ -158,5 +158,10 @@ export class BottomBar extends PIXI.Container {
       this.proceedButton.visible = false;
       this.proceedButton.disabled = true;
     }
+  }
+
+  public getButton(slug: NodeSlug) {
+    let label = (StringManager.data as any)[`NODE_NAME_SHORT_${slug}`];
+    return this.buttons.find(el => el.getLabel() === label);
   }
 }

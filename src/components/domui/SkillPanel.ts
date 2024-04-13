@@ -3,6 +3,7 @@ import { ISkillConfig, SkillData } from '../../data/SkillData';
 import { SkillBar } from './SkillBar';
 import { Formula } from '../../services/Formula';
 import { JMEventListener } from 'src/JMGE/events/JMEventListener';
+import { DomManager } from '../../JMGE/DomManager';
 
 export class SkillPanel {
   public skillsSpent: number = 0;
@@ -19,12 +20,10 @@ export class SkillPanel {
   private skillLevels: number = 0;
 
   constructor(skills: ISkillConfig[], private leveled: string[], private always: string[], tier: number, private disabled?: boolean) {
-    this.element = document.createElement('div');
-    this.element.classList.add('skill-panel');
-    document.body.appendChild(this.element);
-    let top = document.createElement('div');
-    top.classList.add('top');
-    this.element.appendChild(top);
+    this.element = DomManager.makeDiv('skill-panel', document.body);
+    let top = DomManager.makeDiv('top', this.element);
+    DomManager.makeButton('X', 'close-button', () => this.hidden = true, this.element);
+
     if (disabled) {
       top.innerHTML = `
       <div class="skill-title">${StringManager.data.UI_SKILLTREE_TITLE}</div>
@@ -35,40 +34,24 @@ export class SkillPanel {
       <div class="skill-subtitle">${StringManager.data.UI_SKILLTREE_SUBTITLE_ACTIVE}</div>`;
     }
     if (tier > 0) {
-      this.tierContainer = document.createElement('div');
-      this.tierContainer.classList.add('tier-content');
-      top.appendChild(this.tierContainer);
+      this.tierContainer = DomManager.makeDiv('tier-container', top);
     }
 
-    this.contentElement = document.createElement('div');
-    this.contentElement.classList.add('skill-content');
-    top.appendChild(this.contentElement);
+    this.contentElement = DomManager.makeDiv('skill-content', top);
+    
     skills.forEach((skill) => {
       let block = this.createSkillBlock(skill);
-      this.contentElement.appendChild(block);
     });
 
-    let button = document.createElement('button');
-    button.classList.add('close-button');
-    this.element.appendChild(button);
-    button.innerHTML = 'X';
-    button.addEventListener('click', () => this.hidden = true);
-
     if (!disabled) {
-      let skillElement = document.createElement('div');
+      let skillElement = DomManager.makeDiv(null, this.element);
+      this.skillpointElement = DomManager.makeDiv('skill-skillpoint', skillElement);
+      this.negative = DomManager.makeDiv('skill-negative', skillElement);
 
-      this.skillpointElement = document.createElement('div');
-      this.skillpointElement.classList.add('skill-skillpoint');
-      skillElement.appendChild(this.skillpointElement);
       this.skillpointElement.innerHTML = `5 Skillpoints`;
-
-      this.negative = document.createElement('div');
-      this.negative.classList.add('skill-negative');
-      skillElement.appendChild(this.negative);
 
       this.skillbar = new SkillBar();
       skillElement.appendChild(this.skillbar.element);
-      this.element.appendChild(skillElement);
     }
 
     this.hidden = true;
@@ -77,15 +60,8 @@ export class SkillPanel {
     if (tier > 0) {
       for (let i = 1; i <= tier + 1; i++) {
         let j = i;
-        let tierButton = document.createElement('button');
-        tierButton.classList.add('tier-button');
-        tierButton.innerHTML = `${StringManager.data.UI_SKILLTREE_TIER} ${i}`;
+        let tierButton = DomManager.makeButton(`${StringManager.data.UI_SKILLTREE_TIER} ${i}`, 'tier-button', () => (buttons.forEach(b => b.disabled = b === tierButton), this.openTierPage(j)), this.tierContainer);
         buttons.push(tierButton);
-        this.tierContainer.appendChild(tierButton);
-        tierButton.addEventListener('click', () => {
-          buttons.forEach(b => b.disabled = b === tierButton);
-          this.openTierPage(j);
-        });
       }
       buttons[tier].disabled = true;
       this.openTierPage(tier + 1);
@@ -158,11 +134,11 @@ export class SkillPanel {
   }
 
   private createSkillBlock(skill: ISkillConfig): HTMLElement {
-    let element = document.createElement('button');
-    element.classList.add('skill-block');
-    element.innerHTML = `<div class="skill-block-title">${skill.title}</div>
+    let content = `<div class="skill-block-title">${skill.title}</div>
     <div class="skill-block-content">${skill.description}</div>
     <div class="skill-block-cost">${skill.cost} Point${skill.cost === 1 ? '' : 's'}</div>`;
+    
+    let element = DomManager.makeButton(content, 'skill-block', null, this.contentElement);
 
     if (this.always.includes(skill.slug)) {
       element.disabled = true;

@@ -59,7 +59,7 @@
 }
 
 .skill-block .skill-block-cost {
-  font-size: 0.6em;
+  font-size: 0.8em;
   font-style: italic;
   margin-top: 8px;
 }
@@ -76,15 +76,20 @@
   font-size: 1.4em;
   font-weight: bold;
   margin-bottom: 1em;
+  width: 30em;
+  height: 2em;
+  border: black solid;
+}
+
+.skillbar .innerbar {
+  background: #A390F0;
+  height: 100%;
 }
 
 .skillbar .sub-text {
-  font-size: 0.6em;
-  margin-block-start: 0px;
-  font-weight: normal;
+  position: relative;
+  top: -1.5em;
 }
-
-
 
 .node-title {
   font-weight: bold;

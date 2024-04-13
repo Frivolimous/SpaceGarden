@@ -13,6 +13,7 @@ import { InfoPopup } from '../../components/domui/InfoPopup';
 import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { CrawlerSlug } from '../../data/CrawlerData';
 import { Facade } from '../..';
+import { Colors } from '../../data/Colors';
 
 export class GameKnowledge {
   public onAchievementUpdate = new JMEventListener<{slug: AchievementSlug, unlocked?: boolean, count?: string}>();
@@ -141,12 +142,17 @@ export class GameKnowledge {
   }
 
   public toString(): string {
+    let powerPercent = this.totalPower / this.totalMaxPower;
+    let powerColor = powerPercent > 1 ? Colors.overPowerGradient.getHexAt((powerPercent - 1) * 2) : Colors.powerGradient.getHexAt(powerPercent);
+    let genColor = this.totalGen > this.totalDrain ? Colors.overPowerGradient.getHexAt(this.totalGen / this.totalDrain - 1) : Colors.powerGradient.getHexAt(this.totalGen / this.totalDrain);
+
     let m = `<div class='node-title'>Plant Overview</div>`;
-    m += `<br>Power: ${Math.round(this.totalPower)} / ${Math.round(this.totalMaxPower)}`;
+    m += `<br>Power: <span style="color: ${powerColor}">${Math.round(this.totalPower)}</span> / ${Math.round(this.totalMaxPower)}`;
     if (this.seedlingMaxPower) {
-      m += `<br>Seedling Power: ${Math.round(this.seedlingPower)} / ${Math.round(this.seedlingMaxPower)}`;
+      let seedlingColor = Colors.powerGradient.getHexAt(this.seedlingPower / this.seedlingMaxPower);
+      m += `<br>Seedling Power: <span style="color: ${seedlingColor}">${Math.round(this.seedlingPower)}</span> / ${Math.round(this.seedlingMaxPower)}`;
     }
-    m += `<br>Gen: ${(this.totalGen * 60).toFixed(0)}/s, Drain: ${(this.totalDrain * 60).toFixed(0)}/s`;
+    m += `<br>Gen: <span style="color: ${genColor}">${(this.totalGen * 60).toFixed(0)}/s</span>, Drain: ${(this.totalDrain * 60).toFixed(0)}/s`;
     m += `<br><br>Crawlers: ${this.crawlerCount}`;
     m += `<br>Nodes: ${this.normalNodes.length}`;
 

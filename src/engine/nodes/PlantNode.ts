@@ -4,16 +4,11 @@ import { INodeConfig, NodeSlug } from '../../data/NodeData';
 import { PlantNodePhysics } from './PlantNodePhysics';
 import { PlantNodePower, TransferPowerFunction } from './PlantNodePower';
 import { PlantNodeView } from './PlantNodeView';
-import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { Colors } from '../../data/Colors';
 import { CrawlerModel } from '../Mechanics/Parts/CrawlerModel';
-import { ColorGradient } from '../../JMGE/others/Colors';
 import { StringManager } from '../../services/StringManager';
 
 export class PlantNode {
-  public static powerGradient = new ColorGradient(0xcc0000, 0xffffff);
-  public static overPowerGradient = new ColorGradient(0xffffff, 0xffff00);
-
   public static generateUid() {
     PlantNode.cUid++;
 
@@ -280,7 +275,7 @@ export class PlantNode {
   }
 
   public toString(): string {
-    let powerColor = this.power.powerPercent > 1 ? PlantNode.overPowerGradient.getHexAt((this.power.powerPercent - 1) * 2) : PlantNode.powerGradient.getHexAt(this.power.powerPercent);
+    let powerColor = this.power.powerPercent > 1 ? Colors.overPowerGradient.getHexAt((this.power.powerPercent - 1) * 2) : Colors.powerGradient.getHexAt(this.power.powerPercent);
     let nameColor = this.config.color.toString(16);
     while (nameColor.length < 6) nameColor = '0' + nameColor;
     let m = `<div class='node-title' style='color: #${nameColor}'>${(StringManager.data as any)[`NODE_NAME_LONG_${this.config.slug}`]}</div>

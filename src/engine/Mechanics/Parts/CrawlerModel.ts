@@ -9,13 +9,11 @@ import { JMEventListener } from '../../../JMGE/events/JMEventListener';
 import { CrawlerCommandColors, CrawlerSlug, ICrawlerConfig } from '../../../data/CrawlerData';
 import { commandMap, CommandType } from '../CrawlerCommands/_CommandTypes';
 import { TextureCache } from '../../../services/TextureCache';
-import { ColorGradient } from '../../../JMGE/others/Colors';
 import { StringManager } from '../../../services/StringManager';
 import { Formula } from '../../../services/Formula';
+import { Colors } from '../../../data/Colors';
 
 export class CrawlerModel {
-  public static healthGradient = new ColorGradient(0xcc0000, 0xffffff);
-
   public static generateUid() {
     CrawlerModel.cUid++;
 
@@ -171,7 +169,7 @@ export class CrawlerModel {
 
   public toString(): string {
     let m = `<div class='node-title' style = "color: ${Formula.colorToHex(CrawlerCommandColors[this.preference])}">${(StringManager.data as any)[`CRAWLER_NAME_${this.slug}`]} ${this.isBuffed ? '<span style="font-size:0.4em; color:#ff0; padding: 0.9em">[BLESSED]</span>': ''}</div>`;
-    m += `Health: <span style="color: ${CrawlerModel.healthGradient.getHexAt(this.health)}">${Math.floor(this.health * 100)}%</span> Move: ${Math.round(this.speed * 1000)}`;
+    m += `Health: <span style="color: ${Colors.healthGradient.getHexAt(this.health)}">${Math.floor(this.health * 100)}%</span> Move: ${Math.round(this.speed * 1000)}`;
     m += `<br>Action: <span style="color: ${Formula.colorToHex(CrawlerCommandColors[this.currentCommand.type])}"> ${this.currentCommand ? CommandType[this.currentCommand.type] : 'NONE'}</span>`;
     if (this.currentCommand.type === CommandType.FRUSTRATED && this.frustratedBy) {
       m += ` by ${this.frustratedBy}`;

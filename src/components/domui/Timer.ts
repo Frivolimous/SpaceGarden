@@ -1,10 +1,10 @@
+import { DomManager } from '../../JMGE/DomManager';
+
 export class Timer {
   private element: HTMLDivElement;
 
   constructor() {
-    this.element = document.createElement('div');
-    this.element.classList.add('timer');
-    document.body.appendChild(this.element);
+    this.element = DomManager.makeDiv('timer', document.body);
   }
 
   public setTime(time: number) {

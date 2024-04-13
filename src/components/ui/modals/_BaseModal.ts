@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import { JMTween, JMEasing } from '../../../JMGE/JMTween';
 
 export abstract class BaseModal extends PIXI.Container {
+  public onAppearComplete: () => void;
   protected animating = false;
   protected tween: JMTween;
 
@@ -14,10 +15,6 @@ export abstract class BaseModal extends PIXI.Container {
 
   public updatePosition(borders: PIXI.Rectangle) {
     this.stageBorder = borders;
-
-    let scaleX = borders.width * 0.8 / this.width * this.scale.x;
-    let scaleY = borders.height * 0.8 / this.height * this.scale.y;
-    this.scale.set(Math.min(scaleX, scaleY));
 
     if (!this.animating) {
       this.x = borders.x + borders.width / 2;
@@ -35,6 +32,7 @@ export abstract class BaseModal extends PIXI.Container {
     this.tween = new JMTween(this.scale, 300).wait(delay).from({x: 0, y: 0}).easing(JMEasing.Back.Out).start().onComplete(() => {
       this.tween = null;
       this.animating = false;
+      this.onAppearComplete && this.onAppearComplete();
     });
   }
 }

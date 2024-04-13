@@ -54,8 +54,8 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-4',
       title: 'Rapid Evolution',
-      description: 'Increases Lab Research Generation by x5 but power drain increased by x2',
-      // description: 'Increases Lab Research Generation by x{1-value} but power drain increased by x{2-value}',
+      description: 'Increases Evolution Generation by x5 but power drain increased by x2',
+      // description: 'Increases Evolution Generation by x{1-value} but power drain increased by x{2-value}',
       cost: 3,
       effects: [
         { effectType: 'node', slug: 'lab', key: 'researchGen', valueType: 'multiplicative', value: 5},
@@ -98,7 +98,7 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-2-2',
       title: 'Librarians',
-      description: '<p class="skill-block-subtitle">Requires Crawlers to unlock</p>Crawlers can bring Lab Fruits to the Seedling produce research',
+      description: '<p class="skill-block-subtitle">Requires Crawlers to unlock</p>Crawlers can bring Evolution Fruits to the Seedling produce evolutions',
       cost: 2,
       skillRequirements: ['skill-2-1'],
       effects: [
@@ -223,7 +223,7 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-3-4',
       title: 'Genetic Memory',
-      description: 'Retain 25% of your earned Research Points when you delete or launch your seedling. Let\'s you build 1 Wild Lab.',
+      description: 'Retain 25% of your earned Evolution Points when you delete or launch your seedling. Let\'s you build 1 Wild Lab.',
       cost: 8,
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'biglab'},
@@ -328,8 +328,8 @@ export const SkillData: ISkillData = {
     },
     {
       slug: AchievementSlug.BLOB_15,
-      title: 'Smart Blobs',
-      description: 'Requirement: Have 15 Blobs at once<br>Reward: Blobs no longer path to dead ends',
+      title: 'Smart Particles',
+      description: 'Requirement: Have 15 Particles at once<br>Reward: Particles no longer path to dead ends',
       effects: [
         {effectType: 'config', key: 'BLOB_AI', valueType: 'replace', value: 1},
       ],
@@ -379,73 +379,83 @@ export const SkillData: ISkillData = {
   hubs: [
     {
       slug: 'core-links',
-      costType: 'fruit', costs: [450,8100,145800,2624400,47239200],
+      label: 'Core Links',
+      costType: 'fruit', costs: [4000,72000,1440000,43200000,1728000000],
       effect: {
         effectType: 'node', slug: 'core', key: 'maxLinks', value: 1,  valueType: 'additive', 
       }
     },
     {
       slug: 'core-gen',
+      label: 'Core Power',
       effect: {
-        effectType: 'node', slug: 'core', key: 'powerGen', value: 0.2, valueType: 'additive', 
+        effectType: 'node', slug: 'core', key: 'powerGen', value: 0.4, valueType: 'additive', 
       },
-      costType: 'research', costs: [700,17500,437500,10937500,273437500],
+      costType: 'fruit', costs: [350,6300,113400,2041200,36741600],
     },
     {
       slug: 'stem-count',
+      label: 'Stem Count',
       effect: {
         effectType: 'node', slug: 'stem', key: 'maxCount', value: 1, valueType: 'additive',
       },
-      costType: 'fruit', costs: [400,7200,129600,2332800,41990400],
+      costType: 'power', costs: [30000,540000,10800000,324000000,12960000000],
     },
     {
       slug: 'generator-count',
-      costType: 'fruit', costs: [300,5400,97200,1749600,31492800],
+      label: 'Collector Count',
+      costType: 'fruit', costs: [3500,63000,1260000,37800000,1512000000],
       effect: {
         effectType: 'node', slug: 'generator', key: 'maxCount', value: 1,  valueType: 'additive', 
       }
     },
     {
       slug: 'generator-gen',
+      label: 'Collector Power',
       effect: {
-        effectType: 'node', slug: 'generator', key: 'powerGen', value: 0.03, valueType: 'additive', 
+        effectType: 'node', slug: 'generator', key: 'powerGen', value: 0.06, valueType: 'additive', 
       },
-      costType: 'research', costs: [800,20000,500000,12500000,312500000],
+      costType: 'fruit', costs: [300,5400,97200,1749600,31492800],
     },
     {
       slug: 'lab-prod',
+      label: 'Evolver Production',
       effect: {
-        effectType: 'node', slug: 'lab', key: 'researchGen', value: 1.1, valueType: 'multiplicative', 
+        effectType: 'node', slug: 'lab', key: 'researchGen', value: 1.2, valueType: 'multiplicative', 
       },
-      costType: 'research', costs: [500,12500,312500,7812500,195312500],
+      costType: 'power', costs: [2500,45000,810000,14580000,262440000],
     },
     {
       slug: 'lab-fruit',
+      label: 'Evolver Fruits',
       effect: {
         effectType: 'node', slug: 'lab', key: 'maxFruits', value: 1, valueType: 'additive', 
       },
-      costType: 'power', costs: [5000,90000,1800000,54000000,2160000000],
+      costType: 'power', costs: [50000,1250000,31250000,781250000,19531250000],
     },
     {
       slug: 'grove-prod',
+      label: 'Grove Production',
       effect: {
-        effectType: 'node', slug: 'grove', key: 'fruitGen', value: 1.1, valueType: 'multiplicative', 
+        effectType: 'node', slug: 'grove', key: 'fruitGen', value: 1.2, valueType: 'multiplicative', 
       },
-      costType: 'research', costs: [600,15000,375000,9375000,234375000],
+      costType: 'research', costs: [450,8100,145800,2624400,47239200],
     },
     {
       slug: 'grove-fruit',
+      label: 'Grove Fruits',
       effect: {
         effectType: 'node', slug: 'grove', key: 'maxFruits', value: 1, valueType: 'additive', 
       },
-      costType: 'power', costs: [3000,54000,1080000,32400000,1296000000],
+      costType: 'research', costs: [8000,200000,5000000,125000000,3125000000],
     },
     {
       slug: 'home-fruit',
+      label: 'Home Fruits',
       effect: {
         effectType: 'node', slug: 'home', key: 'maxFruits', value: 1, valueType: 'additive', 
       },
-      costType: 'power', costs: [4000,72000,1440000,43200000,1728000000],
+      costType: 'research', costs: [11000,275000,6875000,171875000,4296875000],
     },
   ]
 };
@@ -476,6 +486,7 @@ export interface IAchievement {
 
 export interface IHubConfig {
   slug: string;
+  label: string;
   costType: HubCostType;
   costs: number[];
   effect: ISkillEffectNode;

@@ -1,4 +1,11 @@
+import { ColorGradient } from '../JMGE/others/Colors';
+
 export const Colors = {
+  powerGradient: new ColorGradient(0xcc0000, 0xffffff),
+  overPowerGradient: new ColorGradient(0xffffff, 0xffff00),
+  healthGradient: new ColorGradient(0xcc0000, 0xffffff),
+
+
   Node: {
     red: 0xE02323,
     orange: 0xE07000,
