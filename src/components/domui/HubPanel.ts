@@ -82,7 +82,7 @@ export class HubPanel {
   public clear() {
   }
 
-  public updateCurrencies = (research: number, fruit: number, power: number) => {
+  public updateCurrencies = (research: number, fruit: number, power: number, buff: number) => {
     this.research = research;
     this.fruit = fruit;
     this.power = power;

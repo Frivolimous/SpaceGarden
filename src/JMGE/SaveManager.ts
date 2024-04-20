@@ -5,7 +5,7 @@ export class SaveManager<SaveFormat> {
   public saveEvent = new JMEventListener<ISaveEvent>();
   private virtualSave: {version: number, extrinsic: SaveFormat};
 
-  constructor(private config: ISaveManagerConfig, private dSave: SaveFormat, private versionControl: (version: number, extrinsic: SaveFormat) => SaveFormat = defaultVersionControl) {
+  constructor(private config: ISaveManagerConfig, private dSave: SaveFormat, private versionChanges: {version: number, callback: (extrinsic: SaveFormat) => SaveFormat}[] = []) {
     this.virtualSave = {version: config.CurrentVersion, extrinsic: dSave};
   }
 
@@ -23,6 +23,7 @@ export class SaveManager<SaveFormat> {
           this.loadVersion().then(version => {
             this.saveEvent.publish({text: `Data Version: ${version}`});
             if (version < this.config.CurrentVersion) {
+              this.saveEvent.publish({text: 'Version Update'});
               extrinsic = this.versionControl(version, extrinsic);
               this.saveVersion(this.config.CurrentVersion);
               this.saveExtrinsic(extrinsic);
@@ -39,6 +40,16 @@ export class SaveManager<SaveFormat> {
         }
       });
     });
+  }
+
+  public versionControl(version: number, extrinsic: SaveFormat): SaveFormat {
+    this.versionChanges.forEach(el => {
+      if (version < el.version) {
+        extrinsic = el.callback(extrinsic);
+      }
+    });
+
+    return extrinsic;
   }
 
   public resetData = (): () => void => {
@@ -172,13 +183,4 @@ export interface ISaveManagerConfig {
 export interface ISaveEvent {
   data?: any;
   text: any;
-}
-
-function defaultVersionControl<SaveFormat>(version: number, extrinsic: SaveFormat): SaveFormat {
-  if (version < this.config.CurrentVersion) {
-    console.log("SAVE RESET DUE TO VERSION UPDATE", version, this.config.CurrentVersion);
-    extrinsic = _.cloneDeep(this.dSave);
-  }
-
-  return extrinsic;
 }

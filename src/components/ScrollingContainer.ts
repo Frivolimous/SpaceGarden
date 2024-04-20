@@ -4,8 +4,8 @@ import { JMRect } from '../JMGE/others/JMRect';
 import { Starfield } from './Starfield';
 
 export class ScrollingContainer extends PIXI.Container {
-  public innerBounds: JMRect = new JMRect(0, 0, 2000, 1000);
-  public outerBounds: JMRect = new JMRect(0, 0, 2000, 1000);
+  public innerBounds: JMRect = new JMRect(0, 0, 2000, 1000); // the actual canvas
+  public outerBounds: JMRect = new JMRect(0, 0, 2000, 1000); // the camera bounds
   public background: PIXI.Container;
 
   public diff: { oX: number, oY: number, tX: number, tY: number };
@@ -47,14 +47,6 @@ export class ScrollingContainer extends PIXI.Container {
   }
 
   public onTick = () => {
-    // if (this.diff) {
-    //     this.x = this.diff.tX - this.diff.oX;
-    //     this.y = this.diff.tY - this.diff.oY;
-    //     this.diff.tX = this.x;
-    //     this.diff.tY = this.y;
-    //     return;
-    // }
-
     if (this.innerWidth > this.outerBounds.width) {
       this.v.x *= this.friction;
       this.v.x += this.a.x;
@@ -168,6 +160,24 @@ export class ScrollingContainer extends PIXI.Container {
     this.zoomTween = new JMTween(this.scale, 500).to({ x: amount, y: amount }).easing(JMEasing.Quadratic.Out).start().onUpdate(() => this.checkBounds());
     new JMTween(this.position, 500).to({ x, y }).easing(JMEasing.Quadratic.Out).start();
     this.checkBounds();
+  }
+
+  lockCamera(obj: {x: number, y: number}) {
+    let br = this.getPos(0.75, 0.75);
+    let tl = this.getPos(0.25, 0.25);
+
+    if (obj.x < tl.x) this.v.x += (tl.x - obj.x) * 0.001;
+    if (obj.y < tl.y) this.v.y += (tl.y - obj.y) * 0.001;
+    if (obj.x > br.x) this.v.x += (br.x - obj.x) * 0.001;
+    if (obj.y > br.y) this.v.y += (br.y - obj.y) * 0.001;
+  }
+
+  getPos(percentX: number, percentY: number) {
+    return {x: ((this.outerBounds.width) * percentX - (this.x - this.outerBounds.x)) / this.scale.x, y: ((this.outerBounds.height) * percentY - (this.y - this.outerBounds.y)) / this.scale.y};
+  }
+
+  getCenter() {
+    return {x: ((this.outerBounds.width) / 2 - (this.x - this.outerBounds.x)) / this.scale.x, y: ((this.outerBounds.height) / 2 - (this.y - this.outerBounds.y)) / this.scale.y};
   }
 }
 

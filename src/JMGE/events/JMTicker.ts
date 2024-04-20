@@ -3,6 +3,9 @@ export const JMTicker = {
   prevTime: -1,
   tickEvents: [] as ((ms?: number) => void)[],
 
+  framerate: 1000 / 60,
+  frames: 0,
+
   active: false,
 
   add: (output: (ms?: number) => void) => {
@@ -44,25 +47,27 @@ export const JMTicker = {
   },
 
   onTick: (time: number) => {
-    let ms: number;
-    if (JMTicker.prevTime < 0) {
-      ms = 0;
-    } else {
-      ms = time - JMTicker.prevTime;
-    }
+    let ms: number = JMTicker.prevTime < 0 ? 0 : (time - JMTicker.prevTime);
     JMTicker.prevTime = time;
+    JMTicker.frames += ms;
 
-    if (JMTicker.tickEvents.length === 0) {
-      JMTicker.active = false;
-      JMTicker.prevTime = -1;
-    } else {
-      JMTicker.tickEvents.forEach(output => output(ms));
-      if (JMTicker.speedFactor > 1) {
-        for (let i = 0; i < JMTicker.speedFactor - 1; i++) {
-          JMTicker.tickEvents.forEach(output => output(ms));
+    if (JMTicker.frames >= JMTicker.framerate) {
+      JMTicker.frames -= JMTicker.framerate;
+
+      if (JMTicker.tickEvents.length === 0) {
+        JMTicker.active = false;
+        JMTicker.prevTime = -1;
+        return;
+      } else {
+        JMTicker.tickEvents.forEach(output => output(ms));
+        if (JMTicker.speedFactor > 1) {
+          for (let i = 0; i < JMTicker.speedFactor - 1; i++) {
+            JMTicker.tickEvents.forEach(output => output(ms));
+          }
         }
       }
-      requestAnimationFrame(JMTicker.onTick);
     }
+
+    requestAnimationFrame(JMTicker.onTick);
   },
 };

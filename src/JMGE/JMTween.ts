@@ -42,7 +42,7 @@ export class JMTween<T = any> {
   private static _tick = (time: number) => {
     JMTween.running = false;
     JMTween.tweens.forEach(tween => tween.tickThis(time));
-    if (!JMTween.running && JMTween.tweens.length > 0) {
+    if (JMTween.tweens.length > 0) {
       JMTween.running = true;
       requestAnimationFrame(JMTween._tick);
     }

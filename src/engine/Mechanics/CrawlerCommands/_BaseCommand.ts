@@ -34,6 +34,12 @@ export class BaseCommand {
 
   }
 
+  public abortCommand() {
+    this.isComplete = true;
+    this.nextLoc = null;
+    this.fruit = null;
+  }
+
   public genPriority(): number {
     return 0;
   }
@@ -72,7 +78,9 @@ export class BaseCommand {
     }
     new JMTween(fruit.view.scale, 500).easing(JMEasing.Back.In).to({x: 0, y: 0}).start().onComplete(() => {
       fruit.flagDestroy = true;
-      onComplete(fruit);
+      if (!this.isComplete) {
+        onComplete(fruit);
+      }
     });
   }
 

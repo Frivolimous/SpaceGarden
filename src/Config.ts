@@ -1,16 +1,4 @@
-export const dConfigNode = {
-  FRUIT_THRESHOLD: 0.6,
-  POWER_THRESHOLD: 0.25,
-  GEN_FADE: 30,
-  FRUIT_APPLY: 0.3,
-  LAUNCH_PERCENT: 1,
-  BLOB_AI: 0,
-  SAVED_RESEARCH: 0,
-  FRUIT_GROWTH: 0,
-  HUB_BUTTONS: 0,
-  AMP_AMOUNT: 2,
-  AMP_FADE_BOOST: 2,
-};
+import _ from 'lodash';
 
 export const Config = {
   INIT: {
@@ -44,16 +32,22 @@ export const Config = {
     POWER_THRESHOLD: 0.25,
     GEN_FADE: 30,
     FRUIT_APPLY: 0.3,
+    BUFF_FADE: 5,
     LAUNCH_PERCENT: 1,
     BLOB_AI: 0,
     SAVED_RESEARCH: 0,
     FRUIT_GROWTH: 0,
     HUB_BUTTONS: 0,
     AMP_AMOUNT: 2,
-    AMP_FADE_BOOST: 2,
+    AMP_FADE_BOOST: 3,
+    BUFF_BOOST: 1.5,
+    BUFF_DURATION: 1700,
+    CAN_EXECUTE: 0,
   },
 
   CRAWLER: {
     BREED_AT: 1.5,
   },
 };
+
+export const dConfigNode = _.clone(Config.NODE);

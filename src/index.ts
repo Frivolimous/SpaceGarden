@@ -15,6 +15,9 @@ import { FontLoader } from './services/FontLoader';
 import { IExtrinsicModel, dExtrinsicModel } from './data/SaveData';
 
 export let interactionMode: 'desktop'|'mobile' = 'desktop';
+const versionUpdates: {version: number, callback: (save: IExtrinsicModel) => IExtrinsicModel}[] = [
+  {version: Config.INIT.GAME_DATA_VERSION, callback: () => _.cloneDeep(dExtrinsicModel)},
+];
 
 export let Facade = new class FacadeInner {
   private static exists = false;
@@ -70,7 +73,7 @@ export let Facade = new class FacadeInner {
     // Initialize Libraries
     new TooltipReader(this.screen, this.stageBorders, {});
     TextureCache.initialize(this.app);
-    this.saveManager = new SaveManager({CurrentVersion: Config.INIT.GAME_DATA_VERSION, DocName: 'SG-Extrinsic', VerName: 'SG-Version', SaveLoc: 'local'}, dExtrinsicModel);
+    this.saveManager = new SaveManager({CurrentVersion: Config.INIT.GAME_DATA_VERSION, DocName: 'SG-Extrinsic', VerName: 'SG-Version', SaveLoc: 'local'}, dExtrinsicModel, versionUpdates);
 
     // Resize Event (for full screen mode / scaling)
     let finishResize = _.debounce(this.finishResize, 500);
@@ -126,8 +129,12 @@ export let Facade = new class FacadeInner {
 
   private finishResize = () => {
     // resize event
-    let viewWidth = this.element.offsetWidth;
-    let viewHeight = this.element.offsetHeight;
+    // let viewWidth = this.element.offsetWidth;
+    // let viewHeight = this.element.offsetHeight;
+    let ratio = this.element.offsetWidth / this.element.offsetHeight;
+    let viewHeight = Math.min(this.element.offsetHeight, 2000);
+    let viewWidth = viewHeight * ratio;
+    this.app.view.style.width = '100%';
     this.app.renderer.resize(viewWidth, viewHeight);
     let innerWidth = Config.STAGE.SCREEN_WIDTH;
     let innerHeight = Config.STAGE.SCREEN_HEIGHT;

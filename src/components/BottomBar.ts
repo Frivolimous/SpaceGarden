@@ -18,7 +18,7 @@ export class BottomBar extends PIXI.Container {
   public onTurboButton = new JMEventListener<boolean>();
 
   private graphic = new PIXI.Graphics();
-  private buttons: NodeButton[] = [];
+  public buttons: NodeButton[] = [];
   private deleteButton: ToggleButton;
   private turboButton: ToggleButton;
   private proceedButton: Button;

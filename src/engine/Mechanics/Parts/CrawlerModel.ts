@@ -48,6 +48,7 @@ export class CrawlerModel {
 
   public frustratedBy: string;
   public isBuffed = false;
+  public toExecute = false;
 
   private commandList: BaseCommand[] = [];
 

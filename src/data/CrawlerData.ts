@@ -19,6 +19,7 @@ export const CrawlerData: ICrawlerData = {
         CommandType.FRUSTRATED,
         CommandType.STARVING,
         // CommandType.BREED,
+        // CommandType.GET_EXECUTED,
       ],
       preferenceList: [
         CommandType.WANDER,
@@ -61,8 +62,10 @@ export const CrawlerData: ICrawlerData = {
         CommandType.EAT,
         CommandType.FRUSTRATED,
         CommandType.STARVING,
+        // CommandType.EXECUTE,
       ],
       preferenceList: [
+        // CommandType.EXECUTE,
         CommandType.WANDER,
         CommandType.BUFF,
       ],
@@ -131,4 +134,6 @@ export const CrawlerCommandColors: {[key in CommandType]: number} = {
   [CommandType.STARVING]: Colors.Node.darkblue,
   [CommandType.BREED]: Colors.Node.lightblue,
   [CommandType.BUFF]: Colors.Node.white,
+  [CommandType.EXECUTE]: Colors.Node.grey,
+  [CommandType.GET_EXECUTED]: Colors.Node.green,
 }

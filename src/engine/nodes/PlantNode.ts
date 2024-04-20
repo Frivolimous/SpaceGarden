@@ -7,6 +7,7 @@ import { PlantNodeView } from './PlantNodeView';
 import { Colors } from '../../data/Colors';
 import { CrawlerModel } from '../Mechanics/Parts/CrawlerModel';
 import { StringManager } from '../../services/StringManager';
+import { Config } from '../../Config';
 
 export class PlantNode {
   public static generateUid() {
@@ -36,6 +37,8 @@ export class PlantNode {
   public view: PlantNodeView;
   public physics: PlantNodePhysics;
   public power: PlantNodePower;
+
+  public buffDuration: number = 0;
 
   public flagUnlink = false;
   public flagDestroy = false;
@@ -95,6 +98,11 @@ export class PlantNode {
       return _.some(this.fruits, fruit => fruit.canSpawnFruit());
     }
 
+    return false;
+  }
+
+  public canGetBuffed(): boolean {
+    if (this.power.powerGen > 0 || this.power.researchGen > 0 || this.power.fruitGen > 0 || this.power.buffGen > 0) return true;
     return false;
   }
 
@@ -245,6 +253,12 @@ export class PlantNode {
     this.power.researchCurrent += amount;
   }
 
+  public receiveBuff = (amount: number) => {
+    this.buffDuration += Config.NODE.BUFF_DURATION * amount;
+    this.power.isBuffed = true;
+    this.view.showBuff(true);
+  }
+
   public isHarvestable = (): boolean => {
     return this.power.powerPercent > 0.6 && !this.claimedBy;
   }
@@ -266,6 +280,15 @@ export class PlantNode {
     if (this.active) {
       this.power.onTick();
       this.view.setIntensity(this.power.powerPercent);
+
+      if (this.buffDuration > 0) {
+        this.buffDuration--;
+
+        if (this.buffDuration <= 0) {
+          this.power.isBuffed = false;
+          this.view.showBuff(false);
+        }
+      }
     }
   }
 
@@ -278,13 +301,13 @@ export class PlantNode {
     let powerColor = this.power.powerPercent > 1 ? Colors.overPowerGradient.getHexAt((this.power.powerPercent - 1) * 2) : Colors.powerGradient.getHexAt(this.power.powerPercent);
     let nameColor = this.config.color.toString(16);
     while (nameColor.length < 6) nameColor = '0' + nameColor;
-    let m = `<div class='node-title' style='color: #${nameColor}'>${(StringManager.data as any)[`NODE_NAME_LONG_${this.config.slug}`]}</div>
+    let m = `<div class='node-title' style='color: #${nameColor}'>${(StringManager.data as any)[`NODE_NAME_LONG_${this.config.slug}`]}${this.power.isBuffed ? '<span style="font-size:0.4em; color:#ff0; padding: 0.9em">[BUFFED]</span>': ''}</div>
         Power: <span style="color: ${powerColor}">${Math.round(this.view._Intensity * this.config.powerMax)}</span> / ${this.config.powerMax}`;
     if (!this.active) {
       m += `<p style='color: #eedd33;'>[ Drag to your network in order to connect the new node ]</p>`;
     } else {
       if (this.config.slug === 'seedling') {
-        m += `<br>Research Points: ${Math.round(this.power.researchCurrent)}`;
+        m += `<br>Evolution Points: ${Math.round(this.power.researchCurrent)}`;
       }
       if (this.power.powerGen > 0) {
         m += `<br>Power Gen: ${(this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;
@@ -296,12 +319,15 @@ export class PlantNode {
       }
       
       // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
-
+      
       if (this.power.researchGen > 0) {
-        m += `<br>Research Gen: ${(this.power.researchGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
+        m += `<br>Evolution Gen: ${(this.power.researchGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
       }
       if (this.power.fruitGen > 0) {
         m += `<br>Fruit Gen: ${(this.power.fruitGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
+      }
+      if (this.power.buffGen > 0) {
+        m += `<br>Buff Gen: ${(this.power.buffGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;
       }
       if (this.config.maxLinks > 1) {
         m += `<br>Connections: ${this.outlets.length} / ${this.config.maxLinks}`;
@@ -336,6 +362,7 @@ export interface INodeSave {
   powerCurrent: number;
   researchCurrent?: number;
   fruitCurrent?: number;
+  buffCurrent?: number;
   storedPowerCurrent?: number;
   receiveResearch?: boolean;
   receiveFruit?: boolean;

@@ -9,6 +9,8 @@ import { BreedCommand } from './BreedCommand';
 import { StarvingCommand } from './StarvingCommand';
 import { BaseCommand } from './_BaseCommand';
 import { BuffCommand } from './BuffCommand';
+import { ExecuteCommand } from './ExecuteCommand';
+import { GetExecutedCommand } from './GetExecutedCommand';
 
 export enum CommandType {
   NONE,
@@ -22,6 +24,8 @@ export enum CommandType {
   STARVING,
   BREED,
   BUFF,
+  EXECUTE,
+  GET_EXECUTED,
 }
 
 export const commandMap: {[key in CommandType]: typeof BaseCommand} = {
@@ -36,4 +40,6 @@ export const commandMap: {[key in CommandType]: typeof BaseCommand} = {
   [CommandType.STARVING]: StarvingCommand,
   [CommandType.BREED]: BreedCommand,
   [CommandType.BUFF]: BuffCommand,
+  [CommandType.EXECUTE]: ExecuteCommand,
+  [CommandType.GET_EXECUTED]: GetExecutedCommand,
 };

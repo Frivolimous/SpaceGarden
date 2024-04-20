@@ -12,6 +12,7 @@ export class PlantNodeView extends PIXI.Container {
 
   public sprite: PIXI.Sprite;
   public _Highlight: PIXI.Graphics;
+  public _Buff: PIXI.Graphics;
   public text = new PIXI.Text('2/2', { fontSize: 12, fontFamily: Fonts.FLYING, stroke: 0, strokeThickness: 1, fill: 0xffffff });
 
   public _Intensity: number;
@@ -104,6 +105,17 @@ export class PlantNodeView extends PIXI.Container {
     this.y = target.y + (this.y - target.y) * mult;
   }
 
+  public showBuff(b: boolean) {
+    if (b &&!this._Buff) {
+      this._Buff = new PIXI.Graphics();
+      this._Buff.beginFill(0xffffff, 0.2);
+      this._Buff.drawCircle(0, 0, this.radius * 1.2);
+      this.addChildAt(this._Buff, 0);
+    }
+
+    this._Buff.visible = b;
+  }
+
   private intensityInterpolation(k: number): number {
     // if (n > 1) {
     //   this.targetIntensity = Math.min(2, 1 + (n - 1) * 0.1);
@@ -124,4 +136,5 @@ export class PlantNodeView extends PIXI.Container {
     //   return 0.5 + (k - 0.7) / 0.3 * 0.5;
     // }
   }
+  
 }

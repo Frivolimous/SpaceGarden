@@ -10,6 +10,10 @@ export class SidebarButton {
     this.element = DomManager.makeButton(content, className, onClick);
   }
 
+  public set text(s: string) {
+    this.element.innerHTML = s;
+  }
+
   public get isHidden() {
     return this.element.style.display === 'none';
   }

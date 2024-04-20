@@ -4,8 +4,9 @@ import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { JMTween } from '../../JMGE/JMTween';
 import { colorLuminance } from '../../JMGE/others/Colors';
 import { PlantNode } from '../nodes/PlantNode';
+import { TransferBlock } from '../Transfers/_TransferBlock';
 
-interface IBlob {
+export interface IBlob {
   x: number;
   y: number;
   color: number;
@@ -58,9 +59,10 @@ export class FDGLink {
     return new JMTween((this as FDGLink), 300).to({ intensity: 0 }).start();
   }
 
-  public zip(origin: PlantNode, color: number, fade: number, amped: boolean, onComplete: () => void): JMTween {
-    let blob: IBlob = {x: origin.view.x, y: origin.view.y, color, size: amped ? 3 : 2, fade};
-    let target = this.other(origin);
+  public zip(block: TransferBlock, onComplete: () => void) {
+    let blob = block.makeBlob();
+    let origin = block.origin;
+    let target = this.other(block.origin);
     this.blobs.push(blob);
     return new JMTween({percent: 0}, 300).to({percent: 1}).start().onUpdate(data => {
       if (!origin.view.parent || !target.view.parent) return;

@@ -9,7 +9,7 @@ export enum ScoreType {
 }
 
 export enum AchievementSlug {
-  PRESTIGE_10,
+  PRESTIGE_5,
   BLOB_15,
   LAUNCH_DISTANCE_9,
   CRAWLERS_15,

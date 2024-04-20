@@ -48,7 +48,7 @@ export class SkillPanel {
       this.skillpointElement = DomManager.makeDiv('skill-skillpoint', skillElement);
       this.negative = DomManager.makeDiv('skill-negative', skillElement);
 
-      this.skillpointElement.innerHTML = `5 Skillpoints`;
+      this.skillpointElement.innerHTML = `5 Evolutions`;
 
       this.skillbar = new SkillBar();
       skillElement.appendChild(this.skillbar.element);

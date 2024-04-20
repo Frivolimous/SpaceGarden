@@ -30,7 +30,6 @@ export class MenuUI extends BaseUI {
     this.langB.position.set(150, 380);
     this.addChild(this.startB, this.langB);
     this.langB.visible = false;
-
   }
 
   public navIn = () => {

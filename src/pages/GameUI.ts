@@ -1,7 +1,6 @@
-import _ from 'lodash';
+import _, { update } from 'lodash';
 import * as PIXI from 'pixi.js';
 import { BaseUI } from './_BaseUI';
-import { Fonts } from '../data/Fonts';
 import { GameEvents, IResizeEvent } from '../services/GameEvents';
 import { Direction, ScrollingContainer } from '../components/ScrollingContainer';
 import { KeyMapper } from '../JMGE/KeyMapper';
@@ -13,11 +12,11 @@ import { NodeManager } from '../engine/Mechanics/NodeManager';
 import { FDGLink } from '../engine/FDG/FDGLink';
 import { GameController } from '../engine/Mechanics/GameController';
 import { Sidebar } from '../components/domui/Sidebar';
-import { INodeConfig, NodeData } from '../data/NodeData';
+import { INodeConfig } from '../data/NodeData';
 import { IExtrinsicModel, TierSaves } from '../data/SaveData';
 import { Config, dConfigNode } from '../Config';
 import { InfoPopup } from '../components/domui/InfoPopup';
-import { HubCostType, IHubConfig, ISkillConfig, SkillData } from '../data/SkillData';
+import { HubCostType, IHubConfig, SkillData } from '../data/SkillData';
 import { SkillPanel } from '../components/domui/SkillPanel';
 import { StringManager } from '../services/StringManager';
 import { GOD_MODE } from '../services/_Debug';
@@ -29,6 +28,7 @@ import { Timer } from '../components/domui/Timer';
 import { Facade } from '..';
 import { SimpleModal } from '../components/ui/modals/SimpleModal';
 import { PointingArrow } from '../JMGE/effects/PointingArrow';
+import { JMTween } from '../JMGE/JMTween';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -135,6 +135,7 @@ export class GameUI extends BaseUI {
         {key: '1', noCtrl: true, function: () => this.loadSave(TierSaves[1])},
         {key: '2', noCtrl: true, function: () => this.loadSave(TierSaves[2])},
         {key: '3', noCtrl: true, function: () => this.loadSave(TierSaves[3])},
+        {key: '4', noCtrl: true, function: () => this.loadSave(TierSaves[4])},
         {key: '0', noCtrl: true, function: () => this.loadSave(TierSaves[0])},
         {key: '1', withCtrl: true, function: () => this.loadSave(TierSaves[11])},
         {key: '2', withCtrl: true, function: () => this.loadSave(TierSaves[12])},
@@ -189,14 +190,21 @@ export class GameUI extends BaseUI {
     this.keymapper.enabled = true;
     this.sidebar.navIn();
     GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME NAV IN'});
+    if (this.extrinsic.tutorialStep < 6) {
+      JMTicker.add(this.checkTutorial);
+    }
   }
 
   public navOut = () => {
     JMTicker.remove(this.onTick);
+    // JMTween.clearTweens();
     this.exists = false;
     this.keymapper.enabled = false;
     this.sidebar.navOut();
     GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME NAV OUT'});
+    if (this.extrinsic.tutorialStep < 6) {
+      JMTicker.remove(this.checkTutorial);
+    }
   }
 
   public saveGameTimeout = () => {
@@ -243,38 +251,46 @@ export class GameUI extends BaseUI {
 
     if (!this.running) return;
 
-    this.extrinsic.totalTime += this.gameSpeed * delta;
-    this.extrinsic.prestigeTime += this.gameSpeed * delta;
-    this.timer.setTime(this.extrinsic.prestigeTime);
-
+    this.updateTimer(delta);
     this.container.onTick(this.gameSpeed);
     this.gameC.onTick(this.gameSpeed);
     this.gameC.knowledge.update();
 
     this.sidebar.updateNodes();
 
-    let seedling = this.gameC.nodes.find(node => node.slug === 'seedling');
+    let seedling = this.gameC.knowledge.sortedNodes.seedling[0];
+    let core = this.gameC.knowledge.sortedNodes.core[0];
+
+    if (core) this.canvas.lockCamera(core.view);
 
     if (seedling) {
       this.bottomBar.updateSeedling(seedling);
     }
 
     this.sidebar.updateKnowledge(this.gameC.knowledge);
+    }
 
+  public checkTutorial = () => {
     if (!this.extrinsic.tutorialStep) {
       this.extrinsic.tutorialStep = 1;
       let modal = new SimpleModal('Wecome to your Space Garden.  This is a slow paced game, where your goal is to grow a magical space plant and evolve its seedling.', () => this.extrinsic.tutorialStep = 2);
       this.addDialogueWindow(modal, 500);
+      this.bottomBar.buttons.forEach(button => button.disabled = true);
+
     } else if (this.extrinsic.tutorialStep === 2) {
       this.extrinsic.tutorialStep = 3;
       this.pointingArrow = new PointingArrow();
       this.pointingArrow.x = 25;
-      this.bottomBar.getButton('stem').addChild(this.pointingArrow);
       this.pointingArrow.visible = false;
       let modal = new SimpleModal('To start with, try adding a Stem to your Core by dragging it from the button here.', null);
       modal.onAppearComplete = () => this.pointingArrow.visible = true;
       this.addDialogueWindow(modal, 500);
-      modal.position.set(0, this.bottomBar.y - 200);
+      modal.position.set(this.previousResize.outerBounds.x + 400 / 2 + 25, this.bottomBar.y - 200);
+
+      let stemB = this.bottomBar.getButton('stem');
+      stemB.disabled = false;
+      stemB.addChild(this.pointingArrow);
+
     } else if (this.extrinsic.tutorialStep === 3) {
       let stem = this.gameC.nodes.find(el => el.slug === 'stem');
       if (stem) {
@@ -293,11 +309,20 @@ export class GameUI extends BaseUI {
         }
       }
     } else if (this.extrinsic.tutorialStep === 5) {
+      this.bottomBar.buttons.forEach(button => button.disabled = false);
+      let coreB = this.bottomBar.getButton('core');
+      coreB.disabled = true;
       this.extrinsic.tutorialStep = 6;
       let modal = new SimpleModal('Keep building your plant to discover all the mysteries that the Space Garden holds!', () => this.extrinsic.tutorialStep = 6);
       this.addDialogueWindow(modal, 500);
-
+      JMTicker.remove(this.checkTutorial);
     }
+  }
+
+  public updateTimer(delta: number) {
+    this.extrinsic.totalTime += this.gameSpeed * delta;
+    this.extrinsic.prestigeTime += this.gameSpeed * delta;
+    this.timer.setTime(this.extrinsic.prestigeTime);
   }
 
   public positionElements = (e: IResizeEvent) => {
@@ -449,6 +474,8 @@ export class GameUI extends BaseUI {
         hub.power.researchCurrent -= cost;
       } else if (skill.costType === 'fruit') {
         hub.power.fruitCurrent -= cost;
+      } else if (skill.costType === 'buff') {
+        hub.power.buffCurrent -= cost;
       } else {
         hub.power.storedPowerCurrent -= cost;
       }

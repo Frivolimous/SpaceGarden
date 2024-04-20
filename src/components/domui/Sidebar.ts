@@ -160,8 +160,8 @@ export class Sidebar {
     if (node.slug === 'seedling') {
       element.addButton(StringManager.data.UI_SIDEBAR_SKILLTREE_NEXT, () => {
         this.nextSkillPanel.hidden = !this.nextSkillPanel.hidden;
-        this.currentSkillPanel.hidden = true;
-        this.hubPanel.hidden = true;
+        this.currentSkillPanel && (this.currentSkillPanel.hidden = true);
+        this.hubPanel && (this.hubPanel.hidden = true);
       });
       this.seedlingElement = element;
     } else if (node.slug === 'core' && this.currentSkillPanel) {
@@ -180,6 +180,11 @@ export class Sidebar {
         this.hubPanel.toggleCollection('power', node.power.canStorePower);
       });
       this.hubElement = element;
+    } else if (node.slug === 'crawler' || node.slug === 'chieftain' || node.slug === 'shaman') {
+      // element.addButton('Execute', () => {
+      //   node.toExecute = !node.toExecute;
+      //   element.button.text = node.toExecute ? 'Let it Live' : 'Execute';
+      // });
     }
 
     if (node.type === 'crawler' && this.crawlerButton.isHidden) {
@@ -216,7 +221,7 @@ export class Sidebar {
 
     if (this.hubElement) {
       let plantElement = this.hubElement.source as PlantNode;
-      this.hubPanel.updateCurrencies(plantElement.power.researchCurrent, plantElement.power.fruitCurrent, plantElement.power.storedPowerCurrent);
+      this.hubPanel.updateCurrencies(plantElement.power.researchCurrent, plantElement.power.fruitCurrent, plantElement.power.storedPowerCurrent, plantElement.power.buffCurrent);
       this.hubElement.button.notify(this.hubPanel.hidden && this.hubPanel.hasSkillToLevel);
       this.hubPanel.toggleToggleButtons(Boolean(Config.NODE.HUB_BUTTONS));
     }

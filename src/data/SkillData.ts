@@ -173,7 +173,9 @@ export const SkillData: ISkillData = {
       cost: 5,
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'bigstem'},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+        {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
       ],
     },
     {
@@ -184,7 +186,9 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'crawler-available', valueType: 'additive', value: 'shaman'},
         {effectType: 'crawler-available', valueType: 'additive', value: 'chieftain'},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+        {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
       ],
     },
     {
@@ -195,7 +199,9 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'volatile'},
         {effectType: 'node', slug: 'generator', key: 'powerGen', valueType: 'additive', value: 0.2},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+        {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
       ],
     },
     {
@@ -206,7 +212,9 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'biggrove'},
         {effectType: 'config', key: 'FRUIT_GROWTH', valueType: 'additive', value: 0.05},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+        {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
       ],
     },
     {
@@ -217,7 +225,9 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'wall'},
         {effectType: 'buildable', valueType: 'additive', value: 'amp'},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+        {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
       ],
     },
     {
@@ -228,7 +238,9 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'buildable', valueType: 'additive', value: 'biglab'},
         {effectType: 'config', key: 'SAVED_RESEARCH', valueType: 'replace', value: 0.25},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.02},
+        {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
+        {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
       ],
     },
     {
@@ -240,19 +252,20 @@ export const SkillData: ISkillData = {
       effects: [
         {effectType: 'tier', valueType: 'replace', value: 3},
         {effectType: 'node', slug: 'seedling', key: 'powerMax', valueType: 'additive', value: 450000},
-        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -1},
+        {effectType: 'node', slug: 'seedling', key: 'powerGen', valueType: 'additive', value: -0.017},
 
         // temp sandbox reward
 
         {effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: Infinity},
         {effectType: 'node', slug: 'generator', key: 'maxCount', valueType: 'additive', value: Infinity},
         {effectType: 'node', slug: 'bigstem', key: 'maxCount', valueType: 'additive', value: Infinity},
+        {effectType: 'buildable', valueType: 'additive', value: 'buffer'},
       ],
     },
     {
       slug: 'placeholder',
       title: 'You win!',
-      description: 'You beat the game!  For now... more content will be coming soon™!',
+      description: 'You beat the game!  For now... more content will be coming soon™!\n In the meantime, enjoy unlimited Stems, Big Stems and Generators!',
       cost: 99,
       effects: [
         
@@ -319,7 +332,7 @@ export const SkillData: ISkillData = {
 
   achievements: [
     {
-      slug: AchievementSlug.PRESTIGE_10,
+      slug: AchievementSlug.PRESTIGE_5,
       title: 'Eventuality',
       description: 'Requirement: Launch Seedling 10 times<br>Reward: Seedling can be launched at 95% Power',
       effects: [
@@ -403,7 +416,7 @@ export const SkillData: ISkillData = {
     },
     {
       slug: 'generator-count',
-      label: 'Collector Count',
+      label: 'Generator Count',
       costType: 'fruit', costs: [3500,63000,1260000,37800000,1512000000],
       effect: {
         effectType: 'node', slug: 'generator', key: 'maxCount', value: 1,  valueType: 'additive', 
@@ -411,7 +424,7 @@ export const SkillData: ISkillData = {
     },
     {
       slug: 'generator-gen',
-      label: 'Collector Power',
+      label: 'Generator Power',
       effect: {
         effectType: 'node', slug: 'generator', key: 'powerGen', value: 0.06, valueType: 'additive', 
       },
@@ -492,7 +505,7 @@ export interface IHubConfig {
   effect: ISkillEffectNode;
 }
 
-export type HubCostType = 'research' | 'fruit' | 'power';
+export type HubCostType = 'research' | 'fruit' | 'power' | 'buff';
 export type ISkillEffect = ISkillEffectNode | ISkillEffectCrawler | ISkillEffectSimple;
 
 export interface ISkillEffectNode {

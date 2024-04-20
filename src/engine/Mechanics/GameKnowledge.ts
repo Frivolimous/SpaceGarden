@@ -46,6 +46,7 @@ export class GameKnowledge {
     'amp': [],
     'volatile': [],
     'biggrove': [],
+    'buffer': [],
   };
 
   public sortedCrawlers: {[key in CrawlerSlug]: CrawlerModel[]} = {
@@ -58,6 +59,7 @@ export class GameKnowledge {
 
   public totalGen: number = 0;
   public totalDrain: number = 0;
+
   public totalPower: number = 0;
   public totalMaxPower: number = 0;
   public seedlingPower: number = 0;
@@ -70,6 +72,7 @@ export class GameKnowledge {
   private numBlobs: number = 0;
   private numRBlobs: number = 0;
   private numFBlobs: number = 0;
+  private numBBlobs: number = 0;
 
   private highestHubResearch: number = 0;
 
@@ -123,11 +126,12 @@ export class GameKnowledge {
     });
 
     this.totalPower = power;
-    this.totalGen = gen;
-    this.totalDrain = drain;
     this.totalMaxPower = maxPower;
 
     this.frames++;
+
+    this.totalGen = this.totalGen + (gen - this.totalGen) / 100;
+    this.totalDrain = this.totalDrain + (drain - this.totalDrain) / 100;
   }
 
   public numFruitsPerNode(slug: NodeSlug) {
@@ -158,7 +162,7 @@ export class GameKnowledge {
 
     if (GOD_MODE) {
       m += '<br> --- <br> DEV STUFF <br><br>';
-      m += `Research Blobs: ${this.numRBlobs}<br>Fruit Blobs: ${this.numFBlobs}<br>`
+      m += `Research Blobs: ${this.numRBlobs}<br>Fruit Blobs: ${this.numFBlobs}<br>Fruit Blobs: ${this.numBBlobs}<br>`
       let keys = Object.keys(this.sortedNodes);
       keys.forEach(key => {
         let value = this.sortedNodes[key as NodeSlug].length;
@@ -246,15 +250,19 @@ export class GameKnowledge {
           this.numBlobs++;
           if (e.data.type === 'research') {
             this.numRBlobs++;
-          } else {
+          } else if (e.data.type === 'fruit') {
             this.numFBlobs++;
+          } else {
+            this.numBBlobs++;
           }
         } else {
           this.numBlobs--;
           if (e.data.type === 'research') {
             this.numRBlobs--;
-          } else {
+          } else if (e.data.type === 'fruit') {
             this.numFBlobs--;
+          } else {
+            this.numBBlobs--;
           }
         }
         this.checkBlob15();
@@ -276,12 +284,12 @@ export class GameKnowledge {
   }
 
   private checkP10 = () => {
-    if (!this.extrinsic.achievements[AchievementSlug.PRESTIGE_10]) {
-      if (this.extrinsic.scores[ScoreType.PRESTIGES] >= 10) {
-        this.achieveAchievement(AchievementSlug.PRESTIGE_10);
+    if (!this.extrinsic.achievements[AchievementSlug.PRESTIGE_5]) {
+      if (this.extrinsic.scores[ScoreType.PRESTIGES] >= 5) {
+        this.achieveAchievement(AchievementSlug.PRESTIGE_5);
       } else {
-        let count = `Current Launches: ${this.extrinsic.scores[ScoreType.PRESTIGES]} / 10`;
-        this.onAchievementUpdate.publish({slug: AchievementSlug.PRESTIGE_10, count});
+        let count = `Current Launches: ${this.extrinsic.scores[ScoreType.PRESTIGES]} / 5`;
+        this.onAchievementUpdate.publish({slug: AchievementSlug.PRESTIGE_5, count});
       }
     }
   }
@@ -291,7 +299,7 @@ export class GameKnowledge {
       if (this.numBlobs >= 15) {
         this.achieveAchievement(AchievementSlug.BLOB_15);
       } else {
-        let count = `Current Blobs: ${this.numBlobs} / 15`;
+        let count = `Current Particles: ${this.numBlobs} / 15`;
         this.onAchievementUpdate.publish({slug: AchievementSlug.BLOB_15, count});
       }
     }

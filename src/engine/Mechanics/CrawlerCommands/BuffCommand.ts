@@ -28,7 +28,7 @@ export class BuffCommand extends BaseCommand {
 
   public genPriority(): number {
     let numHere = this.knowledge.sortedCrawlers.crawler.filter(this.canBuff).length;
-    // return 1.2 - numHere * 0.1 - (this.crawler.preference === this.type ? 0.15 : 0);
+
     if (numHere === 0) return 2;
     return 1 - numHere * 0.1 - (this.crawler.preference === this.type ? 0.15 : 0);
   }

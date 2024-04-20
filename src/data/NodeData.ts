@@ -79,7 +79,7 @@ export const NodeData: INodeData = {
       fruitType: 'gen', fruitChain: 1, maxFruits: 2, fruitClump: NodeBase.fruitClump,
     },
     {
-      slug: 'hub', type: 'normal', color: Colors.Node.green, shape: 'hexagon',
+      slug: 'hub', type: 'normal', color: Colors.Node.green, shape: 'pentagon',
       radius: 25, mass: 3, force: 1, maxLinks: 4, maxCount: 1,
       powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.stemDrain * 5, powerWeight: 1.1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClump * 0.5,
@@ -121,6 +121,14 @@ export const NodeData: INodeData = {
       powerMax: NodeBase.powerMax * 2, powerGen: NodeBase.powerDrain * 3, powerWeight: 1,
       powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
       fruitType: 'wood', fruitChain: 2, maxFruits: 2, fruitClump: NodeBase.fruitClump * 2,
+    },
+    {
+      slug: 'buffer', type: 'normal', color: Colors.Node.white, shape: 'fat-rect',
+      radius: 10, mass: 2, force: 2, maxLinks: 1, maxCount: 1,
+      buffGen: 0.07,
+      powerMax: NodeBase.powerMax * 3, powerGen: NodeBase.powerDrain * 3, powerWeight: 1,
+      powerDelay: NodeBase.powerDelay, powerClump: NodeBase.powerClumpSub,
+      fruitType: 'wood', fruitChain: 0, maxFruits: 2, fruitClump: NodeBase.fruitClump * 2,
     },
 
     // fruits \\
@@ -191,20 +199,21 @@ export const NodeData: INodeData = {
     'stem',
     'bigstem',
     'generator',
+    'volatile',
     'lab',
+    'biglab',
     'home',
     'grove',
-    'biglab',
-    'wall',
-    'amp',
-    'volatile',
     'biggrove',
+    'buffer',
+    'amp',
+    'wall',
     'seedling',
   ],
 };
 
 if (GOD_MODE) {
-  // NodeData.BaseBuildable.push('biglab');
+  // NodeData.BaseBuildable.push('buffer');
   // NodeData.BaseBuildable.push('wall');
   // NodeData.BaseBuildable.push('amp');
   // NodeData.BaseBuildable.push('volatile');
@@ -212,7 +221,7 @@ if (GOD_MODE) {
 }
 
 export type NodeSlug = 'home' | 'lab' | 'generator' | 'grove' | 'stem' | 'bigstem' | 'hub' | 'core'| 'seedling' | 
-  'biglab' | 'wall' | 'amp' | 'volatile' | 'biggrove' |
+  'biglab' | 'wall' | 'amp' | 'volatile' | 'biggrove' | 'buffer' |
   'enemy-core' | 'enemy-box' |
   'food' | 'research' | 'battery' | 'gen' | 'burr' | 'big-evil' | 'small-evil' | 'leaf' | 'wood';
 export type NodeColor = 'blue' | 'purple' | 'yellow' | 'orange' | 'green' | 'yellow';
@@ -248,6 +257,7 @@ export interface INodeConfig {
 
   researchGen?: number;
   fruitGen?: number;
+  buffGen?: number;
 
   outletEffects?: {stat: string, type: 'additive' | 'multiplicative', amount: number}[];
 }

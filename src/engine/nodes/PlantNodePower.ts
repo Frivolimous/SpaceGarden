@@ -2,6 +2,7 @@ import _ from 'lodash';
 import { Config } from '../../Config';
 import { INodeConfig, NodeSlug } from '../../data/NodeData';
 import { PlantNode } from './PlantNode';
+import { TransferBlock } from '../Transfers/_TransferBlock';
 
 export class PlantNodePower {
   public fruitType: NodeSlug;
@@ -11,8 +12,10 @@ export class PlantNodePower {
 
   public powerCurrent: number = 0;
   public fruitCurrent: number = 0;
+  public buffCurrent: number = 0;
   public powerClump: number = 0;
   public researchCurrent: number = 0;
+  public isBuffed = false;
   
   // HUB ONLY
   public storedPowerCurrent: number = 0;
@@ -60,18 +63,22 @@ export class PlantNodePower {
 
   public get powerGen() {
     if (this._PowerGen > 0) {
-      return this._PowerGen * this.powerPercentOne;
+      return this._PowerGen * this.powerPercentOne * (this.isBuffed ? Config.NODE.BUFF_BOOST : 1);
     } else {
       return this._PowerGen * this.powerPercent;
     }
   }
 
   public get fruitGen() {
-    return (this.config.fruitGen || 0) * this.powerPercentOne;
+    return (this.config.fruitGen || 0) * this.powerPercentOne * (this.isBuffed ? Config.NODE.BUFF_BOOST : 1);
+  }
+
+  public get buffGen() {
+    return (this.config.buffGen || 0) * this.powerPercentOne * (this.isBuffed ? Config.NODE.BUFF_BOOST : 1);
   }
 
   public get researchGen() {
-    return (this._ResearchGen || 0) * this.powerPercentOne;
+    return (this._ResearchGen || 0) * this.powerPercentOne * (this.isBuffed ? Config.NODE.BUFF_BOOST : 1);
   }
 
   public onTick() {
@@ -96,7 +103,7 @@ export class PlantNodePower {
 
     this.powerTick--;
     if (this.powerTick <= 0) {
-      this.powerTick = this.config.powerDelay + (-3 + 6 * Math.random());
+      this.powerTick += this.config.powerDelay * (0.9 + 0.2 * Math.random());
 
       this.generateSpecial();
       this.powerFruits();
@@ -114,7 +121,9 @@ export class PlantNodePower {
         if (this.researchCurrent > Math.max(this.config.researchGen * 10, 1)) {
           let clump = this.researchCurrent;
           this.researchCurrent = 0;
-          this.transferPower(this.data, target, {type: 'research', amount: clump, fade: Config.NODE.GEN_FADE});
+          let block = new TransferBlock('fruit', clump, Config.NODE.GEN_FADE);
+          block.setSource(this.data, target);
+          this.transferPower(block);
         }
       }
     }
@@ -129,9 +138,24 @@ export class PlantNodePower {
           if (this.data.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
             this.data.receiveFruitPower(1);
           } else {
-            let clump = this.fruitCurrent;
-            this.transferPower(this.data, target, {type: 'fruit', amount: 1, fade: Config.NODE.GEN_FADE});
+            let block = new TransferBlock('fruit', 1, Config.NODE.GEN_FADE);
+            block.setSource(this.data, target);
+            this.transferPower(block);
           }
+        }
+      }
+    }
+    
+    if (this.config.buffGen > 0) {
+      let target = _.sample(this.data.outlets.filter(outlet => outlet.active));
+      
+      if (target) {
+        this.buffCurrent+= this.buffGen;
+        if (this.buffCurrent > 1) {
+          this.buffCurrent--;
+          let block = new TransferBlock('buff', 1, Config.NODE.BUFF_FADE);
+          block.setSource(this.data, target);
+          this.transferPower(block);
         }
       }
     }
@@ -148,7 +172,10 @@ export class PlantNodePower {
       
       if (this.powerPercentOver > target.power.powerPercentOver && target.power.powerPercentOver < target.power.OVERCHARGE_PERCENT) {
         let clump = Math.min(this.powerCurrent, this.config.fruitClump);
-        this.transferPower(this.data, target, {type: 'grow', amount: clump, removeOrigin: clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1)});
+        let block = new TransferBlock('grow', clump);
+        block.removeOrigin = clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1);
+        block.setSource(this.data, target);
+        this.transferPower(block);
         this.powerCurrent -= clump;
       }
     }
@@ -168,19 +195,14 @@ export class PlantNodePower {
 
       if (target && this.powerCurrent >= this.powerClump) {
         let clump = Math.min(this.powerCurrent, this.powerClump);
-        this.transferPower(this.data, target, {type: 'grow', amount: clump});
+        let block = new TransferBlock('grow', clump);
+        block.setSource(this.data, target);
+        this.transferPower(block);
         this.powerCurrent -= clump;
       }
     }
   }
 }
 
-export type TransferPowerFunction = (origin: PlantNode, target: PlantNode, block: ITransferBlock) => void;
+export type TransferPowerFunction = (block: TransferBlock) => void;
 
-export interface ITransferBlock {
-  type: 'grow' | 'fruit' | 'research';
-  amount: number;
-  fade?: number;
-  amped?: boolean;
-  removeOrigin?: boolean;
-}
