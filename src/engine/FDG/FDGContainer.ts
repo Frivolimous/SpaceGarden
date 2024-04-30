@@ -80,7 +80,7 @@ export class FDGContainer extends PIXI.Graphics {
     return this.links.find(link => link.hasNode(origin) && link.hasNode(target));
   }
 
-  public getClosestObject(config: { x: number, y: number, distance?: number, maxLinks?: boolean, filter?: PlantNode, notType?: NodeSlug, notFruit?: boolean }) {
+  public getClosestObject(config: { x: number, y: number, distance?: number, maxLinks?: boolean, filter?: PlantNode, notType?: NodeSlug, notFruit?: boolean, customFilter?: (node: PlantNode) => boolean }) {
     let m: PlantNode;
 
     let distance = config.distance ? config.distance * config.distance : Config.PHYSICS.MAX_GRAB * Config.PHYSICS.MAX_GRAB;
@@ -92,6 +92,7 @@ export class FDGContainer extends PIXI.Graphics {
       if (config.filter && config.filter === node) continue;
       if (config.notType && node.slug === config.notType) continue;
       if (config.notFruit && node.isFruit()) continue;
+      if (config.customFilter && !config.customFilter(node)) continue;
       // if (par.hasTag!=null && par.hasTag!==this.nodes[i].tag) continue;
       // if (par.notHasTag!=null && par.notHasTag===this.nodes[i].tag) continue;
 
@@ -111,6 +112,19 @@ export class FDGContainer extends PIXI.Graphics {
 
   public showConnectionCount(show: boolean = true) {
     this.nodes.forEach(node => !node.isFruit() ? node.showConnectionCount(show) : null);
+  }
+
+  public highlightConditional(nodeFilter: (node: PlantNode) => boolean) {
+    this.nodes.forEach(node => {
+      if (nodeFilter(node)) {
+        node.view.highlight2 = true;
+        console.log("NODE", node);
+      }
+    });
+  }
+
+  public removeHighlights() {
+    this.nodes.forEach(node => node.view.highlight2 = false);
   }
 
   // ==== RUNNING ==== \\

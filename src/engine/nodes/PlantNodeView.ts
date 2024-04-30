@@ -12,6 +12,7 @@ export class PlantNodeView extends PIXI.Container {
 
   public sprite: PIXI.Sprite;
   public _Highlight: PIXI.Graphics;
+  public _Highlight2: PIXI.Graphics;
   public _Buff: PIXI.Graphics;
   public text = new PIXI.Text('2/2', { fontSize: 12, fontFamily: Fonts.FLYING, stroke: 0, strokeThickness: 1, fill: 0xffffff });
 
@@ -31,8 +32,12 @@ export class PlantNodeView extends PIXI.Container {
     this._Highlight.beginFill(0xffff00, 0.5);
     this._Highlight.drawCircle(0, 0, Math.max(this.radius * 1.2, this.radius + 4));
     this._Highlight.visible = false;
+    this._Highlight2 = new PIXI.Graphics();
+    this._Highlight2.beginFill(0x00ffff, 0.5);
+    this._Highlight2.drawCircle(0, 0, Math.max(this.radius * 1.2, this.radius + 4));
+    this._Highlight2.visible = false;
 
-    this.addChild(this._Highlight, this.sprite, this.text);
+    this.addChild(this._Highlight2, this._Highlight, this.sprite, this.text);
 
     this.setIntensity(1, true);
   }
@@ -43,6 +48,14 @@ export class PlantNodeView extends PIXI.Container {
 
   set highlight(b: boolean) {
     this._Highlight.visible = b;
+  }
+
+  get highlight2(): boolean {
+    return this._Highlight2.visible;
+  }
+
+  set highlight2(b: boolean) {
+    this._Highlight2.visible = b;
   }
 
   public setIntensity(n: number, instant?: boolean) {

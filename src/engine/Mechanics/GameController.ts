@@ -9,9 +9,9 @@ import { CrawlerModel } from './Parts/CrawlerModel';
 import { ICrawlerSave } from 'src/data/SaveData';
 import { GameKnowledge } from './GameKnowledge';
 import { GameEvents } from '../../services/GameEvents';
-import { CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
+import { ICrawlerConfig } from '../../data/CrawlerData';
 import { Firework } from '../../JMGE/effects/Firework';
-import { TransferBlock } from '../Transfers/_TransferBlock';
+import { TransferBlock } from './Transfers/_TransferBlock';
 
 export class GameController {
   public onNodeAdded = new JMEventListener<PlantNode>();
@@ -298,37 +298,25 @@ export class GameController {
     let link = this.container.getLink(block.origin, block.target);
 
     if (block.type === 'grow') {
-      block.finishTransferGrow();
-
-      if (block.removeOrigin) {
-        this.removeNode(block.origin);
-      } else {
-        link.flash();
-      }
+      block.finishTransfer();
+      link.flash();
     } else {
       GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: true, type: block.type}});
-      link.zip(block, () => {
-        if (!this.exists) return;
-        GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: false, type: block.type}});
+      link.zip(block, this.finishTransferPower);
+    }
+  }
 
-        let transferComplete: boolean;
-        if (block.type === 'research') {
-          transferComplete = block.finishTransferResearch();
-        } else if (block.type === 'fruit') {
-          transferComplete = block.finishTransferFruit();
-        } else if (block.type === 'buff') {
-          transferComplete = block.finishTransferBuff();
-        }
+  public finishTransferPower = (block: TransferBlock) => {
+    GameEvents.ACTIVITY_LOG.publish({slug: 'BLOB', data: {add: false, type: block.type}});
+    if (!this.exists) return;
 
-        if (!transferComplete) {
-          let target2 = block.selectNextTarget();
+    if (!block.finishTransfer()) {
+      let target2 = block.selectNextTarget();
 
-          if (target2) {
-            block.setSource(block.target, target2);
-            this.transferPower(block);
-          }
-        }
-      });
+      if (target2) {
+        block.setSource(block.target, target2);
+        this.transferPower(block);
+      }
     }
   }
 

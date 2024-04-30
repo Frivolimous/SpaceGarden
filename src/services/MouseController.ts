@@ -28,7 +28,7 @@ export class MouseController {
     this.container.addPull(config);
   }
 
-  public setNextClickEvent = (data: { onDown?: (e: {x: number, y: number}) => void, onUp?: () => void}) => {
+  public setNextClickEvent = (data: IClickEvent) => {
     this.nextClickEvent = data;
   }
 
@@ -42,7 +42,7 @@ export class MouseController {
     if (this.nextClickEvent) {
       if (this.nextClickEvent.onDown) {
         this.nextClickEvent.onDown(position);
-        if (!this.nextClickEvent.onUp) {
+        if (this.nextClickEvent && !this.nextClickEvent.onUp) {
           this.nextClickEvent = null;
         }
         return;
@@ -100,4 +100,9 @@ export class MouseController {
       this.onMove.publish(position);
     }
   }
+}
+
+export interface IClickEvent {
+  onDown?: (e: {x: number, y: number}) => void;
+  onUp?: () => void;
 }

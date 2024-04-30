@@ -28,14 +28,15 @@ import { Timer } from '../components/domui/Timer';
 import { Facade } from '..';
 import { SimpleModal } from '../components/ui/modals/SimpleModal';
 import { PointingArrow } from '../JMGE/effects/PointingArrow';
-import { JMTween } from '../JMGE/JMTween';
+import { TurboSpell } from '../engine/Mechanics/Spells/TurboSpell';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
+  public container: FDGContainer;
+  public gameSpeed: number = 1;
 
   private timer: Timer;
   private canvas: ScrollingContainer;
-  private container: FDGContainer;
   private nodeManager: NodeManager;
   private sidebar: Sidebar;
   private bottomBar: BottomBar;
@@ -43,8 +44,6 @@ export class GameUI extends BaseUI {
   private keymapper: KeyMapper;
   private mouseC: MouseController;
 
-  private gameSpeed: number = 1;
-  private turboSpeed: number = 3;
   private running = true;
   private exists = true;
 
@@ -86,7 +85,15 @@ export class GameUI extends BaseUI {
 
     this.sidebar = new Sidebar(currentSkillPanel, nextSkillPanel, hubPanel, achieveElement);
     this.keymapper = new KeyMapper();
-    this.bottomBar = new BottomBar(100, 100, this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug)));
+    this.bottomBar = new BottomBar(100, 100, this.mouseC);
+
+    let nodeConfigs = this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug));
+    let spellConfigs = this.nodeManager.activeSpells.map(slug => new (this.nodeManager.getSpellConfig(slug) as any)(this));
+
+    if (GOD_MODE) spellConfigs.push(new TurboSpell(this));
+    
+    this.bottomBar.setNodeButtons(nodeConfigs);
+    this.bottomBar.setSpells(spellConfigs);
 
     this.timer = new Timer();
 
@@ -105,8 +112,6 @@ export class GameUI extends BaseUI {
     this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
     this.bottomBar.onProceedButton.addListener(this.nextStage);
     this.bottomBar.onCreateButton.addListener(this.createNewNode);
-    this.bottomBar.onDeleteButton.addListener(this.deleteNextClicked);
-    this.bottomBar.onTurboButton.addListener(this.toggleTurboMode);
     this.gameC.knowledge.onAchievementUpdate.addListener(this.sidebar.updateAchievement);
 
     this.keymapper.enabled = false;
@@ -275,7 +280,7 @@ export class GameUI extends BaseUI {
       this.extrinsic.tutorialStep = 1;
       let modal = new SimpleModal('Wecome to your Space Garden.  This is a slow paced game, where your goal is to grow a magical space plant and evolve its seedling.', () => this.extrinsic.tutorialStep = 2);
       this.addDialogueWindow(modal, 500);
-      this.bottomBar.buttons.forEach(button => button.disabled = true);
+      this.bottomBar.nodeButtons.forEach(button => button.disabled = true);
 
     } else if (this.extrinsic.tutorialStep === 2) {
       this.extrinsic.tutorialStep = 3;
@@ -309,7 +314,7 @@ export class GameUI extends BaseUI {
         }
       }
     } else if (this.extrinsic.tutorialStep === 5) {
-      this.bottomBar.buttons.forEach(button => button.disabled = false);
+      this.bottomBar.nodeButtons.forEach(button => button.disabled = false);
       let coreB = this.bottomBar.getButton('core');
       coreB.disabled = true;
       this.extrinsic.tutorialStep = 6;
@@ -331,10 +336,6 @@ export class GameUI extends BaseUI {
 
     this.bottomBar.resize(e.outerBounds.width);
     this.bottomBar.position.set(e.outerBounds.x, e.outerBounds.bottom - this.bottomBar.barHeight);
-  }
-
-  public toggleTurboMode = (b: boolean) => {
-    this.gameSpeed = b ? this.turboSpeed : 1;
   }
 
   public onMouseMove = (position: {x: number, y: number}) => {
@@ -414,24 +415,6 @@ export class GameUI extends BaseUI {
         }
       },
     });
-  }
-
-  public deleteNextClicked = (e: { onComplete: () => void }) => {
-    if (e) {
-      this.container.showConnectionCount();
-      this.mouseC.setNextClickEvent({ onDown: position => {
-        let nodeToDelete = this.container.getClosestObject({ x: position.x, y: position.y, notType: 'core', notFruit: true });
-        if (nodeToDelete) {
-          nodeToDelete.flagDestroy = true;
-          nodeToDelete.flagExplode = true;
-        }
-
-        e.onComplete && e.onComplete();
-      } });
-    } else {
-      this.mouseC.clearNextClickEvent();
-      this.container.showConnectionCount(false);
-    }
   }
 
   private logSave = () => {

@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import _ from 'lodash';
 import { colorLuminance } from '../../JMGE/others/Colors';
 import { Fonts } from '../../data/Fonts';
-// import { SoundData, SoundIndex } from '../../utils/SoundData';
+import { JMTween } from '../../JMGE/JMTween';
 
 const defaultConfig: Partial<IToggleButton> = { width: 30, height: 30, rounding: 8, hoverScale: 0.1 };
 
@@ -29,6 +29,9 @@ export class ToggleButton extends PIXI.Container {
 
   private defaultColor: number = 0xff0000;
   private selectedColor: number = 0x007700;
+  private disabledColor = 0x999999;
+
+  private _Disabled: boolean;
   private _Selected: boolean;
 
   constructor(protected config: IToggleButton) {
@@ -61,14 +64,17 @@ export class ToggleButton extends PIXI.Container {
     this.cursor = 'pointer';
 
     this.addListener('mouseover', () => {
+      if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1 + this.config.hoverScale);
     });
     this.addListener('mouseout', () => {
+      if (this.disabled) return;
       this.background.tint = this.color;
       this.inner.scale.set(1);
     });
     this.addListener('mouseup', (e) => {
+      if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1);
       if (e.target === this) {
@@ -77,6 +83,7 @@ export class ToggleButton extends PIXI.Container {
     });
 
     this.addListener('touchend', (e) => {
+      if (this.disabled) return;
       this.background.tint = this.color;
       this.inner.scale.set(1);
       if (e.target === this) {
@@ -85,10 +92,28 @@ export class ToggleButton extends PIXI.Container {
     });
 
     this.addListener('pointerdown', () => {
+      if (this.disabled) return;
       this.background.tint = colorLuminance(this.color, 0.8);
       this.inner.scale.set(1 - this.config.hoverScale);
       // SoundData.playSound(SoundIndex.CLICK);
     });
+  }
+
+  public set disabled(b: boolean) {
+    this._Disabled = b;
+    this.cursor = b ? 'auto' : 'pointer';
+    if (b) {
+      this.color = this.disabledColor;
+      this.label.visible = false;
+    } else {
+      this.color = this.defaultColor;
+      this.label.visible = true;
+    }
+    this.background.tint = this.color;
+  }
+
+  public get disabled() {
+    return this._Disabled;
   }
 
   public set selected(b: boolean) {
@@ -136,5 +161,31 @@ export class ToggleButton extends PIXI.Container {
 
   public getHeight(withScale = true) {
     return this.config.height * (withScale ? this.scale.y : 1);
+  }
+
+  public disableTimer(time: number) {
+    let timer = new PIXI.Text('00:00');
+    this.disabled = true;
+    this.addChild(timer);
+    timer.width = this.background.width * 0.9;
+    timer.scale.y = timer.scale.x;
+    timer.x = (this.background.width - timer.width) / 2;
+    timer.y = (this.background.height - timer.height) / 2;
+
+    let minutes = Math.floor(time / 60000);
+    let seconds = Math.floor(time / 1000) - minutes * 60;
+    timer.text = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+    
+    new JMTween({time}, time).to({time: 0}).start()
+      .onUpdate(obj => {
+        let minutes = Math.floor(obj.time / 60000);
+        let seconds = Math.floor(obj.time / 1000) - minutes * 60;
+        timer.text = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+      })
+      .onComplete(obj =>{
+        this.removeChild(timer);
+        this.disabled = false;
+        timer.destroy();
+      });
   }
 }

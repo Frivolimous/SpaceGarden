@@ -2,7 +2,11 @@ import _ from 'lodash';
 import { Config } from '../../Config';
 import { INodeConfig, NodeSlug } from '../../data/NodeData';
 import { PlantNode } from './PlantNode';
-import { TransferBlock } from '../Transfers/_TransferBlock';
+import { TransferBlock } from '../Mechanics/Transfers/_TransferBlock';
+import { FruitBlock } from '../Mechanics/Transfers/FruitBlock';
+import { ResearchBlock } from '../Mechanics/Transfers/ResearchBlock';
+import { BuffBlock } from '../Mechanics/Transfers/BuffBlock';
+import { GrowBlock } from '../Mechanics/Transfers/GrowBlock';
 
 export class PlantNodePower {
   public fruitType: NodeSlug;
@@ -16,6 +20,7 @@ export class PlantNodePower {
   public powerClump: number = 0;
   public researchCurrent: number = 0;
   public isBuffed = false;
+  public hasPowerPriority = false;
   
   // HUB ONLY
   public storedPowerCurrent: number = 0;
@@ -58,6 +63,7 @@ export class PlantNodePower {
   }
 
   public get powerWeight(): number {
+    // if (this.hasPowerPriority) return -1;
     return this.powerCurrent / this.config.powerMax / this.config.powerWeight;
   }
 
@@ -121,7 +127,7 @@ export class PlantNodePower {
         if (this.researchCurrent > Math.max(this.config.researchGen * 10, 1)) {
           let clump = this.researchCurrent;
           this.researchCurrent = 0;
-          let block = new TransferBlock('fruit', clump, Config.NODE.GEN_FADE);
+          let block = new ResearchBlock(clump, Config.NODE.GEN_FADE);
           block.setSource(this.data, target);
           this.transferPower(block);
         }
@@ -138,7 +144,7 @@ export class PlantNodePower {
           if (this.data.canSpawnFruit() && Math.random() < Config.NODE.FRUIT_APPLY) {
             this.data.receiveFruitPower(1);
           } else {
-            let block = new TransferBlock('fruit', 1, Config.NODE.GEN_FADE);
+            let block = new FruitBlock(1, Config.NODE.GEN_FADE);
             block.setSource(this.data, target);
             this.transferPower(block);
           }
@@ -153,7 +159,7 @@ export class PlantNodePower {
         this.buffCurrent+= this.buffGen;
         if (this.buffCurrent > 1) {
           this.buffCurrent--;
-          let block = new TransferBlock('buff', 1, Config.NODE.BUFF_FADE);
+          let block = new BuffBlock(1, Config.NODE.BUFF_FADE);
           block.setSource(this.data, target);
           this.transferPower(block);
         }
@@ -172,8 +178,7 @@ export class PlantNodePower {
       
       if (this.powerPercentOver > target.power.powerPercentOver && target.power.powerPercentOver < target.power.OVERCHARGE_PERCENT) {
         let clump = Math.min(this.powerCurrent, this.config.fruitClump);
-        let block = new TransferBlock('grow', clump);
-        block.removeOrigin = clump === this.powerCurrent && (this.data.outlets.length + this.data.fruits.length === 1);
+        let block = new GrowBlock(clump);
         block.setSource(this.data, target);
         this.transferPower(block);
         this.powerCurrent -= clump;
@@ -187,7 +192,11 @@ export class PlantNodePower {
 
       this.data.outlets.forEach(outlet => {
         if (outlet.active) {
-          if (outlet.power.powerPercentOver < this.powerPercentOver && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
+          if ((outlet.power.hasPowerPriority && outlet.power.powerPercent < 1) && (!target || !target.power.hasPowerPriority)) {
+            target = outlet;
+          } else if (target && target.power.hasPowerPriority) {
+            
+          } else if ((outlet.power.powerPercentOver < this.powerPercentOver) && (!target || outlet.power.powerWeight < target.power.powerWeight)) {
             target = outlet;
           }
         }
@@ -195,7 +204,7 @@ export class PlantNodePower {
 
       if (target && this.powerCurrent >= this.powerClump) {
         let clump = Math.min(this.powerCurrent, this.powerClump);
-        let block = new TransferBlock('grow', clump);
+        let block = new GrowBlock(clump);
         block.setSource(this.data, target);
         this.transferPower(block);
         this.powerCurrent -= clump;

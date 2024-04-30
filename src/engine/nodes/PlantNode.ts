@@ -318,7 +318,7 @@ export class PlantNode {
         m += `<br>Transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s`
       }
       
-      // m += `<br>Weight: ${Math.round(this.powerWeight * 100)} / ${Math.round(this.powerPercent * 100)}`;
+      // m += `<br>Weight: ${Math.round(this.power.powerWeight * 100)}`;
       
       if (this.power.researchGen > 0) {
         m += `<br>Evolution Gen: ${(this.power.researchGen / this.config.powerDelay * 60 * 60).toFixed(0)}/min`;

@@ -3,12 +3,19 @@ import { INodeConfig, NodeData, NodeSlug } from '../../data/NodeData';
 import { IAchievement, IHubConfig, ISkillConfig, ISkillEffect, ISkillEffectNode, SkillData } from '../../data/SkillData';
 import { Config } from '../../Config';
 import { CrawlerData, CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
+import { SpellSlug } from './Spells/_BaseSpell';
+import { DeleteSpell } from './Spells/DeleteSpell';
+import { TurboSpell } from './Spells/TurboSpell';
+import { BuffSpell } from './Spells/BuffSpell';
+import { WeightSpell } from './Spells/WeightSpell';
 
 export class NodeManager {
   public skills: ISkillConfig[];
   public hubSkills: IHubConfig[];
 
   public buildableNodes: NodeSlug[];
+
+  public activeSpells: SpellSlug[];
 
   public availableCrawlers: CrawlerSlug[];
 
@@ -17,6 +24,7 @@ export class NodeManager {
 
   constructor(private skillTier: number) {
     this.buildableNodes = _.clone(NodeData.BaseBuildable);
+    this.activeSpells = _.clone(SkillData.activeSpells);
     this.availableCrawlers = _.clone(CrawlerData.BaseAvailable);
     this.data = _.cloneDeep(NodeData.Nodes);
     this.skills = _.cloneDeep(SkillData.skills);
@@ -32,6 +40,16 @@ export class NodeManager {
     let raw = this.data.find(config => config.slug === slug);
 
     return raw;
+  }
+
+  public getSpellConfig(slug: SpellSlug) {
+    switch(slug) {
+      case 'delete': return DeleteSpell;
+      case 'turbo': return TurboSpell;
+      case 'buff': return BuffSpell;
+      case 'weight': return WeightSpell;
+      case 'none': default: return null;
+    }
   }
 
   public extractTier(slugs: string[], currentTier: number): number {
@@ -136,6 +154,8 @@ export class NodeManager {
         }
       } else if (effect.effectType === 'buildable') {
         this.finishArrayEffect(this.buildableNodes, effect);
+      } else if (effect.effectType === 'spell') {
+        this.finishArrayEffect(this.activeSpells, effect);
       } else if (effect.effectType === 'crawler-available') {
         this.finishArrayEffect(this.availableCrawlers, effect);
       } else if (effect.effectType === 'config') {

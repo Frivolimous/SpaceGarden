@@ -1,4 +1,5 @@
 import { CommandType } from '../engine/Mechanics/CrawlerCommands/_CommandTypes';
+import { SpellSlug } from '../engine/Mechanics/Spells/_BaseSpell';
 import { AchievementSlug } from './ATSData';
 import { CrawlerSlug } from './CrawlerData';
 import { NodeBase, NodeSlug } from './NodeData';
@@ -260,6 +261,8 @@ export const SkillData: ISkillData = {
         {effectType: 'node', slug: 'generator', key: 'maxCount', valueType: 'additive', value: Infinity},
         {effectType: 'node', slug: 'bigstem', key: 'maxCount', valueType: 'additive', value: Infinity},
         {effectType: 'buildable', valueType: 'additive', value: 'buffer'},
+        {effectType: 'spell', valueType: 'additive', value: 'buff'},
+        {effectType: 'spell', valueType: 'additive', value: 'weight'},
       ],
     },
     {
@@ -321,6 +324,8 @@ export const SkillData: ISkillData = {
     3000000,
     3500000, // T3 Finish (46 SP / 24h)
   ],
+
+  activeSpells: ['delete'],
 
   skillTiers: [
     [],
@@ -479,6 +484,7 @@ interface ISkillData {
   skillTiers: string[][];
   achievements: IAchievement[];
   hubs: IHubConfig[];
+  activeSpells: SpellSlug[];
 }
 
 export interface ISkillConfig {
@@ -525,7 +531,7 @@ export interface ISkillEffectCrawler {
 }
 
 export interface ISkillEffectSimple {
-  effectType: 'tier' | 'config' | 'buildable' | 'crawler-available';
+  effectType: 'tier' | 'config' | 'buildable' | 'crawler-available' | 'spell';
   key?: string;
   valueType: EffectValueType;
   value: any;
