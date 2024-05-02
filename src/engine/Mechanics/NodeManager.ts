@@ -1,13 +1,10 @@
 import _ from 'lodash';
 import { INodeConfig, NodeData, NodeSlug } from '../../data/NodeData';
-import { IAchievement, IHubConfig, ISkillConfig, ISkillEffect, ISkillEffectNode, SkillData } from '../../data/SkillData';
+import { IAchievement, IHubConfig, ISkillConfig, ISkillEffectFormulable, ISkillEffectNode, SkillData } from '../../data/SkillData';
 import { Config } from '../../Config';
 import { CrawlerData, CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
-import { SpellSlug } from './Spells/_BaseSpell';
-import { DeleteSpell } from './Spells/DeleteSpell';
-import { TurboSpell } from './Spells/TurboSpell';
-import { BuffSpell } from './Spells/BuffSpell';
-import { WeightSpell } from './Spells/WeightSpell';
+import { SpellSlug } from './Spells/_SpellTypes';
+import { GameEvents } from '../../services/GameEvents';
 
 export class NodeManager {
   public skills: ISkillConfig[];
@@ -40,16 +37,6 @@ export class NodeManager {
     let raw = this.data.find(config => config.slug === slug);
 
     return raw;
-  }
-
-  public getSpellConfig(slug: SpellSlug) {
-    switch(slug) {
-      case 'delete': return DeleteSpell;
-      case 'turbo': return TurboSpell;
-      case 'buff': return BuffSpell;
-      case 'weight': return WeightSpell;
-      case 'none': default: return null;
-    }
   }
 
   public extractTier(slugs: string[], currentTier: number): number {
@@ -117,54 +104,56 @@ export class NodeManager {
 
   public applySkill = (skill: ISkillConfig | IAchievement) => {
     skill.effects.forEach(effect => {
-      if (effect.effectType === 'node') {
-        let config = this.getNodeConfig(effect.slug);
-        if (effect.key === 'outletEffects') {
-          this.finishArrayEffect(config, effect);
-        } else {
-          this.finishNumberEffect(config, effect);
-        }
-      } else if (effect.effectType === 'crawler') {
-        if (effect.slug === 'all') {
-          this.crawlers.forEach(config => {
-            if (effect.key === 'commands' || effect.key === 'preferenceList') {
-              this.finishArrayEffect(config, effect);
-            } else {
-              this.finishNumberEffect(config, effect);
-            }
-          });
-        } else {
-          let config = this.getCrawlerConfig(effect.slug);
-          if (effect.key === 'commands' || effect.key === 'preferenceList') {
-            this.finishArrayEffect(config, effect);
+      switch(effect.effectType) {
+        case 'node':
+          if (effect.key === 'outletEffects') {
+            this.finishArrayEffect(this.getNodeConfig(effect.slug), effect);
           } else {
-            this.finishNumberEffect(config, effect);
+            this.finishNumberEffect(this.getNodeConfig(effect.slug), effect);
           }
-        }
-      } else if (effect.effectType === 'crawler-command') {
-        if (effect.slug === 'all') {
-          this.crawlers.forEach(config => {
-            if (config.slug !== 'chieftain') {
-              this.finishNumberEffect(config.commandConfig, effect);
+          break;
+        case 'crawler':
+          if (effect.slug === 'all') {
+            this.crawlers.forEach(config => {
+              if (effect.key === 'commands' || effect.key === 'preferenceList') {
+                this.finishArrayEffect(config, effect);
+              } else {
+                this.finishNumberEffect(config, effect);
+              }
+            });
+          } else {
+            if (effect.key === 'commands' || effect.key === 'preferenceList') {
+              this.finishArrayEffect(this.getCrawlerConfig(effect.slug), effect);
+            } else {
+              this.finishNumberEffect(this.getCrawlerConfig(effect.slug), effect);
             }
-          });
-        } else {
-          let config = this.getCrawlerConfig(effect.slug);
-          this.finishNumberEffect(config.commandConfig, effect);
-        }
-      } else if (effect.effectType === 'buildable') {
-        this.finishArrayEffect(this.buildableNodes, effect);
-      } else if (effect.effectType === 'spell') {
-        this.finishArrayEffect(this.activeSpells, effect);
-      } else if (effect.effectType === 'crawler-available') {
-        this.finishArrayEffect(this.availableCrawlers, effect);
-      } else if (effect.effectType === 'config') {
-        this.finishNumberEffect(Config.NODE, effect);
+          }
+          break;
+        case 'crawler-command':
+          if (effect.slug === 'all') {
+            this.crawlers.forEach(config => {
+              if (config.slug !== 'chieftain') {
+                this.finishNumberEffect(config.commandConfig, effect);
+              }
+            });
+          } else {
+            let config = this.getCrawlerConfig(effect.slug);
+            this.finishNumberEffect(config.commandConfig, effect);
+          }
+          break;
+        case 'buildable': this.buildableNodes.push(effect.value); break;
+        case 'spell':
+          // this.activeSpells.push(effect.value);
+          GameEvents.ACTIVITY_LOG.publish({slug: 'SPELL_ADDED', data: effect.value});
+          break;
+        case 'crawler-available': this.availableCrawlers.push(effect.value); break;
+        case 'config': this.finishNumberEffect(Config.NODE, effect); break;
+        case 'tier': break;
       }
     });
   }
 
-  private finishNumberEffect(config: any, effect: ISkillEffect) {
+  private finishNumberEffect(config: any, effect: ISkillEffectFormulable) {
     if (effect.valueType === 'additive') {
       config[effect.key] += effect.value;
     } else if (effect.valueType === 'multiplicative') {
@@ -174,7 +163,7 @@ export class NodeManager {
     }
   }
 
-  private finishArrayEffect(config: any, effect: ISkillEffect) {
+  private finishArrayEffect(config: any, effect: ISkillEffectFormulable) {
     if (effect.key) {
       if (!config[effect.key]) {
         config[effect.key] = [];

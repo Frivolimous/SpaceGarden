@@ -1,5 +1,5 @@
 import { CommandType } from '../engine/Mechanics/CrawlerCommands/_CommandTypes';
-import { SpellSlug } from '../engine/Mechanics/Spells/_BaseSpell';
+import { SpellSlug } from '../engine/Mechanics/Spells/_SpellTypes';
 import { AchievementSlug } from './ATSData';
 import { CrawlerSlug } from './CrawlerData';
 import { NodeBase, NodeSlug } from './NodeData';
@@ -93,7 +93,7 @@ export const SkillData: ISkillData = {
       cost: 1,
       skillRequirements: ['skill-tier-1'],
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'home'},
+        {effectType: 'buildable', value: 'home'},
       ],
     },
     {
@@ -173,7 +173,7 @@ export const SkillData: ISkillData = {
       description: 'Lets you place up to two Big Stems.',
       cost: 5,
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'bigstem'},
+        {effectType: 'buildable', value: 'bigstem'},
         {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
@@ -185,8 +185,8 @@ export const SkillData: ISkillData = {
       description: 'Up to one Crawler appears as a Chieftain, up to one Crawler appears as a Shaman.',
       cost: 5,
       effects: [
-        {effectType: 'crawler-available', valueType: 'additive', value: 'shaman'},
-        {effectType: 'crawler-available', valueType: 'additive', value: 'chieftain'},
+        {effectType: 'crawler-available',value: 'shaman'},
+        {effectType: 'crawler-available',value: 'chieftain'},
         {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
@@ -198,7 +198,7 @@ export const SkillData: ISkillData = {
       description: 'Significantly increases the power of generators Generators. Lets you build 1 Volatile Generator.',
       cost: 6,
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'volatile'},
+        {effectType: 'buildable', value: 'volatile'},
         {effectType: 'node', slug: 'generator', key: 'powerGen', valueType: 'additive', value: 0.2},
         {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
@@ -211,7 +211,7 @@ export const SkillData: ISkillData = {
       description: 'All fruit gains Passive Growth. Lets you build 1 Lumber Grove.',
       cost: 6,
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'biggrove'},
+        {effectType: 'buildable', value: 'biggrove'},
         {effectType: 'config', key: 'FRUIT_GROWTH', valueType: 'additive', value: 0.05},
         {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
@@ -224,8 +224,8 @@ export const SkillData: ISkillData = {
       description: 'Lets you build 1 Resistor and 1 Amplifier',
       cost: 6,
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'wall'},
-        {effectType: 'buildable', valueType: 'additive', value: 'amp'},
+        {effectType: 'buildable', value: 'wall'},
+        {effectType: 'buildable', value: 'amp'},
         {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'lab', key: 'powerGen', valueType: 'additive', value: -0.0017},
@@ -237,7 +237,7 @@ export const SkillData: ISkillData = {
       description: 'Retain 25% of your earned Evolution Points when you delete or launch your seedling. Let\'s you build 1 Wild Lab.',
       cost: 8,
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'biglab'},
+        {effectType: 'buildable', value: 'biglab'},
         {effectType: 'config', key: 'SAVED_RESEARCH', valueType: 'replace', value: 0.25},
         {effectType: 'node', slug: 'grove', key: 'powerGen', valueType: 'additive', value: -0.0017},
         {effectType: 'node', slug: 'home', key: 'powerGen', valueType: 'additive', value: -0.0017},
@@ -260,9 +260,7 @@ export const SkillData: ISkillData = {
         {effectType: 'node', slug: 'stem', key: 'maxCount', valueType: 'additive', value: Infinity},
         {effectType: 'node', slug: 'generator', key: 'maxCount', valueType: 'additive', value: Infinity},
         {effectType: 'node', slug: 'bigstem', key: 'maxCount', valueType: 'additive', value: Infinity},
-        {effectType: 'buildable', valueType: 'additive', value: 'buffer'},
-        {effectType: 'spell', valueType: 'additive', value: 'buff'},
-        {effectType: 'spell', valueType: 'additive', value: 'weight'},
+        {effectType: 'buildable', value: 'buffer'},
       ],
     },
     {
@@ -325,7 +323,7 @@ export const SkillData: ISkillData = {
     3500000, // T3 Finish (46 SP / 24h)
   ],
 
-  activeSpells: ['delete'],
+  activeSpells: ['delete', 'weight'],
 
   skillTiers: [
     [],
@@ -361,6 +359,14 @@ export const SkillData: ISkillData = {
       ],
     },
     {
+      slug: AchievementSlug.CAST_WEIGHT_20,
+      title: 'Super Focus',
+      description: 'Requirement: Use your Focus spell 20 times <br>Reward: Buff Spell',
+      effects: [
+        {effectType: 'spell', value: 'buff'},
+      ],
+    },
+    {
       slug: AchievementSlug.CRAWLERS_15,
       title: 'Overpopulation',
       description: 'Requirement: Have 15 Crawlers at once<br>Reward: Crawlers gain 10% more health when eating',
@@ -381,7 +387,7 @@ export const SkillData: ISkillData = {
       title: 'Expanded Evolution',
       description: 'Requirement: Reach Tier 3<br>Reward: Unlocks the Hub Node',
       effects: [
-        {effectType: 'buildable', valueType: 'additive', value: 'hub'},
+        {effectType: 'buildable', value: 'hub'},
       ],
     },
     {
@@ -512,7 +518,8 @@ export interface IHubConfig {
 }
 
 export type HubCostType = 'research' | 'fruit' | 'power' | 'buff';
-export type ISkillEffect = ISkillEffectNode | ISkillEffectCrawler | ISkillEffectSimple;
+export type ISkillEffect = ISkillEffectNode | ISkillEffectCrawler | ISkillEffectSimple | ISkillUnlockable;
+export type ISkillEffectFormulable = ISkillEffectNode | ISkillEffectCrawler | ISkillEffectSimple;
 
 export interface ISkillEffectNode {
   effectType: 'node';
@@ -531,9 +538,14 @@ export interface ISkillEffectCrawler {
 }
 
 export interface ISkillEffectSimple {
-  effectType: 'tier' | 'config' | 'buildable' | 'crawler-available' | 'spell';
+  effectType: 'tier' | 'config';
   key?: string;
   valueType: EffectValueType;
+  value: any;
+}
+
+export interface ISkillUnlockable {
+  effectType: 'buildable' | 'crawler-available' | 'spell';
   value: any;
 }
 

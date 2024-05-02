@@ -1,5 +1,6 @@
 import { GameUI } from '../../../pages/GameUI';
 import { IClickEvent } from '../../../services/MouseController';
+import { SpellSlug } from './_SpellTypes';
 
 export abstract class BaseSpell {
   slug: SpellSlug = 'none';
@@ -27,6 +28,3 @@ export abstract class BaseSpell {
     
   }
 }
-
-export type SpellSlug = 'delete' | 'turbo' | 'buff' | 'weight' |
-      'none';

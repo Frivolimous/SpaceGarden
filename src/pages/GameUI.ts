@@ -1,7 +1,7 @@
 import _, { update } from 'lodash';
 import * as PIXI from 'pixi.js';
 import { BaseUI } from './_BaseUI';
-import { GameEvents, IResizeEvent } from '../services/GameEvents';
+import { GameEvents, IActivityLog, IResizeEvent } from '../services/GameEvents';
 import { Direction, ScrollingContainer } from '../components/ScrollingContainer';
 import { KeyMapper } from '../JMGE/KeyMapper';
 import { JMTicker } from '../JMGE/events/JMTicker';
@@ -29,6 +29,7 @@ import { Facade } from '..';
 import { SimpleModal } from '../components/ui/modals/SimpleModal';
 import { PointingArrow } from '../JMGE/effects/PointingArrow';
 import { TurboSpell } from '../engine/Mechanics/Spells/TurboSpell';
+import { SpellMap, SpellSlug } from '../engine/Mechanics/Spells/_SpellTypes';
 
 export class GameUI extends BaseUI {
   public gameC: GameController;
@@ -88,7 +89,7 @@ export class GameUI extends BaseUI {
     this.bottomBar = new BottomBar(100, 100, this.mouseC);
 
     let nodeConfigs = this.nodeManager.buildableNodes.map(slug => this.nodeManager.getNodeConfig(slug));
-    let spellConfigs = this.nodeManager.activeSpells.map(slug => new (this.nodeManager.getSpellConfig(slug) as any)(this));
+    let spellConfigs = this.nodeManager.activeSpells.map(slug => new (SpellMap[slug] as any)(this));
 
     if (GOD_MODE) spellConfigs.push(new TurboSpell(this));
     
@@ -113,6 +114,7 @@ export class GameUI extends BaseUI {
     this.bottomBar.onProceedButton.addListener(this.nextStage);
     this.bottomBar.onCreateButton.addListener(this.createNewNode);
     this.gameC.knowledge.onAchievementUpdate.addListener(this.sidebar.updateAchievement);
+    GameEvents.ACTIVITY_LOG.addListener(this.onActivity);
 
     this.keymapper.enabled = false;
     this.keymapper.setKeys([
@@ -186,6 +188,7 @@ export class GameUI extends BaseUI {
     this.keymapper.destroy();
     this.mouseC.destroy();
     this.timer.destroy();
+    GameEvents.ACTIVITY_LOG.removeListener(this.onActivity);
 
     GameEvents.APP_LOG.publish({type: 'NAVIGATE', text: 'GAME INSTANCE DESTROYED'});
   }
@@ -501,6 +504,17 @@ export class GameUI extends BaseUI {
         case 'research': hub.power.canReceiveResearch = state; break;
         case 'fruit': hub.power.canReceiveFruit = state; break;
         case 'power': hub.power.canStorePower = state; break;
+      }
+    }
+  }
+
+  onActivity = (e: IActivityLog) => {
+    if (e.slug === 'SPELL_ADDED') {
+      let spellSlug: SpellSlug = e.data;
+
+      this.bottomBar.addSpell(new (SpellMap[spellSlug] as any)(this));
+      if (this.previousResize) {
+        this.bottomBar.resize(this.previousResize.outerBounds.width);
       }
     }
   }

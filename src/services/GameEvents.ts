@@ -33,4 +33,4 @@ export interface IAppLog {
 
 export type AppEvent = 'INITIALIZE' | 'SAVE' | 'NAVIGATE';
 
-export type ActivitySlug = 'PRESTIGE' | 'BLOB' | 'HUB';
+export type ActivitySlug = 'PRESTIGE' | 'BLOB' | 'HUB' | 'SPELL' | 'SPELL_ADDED';

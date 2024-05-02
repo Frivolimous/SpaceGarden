@@ -1,6 +1,7 @@
 import { Config } from '../../../Config';
 import { IClickEvent } from '../../../services/MouseController';
-import { BaseSpell, SpellSlug } from './_BaseSpell';
+import { BaseSpell } from './_BaseSpell';
+import { SpellSlug } from './_SpellTypes';
 
 export class BuffSpell extends BaseSpell{
   slug: SpellSlug = 'buff';

@@ -1,7 +1,8 @@
 import { JMTween } from '../../../JMGE/JMTween';
 import { IClickEvent } from '../../../services/MouseController';
-import { BaseSpell, SpellSlug } from './_BaseSpell';
+import { BaseSpell } from './_BaseSpell';
 import * as PIXI from 'pixi.js';
+import { SpellSlug } from './_SpellTypes';
 
 export class WeightSpell extends BaseSpell{
   slug: SpellSlug = 'weight';
@@ -15,12 +16,12 @@ export class WeightSpell extends BaseSpell{
       let node = this.gameUI.container.getClosestObject({ x: position.x, y: position.y, notFruit: true });
       if (node) {
         node.power.hasPowerPriority = true;
-        // let dot = new PIXI.Graphics();
-        // dot.beginFill(0x00ffff);
-        // dot.drawCircle(0, 0, 10);
-        // node.view.addChild(dot);
+        let dot = new PIXI.Graphics();
+        dot.beginFill(0xffff77, 0.5);
+        dot.drawCircle(0, 0, node.config.radius * 1.3);
+        node.view.addChildAt(dot, 0);
         new JMTween({percent: 0}, this.weightDuration).to({percent: 1}).onComplete(() => {
-          // node.view.removeChild(dot);
+          node.view.removeChild(dot);
           node.power.hasPowerPriority = false;
         }).start();
         this.onComplete(true);
@@ -31,7 +32,7 @@ export class WeightSpell extends BaseSpell{
   }
 
   activate = () => {
-    this.gameUI.container.highlightConditional(node => true);
+    this.gameUI.container.highlightConditional(node => !node.isFruit());
   }
 
   cancelActivation = () => {

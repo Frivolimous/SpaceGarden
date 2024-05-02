@@ -59,7 +59,7 @@ export class GameController {
     this.container.removeNode(node);
 
     if (explosionSize > 0) {
-      Firework.makeExplosion(this.container, {x: node.view.x, y: node.view.y, tint: node.config.color, mag_min: 0.5, mag_max: 2, count: node.config.radius});
+      Firework.makeExplosion(this.container, {x: node.view.x, y: node.view.y, tint: node.config.color, mag_min: 0.5, mag_max: 2, count: node.config.radius, offRadius: node.config.radius});
       // interface IExplosion {
       //   x: number;
       //   y: number;

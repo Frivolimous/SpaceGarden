@@ -1,5 +1,6 @@
 import { InfoPopup } from '../../../components/domui/InfoPopup';
-import { BaseSpell, SpellSlug } from './_BaseSpell';
+import { BaseSpell } from './_BaseSpell';
+import { SpellSlug } from './_SpellTypes';
 
 export class TurboSpell extends BaseSpell{
   slug: SpellSlug = 'turbo';

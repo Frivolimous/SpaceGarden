@@ -14,6 +14,7 @@ import { JMEventListener } from '../../JMGE/events/JMEventListener';
 import { CrawlerSlug } from '../../data/CrawlerData';
 import { Facade } from '../..';
 import { Colors } from '../../data/Colors';
+import { SpellSlug } from './Spells/_SpellTypes';
 
 export class GameKnowledge {
   public onAchievementUpdate = new JMEventListener<{slug: AchievementSlug, unlocked?: boolean, count?: string}>();
@@ -101,6 +102,7 @@ export class GameKnowledge {
     this.checkLaunch9Placement();
     this.checkCrawler15();
     this.checkCrawlerDie100();
+    this.checkWeightSpell20();
     this.checkHubLevel(_.maxBy(this.extrinsic.hubLevels, el => el[1]));
   }
 
@@ -199,6 +201,11 @@ export class GameKnowledge {
     this.checkCrawlerDie100();
   }
 
+  private spellCast = (slug: SpellSlug) => {
+    this.extrinsic.scores[ScoreType.WEIGHT_SPELLS_CAST]++;
+    this.checkWeightSpell20();
+  }
+
   private nodeAdded = (node: PlantNode) => {
     this.sortedNodes[node.slug].push(node);
     this.nodes.push(node);
@@ -270,6 +277,8 @@ export class GameKnowledge {
       case 'HUB':
         this.checkHubLevel(e.data);
         break
+      case 'SPELL':
+        this.spellCast(e.data);
     }
   }
 
@@ -329,6 +338,7 @@ export class GameKnowledge {
       }
     }
   }
+
   private checkCrawlerDie100 = () => {
     if (!this.extrinsic.achievements[AchievementSlug.CRAWLERS_DIE_100]) {
       if (this.extrinsic.scores[ScoreType.CRAWLERS_DEAD] >= 100) {
@@ -336,6 +346,17 @@ export class GameKnowledge {
       } else {
         let count = `Current Deaths: ${this.extrinsic.scores[ScoreType.CRAWLERS_DEAD]} / 100`;
         this.onAchievementUpdate.publish({slug: AchievementSlug.CRAWLERS_DIE_100, count});
+      }
+    }
+  }
+
+  private checkWeightSpell20 = () => {
+    if (!this.extrinsic.achievements[AchievementSlug.CAST_WEIGHT_20]) {
+      if (this.extrinsic.scores[ScoreType.WEIGHT_SPELLS_CAST] >= 20) {
+        this.achieveAchievement(AchievementSlug.CAST_WEIGHT_20);
+      } else {
+        let count = `Focus Spells Cast: ${this.extrinsic.scores[ScoreType.WEIGHT_SPELLS_CAST]} / 20`;
+        this.onAchievementUpdate.publish({slug: AchievementSlug.CAST_WEIGHT_20, count});
       }
     }
   }

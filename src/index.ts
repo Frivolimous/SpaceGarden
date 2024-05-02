@@ -16,7 +16,10 @@ import { IExtrinsicModel, dExtrinsicModel } from './data/SaveData';
 
 export let interactionMode: 'desktop'|'mobile' = 'desktop';
 const versionUpdates: {version: number, callback: (save: IExtrinsicModel) => IExtrinsicModel}[] = [
-  {version: Config.INIT.GAME_DATA_VERSION, callback: () => _.cloneDeep(dExtrinsicModel)},
+  // <28, reset
+  // 28 -> 29, add another SCORE
+  {version: 28, callback: () => _.cloneDeep(dExtrinsicModel)},
+  {version: 29, callback: (save) => {save.scores[3] = 0; return save}},
 ];
 
 export let Facade = new class FacadeInner {

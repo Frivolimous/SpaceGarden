@@ -2,6 +2,7 @@ export enum ScoreType {
   PRESTIGES,
   CRAWLERS_DEAD,
   RESEARCH_SAVED,
+  WEIGHT_SPELLS_CAST,
   // NODES_MADE,
   // NODES_DELETED,
   // CRAWLERS_BORN,
@@ -16,4 +17,5 @@ export enum AchievementSlug {
   CRAWLERS_DIE_100,
   TIER_3,
   HUB_3,
+  CAST_WEIGHT_20,
 }

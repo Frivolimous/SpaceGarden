@@ -11,6 +11,7 @@ import { Config } from '../Config';
 import _ from 'lodash';
 import { BaseSpell } from '../engine/Mechanics/Spells/_BaseSpell';
 import { MouseController } from '../services/MouseController';
+import { GameEvents } from '../services/GameEvents';
 
 export class BottomBar extends PIXI.Container {
   public onCreateButton = new JMEventListener<{ config: INodeConfig, e: PIXI.FederatedPointerEvent, onComplete: () => void }>();
@@ -63,30 +64,33 @@ export class BottomBar extends PIXI.Container {
   }
 
   public setSpells(spells: BaseSpell[]) {
-    spells.forEach(spell => {
-      let spellButton = new ToggleButton({
-        label: (StringManager.data as any)['SPELL_NAME_SHORT_' + spell.slug], width: 50, height: 50, rounding: 25, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: (b: boolean) => {
-          if (b) {
-            this.nodeButtons.forEach(button => button.selected = false);
-            this.spellButtons.forEach(button => ((button !== spellButton) && (button.selected = false)));
-            spell.activate();
-            this.mouseC.setNextClickEvent(spell.clickEvent);
-          } else {
-            spell.cancelActivation();
-            this.mouseC.clearNextClickEvent();
-          }
-        },
-      });
-      spell.onComplete = (success) => {
-        spellButton.selected = false;
-        if (success) spellButton.disableTimer(spell.cooldown);
-      };
-      TooltipReader.addTooltip(spellButton, {title: (StringManager.data as any)['SPELL_NAME_LONG_' + spell.slug], description: (StringManager.data as any)['SPELL_DESC_' + spell.slug]});
+    spells.forEach(spell => this.addSpell(spell));
+  }
 
-      this.addChild(spellButton);
-
-      this.spellButtons.push(spellButton);
+  public addSpell(spell: BaseSpell) {
+    let spellButton = new ToggleButton({
+      label: (StringManager.data as any)['SPELL_NAME_SHORT_' + spell.slug], width: 50, height: 50, rounding: 25, color: 0x77ccff, selectedColor: 0xffcc77, onToggle: (b: boolean) => {
+        if (b) {
+          this.nodeButtons.forEach(button => button.selected = false);
+          this.spellButtons.forEach(button => ((button !== spellButton) && (button.selected = false)));
+          spell.activate();
+          this.mouseC.setNextClickEvent(spell.clickEvent);
+        } else {
+          spell.cancelActivation();
+          this.mouseC.clearNextClickEvent();
+        }
+      },
     });
+    spell.onComplete = (success) => {
+      GameEvents.ACTIVITY_LOG.publish({slug: 'SPELL', data: spell.slug});
+      spellButton.selected = false;
+      if (success) spellButton.disableTimer(spell.cooldown);
+    };
+    TooltipReader.addTooltip(spellButton, {title: (StringManager.data as any)['SPELL_NAME_LONG_' + spell.slug], description: (StringManager.data as any)['SPELL_DESC_' + spell.slug]});
+
+    this.addChild(spellButton);
+
+    this.spellButtons.push(spellButton);
   }
 
   public refreshNodeButton(config: INodeConfig) {

@@ -5,6 +5,7 @@ import { TextureCache } from '../../services/TextureCache';
 
 const DExplosion: IExplosion = {
   x: 0, y: 0, count: 20,
+  offRadius: 0,
   angle_min: 0, angle_max: Math.PI * 2,
   mag_min: 1, mag_max: 3,
   fade: 0.06,
@@ -34,6 +35,13 @@ export class Firework {
 
       let mag = _.random(config.mag_min, config.mag_max);
       let angle = _.random(config.angle_min, config.angle_max);
+
+      if (config.offRadius) {
+        let mag_s = Math.random() * config.offRadius;
+
+        display.x += mag_s * Math.cos(angle);
+        display.y += mag_s * Math.cos(angle)
+      }
 
       let particle: IParticle = {
         display,
@@ -81,6 +89,7 @@ export class Firework {
 interface IExplosion {
   x: number;
   y: number;
+  offRadius?: number;
   count?: number;
   angle_min?: number;
   angle_max?: number;
