@@ -144,7 +144,7 @@ export class HubPanel {
 
     element.innerHTML = '';
     let skillName = DomManager.makeDiv('skill-block-title', element);
-    skillName.innerHTML = `${skill.label}: ${skill.effect.valueType === 'multiplicative' ? 'x' : '+'}${skill.effect.value}`;
+    skillName.innerHTML = skill.label;
     let levelElement = DomManager.makeDiv('skill-block-content', element);
 
     if (level >= skill.costs.length) {

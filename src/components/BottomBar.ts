@@ -94,7 +94,7 @@ export class BottomBar extends PIXI.Container {
   }
 
   public refreshNodeButton(config: INodeConfig) {
-    let nodeButton = this.nodeButtons.find(el => el.getLabel() === config.slug);
+    let nodeButton = this.nodeButtons.find(el => el.getLabel() === (StringManager.data as any)[`NODE_NAME_SHORT_${config.slug}`]);
 
     if (nodeButton) {
       nodeButton.maxNodes = config.maxCount;

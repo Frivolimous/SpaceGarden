@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { GOD_MODE } from './services/_Debug';
 
 export const Config = {
   INIT: {
@@ -49,5 +50,9 @@ export const Config = {
     BREED_AT: 1.5,
   },
 };
+
+if (GOD_MODE) {
+  Config.NODE.LAUNCH_PERCENT = 0.05;
+}
 
 export const dConfigNode = _.clone(Config.NODE);

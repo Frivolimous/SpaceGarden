@@ -4,7 +4,7 @@ import { SpellSlug } from './_SpellTypes';
 
 export class DeleteSpell extends BaseSpell{
   slug: SpellSlug = 'delete';
-  cooldown: number = 5000;
+  cooldown: number = 2000;
 
   clickEvent: IClickEvent = {
     onDown: position => {

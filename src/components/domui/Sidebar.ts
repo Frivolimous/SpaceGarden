@@ -216,6 +216,7 @@ export class Sidebar {
 
     if (this.seedlingElement) {
       this.nextSkillPanel.updateSkillpoints((this.seedlingElement.source as PlantNode).power.researchCurrent);
+      (this.seedlingElement.source as PlantNode).skillpoints = this.nextSkillPanel.skillpoints;
       this.seedlingElement.button.notify(this.nextSkillPanel.hidden && this.nextSkillPanel.hasSkillToLevel);
     }
 

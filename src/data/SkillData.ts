@@ -234,7 +234,7 @@ export const SkillData: ISkillData = {
     {
       slug: 'skill-3-4',
       title: 'Genetic Memory',
-      description: 'Retain 25% of your earned Evolution Points when you delete or launch your seedling. Let\'s you build 1 Wild Lab.',
+      description: 'Retain 25% of your earned Genes when you delete or launch your seedling. Let\'s you build 1 Wild Lab.',
       cost: 8,
       effects: [
         {effectType: 'buildable', value: 'biglab'},
@@ -339,7 +339,7 @@ export const SkillData: ISkillData = {
       title: 'Eventuality',
       description: 'Requirement: Launch Seedling 10 times<br>Reward: Seedling can be launched at 95% Power',
       effects: [
-        {effectType: 'config', key: 'LAUNCH_PERCENT', valueType: 'replace', value: 0.95},
+        {effectType: 'config', key: 'LAUNCH_PERCENT', valueType: 'additive', value: -0.05},
       ],
     },
     {
@@ -403,82 +403,92 @@ export const SkillData: ISkillData = {
   hubs: [
     {
       slug: 'core-links',
-      label: 'Core Links',
+      label: 'Core Links: +1',
       costType: 'fruit', costs: [4000,72000,1440000,43200000,1728000000],
-      effect: {
-        effectType: 'node', slug: 'core', key: 'maxLinks', value: 1,  valueType: 'additive', 
-      }
+      effects: [
+        {effectType: 'node', slug: 'core', key: 'maxLinks', value: 1,  valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ]
     },
     {
       slug: 'core-gen',
-      label: 'Core Power',
-      effect: {
-        effectType: 'node', slug: 'core', key: 'powerGen', value: 0.4, valueType: 'additive', 
-      },
+      label: 'Core Power: +24/s',
+      effects: [
+        {effectType: 'node', slug: 'core', key: 'powerGen', value: 0.4, valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'fruit', costs: [350,6300,113400,2041200,36741600],
     },
     {
       slug: 'stem-count',
-      label: 'Stem Count',
-      effect: {
-        effectType: 'node', slug: 'stem', key: 'maxCount', value: 1, valueType: 'additive',
-      },
+      label: 'Stem Count: +1',
+      effects: [
+        {effectType: 'node', slug: 'stem', key: 'maxCount', value: 1, valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'power', costs: [30000,540000,10800000,324000000,12960000000],
     },
     {
       slug: 'generator-count',
-      label: 'Generator Count',
+      label: 'Generator Count: +1',
       costType: 'fruit', costs: [3500,63000,1260000,37800000,1512000000],
-      effect: {
-        effectType: 'node', slug: 'generator', key: 'maxCount', value: 1,  valueType: 'additive', 
-      }
+      effects: [
+        {effectType: 'node', slug: 'generator', key: 'maxCount', value: 1,  valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+    ],
     },
     {
       slug: 'generator-gen',
-      label: 'Generator Power',
-      effect: {
-        effectType: 'node', slug: 'generator', key: 'powerGen', value: 0.06, valueType: 'additive', 
-      },
+      label: 'Generator Power: +3.6/s',
+      effects: [
+        {effectType: 'node', slug: 'generator', key: 'powerGen', value: 0.06, valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'fruit', costs: [300,5400,97200,1749600,31492800],
     },
     {
       slug: 'lab-prod',
-      label: 'Evolver Production',
-      effect: {
-        effectType: 'node', slug: 'lab', key: 'researchGen', value: 1.2, valueType: 'multiplicative', 
-      },
+      label: 'Evolver Production: +3.6/s',
+      effects: [
+        {effectType: 'node', slug: 'lab', key: 'researchGen', value: 1.2, valueType: 'multiplicative'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'power', costs: [2500,45000,810000,14580000,262440000],
     },
     {
       slug: 'lab-fruit',
-      label: 'Evolver Fruits',
-      effect: {
-        effectType: 'node', slug: 'lab', key: 'maxFruits', value: 1, valueType: 'additive', 
-      },
+      label: 'Evolver Fruits: +1',
+      effects: [
+        {effectType: 'node', slug: 'lab', key: 'maxFruits', value: 1, valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'power', costs: [50000,1250000,31250000,781250000,19531250000],
     },
     {
       slug: 'grove-prod',
-      label: 'Grove Production',
-      effect: {
-        effectType: 'node', slug: 'grove', key: 'fruitGen', value: 1.2, valueType: 'multiplicative', 
-      },
+      label: 'Grove Production: +3.6/s',
+      effects: [
+        {effectType: 'node', slug: 'grove', key: 'fruitGen', value: 1.2, valueType: 'multiplicative'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'research', costs: [450,8100,145800,2624400,47239200],
     },
     {
       slug: 'grove-fruit',
-      label: 'Grove Fruits',
-      effect: {
-        effectType: 'node', slug: 'grove', key: 'maxFruits', value: 1, valueType: 'additive', 
-      },
+      label: 'Grove Fruits: +1',
+      effects: [
+        {effectType: 'node', slug: 'grove', key: 'maxFruits', value: 1, valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'research', costs: [8000,200000,5000000,125000000,3125000000],
     },
     {
       slug: 'home-fruit',
-      label: 'Home Fruits',
-      effect: {
-        effectType: 'node', slug: 'home', key: 'maxFruits', value: 1, valueType: 'additive', 
-      },
+      label: 'Home Fruits: +1',
+      effects: [
+        {effectType: 'node', slug: 'home', key: 'maxFruits', value: 1, valueType: 'additive'},
+        {effectType: 'node', slug: 'hub', key: 'powerGen', value: -0.017, valueType: 'additive'}
+      ],
       costType: 'research', costs: [11000,275000,6875000,171875000,4296875000],
     },
   ]
@@ -514,7 +524,7 @@ export interface IHubConfig {
   label: string;
   costType: HubCostType;
   costs: number[];
-  effect: ISkillEffectNode;
+  effects: ISkillEffectNode[];
 }
 
 export type HubCostType = 'research' | 'fruit' | 'power' | 'buff';

@@ -40,7 +40,7 @@ export class GameUI extends BaseUI {
   private canvas: ScrollingContainer;
   private nodeManager: NodeManager;
   private sidebar: Sidebar;
-  private bottomBar: BottomBar;
+  public bottomBar: BottomBar;
 
   private keymapper: KeyMapper;
   private mouseC: MouseController;
@@ -61,7 +61,7 @@ export class GameUI extends BaseUI {
 
     this.extrinsic = Facade.saveManager.getExtrinsic();
 
-    this.nodeManager = new NodeManager(this.extrinsic.skillTier);
+    this.nodeManager = new NodeManager(this.extrinsic.skillTier, this);
     this.canvas = new ScrollingContainer(1500, 1000);
     this.container = new FDGContainer(this.canvas.innerBounds);
     this.mouseC = new MouseController(this.canvas, this.container);
@@ -69,7 +69,6 @@ export class GameUI extends BaseUI {
 
     this.nodeManager.applySkills(this.extrinsic.skillsCurrent);
     this.nodeManager.applyAchievements(this.extrinsic.achievements);
-    this.nodeManager.applyHubs(this.extrinsic.hubLevels);
 
     let always = this.nodeManager.getSkillAlways(this.extrinsic.skillTier);
 
@@ -108,6 +107,7 @@ export class GameUI extends BaseUI {
     this.mouseC.onMove.addListener(this.onMouseMove);
     this.gameC.onNodeAdded.addListener(this.sidebar.addNodeElement);
     this.gameC.onNodeAdded.addListener(this.bottomBar.nodeAdded);
+    this.gameC.onNodeAdded.addListener(this.onNodeAdded);
     this.gameC.onNodeRemoved.addListener(this.nodeRemoved);
     this.gameC.onCrawlerAdded.addListener(this.sidebar.addNodeElement);
     this.gameC.onCrawlerRemoved.addListener(this.sidebar.removeNodeElement);
@@ -152,6 +152,10 @@ export class GameUI extends BaseUI {
         {key: 'o', function: () => GameEvents.ACTIVITY_LOG.publish({slug: 'PRESTIGE'})},
         {key: 'c', function: () => this.nodeManager.hubSkills.forEach(el => el.costs = el.costs.map(el => 5))},
         {key: 'z', function: () => this.gameC.knowledge.achieveAchievement(AchievementSlug.HUB_3)},
+        {key: '6', function: () => this.bottomBar.spellButtons[0].selected = true},
+        {key: '7', function: () => this.bottomBar.spellButtons[1].selected = true},
+        {key: '8', function: () => this.bottomBar.spellButtons[2].selected = true},
+        {key: '9', function: () => this.bottomBar.spellButtons[3].selected = true},
         // {key: 'k', function: this.toggleKnowledge},
       ]);
     }
@@ -251,6 +255,7 @@ export class GameUI extends BaseUI {
     this.extrinsic.skillsCurrent = this.extrinsic.skillsNext;
     this.extrinsic.skillsNext = [];
     this.extrinsic.prestigeTime = 0;
+    this.extrinsic.hubLevels = [];
     this.resetGame();
   }
 
@@ -440,11 +445,21 @@ export class GameUI extends BaseUI {
     }
   }
 
+  public onNodeAdded = (node: PlantNode) => {
+    if (node.slug === 'hub') {
+      console.log("ADD HUB");
+      this.nodeManager.applyHubs(this.extrinsic.hubLevels);
+    }
+  }
+
   private nodeRemoved = (node: PlantNode) => {
     this.bottomBar.nodeRemoved(node);
     this.sidebar.removeNodeElement(node);
     if (node.active && node.slug === 'seedling') {
       this.extrinsic.scores[ScoreType.RESEARCH_SAVED] = node.power.researchCurrent * Config.NODE.SAVED_RESEARCH;
+    } else if (node.slug === 'hub') {
+      console.log("REMOVE HUB");
+      this.nodeManager.removeHubs(this.extrinsic.hubLevels);
     }
   }
 
@@ -466,24 +481,7 @@ export class GameUI extends BaseUI {
         hub.power.storedPowerCurrent -= cost;
       }
 
-      this.nodeManager.applyNodeEffect(skill.effect);
-
-      if (skill.effect.key === 'maxCount') {
-        let node = this.nodeManager.getNodeConfig(skill.effect.slug);
-        this.bottomBar.refreshNodeButton(node);
-      } else if (skill.effect.key === 'powerGen') {
-        this.gameC.nodes.forEach(node => {
-          if (node.slug === skill.effect.slug) {
-            node.power._PowerGen += skill.effect.value;
-          }
-        });
-      } else if (skill.effect.key === 'researchGen') {
-        this.gameC.nodes.forEach(node => {
-          if (node.slug === skill.effect.slug) {
-            node.power._ResearchGen *= skill.effect.value;
-          }
-        })
-      }
+      skill.effects.forEach(effect => this.nodeManager.applyNodeEffect(effect));
 
       if (!levelPair) {
         levelPair = [skill.slug, 0];

@@ -30,6 +30,7 @@ export class PlantNode {
   public type: 'normal' | 'fruit';
   public outlets: PlantNode[] = [];
   public fruits: PlantNode[] = [];
+  public skillpoints: number;
 
   public active = true;
   public exists = true;
@@ -307,7 +308,7 @@ export class PlantNode {
       m += `<p style='color: #eedd33;'>[ Drag to your network in order to connect the new node ]</p>`;
     } else {
       if (this.config.slug === 'seedling') {
-        m += `<br>Evolution Points: ${Math.round(this.power.researchCurrent)}`;
+        m += `<br>Evolutions: ${Math.round(this.skillpoints)}`;
       }
       if (this.power.powerGen > 0) {
         m += `<br>Power Gen: ${(this.power.powerGen * 60).toFixed(0)}/s (transfer: ${(this.power.powerClump / this.config.powerDelay * 60).toFixed(0)}/s)`;

@@ -5,6 +5,7 @@ import { Config } from '../../Config';
 import { CrawlerData, CrawlerSlug, ICrawlerConfig } from '../../data/CrawlerData';
 import { SpellSlug } from './Spells/_SpellTypes';
 import { GameEvents } from '../../services/GameEvents';
+import { GameUI } from '../../pages/GameUI';
 
 export class NodeManager {
   public skills: ISkillConfig[];
@@ -19,7 +20,7 @@ export class NodeManager {
   private data: INodeConfig[];
   private crawlers: ICrawlerConfig[];
 
-  constructor(private skillTier: number) {
+  constructor(private skillTier: number, private gameUI: GameUI) {
     this.buildableNodes = _.clone(NodeData.BaseBuildable);
     this.activeSpells = _.clone(SkillData.activeSpells);
     this.availableCrawlers = _.clone(CrawlerData.BaseAvailable);
@@ -79,7 +80,16 @@ export class NodeManager {
     hubLevels.forEach(([slug, level]) => {
       let skill = this.hubSkills.find(el => el.slug === slug);
       for (let i = 0; i < level; i++) {
-        this.applyNodeEffect(skill.effect);
+        skill.effects.forEach(effect => this.applyNodeEffect(effect));
+      }
+    });
+  }
+
+  public removeHubs(hubLevels: [string, number][]) {
+    hubLevels.forEach(([slug, level]) => {
+      let skill = this.hubSkills.find(el => el.slug === slug);
+      for (let i = 0; i < level; i++) {
+        skill.effects.forEach(effect => this.removeNodeEffect(effect));
       }
     });
   }
@@ -99,6 +109,47 @@ export class NodeManager {
       this.finishArrayEffect(config, effect);
     } else {
       this.finishNumberEffect(config, effect);
+    }
+
+    if (effect.key === 'maxCount') {
+      this.gameUI.bottomBar.refreshNodeButton(config);
+    } else if (effect.key === 'powerGen') {
+      this.gameUI.gameC.nodes.forEach(node => {
+        if (node.slug === effect.slug) {
+          node.power._PowerGen += effect.value;
+        }
+      });
+    } else if (effect.key === 'researchGen') {
+      this.gameUI.gameC.nodes.forEach(node => {
+        if (node.slug === effect.slug) {
+          node.power._ResearchGen *= effect.value;
+        }
+      })
+    }
+  }
+
+  removeNodeEffect(effect: ISkillEffectNode) {
+    let config = this.getNodeConfig(effect.slug);
+    if (effect.key === 'outletEffects') {
+      this.finishReverseArrayEffect(config, effect);
+    } else {
+      this.finishReverseNumberEffect(config, effect);
+    }
+
+    if (effect.key === 'maxCount') {
+      this.gameUI.bottomBar.refreshNodeButton(config);
+    } else if (effect.key === 'powerGen') {
+      this.gameUI.gameC.nodes.forEach(node => {
+        if (node.slug === effect.slug) {
+          node.power._PowerGen -= effect.value;
+        }
+      });
+    } else if (effect.key === 'researchGen') {
+      this.gameUI.gameC.nodes.forEach(node => {
+        if (node.slug === effect.slug) {
+          node.power._ResearchGen /= effect.value;
+        }
+      })
     }
   }
 
@@ -174,6 +225,30 @@ export class NodeManager {
       config.push(effect.value);
     } else if (effect.valueType === 'replace') {
       config = [effect.value];
+    }
+  }
+
+  private finishReverseNumberEffect(config: any, effect: ISkillEffectFormulable) {
+    if (effect.valueType === 'additive') {
+      config[effect.key] -= effect.value;
+    } else if (effect.valueType === 'multiplicative') {
+      config[effect.key] /= effect.value;
+    } else if (effect.valueType === 'replace') {
+      console.log("ERROR can't reverse a replacement");
+    }
+  }
+
+  private finishReverseArrayEffect(config: any, effect: ISkillEffectFormulable) {
+    if (effect.key) {
+      if (!config[effect.key]) {
+        config[effect.key] = [];
+      }
+      config = config[effect.key];
+    }
+    if (effect.valueType === 'additive') {
+      _.pull(config, effect.value);
+    } else if (effect.valueType === 'replace') {
+      config.log("ERROR can't reverse a replacement")
     }
   }
 }
