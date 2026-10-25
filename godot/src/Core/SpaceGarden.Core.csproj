@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The garden's rules: physics, growth, motes, saves. Plain C#: it must never reference Godot. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>SpaceGarden.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

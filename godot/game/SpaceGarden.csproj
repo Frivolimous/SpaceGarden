@@ -1,0 +1,12 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <!-- Presentation, input and the widget window only. The garden's rules live in src/Core. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>SpaceGarden</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\Core\SpaceGarden.Core.csproj" />
+    <Using Include="SpaceGarden.Core" />
+  </ItemGroup>
+</Project>
