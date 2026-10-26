@@ -45,11 +45,11 @@ public static class Tuning
     public const float GlowFadePerSecond = 1.5f;
     public const float LinkFlashFadePerSecond = 3.3f;
 
-    // Growth in real seconds at speed 1: a new part about every 20 minutes, so a full prototype garden takes
-    // a few days. The prototype runs at 60x by default (one every 20 s) so the growth can be watched.
+    // Growth in real seconds at speed 1: a new part about every 20 minutes, so a full prototype garden (500 parts)
+    // takes about a week. The prototype runs at 60x by default (one every 20 s) so the growth can be watched.
     public const double SproutEverySeconds = 20 * 60;
-    public const double FruitChance = 0.35;
-    public static int MaxNodes = 220; // not const: the --parts dev option raises it for stress tests
+    public const double FruitChance = 2.0 / 3; // about two thirds of a grown plant is fruit (65% at 500 parts)
+    public static int MaxNodes = 500; // not const: the --parts dev option raises it for stress tests
 
     // Time away is caught up to at most this much real time.
     public const double CatchUpCapSeconds = 72 * 3600;

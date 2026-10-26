@@ -6,10 +6,10 @@ namespace SpaceGarden;
 // Draws the garden each frame, back to front: pruned parts tumbling away, stems, soft halos, the parts, pins and the
 // ring on the part under the pointer, then the motes on top. Nothing here changes the garden.
 //
-// Each layer is a child canvas item drawn in as few draw calls as possible, however big the plant: the halos, the
-// motes and each kind of shape are one instanced batch apiece (a textured quad per part), the stems a few line
-// batches grouped by width. Drawing every part separately cost about four draw calls a part (884 a frame at 220
-// parts), which was most of the widget's CPU time.
+// Each layer is a child canvas item drawn in as few draw calls as possible, however big the plant: the stems, the
+// halos, the motes and each kind of shape are one instanced batch apiece (a textured quad per part, or per stem,
+// stretched along it). Drawing every part separately cost about four draw calls a part (884 a frame at 220 parts),
+// which was most of the widget's CPU time.
 public partial class GardenView : Node2D
 {
     // A pruned part on its way out: it keeps its last motion, falls, spins and fades.
@@ -29,9 +29,8 @@ public partial class GardenView : Node2D
     readonly Garden garden;
     readonly List<Falling> falling = new();
     readonly Node2D fallingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(), markLayer = new(), moteLayer = new();
-    readonly Batch halos = new(), moteHalos = new(), moteDots = new();
+    readonly Batch links = new(), halos = new(), moteHalos = new(), moteDots = new();
     readonly Dictionary<Shape, Batch> shapes = new();
-    readonly Dictionary<int, (List<Vector2> Points, List<Color> Colours)> linkWidths = new();
     float highlightRing;
     float blend = 1;
 
@@ -40,6 +39,7 @@ public partial class GardenView : Node2D
         this.garden = garden;
         foreach (var shape in Enum.GetValues<Shape>()) shapes[shape] = new Batch();
         shapeLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
+        linkLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
         moteLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
         fallingLayer.Draw += DrawFalling;
         linkLayer.Draw += DrawLinks;
@@ -100,33 +100,29 @@ public partial class GardenView : Node2D
     {
         foreach (var f in falling)
         {
-            var fill = Rgb(f.Spec.Rgb);
+            var fill = ColourOf(f.Spec);
             fill.A = f.Life;
             fallingLayer.DrawColoredPolygon(Place(UnitPolygon(f.Spec.Shape), f.Position, f.Radius * (0.6f + 0.4f * f.Life), f.Rotation), fill);
         }
     }
 
-    // One antialiased line batch per stem width (the stems thin with depth).
+    // Each stem is a soft-edged line quad stretched from end to end (the stems thin with depth).
     void DrawLinks()
     {
-        foreach (var (points, colours) in linkWidths.Values)
-        {
-            points.Clear();
-            colours.Clear();
-        }
+        links.Begin();
         foreach (var link in garden.Links)
         {
-            var colour = Shade(Rgb(link.Target.Spec.Rgb), 0.45f + 0.55f * link.Flash);
+            var colour = Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash);
             colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
             float width = link.Target.Spec.IsFruit ? 1.2f : Mathf.Max(1.2f, 3.4f - link.Target.Depth * 0.18f);
-            int key = Mathf.RoundToInt(width * 5);
-            if (!linkWidths.TryGetValue(key, out var batch)) linkWidths[key] = batch = (new(), new());
-            batch.Points.Add(At(link.Origin));
-            batch.Points.Add(At(link.Target));
-            batch.Colours.Add(colour);
+            var from = At(link.Origin);
+            var along = At(link.Target) - from;
+            float length = along.Length();
+            if (length < 0.01f) continue;
+            var across = new Vector2(-along.Y, along.X) / length * (width / Textures.LineCore);
+            links.AddAxes(from + along / 2, along, across, colour);
         }
-        foreach (var (key, (points, colours)) in linkWidths)
-            if (points.Count > 0) linkLayer.DrawMultilineColors(points.ToArray(), colours.ToArray(), key / 5f, true);
+        links.Draw(linkLayer, Textures.Line);
     }
 
     void DrawHalos()
@@ -134,9 +130,9 @@ public partial class GardenView : Node2D
         halos.Begin();
         foreach (var node in garden.Nodes)
         {
-            var colour = Rgb(node.Spec.Rgb);
+            var colour = ColourOf(node.Spec);
             colour.A = 0.3f + 0.4f * node.Glow;
-            halos.Add(At(node), Size(node) * 3.6f, 0, colour);
+            halos.AddRound(At(node), Size(node) * 3.6f, colour);
         }
         halos.Draw(haloLayer, Textures.Halo);
     }
@@ -149,11 +145,12 @@ public partial class GardenView : Node2D
         {
             float size = Size(node);
             if (size < 0.2f) continue;
-            var fill = Shade(Rgb(node.Spec.Rgb), 0.75f + 0.45f * node.Glow);
+            var fill = Shade(ColourOf(node.Spec), 0.75f + 0.45f * node.Glow);
             var batch = shapes[node.Spec.Shape];
             var at = At(node);
-            batch.Add(at, Textures.ShapeDiameter(size + RimWidth / 2), node.Rotation, fill.Lightened(0.35f));
-            batch.Add(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - RimWidth / 2)), node.Rotation, fill);
+            var (sin, cos) = MathF.SinCos(node.Rotation);
+            batch.AddTurned(at, Textures.ShapeDiameter(size + RimWidth / 2), cos, sin, fill.Lightened(0.35f));
+            batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - RimWidth / 2)), cos, sin, fill);
         }
         foreach (var (shape, batch) in shapes) batch.Draw(shapeLayer, Textures.Shape(shape));
     }
@@ -187,8 +184,8 @@ public partial class GardenView : Node2D
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
             var colour = Rgb(mote.Rgb);
             colour.A = 0.85f;
-            moteHalos.Add(p, 26, 0, colour);
-            moteDots.Add(p, Textures.ShapeDiameter(2.6f), 0, Colors.White);
+            moteHalos.AddRound(p, 26, colour);
+            moteDots.AddRound(p, Textures.ShapeDiameter(2.6f), Colors.White);
         }
         moteHalos.Draw(moteLayer, Textures.Halo);
         moteDots.Draw(moteLayer, Textures.Shape(Shape.Circle));
@@ -199,6 +196,7 @@ public partial class GardenView : Node2D
     // Parts swell in over their first second and a half, overshooting a little like a bud opening.
     static float GrowIn(PlantNode node)
     {
+        if (node.Age >= 1.5f) return 1; // grown: almost every part, almost always
         float t = Mathf.Clamp(node.Age / 1.5f, 0, 1);
         const float c1 = 1.70158f, c3 = c1 + 1;
         return 1 + c3 * Mathf.Pow(t - 1, 3) + c1 * Mathf.Pow(t - 1, 2);
@@ -231,6 +229,11 @@ public partial class GardenView : Node2D
 
     public static Color Rgb(uint rgb) => new((rgb << 8) | 0xFF);
 
+    // Each kind of part's colour, worked out once.
+    static readonly Color[] kindColours = Enum.GetValues<NodeKind>().Select(k => Rgb(NodeSpecs.All[k].Rgb)).ToArray();
+
+    static Color ColourOf(NodeSpec spec) => kindColours[(int)spec.Kind];
+
     public static Vector2 V(Num.Vector2 v) => new(v.X, v.Y);
 }
 
@@ -254,15 +257,23 @@ public sealed class Batch
 
     public void Begin() => count = 0;
 
-    public void Add(Vector2 centre, float diameter, float rotation, Color colour)
+    // A quad centred here, its unit square mapped onto the two axes (the quad's width along x, height along y).
+    public void AddAxes(Vector2 centre, Vector2 x, Vector2 y, Color colour)
     {
         if ((count + 1) * Floats > buffer.Length) Array.Resize(ref buffer, buffer.Length * 2);
-        float cos = Mathf.Cos(rotation) * diameter, sin = Mathf.Sin(rotation) * diameter;
         int i = count++ * Floats;
-        buffer[i] = cos; buffer[i + 1] = -sin; buffer[i + 2] = 0; buffer[i + 3] = centre.X;
-        buffer[i + 4] = sin; buffer[i + 5] = cos; buffer[i + 6] = 0; buffer[i + 7] = centre.Y;
+        buffer[i] = x.X; buffer[i + 1] = y.X; buffer[i + 2] = 0; buffer[i + 3] = centre.X;
+        buffer[i + 4] = x.Y; buffer[i + 5] = y.Y; buffer[i + 6] = 0; buffer[i + 7] = centre.Y;
         buffer[i + 8] = colour.R; buffer[i + 9] = colour.G; buffer[i + 10] = colour.B; buffer[i + 11] = colour.A;
     }
+
+    // A square this wide, turned by the angle whose cosine and sine these are.
+    public void AddTurned(Vector2 centre, float diameter, float cos, float sin, Color colour) =>
+        AddAxes(centre, new Vector2(cos, sin) * diameter, new Vector2(-sin, cos) * diameter, colour);
+
+    // A square this wide, unturned (for round things).
+    public void AddRound(Vector2 centre, float diameter, Color colour) =>
+        AddAxes(centre, new Vector2(diameter, 0), new Vector2(0, diameter), colour);
 
     public void Draw(CanvasItem onto, Texture2D texture)
     {
@@ -300,6 +311,25 @@ public static class Textures
 
     public static readonly Texture2D Halo = MakeHalo();
     static readonly Dictionary<Shape, Texture2D> shapes = new();
+
+    // A stem: solid across the middle LineCore of its height, fading out to the edges for a soft, antialiased look.
+    // Stretched along the stem; the quad is drawn the stem's width / LineCore tall so the solid part is the width.
+    public const float LineCore = 0.7f;
+    public static readonly Texture2D Line = MakeLine();
+
+    static Texture2D MakeLine()
+    {
+        const int height = 32;
+        var image = Image.CreateEmpty(4, height, false, Image.Format.Rgba8);
+        for (int y = 0; y < height; y++)
+        {
+            float fromMiddle = Mathf.Abs((y + 0.5f) / height - 0.5f) * 2; // 0 in the middle, 1 at the edges
+            float alpha = Mathf.Clamp((1 - fromMiddle) / (1 - LineCore), 0, 1);
+            for (int x = 0; x < 4; x++) image.SetPixel(x, y, new Color(1, 1, 1, alpha));
+        }
+        image.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(image);
+    }
 
     public static Texture2D Shape(Shape shape)
     {

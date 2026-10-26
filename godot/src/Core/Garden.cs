@@ -39,6 +39,9 @@ public sealed class Garden
     // Walls the plant bounces off (the TS game's borders), or none.
     public (Vector2 Min, Vector2 Max)? Borders;
 
+    // Fruit stays out of the grid and borrows its parent's push (see Repel): about 4x cheaper, nearly as tidy.
+    public bool FruitBorrowsPush = true;
+
     readonly Random rng;
     readonly Dictionary<PlantNode, Link> linkToParent = new();
     readonly Dictionary<PlantNode, float> moteTimers = new();
@@ -328,14 +331,33 @@ public sealed class Garden
     // The far push changes slowly (distant parts barely move relative to each other in a tick), so each part keeps
     // it (FarPush) and applies it every tick, and it's worked out afresh for a share of the cells each tick, in
     // turn: every cell every FarPushEvery ticks, spread evenly so no tick is heavier than the rest.
+    //
+    // With FruitBorrowsPush, fruit (two thirds of a grown plant, light and weak) stays out of the grid, which makes
+    // a fruit-heavy plant's push about 4x cheaper, and nearly as tidy. Both ways the fruit's push goes through its
+    // parent:
+    //   - a part with fruit pushes the rest of the plant with its fruit's force added to its own (PushForce);
+    //   - the fruit gets the push its parent got from the rest of the plant and the core (RepelPush, FarPush),
+    //     scaled from the parent's force and mass to the fruit's: what it would have felt, near enough, being close.
+    // Only its parent and its sibling fruit push it directly (and it pushes them back).
     void Repel()
     {
         int turn = (int)(ticks++ % Tuning.FarPushEvery);
+        bool borrow = FruitBorrowsPush;
+        foreach (var node in Nodes)
+        {
+            node.PushForce = node.Spec.Force;
+            node.RepelPush = Vector2.Zero;
+            if (!borrow) continue;
+            if (node.Spec.IsFruit) node.FarPush = Vector2.Zero; // fruit gets no far push in this mode
+            foreach (var fruit in node.Fruits) node.PushForce += fruit.Spec.Force;
+        }
+
         foreach (var cell in cells.Values) cell.Nodes.Clear();
         if (cells.Count > Nodes.Count * 4) cells.Clear(); // the plant has moved on; drop the empty cells
         farReaching.Clear();
         foreach (var node in Nodes)
         {
+            if (borrow && node.Spec.IsFruit) continue;
             if (node.Spec.Force >= Tuning.FarReachForce)
             {
                 farReaching.Add(node);
@@ -354,8 +376,8 @@ public sealed class Garden
             var weighted = Vector2.Zero;
             foreach (var n in cell.Nodes)
             {
-                force += n.Spec.Force;
-                weighted += n.Position * n.Spec.Force;
+                force += n.PushForce;
+                weighted += n.Position * n.PushForce;
             }
             cell.Force = force;
             cell.Centre = weighted / force;
@@ -386,7 +408,7 @@ public sealed class Garden
                 {
                     var d = Floor(a.Position - other.Centre);
                     float dist2 = d.LengthSquared();
-                    a.FarPush += a.Spec.Force * other.Force / dist2 / MathF.Sqrt(dist2) * d * a.Spec.InverseMass;
+                    a.FarPush += a.PushForce * other.Force / dist2 / MathF.Sqrt(dist2) * d * a.Spec.InverseMass;
                 }
             }
         }
@@ -396,8 +418,27 @@ public sealed class Garden
         {
             var big = farReaching[i];
             foreach (var node in Nodes)
-                if (node != big && !(node.Spec.Force >= Tuning.FarReachForce && farReaching.IndexOf(node) <= i))
-                    Push(big, node);
+            {
+                if (node == big || (node.Spec.Force >= Tuning.FarReachForce && farReaching.IndexOf(node) <= i)) continue;
+                if (borrow && node.Spec.IsFruit) continue; // it gets the core's push through its parent
+                Push(big, node);
+            }
+        }
+
+        if (!borrow) return;
+        foreach (var parent in Nodes)
+        {
+            var fruits = parent.Fruits;
+            if (fruits.Count == 0) continue;
+            // The push the parent got from the rest of the plant, as a field: per unit of its force and mass.
+            var field = (parent.RepelPush + parent.FarPush) * parent.Spec.Mass / parent.PushForce;
+            for (int i = 0; i < fruits.Count; i++)
+            {
+                var fruit = fruits[i];
+                fruit.Velocity += field * fruit.Spec.Force * fruit.Spec.InverseMass;
+                Push(fruit, parent, fruit.Spec.Force, parent.Spec.Force);
+                for (int j = i + 1; j < fruits.Count; j++) Push(fruit, fruits[j], fruit.Spec.Force, fruits[j].Spec.Force);
+            }
         }
     }
 
@@ -421,13 +462,21 @@ public sealed class Garden
     static Vector2 Floor(Vector2 d) =>
         new(d.X > 0 ? Math.Max(2, d.X) : Math.Min(-2, d.X), d.Y > 0 ? Math.Max(2, d.Y) : Math.Min(-2, d.Y));
 
-    static void Push(PlantNode a, PlantNode b)
+    // Two parts push each other, with any fruit they carry counted in their force (only with FruitBorrowsPush).
+    static void Push(PlantNode a, PlantNode b) => Push(a, b, a.PushForce, b.PushForce);
+
+    // Each side's push is also noted in RepelPush, for its fruit to borrow.
+    static void Push(PlantNode a, PlantNode b, float forceA, float forceB)
     {
         var d = Floor(a.Position - b.Position);
         float dist2 = d.LengthSquared();
-        float mult = a.Spec.Force * b.Spec.Force / dist2 / MathF.Sqrt(dist2);
-        a.Velocity += mult * d * a.Spec.InverseMass;
-        b.Velocity -= mult * d * b.Spec.InverseMass;
+        float mult = forceA * forceB / dist2 / MathF.Sqrt(dist2);
+        var pushA = mult * d * a.Spec.InverseMass;
+        var pushB = mult * d * b.Spec.InverseMass;
+        a.Velocity += pushA;
+        a.RepelPush += pushA;
+        b.Velocity -= pushB;
+        b.RepelPush -= pushB;
     }
 
     // Light, wind and the ground are all measured from the core, wherever it's been planted.

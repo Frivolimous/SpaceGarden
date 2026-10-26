@@ -16,10 +16,14 @@ namespace SpaceGarden;
 // Right-click opens the menu. It drops to a low frame rate when nothing's happening.
 public partial class Widget : Node
 {
-    // Idle it draws at 30 fps; while anything's happening, at the monitor's rate (0: no cap, vsync holds it there).
-    // It counts as settled once no part has moved more than SettledSpeed a tick for SettleSeconds.
-    const int IdleFps = 30;
-    const int ActiveFps = 0;
+    // Idle it draws at the Idle frame rate from the menu (30 fps by default); while anything's happening, at the
+    // monitor's rate (no cap, vsync holds it there). It counts as settled once no part has moved more than
+    // SettledSpeed a tick for SettleSeconds. Idle pacing is Godot's low-processor mode (it sleeps between frames)
+    // rather than the max_fps cap, which spends CPU between frames to keep its timing: 4.5% of a core instead of
+    // 7-9% for an empty garden at 30 fps. The idle cost is mostly per frame, so it scales with the idle rate.
+    public static readonly int[] IdleRates = [15, 20, 30, 60];
+    int idleFps = 30;
+    bool idling;
     const float SettledSpeed = 0.45f; // idle sway peaks at 0.2-0.4 (bigger plants higher); a fling is 0.5+ for 2 s
     const double SettleSeconds = 1;
     const float DragThreshold = 4;
@@ -29,7 +33,21 @@ public partial class Widget : Node
 
     public static readonly float[] Sizes = [0.5f, 0.75f, 1f, 1.25f];
 
-    enum MenuId { AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, Size0 = 100 }
+    enum MenuId { AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows, Size0 = 100, Idle0 = 200 }
+
+    public int IdleFps
+    {
+        get => idleFps;
+        set
+        {
+            idleFps = value;
+            OS.LowProcessorUsageModeSleepUsec = 1_000_000 / idleFps; // takes effect at once if idling
+            CheckMenu();
+        }
+    }
+
+    // EXPERIMENT: the cheaper fruit physics (Garden.FruitBorrowsPush), switchable from the menu to compare the feel.
+    bool fruitBorrowsPush = true;
 
     readonly Main main;
     readonly PopupMenu menu = new();
@@ -87,6 +105,11 @@ public partial class Widget : Node
         menu.AddRadioCheckItem("Real time (1x)", (int)MenuId.Speed1);
         menu.AddRadioCheckItem("Fast (60x)", (int)MenuId.Speed60);
         menu.AddRadioCheckItem("Very fast (3600x)", (int)MenuId.Speed3600);
+        menu.AddSeparator("Idle frame rate");
+        for (int i = 0; i < IdleRates.Length; i++)
+            menu.AddRadioCheckItem($"{IdleRates[i]} fps{(IdleRates[i] == 30 ? " (default)" : "")}", (int)MenuId.Idle0 + i);
+        menu.AddSeparator("Physics");
+        menu.AddCheckItem("Fruit borrows its parent's push (cheaper)", (int)MenuId.FruitBorrows);
         menu.AddSeparator();
         menu.AddItem("New garden", (int)MenuId.Reset);
         menu.AddItem("Quit", (int)MenuId.Quit);
@@ -143,6 +166,7 @@ public partial class Widget : Node
 
     public override void _Process(double delta)
     {
+        Garden.FruitBorrowsPush = fruitBorrowsPush; // every frame, so it carries over to a new garden too
         var pointer = PointerInViewport();
         bool overToolbar = toolbar.Visible && toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);
@@ -169,7 +193,7 @@ public partial class Widget : Node
         else UpdateRegion(delta);
         bool active = catchMouse || toolbar.Visible || Garden.Held != null || Garden.Speed > SettledSpeed;
         activeTime = active ? SettleSeconds : activeTime - delta;
-        Engine.MaxFps = activeTime > 0 ? ActiveFps : IdleFps;
+        SetIdle(activeTime <= 0);
     }
 
     // A tapped part's toolbar goes once the pointer has been off both the part and the toolbar for a while (see
@@ -196,6 +220,14 @@ public partial class Widget : Node
         var a = toWindow * (GardenView.V(min) - new Vector2(RegionMargin, RegionMargin));
         var b = toWindow * (GardenView.V(max) + new Vector2(RegionMargin, RegionMargin));
         DisplayServer.WindowSetMousePassthrough([a, new Vector2(b.X, a.Y), b, new Vector2(a.X, b.Y)]);
+    }
+
+    void SetIdle(bool idle)
+    {
+        if (idle == idling) return;
+        idling = idle;
+        OS.LowProcessorUsageModeSleepUsec = 1_000_000 / idleFps;
+        OS.LowProcessorUsageMode = idle;
     }
 
     // ==== INPUT ==== \\
@@ -274,6 +306,8 @@ public partial class Widget : Node
                 main.NewGarden();
                 break;
             case MenuId.Quit: main.SaveAndQuit(); break;
+            case MenuId.FruitBorrows: fruitBorrowsPush = !fruitBorrowsPush; break;
+            case >= MenuId.Idle0: IdleFps = IdleRates[(int)id - (int)MenuId.Idle0]; break;
             case >= MenuId.Size0: PlantScale = Sizes[(int)id - (int)MenuId.Size0]; break;
         }
         CheckMenu();
@@ -284,8 +318,11 @@ public partial class Widget : Node
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed1), main.GrowthSpeed == 1);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed60), main.GrowthSpeed == 60);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed3600), main.GrowthSpeed == 3600);
+        menu.SetItemChecked(menu.GetItemIndex((int)MenuId.FruitBorrows), fruitBorrowsPush);
         for (int i = 0; i < Sizes.Length; i++)
             menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Size0 + i), Mathf.IsEqualApprox(Sizes[i], plantScale));
+        for (int i = 0; i < IdleRates.Length; i++)
+            menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Idle0 + i), IdleRates[i] == idleFps);
     }
 
     // ==== COORDINATES ==== \\

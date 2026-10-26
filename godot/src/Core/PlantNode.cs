@@ -20,6 +20,10 @@ public sealed class PlantNode
     public bool Fixed;
     // The push from distant parts, kept between the ticks it's worked out on (see Garden.Repel).
     public Vector2 FarPush;
+    // Its push on the rest of the plant: its own force, plus its fruit's when fruit only meets its family.
+    public float PushForce;
+    // This tick's near push from other parts (the far push is FarPush): fruit inherits its parent's.
+    public Vector2 RepelPush;
 
     // Presentation state the rules keep so a save or a catch-up carries it: seconds since it sprouted (for the
     // grow-in), and a 0-1 glow that a passing mote sets and that fades.

@@ -62,6 +62,7 @@ public partial class Main : Node2D
         widget = new Widget(this) { Name = "Widget" };
         AddChild(widget);
         widget.CoverScreen(save?.PlantScale ?? 0.75f);
+        if (save != null && Widget.IdleRates.Contains(save.IdleFps)) widget.IdleFps = save.IdleFps;
         if (save == null) PlantAtHome();
         else widget.KeepOnScreen();
         if (args.TryGetValue("parts", out var p))
@@ -106,14 +107,19 @@ public partial class Main : Node2D
 
     double fpsLogTimer;
 
-    // --fpslog prints the frame rate four times a second, with the fastest part's speed and the frame cap.
+    // --fpslog prints the frame rate four times a second, with whether it's idling, the fastest part's speed, the time
+    // spent per frame (process, physics, and the renderer's CPU and GPU), draw calls and triangles.
     public override void _Process(double delta)
     {
         if (!args.ContainsKey("fpslog") || (fpsLogTimer -= delta) > 0) return;
         fpsLogTimer = 0.25;
-        GD.Print($"FPS {Engine.GetFramesPerSecond():0} cap {Engine.MaxFps} speed {Garden.Speed:0.00} held {Garden.Held != null}"
+        var viewport = GetViewport().GetViewportRid();
+        RenderingServer.ViewportSetMeasureRenderTime(viewport, true);
+        GD.Print($"FPS {Engine.GetFramesPerSecond():0} idle {OS.LowProcessorUsageMode} speed {Garden.Speed:0.00} held {Garden.Held != null}"
             + $" | ms/frame process {Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000:0.00}"
             + $" physics {Performance.GetMonitor(Performance.Monitor.TimePhysicsProcess) * 1000:0.00}"
+            + $" render cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(viewport) + RenderingServer.GetFrameSetupTimeCpu():0.00}"
+            + $" gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(viewport):0.00}"
             + $" | draw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):0}"
             + $" primitives {Performance.GetMonitor(Performance.Monitor.RenderTotalPrimitivesInFrame):0}");
     }
@@ -153,7 +159,7 @@ public partial class Main : Node2D
         tween.TweenCallback(Callable.From(layer.QueueFree));
     }
 
-    void Save() => SaveFile.Write(new SaveData(Garden.ToSave(), Time.GetUnixTimeFromSystem(), widget.PlantScale));
+    void Save() => SaveFile.Write(new SaveData(Garden.ToSave(), Time.GetUnixTimeFromSystem(), widget.PlantScale, widget.IdleFps));
 
     public void SaveAndQuit()
     {

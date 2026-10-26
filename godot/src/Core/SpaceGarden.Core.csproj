@@ -3,5 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>SpaceGarden.Core</RootNamespace>
+    <!-- The physics runs about 8x slower unoptimised, so optimise even the debug build the game runs from the project
+         (an export is optimised anyway): CPU measured there then matches what an export uses. -->
+    <Optimize>true</Optimize>
   </PropertyGroup>
 </Project>

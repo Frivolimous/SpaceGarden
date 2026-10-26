@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>SpaceGarden</RootNamespace>
+    <!-- Optimised even in the debug build the game runs from the project (as src/Core is), so the per-frame drawing
+         work costs what it will in an export. -->
+    <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\Core\SpaceGarden.Core.csproj" />

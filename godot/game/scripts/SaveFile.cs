@@ -6,8 +6,8 @@ using FileAccess = Godot.FileAccess;
 namespace SpaceGarden;
 
 // The garden (its parts' places are their places on the desktop) plus what only the overlay needs (when it was
-// last seen, the Size setting), as JSON in user://.
-public sealed record SaveData(GardenSave Garden, double LastSeenUnix, float PlantScale = 0.75f);
+// last seen, the Size and Idle frame rate settings), as JSON in user://.
+public sealed record SaveData(GardenSave Garden, double LastSeenUnix, float PlantScale = 0.75f, int IdleFps = 30);
 
 public static class SaveFile
 {
