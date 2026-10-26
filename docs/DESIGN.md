@@ -63,7 +63,7 @@ The plant must look good **without any UI chrome**. Controls appear only in Acti
 
 ## Economy
 
-Three flowing resources travel visibly through the stems; capacity is a set of limits, not a collected resource. The flowing blobs are the garden's "living light", its main idle visual.
+Three flowing resources move visibly through the stems; capacity is a set of limits, not a collected resource. Power shows as link flashes and node brightness; fruit and genes travel as blobs. Together they are the garden's "living light", its main idle visual.
 
 | Resource | Colour | Source | Purpose |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ Three flowing resources travel visibly through the stems; capacity is a set of l
 
 **Wilting.** When power runs out, growth pauses. Nodes are never destroyed. Empty nodes stop draining, so the core always ends up with a small surplus and growth resumes slowly. The core guarantees the floor.
 
-**Local power flow.** Power travels as blobs through the stems; there is no global pool. A branch far from power can dim on its own while the rest thrives, so generator placement matters.
+**Local power flow.** Each node stores its own power, which flows along links from fuller nodes to emptier ones; there is no global pool. As in the original, a link flashes each time power moves along it (brighter when the receiving node is fuller), and each node's brightness and size follow its fill, with a small bounce when power arrives. A branch far from power can dim on its own while the rest thrives, so generator placement matters.
 
 **Power rules**
 
@@ -295,7 +295,7 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | Step | Name | Contents |
 | --- | --- | --- |
 | 1 | Foundation (done) | Godot widget, transparency, force-directed physics, node and fruit rendering, stress test, time model (wall-clock sim, catch-up, low-power idle) |
-| 2 | Living garden | Power economy, upkeep, wilting; visible blob flow; new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
+| 2 | Living garden | Power economy, upkeep, wilting; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
 | 3 | Shaping → MVP | Gravity Pot, Trellis, Gravity Well; a short round of visual polish, including the prune effect. End of step = MVP |
 | 4 | Information and tracking | Information display, stat tracking, Almanac. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
