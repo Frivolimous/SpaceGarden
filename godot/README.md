@@ -37,8 +37,10 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 
 ## What's ported, what's new
 - **Ported from the TS game:** node sizes, masses, forces, link counts, shapes and colours (`NodeData.ts`);
-  spring, repulsion and damping with the same constants (`FDGContainer.ts`, `Config.PHYSICS`); motes of light
-  hopping along the stems and lighting what they reach (the transfer blobs).
+  spring, repulsion and damping with the same constants (`FDGContainer.ts`, `Config.PHYSICS`); power shown as
+  link flashes, as the original's power transfers were (`FDGLink.flash`): a link flashes as often as power flows
+  along it, so a busy trunk pulses and a full branch rests. (The step-1 motes are gone; travelling blobs return
+  for fruit and genes.)
 - **Also ported:** holding a part (the TS game's pull: `PULL_FRICTION`, `TARGET_RATIO`) and the borders
   (`EDGE_BOUNCE`, now the screen edges). Links are the TS game's soft springs, with no length limit, so a pull
   stretches them and they drag the rest along. The held part is pulled by its weight, so the core is slow and

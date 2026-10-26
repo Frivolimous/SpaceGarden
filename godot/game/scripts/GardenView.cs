@@ -127,6 +127,8 @@ public partial class GardenView : Node2D
         links.Begin();
         foreach (var link in garden.Links)
         {
+            // As the original's link (FDGLink.getColor): its target's colour, dim at rest and full on a power flash.
+            // (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
             var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash), link.Target.WiltLook);
             colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
             float width = link.Target.Spec.IsFruit ? 1.2f : Mathf.Max(1.2f, 3.4f - link.Target.Depth * 0.18f);

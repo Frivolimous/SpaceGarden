@@ -62,7 +62,6 @@ public sealed class Garden
 
     readonly Random rng;
     readonly Dictionary<PlantNode, Link> linkToParent = new();
-    readonly Dictionary<PlantNode, float> moteTimers = new();
     readonly Dictionary<(int X, int Y), Cell> cells = new();
     readonly List<((int X, int Y) Key, Cell Cell)> occupied = new();
     readonly List<PlantNode> farReaching = new();
@@ -193,11 +192,7 @@ public sealed class Garden
         Nodes.RemoveAll(gone.Contains);
         Links.RemoveAll(l => gone.Contains(l.Target));
         Motes.RemoveAll(m => gone.Contains(m.From) || gone.Contains(m.To));
-        foreach (var n in removed)
-        {
-            linkToParent.Remove(n);
-            moteTimers.Remove(n);
-        }
+        foreach (var n in removed) linkToParent.Remove(n);
         if (Held != null && gone.Contains(Held)) LetGo();
         return removed;
     }
@@ -364,6 +359,7 @@ public sealed class Garden
         float flow = Tuning.PowerFlowPerHour * hours;
         foreach (var link in Links)
         {
+            link.FlowPerHour = 0;
             if (link.Target.Spec.IsFruit) continue;
             var (a, b) = link.Origin.Fill >= link.Target.Fill ? (link.Origin, link.Target) : (link.Target, link.Origin);
             float diff = a.Fill - b.Fill;
@@ -372,6 +368,7 @@ public sealed class Garden
             float amount = Math.Min(flow * diff, diff / (1 / a.Store + 1 / b.Store));
             a.Power -= amount;
             b.Power += amount;
+            link.FlowPerHour = amount / hours;
         }
 
         if (!WildGrowth) return 0;
@@ -677,8 +674,13 @@ public sealed class Garden
         }
     }
 
-    // ==== MOTES ==== \\
+    // ==== MOTES AND FLASHES ==== \\
 
+    // Power shows as flashes, not motes: as in the original game, where each power transfer lit its link at once
+    // and the light faded over about 0.3 s. Here power flows smoothly, so a link flashes as often as power runs
+    // along it (FlashesPerPowerHour per unit per hour, at most MaxFlashesPerSecond): a busy trunk pulses, a quiet
+    // twig now and then, a full branch not at all. The rate is per real second whatever the growth speed, so the
+    // plant looks the same at 1x and 60x. Motes are kept for the blobs that do travel (fruit, genes: to come).
     void UpdateMotes(float dt)
     {
         foreach (var node in Nodes)
@@ -687,20 +689,16 @@ public sealed class Garden
             node.Glow = Math.Max(0, node.Glow - Tuning.GlowFadePerSecond * dt);
             float ease = Tuning.WiltLookPerSecond * dt;
             node.WiltLook = Math.Clamp(WiltTarget(node), node.WiltLook - ease, node.WiltLook + ease);
-            float every = node.Spec.Kind switch
-            {
-                NodeKind.Core => Tuning.CoreMoteEvery,
-                NodeKind.Generator => Tuning.GeneratorMoteEvery,
-                _ => 0,
-            };
-            if (every == 0) continue;
-            moteTimers[node] = moteTimers.GetValueOrDefault(node, (float)rng.NextDouble() * every) - dt;
-            if (moteTimers[node] > 0) continue;
-            moteTimers[node] += every;
-            var first = NextHop(node, null);
-            if (first != null) Motes.Add(new Mote(node, first, node.Spec.Kind == NodeKind.Core ? 0xFFFFD0u : 0xE5E570u));
         }
-        foreach (var link in Links) link.Flash = Math.Max(0, link.Flash - Tuning.LinkFlashFadePerSecond * dt);
+        foreach (var link in Links)
+        {
+            link.Flash = Math.Max(0, link.Flash - Tuning.LinkFlashFadePerSecond * dt);
+            link.FlashPhase += dt * Math.Min(Tuning.MaxFlashesPerSecond, link.FlowPerHour * Tuning.FlashesPerPowerHour);
+            if (link.FlashPhase < 1) continue;
+            link.Flash = 1;
+            // A little jitter (the original's ±10%), so links carrying the same flow drift out of step.
+            link.FlashPhase = (float)(rng.NextDouble() - 0.5) * 0.2f;
+        }
 
         for (int i = Motes.Count - 1; i >= 0; i--)
         {

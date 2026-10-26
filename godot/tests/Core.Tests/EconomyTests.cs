@@ -105,6 +105,39 @@ public class EconomyTests
         Assert.All(garden.Nodes, n => Assert.True(n.Fill > 0.9f)); // a gentle slope carries the upkeep out
     }
 
+    [Fact]
+    public void LinksFlashAsOftenAsPowerRunsAlongThem()
+    {
+        // core - stem - stem, the last drained: power rushes out along both links and they flash busily. Once the
+        // plant has filled up only the stems' upkeep still flows, a trickle, and they flash only now and then.
+        var garden = NewGarden(new Capacity(2, 0, 1));
+        garden.WildGrowth = false;
+        var near = Add(garden, garden.Core, NodeKind.Stem);
+        var far = Add(garden, near, NodeKind.Stem);
+        far.Power = 0;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.All(garden.Links, l => Assert.True(l.FlowPerHour > 0));
+
+        // Flashes on any link over 10 real seconds (the flow rate holds between economy steps).
+        int Flashes()
+        {
+            int count = 0;
+            for (int tick = 0; tick < 10 * Tuning.TicksPerSecond; tick++)
+            {
+                garden.Step();
+                count += garden.Links.Count(l => l.Flash == 1);
+            }
+            return count;
+        }
+        int rushing = Flashes();
+
+        garden.Grow(6 * 3600);
+        Assert.All(garden.Links, l => Assert.True(l.FlowPerHour < 1.1f));
+        int trickling = Flashes();
+        Assert.True(rushing > 3 * trickling, $"{rushing} flashes while filling, {trickling} once full");
+        Assert.True(rushing <= 2 * 10 * Tuning.MaxFlashesPerSecond * 1.1f);
+    }
+
     // ==== WILTING ==== \\
 
     [Fact]

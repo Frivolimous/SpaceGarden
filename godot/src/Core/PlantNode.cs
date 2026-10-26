@@ -69,7 +69,11 @@ public sealed class Link
 {
     public readonly PlantNode Origin, Target;
     public readonly float Length;
+    // 0-1 light that a flash sets and that fades. Power flowing along the link (either way, per real hour, as of the
+    // last economy step) sets how often it flashes; FlashPhase counts up to the next.
     public float Flash;
+    public float FlowPerHour;
+    public float FlashPhase;
 
     public Link(PlantNode origin, PlantNode target)
     {

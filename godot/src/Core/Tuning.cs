@@ -37,13 +37,17 @@ public static class Tuning
     // From Config.PHYSICS.EDGE_BOUNCE: how hard the screen edges push parts back.
     public const float EdgeBounce = 0.1f;
 
-    // Motes: seconds per link, how often the core and each generator release one, and the most links one travels.
+    // Motes (travelling blobs, for fruit and genes to come): seconds per link, and the most links one travels.
     public const float MoteLinkSeconds = 0.3f;
-    public const float CoreMoteEvery = 0.9f;
-    public const float GeneratorMoteEvery = 4f;
     public const int MoteMaxHops = 14;
     public const float GlowFadePerSecond = 1.5f;
+
+    // Power shows as link flashes, as in the original game: a flash fades in about 0.3 s (its 300 ms tween). Placeholder
+    // rate: a link carrying 1 power an hour flashes about every 8 s, a trunk carrying 8 about once a second, never more
+    // than 3 a second (the original's fastest, one transfer every 20 ticks).
     public const float LinkFlashFadePerSecond = 3.3f;
+    public const float FlashesPerPowerHour = 0.125f;
+    public const float MaxFlashesPerSecond = 3;
 
     // Growth in real seconds at speed 1: a new part about every 20 minutes, so a full prototype garden (500 parts)
     // takes about a week. The prototype runs at 60x by default (one every 20 s) so the growth can be watched.
