@@ -48,9 +48,9 @@ Every node is a simple geometric shape; meaning is carried by a small, fixed set
 | Shape | Specific node type within its role; every type has a unique shape |
 | Brightness and scale | Power level: full nodes glow and swell, low nodes dim and shrink |
 | Saturation | State: wild growth (subtle tone), dormant, wilting |
+| Fruit | Modifiers on a node; later also crawler food |
 
 A wilting node is dimmed, shrunk and slightly desaturated.
-| Fruit | Modifiers on a node; later also crawler food |
 
 Unique shapes double as colour-blind support. Texture and complex shapes are held in reserve if playtesting shows a state is hard to read. The garden should look consistent: wild growth differs only by a subtle tone.
 

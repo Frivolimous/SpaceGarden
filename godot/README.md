@@ -1,6 +1,6 @@
 # Space Garden — Godot prototype
 
-A feel test for the revival (see [../docs/DESIGN.md](../docs/DESIGN.md) §7): the TS game's force-directed plant,
+A feel test for the revival (see the Platform section of [../docs/DESIGN.md](../docs/DESIGN.md#platform-godot-4-net)): the TS game's force-directed plant,
 ported to Godot 4.7.2 .NET as a transparent, always-on-top overlay that covers the screen's work area (all but the
 taskbar), so the plant seems to live on the desktop itself. Same layout as Eternal Dungeon and Typing Ship:
 `src/Core` is plain C# (physics, growth, motes, saves; no Godot), `game/` is the Godot project (drawing, input,
