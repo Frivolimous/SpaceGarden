@@ -28,6 +28,12 @@ public static class Tuning
     public const float PullMinDistanceSquared = 100;
     public const float PinnedFollow = 0.25f;
 
+    // The grid that speeds up the parts' push on each other (see Garden.Repel): the cell size, and the force from
+    // which a part pushes every other part exactly (only the core's, 30).
+    public const float RepelCell = 120;
+    public const int FarPushEvery = 4; // ticks between working out each part's push from distant cells
+    public const float FarReachForce = 10;
+
     // From Config.PHYSICS.EDGE_BOUNCE: how hard the screen edges push parts back.
     public const float EdgeBounce = 0.1f;
 
@@ -43,7 +49,7 @@ public static class Tuning
     // a few days. The prototype runs at 60x by default (one every 20 s) so the growth can be watched.
     public const double SproutEverySeconds = 20 * 60;
     public const double FruitChance = 0.35;
-    public const int MaxNodes = 220;
+    public static int MaxNodes = 220; // not const: the --parts dev option raises it for stress tests
 
     // Time away is caught up to at most this much real time.
     public const double CatchUpCapSeconds = 72 * 3600;

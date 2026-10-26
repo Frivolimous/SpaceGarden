@@ -11,7 +11,7 @@ public sealed record NodeSpec(
     NodeKind? Fruit = null, int MaxFruits = 0)
 {
     public bool IsFruit => MaxLinks == 0;
-    public float InverseMass => 1 / Mass;
+    public float InverseMass { get; } = 1 / Mass;
 }
 
 // Ported from the TS game's data/NodeData.ts and data/Colors.ts (radius, mass, force, links, shape, colour).

@@ -20,7 +20,7 @@ public partial class Widget : Node
     // It counts as settled once no part has moved more than SettledSpeed a tick for SettleSeconds.
     const int IdleFps = 30;
     const int ActiveFps = 0;
-    const float SettledSpeed = 0.3f;
+    const float SettledSpeed = 0.45f; // idle sway peaks at 0.2-0.4 (bigger plants higher); a fling is 0.5+ for 2 s
     const double SettleSeconds = 1;
     const float DragThreshold = 4;
     const float HoverSlop = 5;

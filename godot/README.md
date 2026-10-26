@@ -43,7 +43,17 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor).
 `--path game -- [options]`: `--grow=N`, `--upright` (the shelved planted layout: core fixed at the bottom, a pull
 upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 `--profile=NAME` (use `user://NAME.json` instead of the real save), `--backdrop=RRGGBB`,
-`--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits).
+`--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits),
+`--parts=N` (grow a new garden to N parts at once, past the usual 220 limit, for stress tests), `--fpslog` (prints
+the frame rate, per-frame process and physics time and draw calls four times a second).
+
+## Performance
+Idle CPU (30 fps, % of one core, i7-12700H, the debug build that runs from the project): an empty garden 7%,
+220 parts 9%, 500 parts 14%, 1000 parts 25%, 2000 parts 62%. Drawing is 8-10 draw calls whatever the size
+(every layer is one batch; see `GardenView`). Physics is what grows: parts push each other through a grid, exact
+for neighbours and summed per cell for distant ones (`Garden.Repel`), so it no longer checks every pair. The
+distant push is kept and worked out again every 4 ticks, a quarter of the cells each tick (`FarPushEvery`). An
+exported (release) build runs the physics about 4x faster than the debug build.
 
 ## Not in the prototype
 No crawlers, skills, seedling, UI panels, sound or tests; no tray icon or launch-on-startup; it still shows in the

@@ -18,6 +18,8 @@ public sealed class PlantNode
     public float Rotation;
     public float Spin;
     public bool Fixed;
+    // The push from distant parts, kept between the ticks it's worked out on (see Garden.Repel).
+    public Vector2 FarPush;
 
     // Presentation state the rules keep so a save or a catch-up carries it: seconds since it sprouted (for the
     // grow-in), and a 0-1 glow that a passing mote sets and that fades.

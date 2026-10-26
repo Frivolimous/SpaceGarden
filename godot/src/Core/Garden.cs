@@ -42,6 +42,10 @@ public sealed class Garden
     readonly Random rng;
     readonly Dictionary<PlantNode, Link> linkToParent = new();
     readonly Dictionary<PlantNode, float> moteTimers = new();
+    readonly Dictionary<(int X, int Y), Cell> cells = new();
+    readonly List<((int X, int Y) Key, Cell Cell)> occupied = new();
+    readonly List<PlantNode> farReaching = new();
+    long ticks;
     int nextId;
 
     public Garden(Layout layout, int? seed = null)
@@ -280,23 +284,7 @@ public sealed class Garden
             }
         }
 
-        // Every pair pushes apart, by force * force / distance squared (the 2 px floor stops overlapping parts
-        // from flinging each other away).
-        for (int i = Nodes.Count - 1; i >= 0; i--)
-        {
-            var node = Nodes[i];
-            for (int j = i - 1; j >= 0; j--)
-            {
-                var other = Nodes[j];
-                var d = node.Position - other.Position;
-                d.X = d.X > 0 ? Math.Max(2, d.X) : Math.Min(-2, d.X);
-                d.Y = d.Y > 0 ? Math.Max(2, d.Y) : Math.Min(-2, d.Y);
-                float dist2 = d.LengthSquared();
-                float mult = node.Spec.Force * other.Spec.Force / dist2 / MathF.Sqrt(dist2);
-                node.Velocity += mult * d * node.Spec.InverseMass;
-                other.Velocity -= mult * d * other.Spec.InverseMass;
-            }
-        }
+        Repel();
 
         foreach (var node in Nodes)
         {
@@ -328,6 +316,118 @@ public sealed class Garden
         foreach (var node in Nodes) Speed = Math.Max(Speed, Vector2.Distance(node.Position, node.PreviousPosition));
 
         UpdateMotes(dt);
+    }
+
+    // Parts push each other apart by force * force / distance squared, as in the TS game. Checking every pair grows
+    // with the square of the plant (220 parts: 24,000 pairs a tick; 1000: half a million), so the parts are sorted
+    // into a grid of RepelCell-sized cells. Parts in the same or neighbouring cells push each other exactly; a
+    // farther cell pushes as one, its parts' forces summed at their (force-weighted) centre. The faint far pushes
+    // still add up, and they're what spreads a big plant out, so they can't just be dropped. Far-reaching parts
+    // (the core, force 30) push every part exactly.
+    //
+    // The far push changes slowly (distant parts barely move relative to each other in a tick), so each part keeps
+    // it (FarPush) and applies it every tick, and it's worked out afresh for a share of the cells each tick, in
+    // turn: every cell every FarPushEvery ticks, spread evenly so no tick is heavier than the rest.
+    void Repel()
+    {
+        int turn = (int)(ticks++ % Tuning.FarPushEvery);
+        foreach (var cell in cells.Values) cell.Nodes.Clear();
+        if (cells.Count > Nodes.Count * 4) cells.Clear(); // the plant has moved on; drop the empty cells
+        farReaching.Clear();
+        foreach (var node in Nodes)
+        {
+            if (node.Spec.Force >= Tuning.FarReachForce)
+            {
+                farReaching.Add(node);
+                continue;
+            }
+            var key = CellOf(node.Position);
+            if (!cells.TryGetValue(key, out var cell)) cells[key] = cell = new();
+            cell.Nodes.Add(node);
+        }
+
+        occupied.Clear();
+        foreach (var (key, cell) in cells)
+        {
+            if (cell.Nodes.Count == 0) continue;
+            float force = 0;
+            var weighted = Vector2.Zero;
+            foreach (var n in cell.Nodes)
+            {
+                force += n.Spec.Force;
+                weighted += n.Position * n.Spec.Force;
+            }
+            cell.Force = force;
+            cell.Centre = weighted / force;
+            occupied.Add((key, cell));
+        }
+
+        foreach (var (key, cell) in occupied)
+        {
+            // Near: each pair once, within the cell and with the four neighbours ahead of it (the other four see it).
+            var list = cell.Nodes;
+            for (int i = 0; i < list.Count; i++)
+                for (int j = i + 1; j < list.Count; j++) Push(list[i], list[j]);
+            foreach (var (dx, dy) in ForwardNeighbours)
+            {
+                if (!cells.TryGetValue((key.X + dx, key.Y + dy), out var other)) continue;
+                foreach (var a in list)
+                    foreach (var b in other.Nodes) Push(a, b);
+            }
+
+            // Far, on this cell's turn: every cell beyond the neighbours pushes this cell's parts as one. (That
+            // cell's parts get this cell's push the same way, on their turn.)
+            if (TurnOf(key) != turn) continue;
+            foreach (var a in list) a.FarPush = Vector2.Zero;
+            foreach (var (otherKey, other) in occupied)
+            {
+                if (Math.Abs(otherKey.X - key.X) <= 1 && Math.Abs(otherKey.Y - key.Y) <= 1) continue;
+                foreach (var a in list)
+                {
+                    var d = Floor(a.Position - other.Centre);
+                    float dist2 = d.LengthSquared();
+                    a.FarPush += a.Spec.Force * other.Force / dist2 / MathF.Sqrt(dist2) * d * a.Spec.InverseMass;
+                }
+            }
+        }
+        foreach (var node in Nodes) node.Velocity += node.FarPush;
+
+        for (int i = 0; i < farReaching.Count; i++)
+        {
+            var big = farReaching[i];
+            foreach (var node in Nodes)
+                if (node != big && !(node.Spec.Force >= Tuning.FarReachForce && farReaching.IndexOf(node) <= i))
+                    Push(big, node);
+        }
+    }
+
+    sealed class Cell
+    {
+        public readonly List<PlantNode> Nodes = new();
+        public float Force;
+        public Vector2 Centre;
+    }
+
+    static readonly (int X, int Y)[] ForwardNeighbours = [(1, 0), (1, 1), (0, 1), (-1, 1)];
+
+    // Which tick of the FarPushEvery a cell's far push is worked out on: scattered, so neighbouring cells differ.
+    static int TurnOf((int X, int Y) key) =>
+        (int)((uint)(key.X * 73856093 ^ key.Y * 19349663) % Tuning.FarPushEvery);
+
+    static (int X, int Y) CellOf(Vector2 p) =>
+        ((int)MathF.Floor(p.X / Tuning.RepelCell), (int)MathF.Floor(p.Y / Tuning.RepelCell));
+
+    // The 2 px floor on each axis stops overlapping parts from flinging each other away.
+    static Vector2 Floor(Vector2 d) =>
+        new(d.X > 0 ? Math.Max(2, d.X) : Math.Min(-2, d.X), d.Y > 0 ? Math.Max(2, d.Y) : Math.Min(-2, d.Y));
+
+    static void Push(PlantNode a, PlantNode b)
+    {
+        var d = Floor(a.Position - b.Position);
+        float dist2 = d.LengthSquared();
+        float mult = a.Spec.Force * b.Spec.Force / dist2 / MathF.Sqrt(dist2);
+        a.Velocity += mult * d * a.Spec.InverseMass;
+        b.Velocity -= mult * d * b.Spec.InverseMass;
     }
 
     // Light, wind and the ground are all measured from the core, wherever it's been planted.
