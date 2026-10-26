@@ -42,10 +42,10 @@ public static class Tuning
     public const float GlowFadePerSecond = 1.5f;
 
     // Power shows as link flashes, as in the original game: a flash fades in about 0.3 s (its 300 ms tween). Placeholder
-    // rate: a link carrying 1 power an hour flashes about every 8 s, a trunk carrying 8 about once a second, never more
-    // than 3 a second (the original's fastest, one transfer every 20 ticks).
+    // rate: a link carrying a bare stem's upkeep flashes about every 3 s, a trunk carrying the core's output 3 times a
+    // second, never more (the original's fastest, one transfer every 20 ticks).
     public const float LinkFlashFadePerSecond = 3.3f;
-    public const float FlashesPerPowerHour = 0.125f;
+    public const float FlashesPerPowerHour = 0.01f;
     public const float MaxFlashesPerSecond = 3;
     // Placeholder. A flash's brightness is this times the fill of the part the power reached (1: a full part's flash
     // is as bright as the original's).
@@ -64,7 +64,7 @@ public static class Tuning
     public const float BounceDamping = 13;
     public const float BounceMax = 0.3f;
 
-    // Growth is in real seconds at speed 1; the prototype runs at 60x by default so the growth can be watched. A free
+    // Growth is in real seconds at speed 1 (the prototype's default; its menu has faster speeds for testing). A free
     // Sprout() (the first stem, stress tests) grows fruit FruitChance of the time.
     public const double FruitChance = 2.0 / 3; // about two thirds of a grown plant is fruit (65% at 500 parts)
     public static int MaxNodes = 500; // not const: the --parts dev option raises it for stress tests
@@ -81,13 +81,16 @@ public static class Tuning
     // Power rates are per real hour (DESIGN.md, Economy: draft values, to be tuned through play). The economy runs
     // in fixed steps of EconomyStepSeconds of growth time, so a live session, a catch-up and a test all take the same
     // steps whatever chunks the time arrives in.
-    public const double EconomyStepSeconds = 10;
+    public const double EconomyStepSeconds = 1; // short enough that blobs leave one at a time, every few seconds
 
-    public const float CorePowerPerHour = 8;
-    public const float GeneratorPowerPerHour = 4;  // half the core's
-    public const float StemUpkeepPerHour = 0.5f;   // halved by each leaf: 0.25 with one, 0.125 with two
+    // Rescaled with the blobs (DESIGN.md, Economy): the doc's draft table times PowerScale, the ratios kept, and the
+    // stores and flow scaled alike, so power fills and drains over the same hours as before.
+    public const float PowerScale = 60;
+    public const float CorePowerPerHour = 8 * PowerScale;
+    public const float GeneratorPowerPerHour = 4 * PowerScale;  // half the core's
+    public const float StemUpkeepPerHour = 0.5f * PowerScale;   // halved by each leaf
     public const float LeafUpkeepFactor = 0.5f;
-    public const float GroveUpkeepPerHour = 1.5f;
+    public const float GroveUpkeepPerHour = 1.5f * PowerScale;
     public const float LabUpkeepPerHour = 2 * GroveUpkeepPerHour;
 
     // Placeholder: each flower fruit (a generator's burr, a lab's research, a grove's berry) adds this much to its
@@ -102,12 +105,12 @@ public static class Tuning
     // Placeholders. How much power a part holds, and how freely it flows: along a link, power runs downhill from the
     // fuller part to the emptier (by fill, as in the original game), PowerFlowPerHour per hour at a full-to-empty
     // difference. A long branch carrying a lot needs a steep slope, so far tips run low first: power is local.
-    public const float NodePowerStore = 1;
-    public const float CorePowerStore = 4;
-    public const float PowerFlowPerHour = 40;
+    public const float NodePowerStore = 1 * PowerScale;
+    public const float CorePowerStore = 4 * PowerScale;
+    public const float PowerFlowPerHour = 40 * PowerScale;
 
     // Placeholder. The power a new part starts with (free: buds and grown parts don't cost their parent anything).
-    public const float SproutPower = 0.5f;
+    public const float SproutPower = 0.5f * PowerScale;
 
     // Placeholder. A part that can't pay its upkeep wilts: it stops draining (so the power left reaches the rest) and
     // recovers once it has filled back up to RecoverFill. Nothing is ever destroyed.
@@ -127,11 +130,10 @@ public static class Tuning
     public const int BlobMaxHops = 30;
     public const int MaxMotes = 60; // blobs in flight at once; past it a blob still does its work, unseen
 
-    // Growth blobs, from groves: one every 3 minutes (every 3 s at 60x), each carrying BlobGrowth. A part with
-    // nothing forming absorbs one AbsorbChance of the time (the original's 30%), a part with something forming
-    // always does. A fresh one starts a bud BudChance of the time where a branch could grow, else a fruit; the fruit
+    // Growth blobs, from groves: one every 3 s, each carrying BlobGrowth. A part with nothing forming absorbs one
+    // AbsorbChance of the time (the original's 30%), a part with something forming always does. A fresh one starts a bud BudChance of the time where a branch could grow, else a fruit; the fruit
     // completes at FruitGrowth, the bud at BudGrowth.
-    public const float GroveBlobsPerHour = 20;
+    public const float GroveBlobsPerHour = 1200;
     public const float BlobGrowth = 0.1f;
     public const float AbsorbChance = 0.3f;
     public const float BudChance = 0.5f;
@@ -141,10 +143,10 @@ public static class Tuning
     public const float EmergeStart = 0.3f;
     public const float EmergeSpeed = 1.2f;
 
-    // Gene blobs, from labs: one every 5 minutes (every 5 s at 60x), each carrying BlobGenes; only the core absorbs
-    // them. Labs are the only source: the first unlock waits for the first lab's first blob to find the core.
-    public const float LabBlobsPerHour = 12;
-    public const float BlobGenes = 0.5f;
+    // Gene blobs, from labs: one every 5 s, each carrying BlobGenes (a whole gene, so they can be counted); only the
+    // core absorbs them. Labs are the only source: the first unlock waits for the first lab's genes to find the core.
+    public const float LabBlobsPerHour = 720;
+    public const float BlobGenes = 1;
 
     // The linear unlock track (DESIGN.md, Progression, "Linear unlock track (step 2)"): genes reaching the core over
     // the garden's life raise the caps at each threshold, in order. Placeholder thresholds, tuned with the headless
@@ -156,29 +158,29 @@ public static class Tuning
     // and lab at once, so the first step comes from the first few hours' genes, not the first lab's first blob.
     public static readonly UnlockStep[] UnlockTrack =
     [
-        new(18, Stems: 3),                                 // ~4 h
-        new(37, Generators: 1),                            // ~6 h
-        new(74, Stems: 3),                                 // day 1 evening (~10 h)
-        new(200, Stems: 4, Generators: 1),                 // day 2
-        new(410, Stems: 5, Generators: 1, CoreLinks: 1),   // day 3
-        new(850, Stems: 6),                                // day 4
-        new(1250, Generators: 2),                          // day 5
-        new(1740, Stems: 6),                               // day 6
-        new(2190, Generators: 2),                          // day 7: 31 stems, 8 generators, 2 core links
-        new(2660, Stems: 4),                               // day 8
-        new(3110, Generators: 1),                          // day 9
-        new(3550, Stems: 4),                               // day 10
-        new(4000, Generators: 1),                          // day 11
-        new(4450, Stems: 4),                               // day 12
-        new(4900, Generators: 1),                          // day 13
-        new(5350, Stems: 4, CoreLinks: 1),                 // day 14: 47 stems, 11 generators, 3 core links
-        new(6510, Stems: 5, Generators: 1),                // day 16
-        new(7670, Stems: 5),                               // day 18
-        new(8840, Generators: 2),                          // day 20
-        new(10030, Stems: 5),                              // day 22
-        new(11210, Generators: 1),                         // day 24
-        new(12400, Stems: 5),                              // day 26
-        new(13590, Generators: 2),                         // day 28
-        new(14790, Stems: 5),                              // day 30: 72 stems, 17 generators, 3 core links
+        new(5_110, Stems: 3),                              // ~4 h
+        new(8_930, Generators: 1),                         // ~6 h
+        new(16_600, Stems: 3),                             // day 1 evening (~10 h)
+        new(43_600, Stems: 4, Generators: 1),              // day 2
+        new(90_500, Stems: 5, Generators: 1, CoreLinks: 1), // day 3
+        new(124_000, Stems: 6),                            // day 4
+        new(154_000, Generators: 2),                       // day 5
+        new(189_000, Stems: 6),                            // day 6
+        new(221_000, Generators: 2),                       // day 7: 31 stems, 8 generators, 2 core links
+        new(255_000, Stems: 4),                            // day 8
+        new(292_000, Generators: 1),                       // day 9
+        new(334_000, Stems: 4),                            // day 10
+        new(375_000, Generators: 1),                       // day 11
+        new(419_000, Stems: 4),                            // day 12
+        new(459_000, Generators: 1),                       // day 13
+        new(504_000, Stems: 4, CoreLinks: 1),              // day 14: 47 stems, 11 generators, 3 core links
+        new(578_000, Stems: 5, Generators: 1),             // day 16
+        new(650_000, Stems: 5),                            // day 18
+        new(724_000, Generators: 2),                       // day 20
+        new(808_000, Stems: 5),                            // day 22
+        new(889_000, Generators: 1),                       // day 24
+        new(965_000, Stems: 5),                            // day 26
+        new(1_040_000, Generators: 2),                     // day 28
+        new(1_110_000, Stems: 5),                          // day 30: 72 stems, 17 generators, 3 core links
     ];
 }

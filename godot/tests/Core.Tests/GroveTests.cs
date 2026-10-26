@@ -3,6 +3,7 @@ namespace SpaceGarden.Core.Tests;
 public class GroveTests
 {
     const double Hour = 3600, Day = 24 * Hour;
+    const float P = Tuning.PowerScale; // the draft table's units, rescaled with the blobs
     static readonly double BlobHours = 1 / Tuning.GroveBlobsPerHour;
 
     static Garden NewGarden(Capacity? capacity = null, int seed = 7)
@@ -48,9 +49,9 @@ public class GroveTests
     public void AGroveCostsHalfALab()
     {
         var (garden, grove) = WithAGrove();
-        Assert.Equal(1.5f, Garden.UpkeepPerHour(grove));
+        Assert.Equal(1.5f * P, Garden.UpkeepPerHour(grove));
         Assert.Equal(Tuning.LabUpkeepPerHour, 2 * Garden.UpkeepPerHour(grove));
-        Assert.Equal((8f, 2.5f), garden.PowerBalance());
+        Assert.Equal((8 * P, 2.5f * P), garden.PowerBalance());
     }
 
     [Fact]
@@ -99,7 +100,7 @@ public class GroveTests
     public void AGroveSendsBlobsOnARandomWalk()
     {
         var (garden, grove) = WithAGrove();
-        garden.Grow(BlobHours * Hour * 1.1); // one blob's worth
+        garden.Grow(BlobHours * Hour * 1.5); // one blob's worth
         var blob = Assert.Single(garden.Motes);
         Assert.Equal(grove, blob.From);
         Assert.Equal(grove, blob.Route[0]);
@@ -169,7 +170,7 @@ public class GroveTests
         GrowUntil(garden, () => garden.Nodes.Any(n => n.FormingBud));
         var budding = garden.Nodes.Single(n => n.FormingBud);
         var kind = budding.Forming!.Value;
-        Assert.Contains(kind, new[] { NodeKind.Stem, NodeKind.Lab }); // no generator room, and never a grove
+        Assert.Contains(kind, new[] { NodeKind.Stem, NodeKind.Lab, NodeKind.Grove }); // no generator room
         Assert.False(budding.CanBranch); // its one free link is held
         if (kind == NodeKind.Stem) Assert.False(garden.CanSproutFrom(stem, NodeKind.Stem) || garden.CanSproutFrom(budding, NodeKind.Stem));
         var children = budding.Branches.ToList();
@@ -230,7 +231,7 @@ public class GroveTests
         GrowUntil(garden, () => Fruit(garden) == 7);
         var (_, after) = garden.PowerBalance();
         // Both stems carry two leaves: 0.125 each instead of 0.5.
-        Assert.Equal(before - 2 * (0.5f - 0.125f), after, 1e-4f);
+        Assert.Equal(before - 2 * (0.5f - 0.125f) * P, after, 1e-4f);
     }
 
     [Fact]
@@ -277,7 +278,7 @@ public class GroveTests
             Add(g, g.Nodes[1], NodeKind.Lab);
         }
         caught.CatchUp(Tuning.CatchUpCapSeconds);
-        for (int i = 0; i < Tuning.CatchUpCapSeconds / 7; i++) live.Grow(7);
+        for (int i = 0; i < (int)(Tuning.CatchUpCapSeconds / 7); i++) live.Grow(7);
         live.Grow(Tuning.CatchUpCapSeconds % 7);
         Assert.True(Fruit(caught) > 8);
         Assert.True(Main(caught) > 6);
@@ -290,7 +291,7 @@ public class GroveTests
     public void PruningTheRouteDropsTheBlob()
     {
         var (garden, grove) = WithAGrove();
-        garden.Grow(BlobHours * Hour * 1.1);
+        garden.Grow(BlobHours * Hour * 1.5);
         Assert.Single(garden.Motes);
         garden.Prune(grove);
         Assert.Empty(garden.Motes);
@@ -323,17 +324,17 @@ public class GroveTests
     }
 
     [Fact]
-    public void WildGrowthNeverPlantsAGroveAndIgnoresPower()
+    public void WildGrowthIgnoresPower()
     {
         // The plant is stupid: with one grove planted and left alone it grows whatever it rolls, labs that drain it
-        // included (until the grove wilts and growth stops), and never a second grove.
+        // and more groves included, until wilting stops its groves.
         foreach (var seed in new[] { 1, 2, 3, 4 })
         {
             var garden = NewGarden(new Capacity(40, 2, 1), seed);
             var stem = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
             Add(garden, stem, NodeKind.Grove);
-            garden.Grow(7 * Day);
-            Assert.Equal(1, garden.Nodes.Count(n => n.Spec.Kind == NodeKind.Grove));
+            garden.Grow(Day);
+            Assert.True(garden.Nodes.Count(n => n.Spec.Kind == NodeKind.Grove) >= 1);
             Assert.True(Main(garden) > 6, $"seed {seed}: {Main(garden)} main parts");
             Assert.True(Fruit(garden) > 5, $"seed {seed}: {Fruit(garden)} fruit");
         }

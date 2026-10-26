@@ -6,7 +6,7 @@ namespace SpaceGarden;
 // and saves it every minute and on quit. The plant is never rescaled automatically; only the Size setting in the
 // menu changes it.
 //
-// Dev options (after "--"): --grow=N growth speed (default 60x; 1 is the real pace), --upright for the shelved
+// Dev options (after "--"): --grow=N growth speed (default 1, the real pace), --upright for the shelved
 // planted layout (every garden, saved ones too, is otherwise radial), --fresh to ignore the save, --seed=N, --away=HOURS to pretend that long
 // has passed since the last save, --backdrop=RRGGBB to draw a colour behind the plant, --profile=NAME to use
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
@@ -25,7 +25,7 @@ public partial class Main : Node2D
     const double VisibilityCheckSeconds = 0.5;
 
     public Garden Garden = null!;
-    public double GrowthSpeed = 60;
+    public double GrowthSpeed = 1;
     public GardenView View = null!;
 
     // Why the garden can't be seen just now, or null while it can.

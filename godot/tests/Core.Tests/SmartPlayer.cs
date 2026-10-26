@@ -2,6 +2,7 @@ namespace SpaceGarden.Core.Tests;
 
 // A smart, attentive player, for pacing runs (DESIGN.md: "simulations assume a smart player who is actively tending"):
 // the plant is stupid, so this is the brain. Each check-in it
+//   - prunes wild groves past the ones it wants (the farthest first);
 //   - prunes drains: while the garden would cost more than it makes at full power, the lab furthest from the core
 //     goes (wild ones are usually far out), then any lab wilting or too far out for its genes to find the core;
 //   - adds labs near the core (within MaxLabDepth) while the power to spare covers one, keeping a small reserve and
@@ -25,9 +26,13 @@ public static class SmartPlayer
             && Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth)) { }
         while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
         while (Bud(garden, NodeKind.Generator, nearFirst: false, hungriest: true)) { }
-        while (Count(garden, NodeKind.Grove) < 1 + Count(garden, NodeKind.Stem) / GroveEvery
-            && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
+        while (Count(garden, NodeKind.Grove) < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
+        // The player doesn't undo, and the 30 s undo window passes (counted in physics ticks, which a pacing run
+        // doesn't run; left open, it would hold off wild buds for good).
+        garden.ForgetPrune();
     }
+
+    static int GrovesWanted(Garden garden) => 1 + Count(garden, NodeKind.Stem) / GroveEvery;
 
     // Labs deeper than this lose most of their gene blobs on the way (they wander), so they aren't worth their upkeep.
     const int MaxLabDepth = 4;
@@ -46,6 +51,9 @@ public static class SmartPlayer
 
     static void PruneDrains(Garden garden)
     {
+        // Wild groves past the one-per-GroveEvery-stems the garden needs only drain it and take slots: the farthest go.
+        while (Count(garden, NodeKind.Grove) > GrovesWanted(garden)
+            && garden.Nodes.Where(n => n.Spec.Kind == NodeKind.Grove).MaxBy(n => n.Depth) is { } grove) garden.Prune(grove);
         while (Spare(garden) < 0 && FarthestLab(garden, _ => true) is { } lab) garden.Prune(lab);
         while (FarthestLab(garden, n => n.Wilting || n.Depth > MaxLabDepth) is { } lab) garden.Prune(lab);
     }

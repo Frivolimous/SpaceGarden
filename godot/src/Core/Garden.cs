@@ -73,6 +73,7 @@ public sealed class Garden
     readonly Dictionary<(int X, int Y), Cell> cells = new();
     readonly List<((int X, int Y) Key, Cell Cell)> occupied = new();
     readonly List<PlantNode> farReaching = new();
+    readonly List<PlantNode> sending = new(); // flowers with a blob ready, this economy step
     long ticks;
     int nextId;
 
@@ -252,7 +253,8 @@ public sealed class Garden
         return nodes;
     }
 
-    void ForgetPrune()
+    // Closes the undo window now (time away; a simulation that runs no physics ticks to count it down).
+    public void ForgetPrune()
     {
         lastPrune = null;
         UndoSecondsLeft = 0;
@@ -296,7 +298,16 @@ public sealed class Garden
     }
 
     // How many stems and generators there are, counting the buds forming (they hold their slot), for the caps.
-    readonly record struct Counts(int Stems, int Generators);
+    readonly record struct Counts(int Stems, int Generators)
+    {
+        // With one more of this kind (a bud starting).
+        public Counts With(NodeKind kind) => kind switch
+        {
+            NodeKind.Stem => this with { Stems = Stems + 1 },
+            NodeKind.Generator => this with { Generators = Generators + 1 },
+            _ => this,
+        };
+    }
 
     Counts CountKinds()
     {
@@ -323,8 +334,8 @@ public sealed class Garden
     };
 
     // The kinds of wild branch this part could bud now, with their odds: near the core only stems, further out also
-    // generators and labs. Never groves: a plant left alone never plants one (DESIGN.md, the plant is stupid). A
-    // stem next to the core takes flowers too once no stem can grow there, so its free link isn't left empty for good
+    // generators, labs and groves. (A garden with no grove sends no growth blobs, so it never grows its first one
+    // alone: the player plants it.) A stem next to the core takes flowers too once no stem can grow there, so its free link isn't left empty for good
     // when the stem cap is reached. (The core itself only ever grows stems.)
     List<(NodeKind Kind, double Weight)> BranchKinds(PlantNode parent, Counts counts)
     {
@@ -341,7 +352,8 @@ public sealed class Garden
     }
 
     static readonly (NodeKind, double)[] NearOdds = [(NodeKind.Stem, 1)];
-    static readonly (NodeKind, double)[] FarOdds = [(NodeKind.Stem, 0.64), (NodeKind.Generator, 0.14), (NodeKind.Lab, 0.12)];
+    static readonly (NodeKind, double)[] FarOdds =
+        [(NodeKind.Stem, 0.64), (NodeKind.Generator, 0.14), (NodeKind.Lab, 0.12), (NodeKind.Grove, 0.1)];
 
     NodeKind Roll(List<(NodeKind Kind, double Weight)> kinds)
     {
@@ -436,11 +448,21 @@ public sealed class Garden
         // Blobs leave after the loop over the parts, as what they grow joins them. A blob leaves even when nothing
         // will absorb it: it just wanders and fades (pretty to watch).
         int grew = 0;
-        foreach (var flower in Nodes.Where(n => n.Blob >= 1 - 1e-4f).ToList())
+        sending.Clear();
+        foreach (var node in Nodes)
+            if (node.Blob >= 1 - 1e-4f) sending.Add(node);
+        if (sending.Count > 0)
         {
-            flower.Blob = Math.Max(0, flower.Blob - 1);
-            if (flower.Spec.Kind == NodeKind.Lab) SendGenes(flower);
-            else if (SendGrowth(flower) != null) grew++;
+            var counts = CountKinds();
+            foreach (var flower in sending)
+            {
+                while (flower.Blob >= 1 - 1e-4f) // (a whole blob, give or take rounding)
+                {
+                    flower.Blob = Math.Max(0, flower.Blob - 1);
+                    if (flower.Spec.Kind == NodeKind.Lab) SendGenes(flower, ref counts);
+                    else if (SendGrowth(flower, ref counts) != null) grew++;
+                }
+            }
         }
 
         float flow = Tuning.PowerFlowPerHour * hours;
@@ -506,31 +528,45 @@ public sealed class Garden
     // ==== BLOBS ==== \\
 
     // A blob's walk from its flower (DESIGN.md, Economy, Blobs): link by link at random, never straight back unless
-    // at a dead end, until a part absorbs it or BlobMaxHops links have passed. Returns the route (from the flower)
-    // and the part that absorbed it, if one did.
-    (List<PlantNode> Route, PlantNode? Absorber) Walk(PlantNode from, Func<PlantNode, bool> absorbs)
+    // at a dead end, until a part absorbs it (a gene blob: only the core) or BlobMaxHops links have passed. Returns
+    // the part that absorbed it, if one did, and adds the parts it passed to route (from the flower), if given: only
+    // a blob that will be shown needs one. Many thousands of blobs leave an hour, so it allocates nothing else.
+    PlantNode? Walk(PlantNode from, bool genes, ref Counts counts, List<PlantNode>? route)
     {
-        var route = new List<PlantNode> { from };
+        route?.Add(from);
         PlantNode? cameFrom = null;
         var at = from;
         for (int hop = 0; hop < Tuning.BlobMaxHops; hop++)
         {
-            var options = new List<PlantNode>(at.Branches);
-            if (at.Parent != null) options.Add(at.Parent);
-            if (options.Count > 1 && cameFrom != null) options.Remove(cameFrom);
-            if (options.Count == 0) break; // a lone core
+            int options = at.Branches.Count + (at.Parent != null ? 1 : 0);
+            if (options == 0) return null; // a lone core
+            var skip = options > 1 ? cameFrom : null;
+            var next = Option(at, rng.Next(skip != null ? options - 1 : options), skip);
             cameFrom = at;
-            at = options[rng.Next(options.Count)];
-            route.Add(at);
-            if (absorbs(at)) return (route, at);
+            at = next;
+            route?.Add(at);
+            if (genes ? at == Core : Absorbs(at, counts)) return at;
         }
-        return (route, null);
+        return null;
     }
 
-    // The blob is shown following its route, unless in a catch-up or with too many already in flight.
-    Mote? Show(List<PlantNode> route, PlantNode flower)
+    // The pick-th of a part's branches and then its parent, passing over skip.
+    static PlantNode Option(PlantNode at, int pick, PlantNode? skip)
     {
-        if (!ShowBlobs || Motes.Count >= Tuning.MaxMotes || route.Count < 2) return null;
+        foreach (var branch in at.Branches)
+        {
+            if (branch == skip) continue;
+            if (pick-- == 0) return branch;
+        }
+        return at.Parent!;
+    }
+
+    // A blob is shown following its route, unless in a catch-up or with too many already in flight.
+    List<PlantNode>? RouteIfShown() => ShowBlobs && Motes.Count < Tuning.MaxMotes ? new List<PlantNode>() : null;
+
+    Mote? Show(List<PlantNode>? route, PlantNode flower)
+    {
+        if (route == null || route.Count < 2) return null;
         var mote = new Mote(route, flower.Spec.Rgb);
         Motes.Add(mote);
         return mote;
@@ -539,32 +575,32 @@ public sealed class Garden
     // A lab's gene blob leaves. Only the core absorbs it; its genes count at the core in this same step, so a
     // catch-up (which runs no physics) and a live session agree, and the blob shown is their journey made visible.
     // A blob that never finds the core fades, its genes lost: labs near the core waste fewer.
-    void SendGenes(PlantNode lab)
+    void SendGenes(PlantNode lab, ref Counts counts)
     {
-        var (route, absorber) = Walk(lab, n => n == Core);
-        if (absorber != null) Deliver(Tuning.BlobGenes);
+        var route = RouteIfShown();
+        if (Walk(lab, genes: true, ref counts, route) != null) Deliver(Tuning.BlobGenes);
         Show(route, lab);
     }
 
     // A grove's growth blob leaves. Where it goes and what it does are settled now, from the garden's own dice, so a
     // catch-up and a live session agree: the part that absorbs it forms more of its fruit or bud, and a part that
     // completes is added now, hidden (its Age below zero) until the blob, shown following the same walk, arrives.
-    // Returns the part that grew, if one did.
-    public PlantNode? SendGrowth(PlantNode grove)
+    // Returns the part that grew, if one did. Counts are the step's, kept up to date as buds start.
+    PlantNode? SendGrowth(PlantNode grove, ref Counts counts)
     {
-        var counts = CountKinds();
-        var (route, absorber) = Walk(grove, n => Absorbs(n, counts));
+        var route = RouteIfShown();
+        var absorber = Walk(grove, genes: false, ref counts, route);
         if (absorber == null)
         {
             Show(route, grove);
             return null;
         }
-        var grown = Feed(absorber, counts);
+        var grown = Feed(absorber, ref counts);
         if (Show(route, grove) is { } mote)
         {
             mote.Growth = Tuning.BlobGrowth;
             mote.Completes = grown != null;
-            if (grown != null) grown.Age = -(route.Count - 1) * Tuning.MoteLinkSeconds;
+            if (grown != null) grown.Age = -(route!.Count - 1) * Tuning.MoteLinkSeconds;
         }
         else absorber.FormingLook = absorber.Growth;
         return grown;
@@ -574,9 +610,8 @@ public sealed class Garden
     // AbsorbChance of the time; a full one never does.
     bool Absorbs(PlantNode node, Counts counts)
     {
-        if (node.Spec.IsFruit) return false;
         if (node.Forming != null) return true;
-        return (CanStartFruit(node) || BudKinds(node, counts).Count > 0) && rng.NextDouble() < Tuning.AbsorbChance;
+        return (CanStartFruit(node) || CanBud(node, counts)) && rng.NextDouble() < Tuning.AbsorbChance;
     }
 
     // While a prune can be undone, nothing new starts on the pruned branch's parent, and no bud anywhere (it would
@@ -584,19 +619,22 @@ public sealed class Garden
     bool CanStartFruit(PlantNode node) =>
         node.CanFruit && Nodes.Count < Tuning.MaxNodes && lastPrune?.Nodes[0].Parent != node;
 
-    List<(NodeKind Kind, double Weight)> BudKinds(PlantNode node, Counts counts) =>
-        WildGrowth && lastPrune == null && Nodes.Count < Tuning.MaxNodes ? BranchKinds(node, counts) : [];
+    // Whether BranchKinds has anything for this part, without listing them: the core grows only stems, any other part
+    // a lab at least (labs are uncapped).
+    bool CanBud(PlantNode node, Counts counts) =>
+        WildGrowth && lastPrune == null && Nodes.Count < Tuning.MaxNodes && node.CanBranch
+        && (node.Depth >= 1 || HasRoomFor(NodeKind.Stem, counts));
 
     // A growth blob absorbed: a part with nothing forming starts something (a bud BudChance of the time where a
     // branch could grow, its kind rolled now; else a fruit), then the blob's growth is added, and what's forming
     // completes once it has grown enough. Returns the part that grew, if one did.
-    PlantNode? Feed(PlantNode node, Counts counts)
+    PlantNode? Feed(PlantNode node, ref Counts counts)
     {
         if (node.Forming == null)
         {
-            var kinds = BudKinds(node, counts);
-            bool bud = kinds.Count > 0 && (!CanStartFruit(node) || rng.NextDouble() < Tuning.BudChance);
-            node.Forming = bud ? Roll(kinds) : node.Spec.Fruit;
+            bool bud = CanBud(node, counts) && (!CanStartFruit(node) || rng.NextDouble() < Tuning.BudChance);
+            node.Forming = bud ? Roll(BranchKinds(node, counts)) : node.Spec.Fruit;
+            if (bud) counts = counts.With(node.Forming!.Value);
             node.Growth = 0;
             node.FormingLook = 0;
         }

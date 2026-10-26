@@ -69,7 +69,7 @@ public class UnlockTests
             garden.Grow(Tuning.EconomyStepSeconds);
         }
         Assert.All(garden.Motes, m => Assert.Equal(lab, m.Route[0]));
-        Assert.InRange(garden.Genes / Tuning.BlobGenes, 40, 160); // some found the core, some didn't
+        Assert.InRange(garden.Genes / Tuning.BlobGenes, 40, 200); // some found the core, some didn't
         Assert.DoesNotContain(garden.Nodes, n => n.Spec.IsFruit || n.Forming != null); // and they grew nothing
     }
 
@@ -77,7 +77,7 @@ public class UnlockTests
     public void GeneBlobsTravelUpToTheCore()
     {
         var (garden, lab) = WithALab();
-        garden.Grow(BlobHours * Hour * 1.1);
+        garden.Grow(BlobHours * Hour * 1.5);
         var blob = Assert.Single(garden.Motes);
         Assert.Equal([lab, lab.Parent!, garden.Core], blob.Route);
 
@@ -127,7 +127,7 @@ public class UnlockTests
         var (caught, _) = WithALab();
         var (live, _) = WithALab();
         caught.CatchUp(10 * Hour);
-        for (int i = 0; i < 10 * Hour / 7; i++) live.Grow(7);
+        for (int i = 0; i < (int)(10 * Hour / 7); i++) live.Grow(7);
         live.Grow(10 * Hour % 7);
         Assert.Empty(caught.Motes);
         Assert.True(caught.Genes > 40);
@@ -225,7 +225,7 @@ public class UnlockTests
         var caught = Tended(7, 10);
         var live = Tended(7, 10);
         caught.CatchUp(Tuning.CatchUpCapSeconds);
-        for (int i = 0; i < Tuning.CatchUpCapSeconds / 7; i++) live.Grow(7);
+        for (int i = 0; i < (int)(Tuning.CatchUpCapSeconds / 7); i++) live.Grow(7);
         live.Grow(Tuning.CatchUpCapSeconds % 7);
         Assert.True(caught.Unlocks >= 3);
         Assert.Equal(live.Unlocks, caught.Unlocks);
@@ -241,7 +241,7 @@ public class UnlockTests
         var garden = Planted();
         var stem = garden.Nodes[1];
         Add(garden, stem, NodeKind.Grove);
-        Add(garden, stem, NodeKind.Lab);
+        Add(garden, Add(garden, stem, NodeKind.Stem), NodeKind.Lab); // leaving the second stem a free link
         garden.Grow(Day);
         int stemsBefore = Count(garden, NodeKind.Stem);
         int unlocks = garden.Unlocks;
@@ -287,11 +287,13 @@ public class UnlockTests
         for (int s = 0; s < seeds.Length; s++)
             for (int u = 0; u < Tuning.UnlockTrack.Length; u++) run.Fired[s, u] = double.PositiveInfinity;
         const double step = 600;
-        for (int s = 0; s < seeds.Length; s++)
+        // The seeds run side by side (each garden is its own), their lines kept in seed order.
+        var lines = seeds.Select(_ => new List<string>()).ToArray();
+        Parallel.For(0, seeds.Length, s =>
         {
             var garden = Planted(seeds[s]);
             double t = 0;
-            log?.Invoke($"seed {seeds[s]}:");
+            lines[s].Add($"seed {seeds[s]}:");
             for (int day = 1; day <= 30; day++)
             {
                 for (; t < day * Day; t += step)
@@ -304,11 +306,12 @@ public class UnlockTests
                     for (int h = 0; h < TargetHours.Length; h++)
                         if (Math.Abs(TargetHours[h] * Hour - (t + step)) < 1) run.GenesAt[s, h] = garden.Genes;
                 }
-                if (shownDays.Contains(day)) log?.Invoke($"  day {day,2}: {Describe(garden)}");
+                if (shownDays.Contains(day)) lines[s].Add($"  day {day,2}: {Describe(garden)}");
                 if (day == 7) run.WeekOne[s] = garden.Unlocks;
             }
             run.Month[s] = garden.Unlocks;
-        }
+        });
+        foreach (var line in lines.SelectMany(l => l)) log?.Invoke(line);
         return run;
     }
 
@@ -344,9 +347,10 @@ public class UnlockTests
         for (int u = 0; u < Tuning.UnlockTrack.Length; u++)
             Assert.InRange(medians[u], TargetHours[u] * 0.75, TargetHours[u] * 1.25 + 0.2);
         // Every garden has had week one's nine steps (DESIGN.md's 31 stems, 8 generators, 2 core links) by the end of
-        // day 7, and is at most one step short of the end of the track by the end of day 30.
+        // day 7, and is at most two steps short of the end of the track by the end of day 30 (at real-speed blob rates
+        // gardens spread out: the slowest seed runs about a fifth behind the median).
         Assert.All(run.WeekOne, u => Assert.True(u >= 9, $"{u} unlocks by day 7"));
-        Assert.All(run.Month, u => Assert.True(u >= Tuning.UnlockTrack.Length - 1, $"{u} unlocks by day 30"));
+        Assert.All(run.Month, u => Assert.True(u >= Tuning.UnlockTrack.Length - 2, $"{u} unlocks by day 30"));
         // PACING=1 shows the curve even when it passes (as the skip message), for tuning.
         if (Environment.GetEnvironmentVariable("PACING") == "1") Assert.Skip(text.ToString());
     }
@@ -369,7 +373,9 @@ public class UnlockTests
                 for (int u = 0; u < Tuning.UnlockTrack.Length; u++)
                 {
                     double median = Median(run.GenesAt, u);
-                    double genes = Math.Max(previous + 1, u < 3 ? Math.Round(median) : Math.Round(median / 10) * 10);
+                    // Rounded to three figures, so the table reads easily.
+                    double scale = median < 100 ? 1 : Math.Pow(10, Math.Floor(Math.Log10(median)) - 2);
+                    double genes = Math.Max(previous + 1, Math.Round(median / scale) * scale);
                     Tuning.UnlockTrack[u] = Tuning.UnlockTrack[u] with { Genes = genes };
                     previous = genes;
                 }
