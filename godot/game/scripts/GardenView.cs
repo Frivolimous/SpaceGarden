@@ -23,7 +23,16 @@ public partial class GardenView : Node2D
 
     const float FallGravity = 260; // px/s²
     const float FallSeconds = 1.4f;
-    const float RimWidth = 1.2f;   // the lighter outline round each part, in garden units
+
+    // A part's outline and fill brightness, from empty (Dim) to full (Dim + Lit): the outline bright, the fill dark.
+    const float OutlineDim = 0.55f, OutlineLit = 0.6f, FillDim = 0.12f, FillLit = 0.3f;
+
+    // The outline's width in garden units: a little wider on big parts (about 3.4 on the core, 1.4 on a fruit).
+    static float OutlineWidth(float radius) => 1 + 0.08f * radius;
+
+    // The dark edge round each part and under each stem (in garden units, added to the radius or width).
+    const float EdgeWidth = 1.4f;
+    static readonly Color Edge = new(0, 0, 0, 0.55f);
 
     public PlantNode? Highlight;
 
@@ -34,7 +43,7 @@ public partial class GardenView : Node2D
     readonly List<Falling> falling = new();
     readonly Node2D fallingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
         markLayer = new(), moteLayer = new();
-    readonly Batch links = new(), halos = new(), moteDots = new();
+    readonly Batch links = new(), linkEdges = new(), halos = new(), moteDots = new();
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
     float highlightRing;
     float blend = 1;
@@ -106,13 +115,14 @@ public partial class GardenView : Node2D
 
     // A part's brightness and size are its power level (DESIGN.md, Visual language), as in the original
     // (PlantNodeView.intensityInterpolation): its shown fill, never below FillLookFloor, plus the bounce from power
-    // arriving. Full parts are drawn as before; a drained one shrinks to a fifth and dims.
+    // arriving. Full parts are full size; a drained one shrinks to about two thirds and dims, so the plant's shape
+    // still reads when it's low.
     static float Level(PlantNode node) => Mathf.Max(Tuning.FillLookFloor, node.FillLook) + node.Bounce;
 
     // An empty part is already small and dim, so wilting only greys it and dims it a little more.
     const float WiltDim = 0.2f, WiltDesaturate = 0.5f;
 
-    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * Level(node);
+    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * (0.55f + 0.45f * Level(node));
 
     static Color Wilted(Color c, float wilt)
     {
@@ -135,10 +145,12 @@ public partial class GardenView : Node2D
         }
     }
 
-    // Each stem is a soft-edged line quad stretched from end to end (the stems thin with depth).
+    // Each stem is a soft-edged line quad stretched from end to end (the stems thin with depth), over a wider dark
+    // one so it shows over a light window.
     void DrawLinks()
     {
         links.Begin();
+        linkEdges.Begin();
         foreach (var link in garden.Links)
         {
             // As the original's link (FDGLink.getColor): its target's colour, dim at rest and full on a power flash.
@@ -150,9 +162,13 @@ public partial class GardenView : Node2D
             var along = At(link.Target) - from;
             float length = along.Length();
             if (length < 0.01f) continue;
-            var across = new Vector2(-along.Y, along.X) / length * (width / Textures.LineCore);
-            links.AddAxes(from + along / 2, along, across, colour);
+            var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore;
+            links.AddAxes(from + along / 2, along, normal * width, colour);
+            var edge = Edge;
+            edge.A *= colour.A;
+            linkEdges.AddAxes(from + along / 2, along, normal * (width + EdgeWidth), edge);
         }
+        linkEdges.Draw(linkLayer, Textures.Line);
         links.Draw(linkLayer, Textures.Line);
     }
 
@@ -167,7 +183,7 @@ public partial class GardenView : Node2D
         foreach (var node in garden.Nodes)
         {
             var colour = Wilted(ColourOf(node.Spec), node.WiltLook);
-            colour.A = 0.3f * Level(node) * (1 - 0.6f * node.WiltLook);
+            colour.A = 0.15f * Level(node) * Level(node) * (1 - 0.6f * node.WiltLook); // faint, and only on full parts
             halos.AddRound(At(node), Size(node) * 3.6f, colour);
             if (node.Glow <= 0) continue;
             var glow = Rgb(node.GlowRgb);
@@ -178,7 +194,9 @@ public partial class GardenView : Node2D
         halos.Draw(haloLayer, Textures.Halo);
     }
 
-    // Each part is its shape twice: a lighter rim, then the fill a little smaller on top of it.
+    // Each part is its shape three times: a thin dark edge, so it stands out over a light window too; then, as in the
+    // original, a crisp outline in its hue and a dark fill tinted with it a little smaller on top. Power brightens
+    // both; even a drained part keeps an outline that reads.
     void DrawShapes()
     {
         foreach (var batch in shapes.Values) batch.Begin();
@@ -186,12 +204,16 @@ public partial class GardenView : Node2D
         {
             float size = Size(node);
             if (size < 0.2f) continue;
-            var fill = Wilted(Shade(ColourOf(node.Spec), 0.75f * Level(node)), node.WiltLook);
+            float level = Level(node);
+            var colour = ColourOf(node.Spec);
+            var outline = Wilted(Shade(colour, OutlineDim + OutlineLit * level), node.WiltLook);
+            var fill = Wilted(Shade(colour, FillDim + FillLit * level), node.WiltLook);
             var batch = shapes[node.Spec.Shape];
             var at = At(node);
             var (sin, cos) = MathF.SinCos(node.Rotation);
-            batch.AddTurned(at, Textures.ShapeDiameter(size + RimWidth / 2), cos, sin, fill.Lightened(0.35f));
-            batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - RimWidth / 2)), cos, sin, fill);
+            batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), cos, sin, Edge);
+            batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, outline);
+            batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), cos, sin, fill);
         }
         foreach (var (shape, batch) in shapes) batch.Draw(shapeLayer, Textures.Shape(shape));
     }
@@ -222,9 +244,9 @@ public partial class GardenView : Node2D
             }
             else
             {
+                // Bright, to show inside its parent's dark fill.
                 size = Mathf.Lerp(0.8f, Mathf.Min(spec.Radius, node.Spec.Radius * 0.7f), grown) * level;
-                colour = Shade(colour, 0.55f);
-                colour.A = 0.85f;
+                colour.A = 0.75f;
             }
             forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size), cos, sin, colour);
         }
