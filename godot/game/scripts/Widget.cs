@@ -23,7 +23,8 @@ public partial class Widget : Node
     // 7-9% for an empty garden at 30 fps. The idle cost is mostly per frame, so it scales with the idle rate.
     public static readonly int[] IdleRates = [15, 20, 30, 60];
     int idleFps = 30;
-    bool idling;
+    bool idling, hidden;
+    const int HiddenSleepUsec = 250_000; // 4 wake-ups a second while the garden can't be seen
     const float SettledSpeed = 0.45f; // idle sway peaks at 0.2-0.4 (bigger plants higher); a fling is 0.5+ for 2 s
     const double SettleSeconds = 1;
     const float DragThreshold = 4;
@@ -167,6 +168,31 @@ public partial class Widget : Node
     public override void _Process(double delta)
     {
         Garden.FruitBorrowsPush = fruitBorrowsPush; // every frame, so it carries over to a new garden too
+
+        // While nobody can see the garden (Main.HiddenReason): wake only a few times a second, to notice it's back.
+        if (main.HiddenReason != null)
+        {
+            if (!hidden)
+            {
+                hidden = true;
+                toolbar.HideAway();
+                pressed = dragging = false;
+                pressNode = null;
+                main.View.Highlight = null;
+                if (ClickThrough.Supported) ClickThrough.Set(true);
+            }
+            OS.LowProcessorUsageModeSleepUsec = HiddenSleepUsec;
+            OS.LowProcessorUsageMode = true;
+            return;
+        }
+        if (hidden)
+        {
+            hidden = false;
+            idling = false; // back at full rate for a moment, then idle as usual
+            OS.LowProcessorUsageMode = false;
+            activeTime = SettleSeconds;
+        }
+
         var pointer = PointerInViewport();
         bool overToolbar = toolbar.Visible && toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);

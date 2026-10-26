@@ -26,6 +26,9 @@ public partial class GardenView : Node2D
 
     public PlantNode? Highlight;
 
+    // While the garden can't be seen nothing is redrawn (Godot then renders nothing at all).
+    public bool Frozen;
+
     readonly Garden garden;
     readonly List<Falling> falling = new();
     readonly Node2D fallingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(), markLayer = new(), moteLayer = new();
@@ -66,6 +69,7 @@ public partial class GardenView : Node2D
 
     public override void _Process(double delta)
     {
+        if (Frozen) return;
         float dt = (float)delta;
         for (int i = falling.Count - 1; i >= 0; i--)
         {

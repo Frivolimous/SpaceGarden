@@ -30,6 +30,9 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor).
   Windows that region also clips drawing, which made the window flash and would cut off the toolbar.
 - It saves every minute and on quit (`%APPDATA%\Space Garden Prototype\garden.json`). Reopening catches up the
   time away (capped at 72 h) and says what grew.
+- While nobody can see it (screen locked, display off, or a full-screen app such as a game or video on its
+  monitor) it pauses: no drawing or physics, waking 4 times a second to check (about 1.5% of a core). When it's
+  visible again the hidden time's growth is caught up at once, like time away. Windows only (`Visibility.cs`).
 
 ## What's ported, what's new
 - **Ported from the TS game:** node sizes, masses, forces, link counts, shapes and colours (`NodeData.ts`);
@@ -46,7 +49,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor).
 ## Dev options
 `--path game -- [options]`: `--grow=N`, `--upright` (the shelved planted layout: core fixed at the bottom, a pull
 upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
-`--profile=NAME` (use `user://NAME.json` instead of the real save), `--backdrop=RRGGBB`,
+`--profile=NAME` (use `user://NAME.json` instead of the real save), `--backdrop=RRGGBB`, `--pausetest=AT,FOR`
+(act as if hidden for FOR seconds from AT seconds after start, to test the pause),
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit, for stress tests), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
