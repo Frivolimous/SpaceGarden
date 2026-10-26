@@ -3,8 +3,9 @@ using Num = System.Numerics;
 
 namespace SpaceGarden;
 
-// Draws the garden each frame, back to front: pruned parts tumbling away, stems, soft halos, the parts, pins and the
-// ring on the part under the pointer, then the motes on top. Nothing here changes the garden.
+// Draws the garden each frame, back to front: pruned parts tumbling away, stems, the motes travelling along them,
+// soft halos (and the glow where a mote is absorbed), the parts, then pins and the ring on the part under the
+// pointer. Nothing here changes the garden.
 //
 // Each layer is a child canvas item drawn in as few draw calls as possible, however big the plant: the stems, the
 // halos, the motes and each kind of shape are one instanced batch apiece (a textured quad per part, or per stem,
@@ -33,7 +34,7 @@ public partial class GardenView : Node2D
     readonly List<Falling> falling = new();
     readonly Node2D fallingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
         markLayer = new(), moteLayer = new();
-    readonly Batch links = new(), halos = new(), moteHalos = new(), moteDots = new();
+    readonly Batch links = new(), halos = new(), moteDots = new();
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
     float highlightRing;
     float blend = 1;
@@ -57,7 +58,7 @@ public partial class GardenView : Node2D
         formingLayer.Draw += DrawForming;
         markLayer.Draw += DrawMarks;
         moteLayer.Draw += DrawMotes;
-        foreach (var layer in new[] { fallingLayer, linkLayer, haloLayer, shapeLayer, formingLayer, markLayer, moteLayer }) AddChild(layer);
+        foreach (var layer in new[] { fallingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, markLayer }) AddChild(layer);
     }
 
     public void Drop(IEnumerable<PlantNode> nodes)
@@ -111,7 +112,7 @@ public partial class GardenView : Node2D
     // An empty part is already small and dim, so wilting only greys it and dims it a little more.
     const float WiltDim = 0.2f, WiltDesaturate = 0.5f;
 
-    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * Level(node) * (1 + 0.15f * node.Glow);
+    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * Level(node);
 
     static Color Wilted(Color c, float wilt)
     {
@@ -144,7 +145,7 @@ public partial class GardenView : Node2D
             // (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
             var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash), link.Target.WiltLook);
             colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
-            float width = link.Target.Spec.IsFruit ? 1.2f : Mathf.Max(1.2f, 3.4f - link.Target.Depth * 0.18f);
+            float width = LinkWidth(link.Target);
             var from = At(link.Origin);
             var along = At(link.Target) - from;
             float length = along.Length();
@@ -155,14 +156,24 @@ public partial class GardenView : Node2D
         links.Draw(linkLayer, Textures.Line);
     }
 
+    // A stem's width: thinning with depth, a fruit's stalk thinnest.
+    static float LinkWidth(PlantNode target) => target.Spec.IsFruit ? 1.2f : Mathf.Max(1.2f, 3.4f - target.Depth * 0.18f);
+
+    // Under each part, a soft halo of its power; and where a mote was just absorbed, a glow of the mote's colour that
+    // widens a little as it fades, so it's seen that something happened.
     void DrawHalos()
     {
         halos.Begin();
         foreach (var node in garden.Nodes)
         {
             var colour = Wilted(ColourOf(node.Spec), node.WiltLook);
-            colour.A = (0.3f * Level(node) + 0.4f * node.Glow) * (1 - 0.6f * node.WiltLook);
+            colour.A = 0.3f * Level(node) * (1 - 0.6f * node.WiltLook);
             halos.AddRound(At(node), Size(node) * 3.6f, colour);
+            if (node.Glow <= 0) continue;
+            var glow = Rgb(node.GlowRgb);
+            glow.A = 0.9f * node.Glow;
+            float radius = Mathf.Max(node.Spec.Radius * GrowIn(node), Size(node));
+            halos.AddRound(At(node), radius * (4.5f + 1.5f * (1 - node.Glow)), glow);
         }
         halos.Draw(haloLayer, Textures.Halo);
     }
@@ -175,7 +186,7 @@ public partial class GardenView : Node2D
         {
             float size = Size(node);
             if (size < 0.2f) continue;
-            var fill = Wilted(Shade(ColourOf(node.Spec), 0.75f * Level(node) + 0.45f * node.Glow), node.WiltLook);
+            var fill = Wilted(Shade(ColourOf(node.Spec), 0.75f * Level(node)), node.WiltLook);
             var batch = shapes[node.Spec.Shape];
             var at = At(node);
             var (sin, cos) = MathF.SinCos(node.Rotation);
@@ -242,19 +253,16 @@ public partial class GardenView : Node2D
 
     void DrawMotes()
     {
-        moteHalos.Begin();
         moteDots.Begin();
-        // A blob is its colour: a soft halo round a small bright bead of it (a gene blob reads purple, a growth blob
-        // orange, not white). The part a growth blob completes stays hidden until it arrives (see GrowIn).
+        // A blob is a small dot of its colour (a gene blob purple, a growth blob orange) as wide as the stem it
+        // travels along, under the parts, so it slips along the stems and in and out of them. The part a growth blob
+        // completes stays hidden until it arrives (see GrowIn).
         foreach (var mote in garden.Motes)
         {
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
-            var colour = Rgb(mote.Rgb);
-            colour.A = 0.9f;
-            moteHalos.AddRound(p, 34, colour);
-            moteDots.AddRound(p, Textures.ShapeDiameter(3.4f), colour.Lightened(0.55f));
+            var deeper = mote.To.Parent == mote.From ? mote.To : mote.From;
+            moteDots.AddRound(p, Textures.ShapeDiameter(LinkWidth(deeper) * 0.65f), Rgb(mote.Rgb).Lightened(0.3f));
         }
-        moteHalos.Draw(moteLayer, Textures.Halo);
         moteDots.Draw(moteLayer, Textures.Shape(Shape.Circle));
     }
 

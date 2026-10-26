@@ -586,8 +586,9 @@ public sealed class Garden
     void SendGenes(PlantNode lab, ref Counts counts)
     {
         var route = RouteIfShown();
-        if (Walk(lab, genes: true, ref counts, route) != null) Deliver(Tuning.BlobGenes);
-        Show(route, lab);
+        bool found = Walk(lab, genes: true, ref counts, route) != null;
+        if (found) Deliver(Tuning.BlobGenes);
+        if (Show(route, lab) is { } mote) mote.Absorbed = found;
     }
 
     // A grove's growth blob leaves. Where it goes and what it does are settled now, from the garden's own dice, so a
@@ -607,6 +608,7 @@ public sealed class Garden
         if (Show(route, grove) is { } mote)
         {
             mote.Growth = Tuning.BlobGrowth;
+            mote.Absorbed = true;
             mote.Completes = grown != null;
             if (grown != null) grown.Age = -(route!.Count - 1) * Tuning.MoteLinkSeconds;
         }
@@ -997,8 +999,6 @@ public sealed class Garden
             if (mote.T < 1) continue;
 
             var arrived = mote.To;
-            arrived.Glow = 1;
-            if (LinkBetween(mote.From, arrived) is { } link) link.Flash = 1;
             var route = mote.Route;
             var next = ++mote.Leg + 1 < route.Count ? route[mote.Leg + 1] : null;
             if (next == null)
@@ -1007,6 +1007,12 @@ public sealed class Garden
                 // (see SendGrowth) and the silhouette goes.
                 if (mote.Completes) arrived.FormingLook = 0;
                 else if (mote.Growth > 0) arrived.FormingLook = Math.Min(arrived.Growth, arrived.FormingLook + mote.Growth);
+                // A blob that's absorbed flashes its part in its own colour; one that fades unabsorbed just goes.
+                if (mote.Absorbed)
+                {
+                    arrived.Glow = 1;
+                    arrived.GlowRgb = mote.Rgb;
+                }
                 Motes.RemoveAt(i);
                 continue;
             }
@@ -1015,9 +1021,6 @@ public sealed class Garden
             mote.T -= 1;
         }
     }
-
-    Link? LinkBetween(PlantNode a, PlantNode b) =>
-        b.Parent == a ? linkToParent[b] : a.Parent == b ? linkToParent[a] : null;
 
     // ==== QUERIES ==== \\
 

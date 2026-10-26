@@ -26,9 +26,10 @@ public sealed class PlantNode
     public Vector2 RepelPush;
 
     // Presentation state the rules keep so a save or a catch-up carries it: seconds since it sprouted (for the
-    // grow-in), and a 0-1 glow that a passing mote sets and that fades.
+    // grow-in), and a 0-1 glow that a blob absorbed here sets, in the blob's colour, and that fades.
     public float Age;
     public float Glow;
+    public uint GlowRgb;
 
     // The economy (see Garden.EconomyStep). Power held, up to Store; a part that couldn't pay its upkeep is Wilting
     // until it fills back up. Fruit holds no power and wilts with its parent. WiltLook eases 0-1 towards Wilting, for
@@ -117,6 +118,8 @@ public sealed class Mote
     public uint Rgb;
     public float Growth;
     public bool Completes;
+    // Whether the part at the end of its route absorbs it (else it fades there).
+    public bool Absorbed;
 
     public Mote(List<PlantNode> route, uint rgb)
     {
