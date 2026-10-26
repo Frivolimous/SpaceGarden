@@ -293,8 +293,9 @@ public class EconomyTests
         var garden = NewGarden();
         garden.Sprout();
         foreach (var n in garden.Nodes) n.Power = 0;
-        // Twenty minutes is a sprout's worth of time, but nothing has power to spare yet.
-        Assert.Equal(0, garden.Grow(Tuning.SproutEverySeconds));
+        // A sprout is due, but nothing has power to spare yet.
+        garden.GrowthClock = Tuning.SproutEverySeconds;
+        Assert.Equal(0, garden.Grow(20 * 60));
         Assert.Equal(2, garden.Nodes.Count);
         Assert.True(garden.Grow(4 * 3600) > 0);
         Assert.True(garden.Nodes.Count > 2);

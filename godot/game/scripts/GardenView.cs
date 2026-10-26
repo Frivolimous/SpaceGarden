@@ -201,7 +201,8 @@ public partial class GardenView : Node2D
     {
         moteHalos.Begin();
         moteDots.Begin();
-        // A blob is its colour: a soft halo round a small bright bead of it (a gene blob reads purple, not white).
+        // A blob is its colour: a soft halo round a small bright bead of it (a gene blob reads purple, a fruit blob
+        // orange, not white). The fruit a fruit blob grows stays hidden until it arrives (see GrowIn).
         foreach (var mote in garden.Motes)
         {
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
@@ -216,7 +217,8 @@ public partial class GardenView : Node2D
 
     // ==== HELPERS ==== \\
 
-    // Parts swell in over their first second and a half, overshooting a little like a bud opening.
+    // Parts swell in over their first second and a half, overshooting a little like a bud opening. A fruit whose
+    // blob is still on its way has an Age below zero, and isn't drawn (nor its stalk) until then.
     static float GrowIn(PlantNode node)
     {
         if (node.Age >= 1.5f) return 1; // grown: almost every part, almost always

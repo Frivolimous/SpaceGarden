@@ -164,12 +164,13 @@ public class UnlockTests
         Assert.Equal(garden.Core.MaxLinks, loaded.Core.MaxLinks);
         for (int i = 0; i < garden.Nodes.Count; i++) Assert.Equal(garden.Nodes[i].Genes, loaded.Nodes[i].Genes);
 
-        // And carry on from there as the original does (wild growth off: the loaded garden's dice are rolled afresh).
+        // And carry on from there as the original does (wild growth off: the loaded garden's dice are rolled afresh,
+        // so fruit blobs land elsewhere and the labs' research fruit can differ a little).
         garden.WildGrowth = loaded.WildGrowth = false;
         garden.Grow(Day);
         loaded.Grow(Day);
         Assert.Equal(garden.Unlocks, loaded.Unlocks);
-        Assert.Equal(garden.Genes, loaded.Genes, 1e-3);
+        Assert.Equal(garden.Genes, loaded.Genes, garden.Genes * 0.03);
     }
 
     [Fact]
@@ -223,7 +224,8 @@ public class UnlockTests
     public void WildGrowthOnlyAddsWhatTheGardenCanAfford()
     {
         // 8 an hour against a lab's 3 and 4 stems' 2: 3 spare, so a stem fits but another lab doesn't (labs leave 30% of
-        // the production unspent). Forty sprouts later it has never eaten into the reserve.
+        // the production unspent). Forty sprouts later it has never eaten into the reserve, and has used the 2 spare
+        // on four more stems (and nothing else: no fruit grows wild, and a grove's 1.5 doesn't fit beside a stem).
         var garden = NewGarden(new Capacity(100, 0, 1), fixedCaps: true);
         var tip = garden.Core;
         for (int i = 0; i < 4; i++) tip = Add(garden, tip, NodeKind.Stem);
@@ -241,7 +243,7 @@ public class UnlockTests
             var (production, upkeep) = garden.PowerBalance();
             Assert.True(production - upkeep >= Tuning.WildSpareReserve - 1e-3f, $"+{production} -{upkeep}");
         }
-        Assert.True(garden.Nodes.Count > 10);
+        Assert.True(garden.Nodes.Count >= 9);
     }
 
     [Fact]
@@ -271,7 +273,7 @@ public class UnlockTests
         var (production, upkeep) = garden.PowerBalance();
         return $"{Count(garden, NodeKind.Stem)}/{garden.Capacity.Stems} stems, "
             + $"{Count(garden, NodeKind.Generator)}/{garden.Capacity.Generators} generators, "
-            + $"{Count(garden, NodeKind.Lab)} labs, {garden.Core.Links}/{garden.Capacity.CoreLinks} core links, "
+            + $"{Count(garden, NodeKind.Lab)} labs, {Count(garden, NodeKind.Grove)} groves, {garden.Core.Links}/{garden.Capacity.CoreLinks} core links, "
             + $"{garden.Nodes.Count(n => !n.Spec.IsFruit)} main, {garden.Nodes.Count(n => n.Spec.IsFruit)} fruit, "
             + $"{garden.Nodes.Count(n => n.Wilting)} wilting, genes {garden.Genes:0}, +{production:0.0}/h -{upkeep:0.0}/h";
     }
