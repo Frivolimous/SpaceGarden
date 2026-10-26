@@ -230,13 +230,13 @@ Note the order change from the first draft: the evolution path is chosen when th
 
 **Wild pool.** Evolutions can add new rare types to the pool; core upgrades raise wild limits.
 
-**Linear unlock track (step 2).** Genes reaching the core raise caps automatically along a fixed sequence, with a small notification and no choices. Only stems, generators and core links unlock; groves and labs are limited by slots and power. Draft first week, to be refined through play:
+**Linear unlock track (step 2).** Genes reaching the core raise caps automatically along a fixed sequence, with a small notification and no choices. Genes come only from labs (the core makes none), so the track starts when the first lab grows, a few hours in. Only stems, generators and core links unlock; groves and labs are limited by slots and power. "Day N" means the start of day N. Draft first month, to be refined through play (thresholds in `Tuning.cs`):
 
 | When | Unlock |
 | --- | --- |
 | Start | Core (1 link), 4 stems, 1 generator |
-| \~10 min | +3 stems |
-| \~1 hr | +1 generator |
+| First lab's first gene (\~4 hr) | +3 stems |
+| \~6 hr | +1 generator |
 | Day 1 evening | +3 stems |
 | Day 2 | +4 stems, +1 generator |
 | Day 3 | +1 core link, +5 stems, +1 generator |
@@ -244,8 +244,11 @@ Note the order change from the first draft: the evolution path is chosen when th
 | Day 5 | +2 generators |
 | Day 6 | +6 stems |
 | Day 7 | +2 generators |
+| Days 8–13 | One step a day, alternating +4 stems and +1 generator |
+| Day 14 | +4 stems, +1 core link |
+| Days 16–30 | One step about every two days, mixing +5 stems and +1–2 generators (exact steps in `Tuning.cs`) |
 
-End of week one: 31 stems, 8 generators, 2 core links, at most about 65 main nodes. Gene thresholds rise faster than lab count to hold this pacing. Proposed: a third core link in week two or three, the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
+End of week one: 31 stems, 8 generators, 2 core links (simulated: about 48 main nodes, under the 65 budget). Day 14: 47 stems, 11 generators, 3 core links. Day 30: 72 stems, 17 generators, 3 core links (simulated: about 107 main nodes and 225 fruit, labs levelling off at 15–18, no wilting). Weeks 2–4 are invented placeholders. Gene thresholds rise faster than lab count to hold this pacing; wild growth only adds a part the whole garden can afford, and labs must leave 30% of production spare. A garden with no labs makes no genes and unlocks nothing. Proposed: the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
 
 **Long-term pacing: TBD.** Week one has to feel right first; pacing beyond it (bloom timing, how long a garden takes to mature) gets planned once it does.
 
