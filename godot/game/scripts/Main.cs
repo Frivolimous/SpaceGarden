@@ -10,7 +10,8 @@ namespace SpaceGarden;
 // planted layout (every garden, saved ones too, is otherwise radial), --fresh to ignore the save, --seed=N, --away=HOURS to pretend that long
 // has passed since the last save, --backdrop=RRGGBB to draw a colour behind the plant, --profile=NAME to use
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
-// parts at once (for stress tests; past the usual limit too), --pausetest=AT,FOR to act as if hidden for FOR seconds
+// parts at once (for stress tests; past the usual limit and caps too), --wilt to start with every part drained and
+// wilting (to watch power flow back), --pausetest=AT,FOR to act as if hidden for FOR seconds
 // from AT seconds after start (to test the pause), plus Screenshot's options. --screenshot runs never touch the
 // real save.
 //
@@ -85,10 +86,21 @@ public partial class Main : Node2D
         {
             int parts = int.Parse(p);
             Tuning.MaxNodes = Math.Max(Tuning.MaxNodes, parts);
+            Garden.Capacity = Capacity.Unlimited;
             while (Garden.Nodes.Count < parts && Garden.Sprout() != null)
                 for (int i = 0; i < 3; i++) Garden.Step();
             for (int i = 0; i < 1800; i++) Garden.Step(); // half a minute's settling
             foreach (var node in Garden.Nodes) node.Age = 10;
+        }
+        if (args.ContainsKey("wilt"))
+        {
+            foreach (var node in Garden.Nodes)
+            {
+                if (node.Parent == null) continue; // the core never wilts
+                node.Power = 0;
+                node.Wilting = !node.Spec.IsFruit;
+            }
+            Garden.SettleLooks();
         }
 
         ShowGarden();
@@ -204,7 +216,7 @@ public partial class Main : Node2D
         tween.TweenCallback(Callable.From(layer.QueueFree));
     }
 
-    void Save() => SaveFile.Write(new SaveData(Garden.ToSave(), Time.GetUnixTimeFromSystem(), widget.PlantScale, widget.IdleFps));
+    void Save() => SaveFile.Write(new SaveData(SaveFile.Version, Garden.ToSave(), Time.GetUnixTimeFromSystem(), widget.PlantScale, widget.IdleFps));
 
     public void SaveAndQuit()
     {

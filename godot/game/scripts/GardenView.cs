@@ -95,7 +95,23 @@ public partial class GardenView : Node2D
     // to the 60 Hz tick.
     Vector2 At(PlantNode node) => V(Num.Vector2.Lerp(node.PreviousPosition, node.Position, blend));
 
-    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * (1 + 0.15f * node.Glow);
+    // A part's brightness and size are its power level (DESIGN.md, Visual language), as in the original
+    // (PlantNodeView.intensityInterpolation): its shown fill, never below FillLookFloor, plus the bounce from power
+    // arriving. Full parts are drawn as before; a drained one shrinks to a fifth and dims.
+    static float Level(PlantNode node) => Mathf.Max(Tuning.FillLookFloor, node.FillLook) + node.Bounce;
+
+    // An empty part is already small and dim, so wilting only greys it and dims it a little more.
+    const float WiltDim = 0.2f, WiltDesaturate = 0.5f;
+
+    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * Level(node) * (1 + 0.15f * node.Glow);
+
+    static Color Wilted(Color c, float wilt)
+    {
+        if (wilt <= 0) return c;
+        float grey = (c.R + c.G + c.B) / 3;
+        var muted = c.Lerp(new Color(grey, grey, grey, c.A), WiltDesaturate * wilt);
+        return Shade(muted, 1 - WiltDim * wilt);
+    }
 
     // ==== LAYERS ==== \\
 
@@ -116,7 +132,9 @@ public partial class GardenView : Node2D
         links.Begin();
         foreach (var link in garden.Links)
         {
-            var colour = Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash);
+            // As the original's link (FDGLink.getColor): its target's colour, dim at rest and full on a power flash.
+            // (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
+            var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash), link.Target.WiltLook);
             colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
             float width = link.Target.Spec.IsFruit ? 1.2f : Mathf.Max(1.2f, 3.4f - link.Target.Depth * 0.18f);
             var from = At(link.Origin);
@@ -134,8 +152,8 @@ public partial class GardenView : Node2D
         halos.Begin();
         foreach (var node in garden.Nodes)
         {
-            var colour = ColourOf(node.Spec);
-            colour.A = 0.3f + 0.4f * node.Glow;
+            var colour = Wilted(ColourOf(node.Spec), node.WiltLook);
+            colour.A = (0.3f * Level(node) + 0.4f * node.Glow) * (1 - 0.6f * node.WiltLook);
             halos.AddRound(At(node), Size(node) * 3.6f, colour);
         }
         halos.Draw(haloLayer, Textures.Halo);
@@ -149,7 +167,7 @@ public partial class GardenView : Node2D
         {
             float size = Size(node);
             if (size < 0.2f) continue;
-            var fill = Shade(ColourOf(node.Spec), 0.75f + 0.45f * node.Glow);
+            var fill = Wilted(Shade(ColourOf(node.Spec), 0.75f * Level(node) + 0.45f * node.Glow), node.WiltLook);
             var batch = shapes[node.Spec.Shape];
             var at = At(node);
             var (sin, cos) = MathF.SinCos(node.Rotation);

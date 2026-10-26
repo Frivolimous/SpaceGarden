@@ -6,11 +6,15 @@ using FileAccess = Godot.FileAccess;
 namespace SpaceGarden;
 
 // The garden (its parts' places are their places on the desktop) plus what only the overlay needs (when it was
-// last seen, the Size and Idle frame rate settings), as JSON in user://.
-public sealed record SaveData(GardenSave Garden, double LastSeenUnix, float PlantScale = 0.75f, int IdleFps = 30);
+// last seen, the Size and Idle frame rate settings), as JSON in user://. Saves aren't migrated until release: one
+// from another Version is set aside and a new garden starts.
+public sealed record SaveData(int Version, GardenSave Garden, double LastSeenUnix, float PlantScale = 0.75f, int IdleFps = 30);
 
 public static class SaveFile
 {
+    // 2: the economy (power, wilting, capacity).
+    public const int Version = 2;
+
     public static string? Path = "user://garden.json";
 
     static readonly JsonSerializerOptions Options = new()
@@ -25,7 +29,19 @@ public static class SaveFile
         if (Path == null || !FileAccess.FileExists(Path)) return null;
         try
         {
-            return JsonSerializer.Deserialize<SaveData>(FileAccess.GetFileAsString(Path), Options);
+            var text = FileAccess.GetFileAsString(Path);
+            using (var doc = JsonDocument.Parse(text))
+            {
+                int version = doc.RootElement.TryGetProperty("Version", out var v) && v.TryGetInt32(out var n) ? n : 1;
+                if (version != Version)
+                {
+                    // Kept beside the new one rather than overwritten, in case it's wanted.
+                    DirAccess.RenameAbsolute(Path, Path.Replace(".json", $".v{version}.json"));
+                    GD.Print($"The save is from version {version}, not {Version}; starting a new garden.");
+                    return null;
+                }
+            }
+            return JsonSerializer.Deserialize<SaveData>(text, Options);
         }
         catch (Exception e)
         {

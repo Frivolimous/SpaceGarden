@@ -30,6 +30,21 @@ public sealed class PlantNode
     public float Age;
     public float Glow;
 
+    // The economy (see Garden.EconomyStep). Power held, up to Store; a part that couldn't pay its upkeep is Wilting
+    // until it fills back up. Fruit holds no power and wilts with its parent. WiltLook eases 0-1 towards Wilting, for
+    // drawing.
+    public float Power;
+    public bool Wilting;
+    public float WiltLook;
+
+    // Presentation, as the original's node intensity: the fill as shown, eased towards the real one, plus a small
+    // spring that a flash of power arriving kicks, so the part swells and brightens past its level and settles back.
+    public float FillLook;
+    public float Bounce, BounceSpeed;
+
+    // Links allowed, counting the parent's. The spec's, except the core's, which is the garden's Capacity.CoreLinks.
+    public int MaxLinks;
+
     public PlantNode(int id, NodeSpec spec, PlantNode? parent, Vector2 position)
     {
         Id = id;
@@ -37,10 +52,14 @@ public sealed class PlantNode
         Parent = parent;
         Depth = parent == null ? 0 : parent.Depth + 1;
         Position = PreviousPosition = position;
+        MaxLinks = spec.MaxLinks;
     }
 
+    public float Store => Spec.IsFruit ? 0 : Parent == null ? Tuning.CorePowerStore : Tuning.NodePowerStore;
+    public float Fill => Spec.IsFruit ? 0 : Power / Store;
+
     public int Links => Branches.Count + (Parent == null ? 0 : 1);
-    public bool CanBranch => Links < Spec.MaxLinks;
+    public bool CanBranch => Links < MaxLinks;
     public bool CanFruit => Spec.Fruit != null && Fruits.Count < Spec.MaxFruits;
 
     public IEnumerable<PlantNode> Neighbours()
@@ -55,7 +74,12 @@ public sealed class Link
 {
     public readonly PlantNode Origin, Target;
     public readonly float Length;
+    // 0-1 light that a flash sets and that fades. Power flowing along the link (either way, per real hour, as of the
+    // last economy step) sets how often it flashes; FlashPhase counts up to the next.
     public float Flash;
+    public float FlowPerHour;
+    public float FlashPhase;
+    public bool FlowsToTarget; // which way the power ran (outward, or back towards the origin)
 
     public Link(PlantNode origin, PlantNode target)
     {
