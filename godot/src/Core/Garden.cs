@@ -25,10 +25,9 @@ public sealed class Garden
     // Only an upright plant's core is planted; a radial one floats like any other part.
     public bool Planted => Layout == Layout.Upright;
 
-    // Seconds of motion (drives the wind); real seconds of growth not yet spent on a sprout; and real seconds not
-    // yet run through the economy (less than one EconomyStepSeconds).
+    // Seconds of motion (drives the wind), and real seconds not yet run through the economy (less than one
+    // EconomyStepSeconds).
     public double Time;
-    public double GrowthClock;
     public double EconomyClock;
 
     // The limits on growth (see Capacity). Raising CoreLinks gives the core room for another branch.
@@ -49,10 +48,10 @@ public sealed class Garden
     public int Unlocks;
     public UnlockStep? NextUnlock => Unlocks < Tuning.UnlockTrack.Length ? Tuning.UnlockTrack[Unlocks] : null;
 
-    // Off, gene blobs still deliver their genes but aren't shown travelling (a catch-up, which draws nothing).
+    // Off, blobs still do their work but aren't shown travelling (a catch-up, which draws nothing).
     public bool ShowBlobs = true;
 
-    // Off, the economy still runs but nothing sprouts by itself (tests, and later a "hold growth" choice).
+    // Off, growth blobs still grow fruit but start no wild buds (tests, and later a "hold growth" choice).
     public bool WildGrowth = true;
 
     // The part the player is holding (see Grab), and where the pointer is pulling it.
@@ -96,18 +95,18 @@ public sealed class Garden
 
     // ==== GROWTH ==== \\
 
-    // Spends real seconds on the economy and growth, in fixed steps; returns how many parts sprouted. However the
-    // time is chunked (a frame at a time, or three days at once on return), the same steps run.
+    // Spends real seconds on the economy and growth, in fixed steps; returns how many parts grew (fruit too). However
+    // the time is chunked (a frame at a time, or three days at once on return), the same steps run.
     public int Grow(double seconds)
     {
         EconomyClock += seconds;
-        int sprouted = 0;
+        int grew = 0;
         while (EconomyClock >= Tuning.EconomyStepSeconds)
         {
             EconomyClock -= Tuning.EconomyStepSeconds;
-            sprouted += EconomyStep(Tuning.EconomyStepSeconds);
+            grew += EconomyStep(Tuning.EconomyStepSeconds);
         }
-        return sprouted;
+        return grew;
     }
 
     // Time away: grow for it (capped), then let the physics settle so the plant isn't shown mid-tangle.
@@ -128,53 +127,14 @@ public sealed class Garden
         return sprouted;
     }
 
-    // A new part somewhere on the plant, for free (the first stem, stress tests), or null if there's no room.
-    public PlantNode? Sprout() => Sprout(wild: false);
-
-    // A sprout the player asked for by clicking a part (or its fruit): a branch, if it has room. Manual buds cost no
-    // power (DESIGN.md: "Manual buds cost nothing") but keep within capacity. They never grow fruit: only groves'
-    // blobs do.
-    public PlantNode? SproutFrom(PlantNode node)
-    {
-        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
-        if (Nodes.Count >= Tuning.MaxNodes) return null;
-        var counts = CountKinds();
-        return BranchKinds(node, counts).Count > 0 ? AddBranch(node, counts) : null;
-    }
-
-    // A branch of a chosen kind, if there's room for it; free, like any bud. Never fruit (see above).
-    public PlantNode? SproutFrom(PlantNode node, NodeKind kind)
-    {
-        if (Nodes.Count >= Tuning.MaxNodes) return null;
-        var spec = NodeSpecs.All[kind];
-        if (spec.IsFruit || kind == NodeKind.Core || !node.CanBranch || !HasRoomFor(kind, CountKinds())) return null;
-        var sprout = AddNear(spec, node);
-        sprout.Power = Tuning.SproutCost;
-        return sprout;
-    }
-
-    public bool CanSproutFrom(PlantNode node)
-    {
-        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
-        return Nodes.Count < Tuning.MaxNodes && BranchKinds(node, CountKinds()).Count > 0;
-    }
-
-    // A fruit of the part's own kind, if it has room: for tests only (players can't grow fruit; groves' blobs do).
-    internal PlantNode? GrowFruit(PlantNode node) => node.CanFruit && Nodes.Count < Tuning.MaxNodes ? AddFruit(node) : null;
-
-    // Wild growth sprouts only stems and flowers (fruit is the groves' work, see SendFruit), only from parts with
-    // power to spare, and the parent pays for it. A free sprout can grow anywhere with room, fruit too.
-    PlantNode? Sprout(bool wild)
+    // A new part somewhere on the plant, for free (the first stem, stress tests), or null if there's no room: a
+    // branch from the core while it has a free link, else fruit FruitChance of the time, or a wild branch.
+    public PlantNode? Sprout()
     {
         if (Nodes.Count >= Tuning.MaxNodes) return null;
         var counts = CountKinds();
-        // Wild growth also keeps within what the whole garden can afford (see WildSpare); a free sprout needn't.
-        Spare? spare = wild ? WildSpare() : null;
-        bool HasPower(PlantNode n) => !wild || (!n.Wilting && n.Fill >= Tuning.GrowFill && n.Power >= Tuning.SproutCost);
-        var branchable = Nodes.Where(n => BranchKinds(n, counts, spare).Count > 0 && HasPower(n)).ToList();
-        var fruitable = wild ? [] : Nodes.Where(n => n.CanFruit).ToList();
-        // A free core link (a new one from an unlock) is filled first, before the other stems take the new stem cap
-        // and leave it bare: the unlock's point is a new branch from the core.
+        var branchable = Nodes.Where(n => BranchKinds(n, counts).Count > 0).ToList();
+        var fruitable = Nodes.Where(n => n.CanFruit).ToList();
         bool fruit = false;
         PlantNode parent = Core;
         if (!branchable.Contains(Core))
@@ -183,9 +143,28 @@ public sealed class Garden
             if (fruit && fruitable.Count == 0) return null;
             parent = Pick(fruit ? fruitable : branchable);
         }
-        if (wild) parent.Power -= Tuning.SproutCost;
-        return fruit ? AddFruit(parent) : AddBranch(parent, counts, spare);
+        return fruit ? AddFruit(parent) : AddBranch(parent, Roll(BranchKinds(parent, counts)));
     }
+
+    // A bud the player asked for (DESIGN.md: "Manual buds cost nothing"): a branch of the chosen kind, grown at once,
+    // if the part (or the part a fruit hangs from) has a free link and the caps have room. Never fruit: only growth
+    // blobs grow it. Groves grow only this way.
+    public PlantNode? SproutFrom(PlantNode node, NodeKind kind)
+    {
+        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
+        return CanSproutFrom(node, kind) ? AddBranch(node, kind) : null;
+    }
+
+    public bool CanSproutFrom(PlantNode node, NodeKind kind)
+    {
+        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
+        var spec = NodeSpecs.All[kind];
+        return !spec.IsFruit && kind != NodeKind.Core && node.CanBranch && Nodes.Count < Tuning.MaxNodes
+            && HasRoomFor(kind, CountKinds());
+    }
+
+    // A fruit of the part's own kind, if it has room: for tests only (players can't grow fruit; growth blobs do).
+    internal PlantNode? GrowFruit(PlantNode node) => node.CanFruit && Nodes.Count < Tuning.MaxNodes ? AddFruit(node) : null;
 
     // Deeper parts are likelier, so the plant reaches outward instead of thickening at the base.
     PlantNode Pick(List<PlantNode> candidates)
@@ -216,7 +195,7 @@ public sealed class Garden
         (node.Spec.IsFruit ? node.Parent.Fruits : node.Parent.Branches).Remove(node);
         Nodes.RemoveAll(gone.Contains);
         Links.RemoveAll(l => gone.Contains(l.Target));
-        Motes.RemoveAll(m => gone.Contains(m.From) || gone.Contains(m.To) || (m.Route?.Any(gone.Contains) ?? false));
+        Motes.RemoveAll(m => m.Route.Any(gone.Contains));
         foreach (var n in removed) linkToParent.Remove(n);
         if (Held != null && gone.Contains(Held)) LetGo();
         lastPrune = (removed, node.Parent.Position);
@@ -316,25 +295,26 @@ public sealed class Garden
         HoldTarget += offset;
     }
 
-    // How many stems, generators and groves there are, for the caps, and how much room for fruit is left.
-    readonly record struct Counts(int Stems, int Generators, int Groves, int FruitRoom);
+    // How many stems and generators there are, counting the buds forming (they hold their slot), for the caps.
+    readonly record struct Counts(int Stems, int Generators);
 
     Counts CountKinds()
     {
-        int stems = 0, generators = 0, groves = 0, fruitRoom = 0;
+        int stems = 0, generators = 0;
+        void Count(NodeKind kind)
+        {
+            if (kind == NodeKind.Stem) stems++;
+            else if (kind == NodeKind.Generator) generators++;
+        }
         foreach (var n in Nodes)
         {
-            if (n.Spec.Kind == NodeKind.Stem) stems++;
-            else if (n.Spec.Kind == NodeKind.Generator) generators++;
-            else if (n.Spec.Kind == NodeKind.Grove) groves++;
-            fruitRoom += FruitRoom(n);
+            Count(n.Spec.Kind);
+            if (n.FormingBud) Count(n.Forming!.Value);
         }
-        return new(stems, generators, groves, fruitRoom);
+        return new(stems, generators);
     }
 
-    static int FruitRoom(PlantNode node) => node.Spec.IsFruit ? 0 : node.Spec.MaxFruits - node.Fruits.Count;
-
-    // Stems and generators are capped; labs and groves only by free links and power.
+    // Stems and generators are capped; labs and groves only by free links.
     bool HasRoomFor(NodeKind kind, Counts counts) => kind switch
     {
         NodeKind.Stem => counts.Stems < Capacity.Stems,
@@ -342,77 +322,47 @@ public sealed class Garden
         _ => true,
     };
 
-    // The kinds of branch this part could grow now, with their odds: near the core only stems, further out also
-    // generators, labs and groves. A stem next to the core takes flowers too once no stem can grow there, so its
-    // free link isn't left empty for good when the stem cap is reached. (The core itself only ever grows stems.)
-    // For wild growth (a spare given) only kinds the garden can afford (see WildSpare) count, and a grove only while
-    // there's fruit room enough for another (GroveFruitRoomEach per grove).
-    List<(NodeKind Kind, double Weight)> BranchKinds(PlantNode parent, Counts counts, Spare? spare = null)
+    // The kinds of wild branch this part could bud now, with their odds: near the core only stems, further out also
+    // generators and labs. Never groves: a plant left alone never plants one (DESIGN.md, the plant is stupid). A
+    // stem next to the core takes flowers too once no stem can grow there, so its free link isn't left empty for good
+    // when the stem cap is reached. (The core itself only ever grows stems.)
+    List<(NodeKind Kind, double Weight)> BranchKinds(PlantNode parent, Counts counts)
     {
         var kinds = new List<(NodeKind, double)>();
         if (!parent.CanBranch) return kinds;
         void Consider((NodeKind, double)[] odds)
         {
             foreach (var (kind, weight) in odds)
-            {
-                if (!HasRoomFor(kind, counts)) continue;
-                if (spare is { } s && (!s.Affords(kind) || (kind == NodeKind.Grove && !GroveWanted(counts)))) continue;
-                kinds.Add((kind, weight));
-            }
+                if (HasRoomFor(kind, counts)) kinds.Add((kind, weight));
         }
         Consider(parent.Depth < 2 ? NearOdds : FarOdds);
         if (kinds.Count == 0 && parent.Depth == 1) Consider(FarOdds);
         return kinds;
     }
 
-    static bool GroveWanted(Counts counts) => counts.FruitRoom > counts.Groves * Tuning.GroveFruitRoomEach;
-
     static readonly (NodeKind, double)[] NearOdds = [(NodeKind.Stem, 1)];
-    static readonly (NodeKind, double)[] FarOdds =
-        [(NodeKind.Stem, 0.64), (NodeKind.Generator, 0.14), (NodeKind.Lab, 0.12), (NodeKind.Grove, 0.1)];
+    static readonly (NodeKind, double)[] FarOdds = [(NodeKind.Stem, 0.64), (NodeKind.Generator, 0.14), (NodeKind.Lab, 0.12)];
 
-    // How much more upkeep an hour wild growth may add: what the garden makes, less what all its parts cost when
-    // none are wilting (wilting ones will want paying again), less a reserve. Labs keep a bigger one (a share of the
-    // production), so they never take the power that stems need to reach new room for generators; without it a
-    // garden fills with labs and stops growing. Never below zero, so a generator (no upkeep) can always grow.
-    public Spare WildSpare()
+    NodeKind Roll(List<(NodeKind Kind, double Weight)> kinds)
     {
-        float production = 0, upkeep = 0;
-        foreach (var node in Nodes)
-        {
-            production += ProductionPerHour(node);
-            upkeep += UpkeepPerHour(node);
-        }
-        float spare = production - upkeep;
-        return new(Math.Max(0, spare - Tuning.WildSpareReserve), Math.Max(0, spare - Tuning.LabSpareShare * production));
-    }
-
-    public readonly record struct Spare(float Any, float Lab)
-    {
-        public bool Affords(NodeKind kind) => KindUpkeepPerHour(kind) <= (kind == NodeKind.Lab ? Lab : Any);
-    }
-
-    PlantNode AddBranch(PlantNode parent, Counts counts, Spare? spare = null)
-    {
-        var kinds = BranchKinds(parent, counts, spare);
         double roll = rng.NextDouble() * kinds.Sum(k => k.Weight);
-        var kind = kinds[^1].Kind;
-        foreach (var (k, weight) in kinds)
-        {
-            roll -= weight;
-            if (roll >= 0) continue;
-            kind = k;
-            break;
-        }
-        var node = AddNear(NodeSpecs.All[kind], parent);
-        node.Power = Tuning.SproutCost; // what it was grown with (paid by the parent for wild growth)
+        foreach (var (kind, weight) in kinds)
+            if ((roll -= weight) < 0) return kind;
+        return kinds[^1].Kind;
+    }
+
+    PlantNode AddBranch(PlantNode parent, NodeKind kind, bool emerge = false)
+    {
+        var node = AddNear(NodeSpecs.All[kind], parent, emerge);
+        node.Power = Tuning.SproutPower;
         return node;
     }
 
     PlantNode AddFruit(PlantNode parent) => AddNear(NodeSpecs.All[parent.Spec.Fruit!.Value], parent);
 
-    // Places a new part just off its parent, heading away from the grandparent (and upward when upright).
-    PlantNode AddNear(NodeSpec spec, PlantNode parent)
+    // Places a new part just off its parent, heading away from the grandparent (and upward when upright). A bud that
+    // formed inside its parent (emerge) starts deep inside it and pops out, its link extending.
+    PlantNode AddNear(NodeSpec spec, PlantNode parent, bool emerge = false)
     {
         Vector2 away = parent.Parent == null
             ? (Layout == Layout.Upright ? -Vector2.UnitY : RandomDirection())
@@ -420,9 +370,9 @@ public sealed class Garden
         if (Layout == Layout.Upright) away = Vector2.Normalize(away - 0.6f * Vector2.UnitY);
         float angle = (float)(rng.NextDouble() - 0.5) * 1.6f;
         var dir = Vector2.Transform(away, Matrix3x2.CreateRotation(angle));
-        float distance = (parent.Spec.Radius + spec.Radius) * 0.8f;
+        float distance = (parent.Spec.Radius + spec.Radius) * (emerge ? Tuning.EmergeStart : 0.8f);
         var node = Add(spec, parent, parent.Position + dir * distance);
-        node.Velocity = dir * 0.3f;
+        node.Velocity = dir * (emerge ? Tuning.EmergeSpeed : 0.3f);
         return node;
     }
 
@@ -453,20 +403,19 @@ public sealed class Garden
 
     // ==== ECONOMY ==== \\
 
-    // One fixed step of the economy (DESIGN.md, Economy), then growth:
+    // One fixed step of the economy (DESIGN.md, Economy):
     //   - the core and generators make power into their own store (anything past full is lost);
     //   - every other part pays its upkeep from its own store. One that can't wilts and stops draining, and recovers
     //     once the power flowing in has filled it back to RecoverFill. Wilting never removes anything;
-    //   - a lab that paid makes genes, sent to the core a blob at a time; genes reaching the core raise
-    //     the caps along the unlock track (see Deliver);
+    //   - flowers make power or blobs in proportion to their fill (none while wilting): labs gene blobs, groves
+    //     growth blobs, each sent off on its walk as it's made (see SendGenes, SendGrowth);
     //   - power flows along each link downhill, from the fuller part to the emptier, so it spreads out from the
-    //     sources and a branch far from them runs low first (there is no global pool);
-    //   - every SproutEverySeconds a wild sprout grows where there's power to spare; if there's none, growth waits.
-    // Returns how many parts sprouted.
+    //     sources and a branch far from them runs low first (there is no global pool).
+    // Nothing checks whether the garden can afford what grows: that's the player's to judge (prune what drains it).
+    // Returns how many parts grew.
     int EconomyStep(double seconds)
     {
         float hours = (float)(seconds / 3600);
-        int sprouted = 0;
         foreach (var node in Nodes)
         {
             if (node.Spec.IsFruit) continue;
@@ -481,26 +430,17 @@ public sealed class Garden
                 node.Wilting = true;
                 continue;
             }
-            float genes = GenesPerHour(node);
-            if (genes > 0)
-            {
-                node.Genes += genes * hours;
-                while (node.Genes >= Tuning.GeneBlobSize - 1e-4f) // (a whole blob, give or take rounding)
-                {
-                    node.Genes = Math.Max(0, node.Genes - Tuning.GeneBlobSize);
-                    SendGenes(node, Tuning.GeneBlobSize);
-                }
-            }
-            float fruit = FruitBlobsPerHour(node);
-            if (fruit > 0) node.FruitBlob += fruit * hours;
+            node.Blob += BlobsPerHour(node) * hours;
         }
 
-        // Groves' blobs leave after the loop over the parts, as the fruit they grow joins them. A blob leaves even
-        // when there's no room for fruit anywhere: it just wanders and fades (pretty to watch).
-        foreach (var grove in Nodes.Where(n => n.FruitBlob >= 1 - 1e-4f).ToList())
+        // Blobs leave after the loop over the parts, as what they grow joins them. A blob leaves even when nothing
+        // will absorb it: it just wanders and fades (pretty to watch).
+        int grew = 0;
+        foreach (var flower in Nodes.Where(n => n.Blob >= 1 - 1e-4f).ToList())
         {
-            grove.FruitBlob = Math.Max(0, grove.FruitBlob - 1);
-            if (SendFruit(grove) != null) sprouted++;
+            flower.Blob = Math.Max(0, flower.Blob - 1);
+            if (flower.Spec.Kind == NodeKind.Lab) SendGenes(flower);
+            else if (SendGrowth(flower) != null) grew++;
         }
 
         float flow = Tuning.PowerFlowPerHour * hours;
@@ -518,25 +458,21 @@ public sealed class Garden
             link.FlowPerHour = amount / hours;
             link.FlowsToTarget = b == link.Target;
         }
-
-        if (!WildGrowth) return sprouted;
-        GrowthClock += seconds;
-        if (GrowthClock < Tuning.SproutEverySeconds) return sprouted;
-        // While a prune can be undone, wild growth waits, so it can't take the room the undo needs.
-        if (lastPrune != null || Sprout(wild: true) == null)
-        {
-            GrowthClock = Tuning.SproutEverySeconds; // no power to spare, or no room: try again next step
-            return sprouted;
-        }
-        GrowthClock -= Tuning.SproutEverySeconds;
-        return sprouted + 1;
+        return grew;
     }
 
-    // Power a part makes per real hour. A generator's fruit adds a little, up to FruitBonusMax.
+    // How hard a flower works (DESIGN.md: "Flower output follows power"): from OutputFloor when empty up to full
+    // when full, and nothing while wilting. (With no floor a generator among drained parts dies away: power flows
+    // out of it faster than its own falling output can make it.)
+    public static float Output(PlantNode node) =>
+        node.Wilting ? 0 : Tuning.OutputFloor + (1 - Tuning.OutputFloor) * Math.Clamp(node.Fill, 0, 1);
+
+    // Power a part makes per real hour now: the core always its full rate, a generator in proportion to its fill
+    // (its fruit adding a little, up to FruitBonusMax).
     public static float ProductionPerHour(PlantNode node) => node.Spec.Kind switch
     {
         NodeKind.Core => Tuning.CorePowerPerHour,
-        NodeKind.Generator => Tuning.GeneratorPowerPerHour * FruitBonus(node),
+        NodeKind.Generator => Tuning.GeneratorPowerPerHour * FruitBonus(node) * Output(node),
         _ => 0,
     };
 
@@ -558,25 +494,26 @@ public sealed class Garden
         _ => 0,
     };
 
-    // Genes a part makes per real hour while it isn't wilting: only labs, their research fruit adding a little.
-    public static float GenesPerHour(PlantNode node) =>
-        node.Spec.Kind == NodeKind.Lab ? Tuning.LabGenesPerHour * FruitBonus(node) : 0;
-
-    // Fruit blobs a part makes per real hour while it isn't wilting: only groves, their berries adding a little.
-    public static float FruitBlobsPerHour(PlantNode node) =>
-        node.Spec.Kind == NodeKind.Grove ? Tuning.GroveFruitPerHour * FruitBonus(node) : 0;
-
-    // ==== FRUIT ==== \\
-
-    // A grove's fruit blob leaves. Where it goes is worked out now, as a random walk over the stems (see Tuning,
-    // GROVES AND FRUIT), and the fruit it grows is added now too, so a catch-up (which runs no physics) and a live
-    // session agree. The fruit stays hidden (its Age below zero) until the blob, shown following the same walk,
-    // arrives; in a catch-up it just grows. Returns the new fruit, or null if the blob found nowhere to land.
-    public PlantNode? SendFruit(PlantNode grove)
+    // Blobs a flower makes per real hour now: gene blobs from a lab, growth blobs from a grove, in proportion to its
+    // fill (their fruit adding a little).
+    public static float BlobsPerHour(PlantNode node) => node.Spec.Kind switch
     {
-        var route = new List<PlantNode> { grove };
-        PlantNode? cameFrom = null, at = grove, fruit = null;
-        for (int hop = 0; hop < Tuning.FruitBlobMaxHops; hop++)
+        NodeKind.Lab => Tuning.LabBlobsPerHour * FruitBonus(node) * Output(node),
+        NodeKind.Grove => Tuning.GroveBlobsPerHour * FruitBonus(node) * Output(node),
+        _ => 0,
+    };
+
+    // ==== BLOBS ==== \\
+
+    // A blob's walk from its flower (DESIGN.md, Economy, Blobs): link by link at random, never straight back unless
+    // at a dead end, until a part absorbs it or BlobMaxHops links have passed. Returns the route (from the flower)
+    // and the part that absorbed it, if one did.
+    (List<PlantNode> Route, PlantNode? Absorber) Walk(PlantNode from, Func<PlantNode, bool> absorbs)
+    {
+        var route = new List<PlantNode> { from };
+        PlantNode? cameFrom = null;
+        var at = from;
+        for (int hop = 0; hop < Tuning.BlobMaxHops; hop++)
         {
             var options = new List<PlantNode>(at.Branches);
             if (at.Parent != null) options.Add(at.Parent);
@@ -585,30 +522,93 @@ public sealed class Garden
             cameFrom = at;
             at = options[rng.Next(options.Count)];
             route.Add(at);
-            if (at.CanFruit && Nodes.Count < Tuning.MaxNodes && rng.NextDouble() < Tuning.FruitLandChance)
-            {
-                fruit = AddFruit(at);
-                route.Add(fruit);
-                break;
-            }
+            if (absorbs(at)) return (route, at);
         }
-        bool shown = ShowBlobs && Motes.Count < Tuning.MaxMotes && route.Count > 1;
-        if (fruit != null && shown) fruit.Age = -(route.Count - 1) * Tuning.MoteLinkSeconds;
-        if (shown) Motes.Add(new Mote(grove, route[1], grove.Spec.Rgb) { Route = route, Leg = 0 });
-        return fruit;
+        return (route, null);
+    }
+
+    // The blob is shown following its route, unless in a catch-up or with too many already in flight.
+    Mote? Show(List<PlantNode> route, PlantNode flower)
+    {
+        if (!ShowBlobs || Motes.Count >= Tuning.MaxMotes || route.Count < 2) return null;
+        var mote = new Mote(route, flower.Spec.Rgb);
+        Motes.Add(mote);
+        return mote;
+    }
+
+    // A lab's gene blob leaves. Only the core absorbs it; its genes count at the core in this same step, so a
+    // catch-up (which runs no physics) and a live session agree, and the blob shown is their journey made visible.
+    // A blob that never finds the core fades, its genes lost: labs near the core waste fewer.
+    void SendGenes(PlantNode lab)
+    {
+        var (route, absorber) = Walk(lab, n => n == Core);
+        if (absorber != null) Deliver(Tuning.BlobGenes);
+        Show(route, lab);
+    }
+
+    // A grove's growth blob leaves. Where it goes and what it does are settled now, from the garden's own dice, so a
+    // catch-up and a live session agree: the part that absorbs it forms more of its fruit or bud, and a part that
+    // completes is added now, hidden (its Age below zero) until the blob, shown following the same walk, arrives.
+    // Returns the part that grew, if one did.
+    public PlantNode? SendGrowth(PlantNode grove)
+    {
+        var counts = CountKinds();
+        var (route, absorber) = Walk(grove, n => Absorbs(n, counts));
+        if (absorber == null)
+        {
+            Show(route, grove);
+            return null;
+        }
+        var grown = Feed(absorber, counts);
+        if (Show(route, grove) is { } mote)
+        {
+            mote.Growth = Tuning.BlobGrowth;
+            mote.Completes = grown != null;
+            if (grown != null) grown.Age = -(route.Count - 1) * Tuning.MoteLinkSeconds;
+        }
+        else absorber.FormingLook = absorber.Growth;
+        return grown;
+    }
+
+    // A part with something forming always absorbs a growth blob; one with room to start a fruit or a bud does
+    // AbsorbChance of the time; a full one never does.
+    bool Absorbs(PlantNode node, Counts counts)
+    {
+        if (node.Spec.IsFruit) return false;
+        if (node.Forming != null) return true;
+        return (CanStartFruit(node) || BudKinds(node, counts).Count > 0) && rng.NextDouble() < Tuning.AbsorbChance;
+    }
+
+    // While a prune can be undone, nothing new starts on the pruned branch's parent, and no bud anywhere (it would
+    // take a cap slot the undo needs). Wild buds wait for WildGrowth too.
+    bool CanStartFruit(PlantNode node) =>
+        node.CanFruit && Nodes.Count < Tuning.MaxNodes && lastPrune?.Nodes[0].Parent != node;
+
+    List<(NodeKind Kind, double Weight)> BudKinds(PlantNode node, Counts counts) =>
+        WildGrowth && lastPrune == null && Nodes.Count < Tuning.MaxNodes ? BranchKinds(node, counts) : [];
+
+    // A growth blob absorbed: a part with nothing forming starts something (a bud BudChance of the time where a
+    // branch could grow, its kind rolled now; else a fruit), then the blob's growth is added, and what's forming
+    // completes once it has grown enough. Returns the part that grew, if one did.
+    PlantNode? Feed(PlantNode node, Counts counts)
+    {
+        if (node.Forming == null)
+        {
+            var kinds = BudKinds(node, counts);
+            bool bud = kinds.Count > 0 && (!CanStartFruit(node) || rng.NextDouble() < Tuning.BudChance);
+            node.Forming = bud ? Roll(kinds) : node.Spec.Fruit;
+            node.Growth = 0;
+            node.FormingLook = 0;
+        }
+        node.Growth += Tuning.BlobGrowth;
+        if (node.Growth < (node.FormingFruit ? Tuning.FruitGrowth : Tuning.BudGrowth) - 1e-4f) return null;
+        var kind = node.Forming!.Value;
+        node.Forming = null;
+        node.Growth = 0;
+        return NodeSpecs.All[kind].IsFruit ? AddFruit(node) : AddBranch(node, kind, emerge: true);
     }
 
     // ==== GENES AND UNLOCKS ==== \\
-
-    // A lab's blob of genes leaves for the core. Its genes count at the core in this same step, so a catch-up (which
-    // runs no physics) and a live session agree; the blob is their journey made visible, a few seconds of travel up
-    // the branch. In a catch-up, or with too many already in flight, it isn't shown.
-    void SendGenes(PlantNode lab, float genes)
-    {
-        Deliver(genes);
-        if (!ShowBlobs || Motes.Count >= Tuning.MaxMotes || lab.Parent == null) return;
-        Motes.Add(new Mote(lab, lab.Parent, lab.Spec.Rgb) { Homing = true });
-    }
 
     // Genes reach the core: each threshold of the unlock track they pass raises the caps, in order.
     public void Deliver(double genes)
@@ -645,6 +645,7 @@ public sealed class Garden
         {
             node.WiltLook = WiltTarget(node);
             node.FillLook = Math.Min(1, node.Spec.IsFruit ? node.Parent!.Fill : node.Fill);
+            node.FormingLook = node.Growth;
         }
     }
 
@@ -912,7 +913,7 @@ public sealed class Garden
     // along it (FlashesPerPowerHour per unit per hour, at most MaxFlashesPerSecond): a busy trunk pulses, a quiet
     // twig now and then, a full branch not at all. The rate is per real second whatever the growth speed, so the
     // plant looks the same at 1x and 60x. Motes are the blobs that do travel: genes from the labs (see SendGenes)
-    // and fruit from the groves (see SendFruit).
+    // and growth from the groves (see SendGrowth).
     void UpdateMotes(float dt)
     {
         foreach (var node in Nodes)
@@ -952,11 +953,14 @@ public sealed class Garden
             var arrived = mote.To;
             arrived.Glow = 1;
             if (LinkBetween(mote.From, arrived) is { } link) link.Flash = 1;
-            var next = mote.Route is { } route ? (++mote.Leg + 1 < route.Count ? route[mote.Leg + 1] : null)
-                : mote.Homing ? arrived.Parent
-                : arrived.Spec.IsFruit || ++mote.Hops >= Tuning.MoteMaxHops ? null : NextHop(arrived, mote.From);
+            var route = mote.Route;
+            var next = ++mote.Leg + 1 < route.Count ? route[mote.Leg + 1] : null;
             if (next == null)
             {
+                // A growth blob's work shows as it arrives: what's forming grows, or the part it completed appears
+                // (see SendGrowth) and the silhouette goes.
+                if (mote.Completes) arrived.FormingLook = 0;
+                else if (mote.Growth > 0) arrived.FormingLook = Math.Min(arrived.Growth, arrived.FormingLook + mote.Growth);
                 Motes.RemoveAt(i);
                 continue;
             }
@@ -964,13 +968,6 @@ public sealed class Garden
             mote.To = next;
             mote.T -= 1;
         }
-    }
-
-    // Motes mostly flow outward, towards the tips and fruit, but now and then double back.
-    PlantNode? NextHop(PlantNode at, PlantNode? cameFrom)
-    {
-        var options = at.Neighbours().Where(n => n != cameFrom && (n != at.Parent || rng.NextDouble() < 0.15)).ToList();
-        return options.Count == 0 ? null : options[rng.Next(options.Count)];
     }
 
     Link? LinkBetween(PlantNode a, PlantNode b) =>
@@ -1013,9 +1010,9 @@ public sealed class Garden
     // ==== SAVES ==== \\
 
     public GardenSave ToSave() => new(
-        Layout, GrowthClock, EconomyClock, Capacity,
+        Layout, EconomyClock, Capacity,
         Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
-            n.Parent != null && n.Fixed, n.Power, n.Wilting, n.Genes, n.FruitBlob)).ToList(),
+            n.Parent != null && n.Fixed, n.Power, n.Wilting, n.Blob, n.Forming, n.Growth)).ToList(),
         Genes, Unlocks);
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
@@ -1023,7 +1020,6 @@ public sealed class Garden
     {
         var garden = new Garden(save.Layout, seed)
         {
-            GrowthClock = save.GrowthClock,
             EconomyClock = save.EconomyClock,
             Capacity = save.Capacity,
             Genes = save.Genes,
@@ -1038,8 +1034,9 @@ public sealed class Garden
             node.Fixed = (parent == null && garden.Planted) || n.Pinned;
             node.Power = n.Power;
             node.Wilting = n.Wilting;
-            node.Genes = n.Genes;
-            node.FruitBlob = n.FruitBlob;
+            node.Blob = n.Blob;
+            node.Forming = n.Forming;
+            node.Growth = n.Growth;
             byId[n.Id] = node;
         }
         garden.SettleLooks();
@@ -1070,7 +1067,7 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks)
 public sealed record UnlockStep(double Genes, int Stems = 0, int Generators = 0, int CoreLinks = 0);
 
 public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, bool Pinned, float Power, bool Wilting,
-    float Genes = 0, float FruitBlob = 0);
+    float Blob = 0, NodeKind? Forming = null, float Growth = 0);
 
-public sealed record GardenSave(Layout Layout, double GrowthClock, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
+public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
     double Genes = 0, int Unlocks = 0);

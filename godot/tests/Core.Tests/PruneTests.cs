@@ -118,16 +118,24 @@ public class PruneTests
     [Fact]
     public void WildGrowthWaitsOutTheWindow()
     {
-        var (garden, _, fork) = Branched();
+        // A grove beside the fork: once the fork is cut, its blobs start no bud and no fruit on the trunk while the
+        // prune can be undone, so the room it freed stays free.
+        var (garden, trunk, fork) = Branched();
+        garden.Capacity = garden.Capacity with { Stems = 4 };
+        var grove = Add(garden, trunk, NodeKind.Grove);
         garden.WildGrowth = true;
         garden.Prune(fork);
-        // Hours of growth (as at a fast growth speed) within the window: nothing grows into the freed room.
-        int grew = garden.Grow(6 * 3600);
-        Assert.Equal(0, grew);
+        // Hours of growth (as at a fast growth speed) within the window.
+        garden.Grow(6 * 3600);
+        Assert.Equal([grove], trunk.Branches);
+        Assert.Empty(trunk.Fruits);
+        Assert.Null(trunk.Forming);
+        Assert.DoesNotContain(garden.Nodes, n => n.FormingBud);
         Assert.True(garden.CanUndoPrune);
 
         for (int i = 0; i < UndoTicks + 1; i++) garden.Step();
-        Assert.True(garden.Grow(2 * 3600) > 0);
+        garden.Grow(12 * 3600);
+        Assert.True(trunk.Fruits.Count > 0 || trunk.Forming != null || trunk.Branches.Count > 1);
     }
 
     [Fact]

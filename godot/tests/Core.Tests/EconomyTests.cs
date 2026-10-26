@@ -51,6 +51,7 @@ public class EconomyTests
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         var generator = Add(garden, stem, NodeKind.Generator);
         var lab = Add(garden, stem, NodeKind.Lab);
+        foreach (var node in garden.Nodes) node.Power = node.Store;
 
         Assert.Equal(4, Garden.ProductionPerHour(generator));
         Assert.Equal(3, Garden.UpkeepPerHour(lab));
@@ -75,7 +76,22 @@ public class EconomyTests
         var garden = NewGarden(Roomy);
         var generator = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Generator);
         for (int i = 0; i < 3; i++) Add(garden, generator, NodeKind.Burr);
+        generator.Power = generator.Store;
         Assert.Equal(4 * 1.2f, Garden.ProductionPerHour(generator), Tolerance);
+    }
+
+    [Fact]
+    public void AGeneratorMakesLessPowerWhenLow()
+    {
+        // From OutputFloor of its rate when empty to all of it when full.
+        var garden = NewGarden(Roomy);
+        var generator = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Generator);
+        generator.Power = 0;
+        Assert.Equal(4 * Tuning.OutputFloor, Garden.ProductionPerHour(generator), Tolerance);
+        generator.Power = generator.Store / 2;
+        Assert.Equal(4 * (1 + Tuning.OutputFloor) / 2, Garden.ProductionPerHour(generator), Tolerance);
+        garden.Core.Power = 0;
+        Assert.Equal(8, Garden.ProductionPerHour(garden.Core)); // the core always makes its full rate
     }
 
     [Fact]
@@ -279,56 +295,38 @@ public class EconomyTests
     [Fact]
     public void WildGrowthKeepsWithinCapacity()
     {
-        var garden = NewGarden();
-        garden.Sprout();
+        var garden = Grown();
         garden.Grow(Tuning.CatchUpCapSeconds);
-        Assert.True(garden.Nodes.Count > 5);
+        Assert.True(MainNodes(garden) > 4);
         Assert.True(garden.Nodes.Count(n => n.Spec.Kind == NodeKind.Stem) <= 4);
         Assert.True(garden.Nodes.Count(n => n.Spec.Kind == NodeKind.Generator) <= 1);
         Assert.Equal(1, garden.Core.Links);
     }
 
     [Fact]
-    public void WildGrowthWaitsForPower()
+    public void WildGrowthDoesntWaitForPower()
     {
-        var garden = NewGarden();
-        garden.Sprout();
-        foreach (var n in garden.Nodes) n.Power = 0;
-        // A sprout is due, but nothing has power to spare yet.
-        garden.GrowthClock = Tuning.SproutEverySeconds;
-        Assert.Equal(0, garden.Grow(20 * 60));
-        Assert.Equal(2, garden.Nodes.Count);
-        Assert.True(garden.Grow(4 * 3600) > 0);
-        Assert.True(garden.Nodes.Count > 2);
-    }
-
-    [Fact]
-    public void ANewGardenSettlesWithinItsMeans()
-    {
-        // Three days of wild growth from the start: it fills its caps, and whatever labs it grows, the garden keeps
-        // going (the core, trunk and generator never wilt). Prints the trajectory, for tuning.
-        var garden = NewGarden();
-        garden.Sprout();
-        for (int hour = 6; hour <= 72; hour += 6)
-        {
-            garden.Grow(6 * 3600);
-            var (production, upkeep) = garden.PowerBalance();
-            TestContext.Current.TestOutputHelper?.WriteLine(
-                $"{hour,3} h: {MainNodes(garden)} main, {garden.Nodes.Count - MainNodes(garden)} fruit, "
-                + $"{garden.Nodes.Count(n => n.Spec.Kind == NodeKind.Lab)} labs, {Wilting(garden)} wilting, "
-                + $"power {garden.TotalPower():0.00}, +{production:0.0}/h -{upkeep:0.0}/h");
-        }
-        Assert.False(garden.Core.Wilting);
-        Assert.False(garden.Nodes[1].Wilting);
-        Assert.All(garden.Nodes.Where(n => n.Spec.Kind == NodeKind.Generator), n => Assert.False(n.Wilting));
+        // The plant is stupid: a drained garden's grove still sends what blobs it can, and they grow buds that only
+        // add to the drain. Pruning is the player's job.
+        var garden = NewGarden(new Capacity(30, 0, 1));
+        var stem = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
+        Add(garden, stem, NodeKind.Grove);
+        for (int i = 0; i < 4; i++) stem = Add(garden, stem, NodeKind.Stem);
+        for (int i = 0; i < 2; i++) Add(garden, stem, NodeKind.Lab);
+        garden.Grow(3 * 24 * 3600);
+        var (production, upkeep) = garden.PowerBalance();
+        Assert.True(MainNodes(garden) > 12);
+        Assert.True(Wilting(garden) > 0 || upkeep > production - 1, $"+{production} -{upkeep}");
     }
 
     // ==== CATCH-UP ==== \\
 
+    // The core, a stem, and a grove the player planted on it.
     static Garden Grown()
     {
         var garden = NewGarden();
         garden.Sprout();
+        Add(garden, garden.Nodes[1], NodeKind.Grove);
         return garden;
     }
 
@@ -342,8 +340,9 @@ public class EconomyTests
             Assert.Equal(e.Parent?.Id, a.Parent?.Id);
             Assert.Equal(e.Power, a.Power, Tolerance);
             Assert.Equal(e.Wilting, a.Wilting);
+            Assert.Equal(e.Forming, a.Forming);
+            Assert.Equal(e.Growth, a.Growth, Tolerance);
         }
-        Assert.Equal(expected.GrowthClock, actual.GrowthClock, 1e-6);
     }
 
     [Fact]

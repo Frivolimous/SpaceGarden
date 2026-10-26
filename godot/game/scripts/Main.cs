@@ -85,6 +85,13 @@ public partial class Main : Node2D
         if (save != null && Widget.IdleRates.Contains(save.IdleFps)) widget.IdleFps = save.IdleFps;
         if (save == null) PlantAtHome();
         else widget.KeepOnScreen();
+        // Dev aid: a new garden with its first grove and lab already planted (nothing grows wild without a grove).
+        if (save == null && args.ContainsKey("grove"))
+        {
+            var stem = Garden.Nodes[1];
+            Garden.SproutFrom(stem, NodeKind.Grove);
+            if (Garden.SproutFrom(stem, NodeKind.Stem) is { } second) Garden.SproutFrom(second, NodeKind.Lab);
+        }
         if (args.TryGetValue("parts", out var p))
         {
             int parts = int.Parse(p);
@@ -106,7 +113,7 @@ public partial class Main : Node2D
             Garden.SettleLooks();
         }
         if (args.ContainsKey("nearunlock") && Garden.NextUnlock is { } next)
-            Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.GeneBlobSize / 2);
+            Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.BlobGenes / 2);
 
         ShowGarden();
         if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");

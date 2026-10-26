@@ -15,6 +15,8 @@ Space Garden is a calm desktop companion with a strategy economy underneath: a s
 
 **High floor, high ceiling.** A neglected garden still thrives slowly; a tuned garden evolves faster. Optimisation changes speed, never safety. Strategy lives in the garden's shape, not in timely reactions. Everyone eventually sees all content.
 
+**The plant is stupid; the player is the brain.** The plant has no smart growth behaviour: it never checks whether it can afford a new part, never saves power for later, never picks a useful spot. Blobs wander at random and parts grow wherever they land. Steering it (planting the first grove, placing generators and labs, pruning growth that drains the garden) is the player's job. A plant left alone never plants a grove and is never optimised, so balance and pacing simulations assume a smart player who is actively tending.
+
 **Constraints carried from the first draft**
 
 - **Never punishing.** Absence is fine; coming back is a pleasant surprise. Wilting (see Economy) is the only consequence of neglect, and it never destroys anything.
@@ -63,29 +65,41 @@ The plant must look good **without any UI chrome**. Controls appear only in Acti
 
 ## Economy
 
-Three flowing resources move visibly through the stems; capacity is a set of limits, not a collected resource. Power shows as link flashes and node brightness; fruit and genes travel as blobs. Together they are the garden's "living light", its main idle visual.
+Three flowing resources move visibly through the stems; capacity is a set of limits, not a collected resource. Power shows as link flashes and node brightness; growth and genes travel as blobs. Blobs flow constantly, each carrying a small amount. Together they are the garden's "living light", its main idle visual.
 
 | Resource | Colour | Source | Purpose |
 | --- | --- | --- | --- |
-| Power | Yellow | Core, generator flowers | Grows new nodes and maintains existing ones |
-| Fruit blobs | Orange | Grove flowers | Travel through stems and grow fruit at random nodes with fruit capacity |
-| Gene blobs | Purple | Lab flowers | Flow to the core first; later also to seedlings and hubs |
+| Power | Yellow | Core, generator flowers | Maintains nodes and runs the flowers |
+| Growth blobs | Orange | Grove flowers | Wander the stems and grow fruit and new wild nodes where they're absorbed |
+| Gene blobs | Purple | Lab flowers | Wander the stems; only the core absorbs them (later also seedlings and hubs) |
 
-**Wilting.** When power runs out, growth pauses. Nodes are never destroyed. Empty nodes stop draining, so the core always ends up with a small surplus and growth resumes slowly. The core guarantees the floor.
+There is no core trickle of growth: groves are the only source, and a new garden has none. The player plants the first grove by hand (step 6's onboarding points there first).
+
+**Wilting.** When power runs out, a node wilts. Nodes are never destroyed. Empty nodes stop draining, so the core always ends up with a small surplus and the garden recovers slowly. The core guarantees the floor.
+
+**Flower output follows power.** Groves, labs and generators produce at their full rate when fully powered, less when low (down to half when empty, to tune), and nothing while wilting. The core always produces at full rate. The half-rate floor keeps a generator among drained parts from dying away: with no floor, power flows out of it faster than its falling output can make it.
+
+**Blobs.** Growth and gene blobs both do the same stupid random walk along the stems: never straight back unless at a dead end, fading after 30 links.
+- **Gene blobs** pass every node by and are absorbed (100%) only by the core. A lab far from the core loses many of its genes on the way.
+- **Growth blobs** are absorbed at 30% by a node with nothing forming, and at 100% by a node with a fruit or bud already forming. A full node (no fruit room and no free link) never absorbs.
+- **Fruit or node.** A blob absorbed fresh at a node with a free link slot and room under the caps rolls between starting a fruit and starting a node bud (50/50, to tune); otherwise it starts a fruit. A wild node's type is rolled when its bud starts, and the bud holds its link and its cap slot until it's done. Each new fruit or bud on a node starts again at 30%.
+- **Forming.** Each absorbed blob adds 0.1; a fruit completes at 1.0 and a node bud at 3.0. A forming fruit grows in scale beside its node. A forming node shows as a silhouette inside its parent, growing from a speck, in its final hue; it doesn't exist in the physics until it's complete, then pops out as its link extends. Buds can't be cancelled: the player prunes after one emerges.
+
+Draft rates, to tune in play (at the prototype's default 60x speed): a fully powered grove sends a growth blob about every 3 s and a lab a gene blob about every 5 s.
 
 **Local power flow.** Each node stores its own power, which flows along links from fuller nodes to emptier ones; there is no global pool. As in the original, a link flashes each time power moves along it (brighter when the receiving node is fuller), and each node's brightness and size follow its fill, with a small bounce when power arrives. A branch far from power can dim on its own while the rest thrives, so generator placement matters.
 
 **Power rules**
 
 - The core is the main source. A generator produces half of the core's output. Core power upgrades come later, not in the MVP.
-- Stems are cheap to maintain. Leaves cut a stem's upkeep: one leaf halves it, two leaves bring it to a quarter. Leaves grow from fruit blobs, like all fruit.
+- Stems are cheap to maintain. Leaves cut a stem's upkeep: one leaf halves it, two leaves bring it to a quarter. Leaves grow from growth blobs, like all fruit.
 - Labs cost twice the upkeep of groves.
 - Generator, grove and lab fruits each slightly raise their flower's efficiency, up to +20% total per flower.
 - The core has no fruit in the MVP; core fruit is reserved for showing later upgrades.
 
 Fruit, once grown, stays. Groves are needed while the garden grows; if growth stalls, they stop being useful. The unlock curve should be paced so a small number of groves always stays useful, keeping up with new stems and flowers.
 
-**Grove tuning target.** Tune the grove's fruit blob rate so one or two groves can just keep up with leaf demand from new stems. Each new stem has room for two leaves, so week one's 27 new stems (4 to 31) mean about 54 leaves.
+**Grove tuning target.** Tune the grove's growth blob rate so one or two groves can just keep up with leaf demand from new stems as well as their share of wild buds. Each new stem has room for two leaves, so week one's 27 new stems (4 to 31) mean about 54 leaves.
 
 Draft values, in relative units per real hour, to be tuned through play:
 
@@ -153,16 +167,16 @@ Implemented in step 1.
 
 ## Growth and pruning
 
-Left alone, the garden grows wild until it fills its capacity; attentive players prune wild growth to make room and place buds where they want.
+Once it has a grove, the garden grows wild until it fills its capacity; attentive players prune wild growth to make room and place buds where they want.
 
-- **Wild growth** is random and happens only when there is excess power. If wild growth doesn't produce enough generators, it slows and stops on its own.
-- **Manual buds** cost nothing. The cost is attention.
+- **Wild growth** is random: it's wherever growth blobs land (see Economy, Blobs), with no check on power. Wild growth that drains the garden is the player's to prune. Wild growth never plants a grove.
+- **Manual buds** cost nothing. The cost is attention. The player picks the type (stem, generator, lab or grove), and the bud grows at once.
 - **Pruning** frees capacity. A full garden can only grow where the player has cut.
 - **Rare wild nodes** can't be planted. Pruning one frees its slot, and a new rare later appears by random chance, possibly a different type in a different place. Regrowth takes time.
 
 **Pruning gives nothing back.** Its rewards are built in: it frees stem and generator capacity for deliberate growth, lowers power upkeep, reshapes the garden, and rerolls rare nodes. With no return, wild growth can't be farmed. The cut itself must feel satisfying: a pruned branch dissolves with a pleasing visual effect rather than simply vanishing.
 
-**Undo and wild growth.** Wild growth waits until the undo window has passed before using capacity freed by a prune, so an undo always has room to restore the branch.
+**Undo and wild growth.** While a prune can be undone, growth blobs start no new buds anywhere and no new fruit on the pruned branch's parent (they still feed what's already forming), so an undo always has room to restore the branch.
 
 ## Tending commands
 
@@ -200,13 +214,13 @@ Nodes come in two tiers. Main nodes are called **stems** (the structure) and **f
 | Group | Nodes | How they appear |
 | --- | --- | --- |
 | Fixed | Core | Always present, can't be pruned |
-| Plantable | Stem, Generator (yellow), Grove (orange), Lab (purple) | Wild growth or manual buds |
+| Plantable | Stem, Generator (yellow), Grove (orange), Lab (purple) | Wild growth or manual buds; groves only by manual buds |
 | Rare wild-only | Hub, Amplifier, Resistor, Volatile, Lumber Grove, Wild Lab, Buffer, Home | Wild growth only, within wild limits |
 | Future unlock | Big Stem (large stem, 4 links) | Unlocked in limited numbers in step 5; never wild |
 | Seedling | Seedling | Separate from the wild pool (see Progression) |
-| Fruits | Leaf on stems, plus each flower's own fruit set | Grown by fruit blobs |
+| Fruits | Leaf on stems, plus each flower's own fruit set | Grown by growth blobs |
 
-Each flower type has its own set of fruits, all grown by fruit blobs. Leaves on stems cut the stem's power upkeep; generator, grove and lab fruits raise their flower's efficiency (see Economy).
+Each flower type has its own set of fruits, all grown by growth blobs. Leaves on stems cut the stem's power upkeep; generator, grove and lab fruits raise their flower's efficiency (see Economy).
 
 Open: Home as a random rare could delay crawlers by luck. It may work better as a plantable node unlocked by an evolution.
 
@@ -230,12 +244,12 @@ Note the order change from the first draft: the evolution path is chosen when th
 
 **Wild pool.** Evolutions can add new rare types to the pool; core upgrades raise wild limits.
 
-**Linear unlock track (step 2).** Genes reaching the core raise caps automatically along a fixed sequence, with a small notification and no choices. Genes come only from labs (the core makes none), so the track starts when the first lab grows, a few hours in. Only stems, generators and core links unlock; groves and labs are limited by slots and power. "Day N" means the start of day N. Draft first month, to be refined through play (thresholds in `Tuning.cs`):
+**Linear unlock track (step 2).** Genes reaching the core raise caps automatically along a fixed sequence, with a small notification and no choices. Genes come only from labs (the core makes none), so the track starts once the player plants a lab. Only stems, generators and core links unlock; groves and labs are limited by slots and power. "Day N" means the start of day N. Draft first month, to be refined through play (thresholds in `Tuning.cs`):
 
 | When | Unlock |
 | --- | --- |
 | Start | Core (1 link), 4 stems, 1 generator |
-| First lab's first gene (\~4 hr) | +3 stems |
+| \~4 hr | +3 stems |
 | \~6 hr | +1 generator |
 | Day 1 evening | +3 stems |
 | Day 2 | +4 stems, +1 generator |
@@ -248,7 +262,7 @@ Note the order change from the first draft: the evolution path is chosen when th
 | Day 14 | +4 stems, +1 core link |
 | Days 16–30 | One step about every two days, mixing +5 stems and +1–2 generators (exact steps in `Tuning.cs`) |
 
-End of week one: 31 stems, 8 generators, 2 core links (simulated, 8 seeds: about 50 main nodes including 7 labs and 2 groves, and about 90 fruit, under the 65 budget). Day 14: 47 stems, 11 generators, 3 core links (about 70 main nodes, 9–10 labs, 2–3 groves, about 135 fruit). Day 30: 72 stems, 17 generators, 3 core links (about 102–109 main nodes, labs levelling off at 13–16, 3–4 groves, 180–245 fruit, no wilting). Weeks 2–4 are invented placeholders. Gene thresholds rise faster than lab count to hold this pacing; they were lowered when groves arrived, since fruit now costs a grove's upkeep and gardens run leaner. Wild growth only adds a part the whole garden can afford, labs must leave 30% of production spare, and a grove grows only while there's fruit room for it. A garden with no labs makes no genes and unlocks nothing. Proposed: the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
+The timings assume a smart player actively tending (see Vision and pillars): the pacing simulation scripts one. It checks in every two hours while awake (16 hours a day), plants the first grove and lab at once, keeps labs within four links of the core (further out, most of their gene blobs wander off), fills the stem cap nearest the core and the generator cap where the plant is hungriest, keeps a grove per 15 stems, and prunes labs that wilt or drain the garden. Simulated over 8 seeds, every unlock's median lands within 2% of its time. End of week one: 31 stems, 8 generators, 2 core links (about 48 main nodes including 5 labs and 3 groves, and about 110 fruit). Day 14: 47 stems, 11 generators, 3 core links (about 73 main nodes, 10 labs, 4 groves, about 165 fruit). Day 30: 72 stems, 17 generators, 3 core links (about 105 main nodes, 10 labs, 5 groves, about 240 fruit; 2–3 labs wilting after a night untended). About half the genes labs make reach the core. Weeks 2–4 are invented placeholders. A garden with no labs makes no genes and unlocks nothing, and one with no grove doesn't grow. Proposed: the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
 
 **Long-term pacing: TBD.** Week one has to feel right first; pacing beyond it (bloom timing, how long a garden takes to mature) gets planned once it does.
 
@@ -299,11 +313,11 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | Step | Name | Contents |
 | --- | --- | --- |
 | 1 | Foundation (done) | Godot widget, transparency, force-directed physics, node and fruit rendering, stress test, time model (wall-clock sim, catch-up, low-power idle) |
-| 2 | Living garden | Power economy, upkeep, wilting; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
+| 2 | Living garden | Power economy, upkeep, wilting; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, growth blobs, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
 | 3 | Shaping → MVP | Gravity Pot, Trellis, Gravity Well; a short round of visual polish, including the prune effect. End of step = MVP |
 | 4 | Information and tracking | Information display, stat tracking, Almanac. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
-| 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding. Revisit idle CPU against the benchmarks before release. End of step = public beta candidate |
+| 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows wild without one). Revisit idle CPU against the benchmarks before release. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
 
 **Idle CPU before the public beta (step 6):** revisit it against the benchmarks. Current levers: a lower idle frame rate in Ambient mode, and a window sized to the plant's bounds instead of the full work area.
@@ -323,7 +337,8 @@ From the first draft, not contradicted by the anchor but not scheduled. Candidat
 
 ## Open questions
 
-None at the moment.
+- **Power: blobs or flashes?** The pacing pass asked for power to "flow visibly every few seconds". Power still shows as link flashes and node brightness (no power blobs, an earlier decision) until this is settled.
+- **Blob cadence: real time or 60x?** The draft rates (a growth blob every 3 s, a gene blob every 5 s) are read as at the prototype's default 60x speed, which keeps growth near its old pace. At real time they'd be 60 times faster.
 
 Settled since the first draft: platform (Godot); "is there any care need?" (no; neglect only slows growth, via wilting). Settled Oct 26:
 - **One plant per garden.**
@@ -341,7 +356,7 @@ Design layers still to work through:
 - [ ] Long-term pacing beyond week one
 - [ ] Choice-based core levels and seedling slot timing (step 5)
 - [ ] Which basic node each evolution becomes, and its fruit (step 5)
-- [ ] Onboarding over the first days (step 6)
+- [ ] Onboarding over the first days (step 6), starting with planting the first grove
 - [ ] Identity: what makes each garden uniquely yours after months
 - [ ] Events and surprises: rare blooms, seasons, day and night
 - [ ] Audio: likely silent by default
