@@ -129,25 +129,23 @@ public sealed class Garden
     // A new part somewhere on the plant, for free (the first stem, stress tests), or null if there's no room.
     public PlantNode? Sprout() => Sprout(wild: false);
 
-    // A sprout the player asked for by clicking a part: a branch if it has room, else a fruit. Manual buds cost no
-    // power (DESIGN.md: "Manual buds cost nothing") but keep within capacity.
+    // A sprout the player asked for by clicking a part (or its fruit): a branch, if it has room. Manual buds cost no
+    // power (DESIGN.md: "Manual buds cost nothing") but keep within capacity. They never grow fruit: only groves'
+    // blobs do.
     public PlantNode? SproutFrom(PlantNode node)
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
         if (Nodes.Count >= Tuning.MaxNodes) return null;
         var counts = CountKinds();
-        if (BranchKinds(node, counts).Count > 0) return AddBranch(node, counts);
-        if (node.CanFruit) return AddFruit(node);
-        return null;
+        return BranchKinds(node, counts).Count > 0 ? AddBranch(node, counts) : null;
     }
 
-    // A sprout of a chosen kind (a branch, or that part's own fruit), if there's room for it; free, like any bud.
+    // A branch of a chosen kind, if there's room for it; free, like any bud. Never fruit (see above).
     public PlantNode? SproutFrom(PlantNode node, NodeKind kind)
     {
         if (Nodes.Count >= Tuning.MaxNodes) return null;
         var spec = NodeSpecs.All[kind];
-        if (spec.IsFruit) return node.Spec.Fruit == kind && node.CanFruit ? AddFruit(node) : null;
-        if (kind == NodeKind.Core || !node.CanBranch || !HasRoomFor(kind, CountKinds())) return null;
+        if (spec.IsFruit || kind == NodeKind.Core || !node.CanBranch || !HasRoomFor(kind, CountKinds())) return null;
         var sprout = AddNear(spec, node);
         sprout.Power = Tuning.SproutCost;
         return sprout;
@@ -156,8 +154,11 @@ public sealed class Garden
     public bool CanSproutFrom(PlantNode node)
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
-        return Nodes.Count < Tuning.MaxNodes && (node.CanFruit || BranchKinds(node, CountKinds()).Count > 0);
+        return Nodes.Count < Tuning.MaxNodes && BranchKinds(node, CountKinds()).Count > 0;
     }
+
+    // A fruit of the part's own kind, if it has room: for tests only (players can't grow fruit; groves' blobs do).
+    internal PlantNode? GrowFruit(PlantNode node) => node.CanFruit && Nodes.Count < Tuning.MaxNodes ? AddFruit(node) : null;
 
     // Wild growth sprouts only stems and flowers (fruit is the groves' work, see SendFruit), only from parts with
     // power to spare, and the parent pays for it. A free sprout can grow anywhere with room, fruit too.

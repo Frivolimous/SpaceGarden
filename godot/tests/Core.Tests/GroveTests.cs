@@ -14,7 +14,8 @@ public class GroveTests
     }
 
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        garden.SproutFrom(parent, kind) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
+        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind))
+            ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     static int Fruit(Garden garden) => garden.Nodes.Count(n => n.Spec.IsFruit);
 
@@ -56,6 +57,19 @@ public class GroveTests
         Add(garden, stem, NodeKind.Grove);
         Add(garden, stem, NodeKind.Grove);
         Assert.Null(garden.SproutFrom(stem, NodeKind.Grove)); // its 3 links are taken
+    }
+
+    [Fact]
+    public void ManualBudsNeverGrowFruit()
+    {
+        // A grove's only link is taken, so a bud on it (or on its fruit) has nowhere to go: no berry instead.
+        var (garden, grove) = WithAGrove();
+        Assert.False(garden.CanSproutFrom(grove));
+        Assert.Null(garden.SproutFrom(grove));
+        Assert.Null(garden.SproutFrom(grove, NodeKind.Berry));
+        var stem = grove.Parent!;
+        Assert.Null(garden.SproutFrom(stem, NodeKind.Leaf));
+        Assert.Equal(0, Fruit(garden));
     }
 
     // ==== FRUIT BLOBS ==== \\

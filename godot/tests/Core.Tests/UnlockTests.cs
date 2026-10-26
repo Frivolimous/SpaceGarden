@@ -21,7 +21,8 @@ public class UnlockTests
     }
 
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        garden.SproutFrom(parent, kind) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
+        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind))
+            ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     static int Count(Garden garden, NodeKind kind) => garden.Nodes.Count(n => n.Spec.Kind == kind);
 
