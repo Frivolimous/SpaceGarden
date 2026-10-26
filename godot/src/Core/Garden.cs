@@ -385,8 +385,8 @@ public sealed class Garden
     //   - the core and generators make power into their own store (anything past full is lost);
     //   - every other part pays its upkeep from its own store. One that can't wilts and stops draining, and recovers
     //     once the power flowing in has filled it back to RecoverFill. Wilting never removes anything;
-    //   - a lab that paid makes genes, sent to the core a blob at a time, and the core adds its own trickle; genes
-    //     reaching the core raise the caps along the unlock track (see Deliver);
+    //   - a lab that paid makes genes, sent to the core a blob at a time; genes reaching the core raise
+    //     the caps along the unlock track (see Deliver);
     //   - power flows along each link downhill, from the fuller part to the emptier, so it spreads out from the
     //     sources and a branch far from them runs low first (there is no global pool);
     //   - every SproutEverySeconds a wild sprout grows where there's power to spare; if there's none, growth waits.
@@ -417,7 +417,6 @@ public sealed class Garden
                 SendGenes(node, Tuning.GeneBlobSize);
             }
         }
-        Deliver(Tuning.CoreGenesPerHour * hours);
 
         float flow = Tuning.PowerFlowPerHour * hours;
         foreach (var link in Links)

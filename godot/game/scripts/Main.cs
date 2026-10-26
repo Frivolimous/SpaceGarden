@@ -11,8 +11,8 @@ namespace SpaceGarden;
 // has passed since the last save, --backdrop=RRGGBB to draw a colour behind the plant, --profile=NAME to use
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
 // parts at once (for stress tests; past the usual limit and caps too), --wilt to start with every part drained and
-// wilting (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob, or
-// half an hour of the core's own genes, sets it off), --pausetest=AT,FOR to act as if hidden for FOR seconds
+// wilting (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob
+// sets it off), --pausetest=AT,FOR to act as if hidden for FOR seconds
 // from AT seconds after start (to test the pause), plus Screenshot's options. --screenshot runs never touch the
 // real save.
 //

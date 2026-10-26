@@ -42,8 +42,8 @@ public class UnlockTests
     {
         var (garden, lab) = WithALab();
         garden.Grow(Hour);
-        // Its six an hour, plus the core's own trickle.
-        Assert.Equal(Tuning.LabGenesPerHour + Tuning.CoreGenesPerHour, garden.Genes, 1e-3);
+        // Its six an hour, every one of them a blob that reached the core.
+        Assert.Equal(Tuning.LabGenesPerHour, garden.Genes, 1e-3);
         Assert.InRange(lab.Genes, 0, Tuning.GeneBlobSize);
         Assert.False(lab.Wilting);
     }
@@ -94,7 +94,7 @@ public class UnlockTests
         var (garden, _) = WithALab();
         garden.CatchUp(10 * Hour);
         Assert.Empty(garden.Motes);
-        Assert.Equal(10 * (Tuning.LabGenesPerHour + Tuning.CoreGenesPerHour), garden.Genes, 1e-2);
+        Assert.Equal(10 * Tuning.LabGenesPerHour, garden.Genes, 1e-2);
         Assert.True(garden.ShowBlobs);
     }
 
@@ -120,13 +120,16 @@ public class UnlockTests
     }
 
     [Fact]
-    public void TheTrackEndsWeekOneAtTheDocsCaps()
+    public void TheTrackReachesTheDocsWeekOneThenAMonth()
     {
         var garden = NewGarden();
+        garden.Deliver(Tuning.UnlockTrack[8].Genes);
+        Assert.Equal(9, garden.Unlocks);
+        Assert.Equal(new Capacity(31, 8, 2), garden.Capacity); // DESIGN.md: 31 stems, 8 generators, 2 core links
         garden.Deliver(1e9);
         Assert.Null(garden.NextUnlock);
         Assert.Equal(Tuning.UnlockTrack.Length, garden.Unlocks);
-        Assert.Equal(new Capacity(31, 8, 2), garden.Capacity); // DESIGN.md: 31 stems, 8 generators, 2 core links
+        Assert.Equal(new Capacity(72, 17, 3), garden.Capacity);
     }
 
     [Fact]
@@ -137,13 +140,15 @@ public class UnlockTests
     }
 
     [Fact]
-    public void AGardenWithNoLabsStillUnlocks()
+    public void OnlyLabsMakeGenes()
     {
-        // The core's trickle alone carries the first unlocks (the floor).
+        // A core and stems alone make none: the first unlock waits for the first lab.
         var garden = NewGarden();
         garden.WildGrowth = false;
-        garden.Grow(2 * Hour);
-        Assert.True(garden.Unlocks >= 2);
+        Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
+        garden.Grow(Day);
+        Assert.Equal(0, garden.Genes);
+        Assert.Equal(0, garden.Unlocks);
     }
 
     [Fact]
@@ -250,21 +255,41 @@ public class UnlockTests
         Assert.All(stem.Branches, b => Assert.NotEqual(NodeKind.Stem, b.Spec.Kind));
     }
 
-    // ==== PACING ==== \\
+    // ==== PACING ==== \
 
-    // The doc's draft week one, in hours from planting: Day N is taken as the start of day N.
-    static readonly double[] TargetHours = [1.0 / 6, 1, 10, 24, 48, 72, 96, 120, 144];
+    // When each unlock should fire, in hours from planting (see Tuning.UnlockTrack; Day N is the start of day N):
+    // the first lab's first blob, ~6 h, day 1 evening, days 2-7, days 8-14, then every other day to day 30.
+    static readonly double[] TargetHours =
+    [
+        4, 6, 10,
+        .. Enumerable.Range(2, 13).Select(day => (day - 1) * 24.0),
+        .. Enumerable.Range(8, 8).Select(i => (2 * i - 1) * 24.0),
+    ];
 
-    // A week of wild growth from planting for a few seeds: when each unlock fired, and the garden at each day's end.
-    // Prints the curve (for tuning), and checks every unlock lands within a loose band around the doc's times.
-    [Fact]
-    public void WeekOnePacing()
+    static string Describe(Garden garden)
     {
+        var (production, upkeep) = garden.PowerBalance();
+        return $"{Count(garden, NodeKind.Stem)}/{garden.Capacity.Stems} stems, "
+            + $"{Count(garden, NodeKind.Generator)}/{garden.Capacity.Generators} generators, "
+            + $"{Count(garden, NodeKind.Lab)} labs, {garden.Core.Links}/{garden.Capacity.CoreLinks} core links, "
+            + $"{garden.Nodes.Count(n => !n.Spec.IsFruit)} main, {garden.Nodes.Count(n => n.Spec.IsFruit)} fruit, "
+            + $"{garden.Nodes.Count(n => n.Wilting)} wilting, genes {garden.Genes:0}, +{production:0.0}/h -{upkeep:0.0}/h";
+    }
+
+    // A month of wild growth from planting for a few seeds: when each unlock fired, and the garden on some days.
+    // Prints the curve (for tuning), and checks every unlock's median lands within a loose band of its target and
+    // every garden keeps up (see the end).
+    [Fact]
+    public void MonthPacing()
+    {
+        Assert.Equal(Tuning.UnlockTrack.Length, TargetHours.Length);
         var log = TestContext.Current.TestOutputHelper;
         var seeds = new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        var shownDays = new[] { 1, 3, 7, 10, 14, 21, 30 };
         var fired = new double[seeds.Length, Tuning.UnlockTrack.Length];
         var genesAt = new double[seeds.Length, TargetHours.Length];
-        var finished = new Capacity[seeds.Length];
+        var weekOne = new int[seeds.Length];
+        var month = new int[seeds.Length];
         for (int s = 0; s < seeds.Length; s++)
             for (int u = 0; u < Tuning.UnlockTrack.Length; u++) fired[s, u] = double.PositiveInfinity;
         for (int s = 0; s < seeds.Length; s++)
@@ -272,7 +297,7 @@ public class UnlockTests
             var garden = Planted(seeds[s]);
             double t = 0;
             log?.WriteLine($"seed {seeds[s]}:");
-            for (int day = 1; day <= 7; day++)
+            for (int day = 1; day <= 30; day++)
             {
                 for (; t < day * Day; t += 600)
                 {
@@ -282,29 +307,28 @@ public class UnlockTests
                     for (int h = 0; h < TargetHours.Length; h++)
                         if (Math.Abs(TargetHours[h] * Hour - (t + 600)) < 1) genesAt[s, h] = garden.Genes;
                 }
-                var (production, upkeep) = garden.PowerBalance();
-                log?.WriteLine($"  day {day}: {Count(garden, NodeKind.Stem)}/{garden.Capacity.Stems} stems, "
-                    + $"{Count(garden, NodeKind.Generator)}/{garden.Capacity.Generators} generators, "
-                    + $"{Count(garden, NodeKind.Lab)} labs, {garden.Core.Links}/{garden.Capacity.CoreLinks} core links, "
-                    + $"{garden.Nodes.Count(n => !n.Spec.IsFruit)} main, {garden.Nodes.Count(n => n.Spec.IsFruit)} fruit, "
-                    + $"{garden.Nodes.Count(n => n.Wilting)} wilting, genes {garden.Genes:0}, +{production:0.0}/h -{upkeep:0.0}/h");
+                if (shownDays.Contains(day)) log?.WriteLine($"  day {day,2}: {Describe(garden)}");
+                if (day == 7) weekOne[s] = garden.Unlocks;
             }
-            finished[s] = garden.Capacity;
+            month[s] = garden.Unlocks;
         }
 
         var medians = new List<double>();
         for (int u = 0; u < Tuning.UnlockTrack.Length; u++)
         {
             var hours = Enumerable.Range(0, seeds.Length).Select(s => fired[s, u]).Order().ToList();
-            double median = hours[hours.Count / 2];
             var genes = Enumerable.Range(0, seeds.Length).Select(s => genesAt[s, u]).Order().ToList();
-            if (TargetHours[u] >= 10)             log?.WriteLine($"genes at {TargetHours[u]:0.##} h: median {genes[genes.Count / 2]:0.#}, range {genes[0]:0.#}-{genes[^1]:0.#}");
-            log?.WriteLine($"unlock {u + 1} (target {TargetHours[u]:0.##} h): median {median:0.##} h, "
-                + $"range {hours[0]:0.##}-{hours[^1]:0.##} h");
+            double median = hours[hours.Count / 2];
+            log?.WriteLine($"unlock {u + 1,2} at {Tuning.UnlockTrack[u].Genes,6:0} genes (target {TargetHours[u]:0.#} h, "
+                + $"day {TargetHours[u] / 24 + 1:0.#}): median {median:0.#} h, range {hours[0]:0.#}-{hours[^1]:0.#} h; "
+                + $"genes at target: median {genes[genes.Count / 2]:0}");
             medians.Add(median);
         }
         for (int u = 0; u < Tuning.UnlockTrack.Length; u++)
             Assert.InRange(medians[u], TargetHours[u] * 0.75, TargetHours[u] * 1.25 + 0.2);
-        Assert.All(finished, c => Assert.Equal(new Capacity(31, 8, 2), c)); // every garden ends week one at the doc's caps
+        // Every garden has had week one's nine steps (DESIGN.md's 31 stems, 8 generators, 2 core links) by the end of
+        // day 7, and is at most one step short of the end of the track by the end of day 30.
+        Assert.All(weekOne, u => Assert.True(u >= 9, $"{u} unlocks by day 7"));
+        Assert.All(month, u => Assert.True(u >= Tuning.UnlockTrack.Length - 1, $"{u} unlocks by day 30"));
     }
 }
