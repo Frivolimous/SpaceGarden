@@ -319,12 +319,14 @@ From the first draft, not contradicted by the anchor but not scheduled. Candidat
 
 ## Open questions
 
-- One plant per garden, or can seeds be planted as additional plants over time?
-- Save migration: the new economy shares little with the old v29 saves, so starting fresh looks likely. Confirm.
-- Distribution target (itch.io, Steam, free/open), now that a public beta is planned.
-- Catch-up cap: 72 h today; keep, shorten, or lengthen?
+None at the moment.
 
-Settled since the first draft: platform (Godot); "is there any care need?" (no; neglect only slows growth, via wilting).
+Settled since the first draft: platform (Godot); "is there any care need?" (no; neglect only slows growth, via wilting). Settled Oct 26:
+- **One plant per garden.**
+- **No save migration until release.** Old v29 saves are not carried over, and prototype save formats may break freely before release.
+- **Distribution:** probably Steam.
+- **Catch-up cap:** keep 72 h for now; tweak later if play shows a need.
+- **Core links:** the core starts with 1 link and gains +1 at day 3 (already in the unlock track); the code's current 2 is a bug.
 
 ## Next topics
 
