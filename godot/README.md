@@ -10,12 +10,13 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 (`tests/Core.Tests`, xUnit).
 
 ## Using it
-- **Display modes.** It starts in **Ambient**: faded, and every click falls through to the desktop. Press
-  **Ctrl+Alt+G** (from anywhere; Windows) for **Active**: full opacity, the toolbar and menu below, and a readout
-  under the plant (power made and used an hour, how full it is, genes towards the next unlock, room left). Ctrl+Alt+G
-  again goes back to Ambient. **Minimised** (from the menu, or a click on the yellow tray icon) hides the plant and
-  pauses it like a locked screen, catching up when it's shown again; click the tray icon to bring it back, or
-  right-click it for the menu.
+- **Display modes.** It starts in **Active**: full opacity, the toolbar and menu below, and a readout under the
+  plant (power made and used an hour, how full it is, genes towards the next unlock, room left) that fades in over
+  1 s while the pointer rests on a part and out again after it leaves. **Ctrl+Alt+G** (from anywhere; Windows)
+  switches to **Ambient**: faded, and every click falls through to the desktop; again to come back. **Minimised**
+  (from the menu, a click on the yellow tray icon, or minimising the window any other way) minimises the window and
+  pauses the garden like a locked screen, catching up when it's shown again. Its taskbar button, Ctrl+Alt+G or the
+  tray icon bring it back in Active. Only one running copy gets the hotkey (a second logs a warning).
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill above the readout puts
   the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; wild growth waits out the window
   so the room is still there, and a bud placed in that room, or time away, ends it.

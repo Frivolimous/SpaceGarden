@@ -5,7 +5,8 @@ namespace SpaceGarden;
 // A few quiet lines under the plant in Active mode, so the garden can be read without a menu: its power (made and
 // used an hour, how full it is), its genes and what the next unlock gives, and how much room is left. Each line is
 // tinted by its role's hue (DESIGN.md, Visual language). While the last prune can be undone, an Undo pill sits above
-// them, counting down.
+// them, counting down. The lines show only while the pointer rests on the plant (TextAlpha, faded by the widget);
+// the Undo pill stays while it can be used.
 public partial class Readout : VBoxContainer
 {
     public event Action? UndoPressed;
@@ -16,7 +17,8 @@ public partial class Readout : VBoxContainer
     static readonly Color GeneTint = new(0.82f, 0.74f, 1f);
     static readonly Color RoomTint = new(0.78f, 0.95f, 0.78f);
 
-    readonly Label power, genes, room, undoText;
+    readonly Label power, genes, room, hint, undoText;
+    readonly Label[] lines;
     readonly PanelContainer undo;
     double refreshTimer;
 
@@ -48,6 +50,9 @@ public partial class Readout : VBoxContainer
         power = Line(PowerTint);
         genes = Line(GeneTint);
         room = Line(RoomTint);
+        hint = Line(new Color(1, 1, 1, 0.7f));
+        lines = [power, genes, room, hint];
+        TextAlpha = 0;
     }
 
     Label Line(Color tint)
@@ -65,6 +70,19 @@ public partial class Readout : VBoxContainer
 
     // Whether the pointer is over the part that takes clicks (the Undo pill), in the readout's layer's units.
     public bool Catches(Vector2 point) => Visible && undo.Visible && undo.GetGlobalRect().Grow(4).HasPoint(point);
+
+    // Whether the pointer is over the lines while they show (so they stay while being read).
+    public bool Over(Vector2 point) => Visible && TextAlpha > 0 && GetGlobalRect().Grow(6).HasPoint(point);
+
+    // How much the lines show, 0-1.
+    public float TextAlpha
+    {
+        get => power.Modulate.A;
+        set
+        {
+            foreach (var line in lines) line.Modulate = new Color(1, 1, 1, value);
+        }
+    }
 
     public void Update(Garden garden, double delta)
     {
@@ -92,6 +110,7 @@ public partial class Readout : VBoxContainer
             : $"Genes {garden.Genes:#,0} · every unlock reached";
 
         var caps = garden.Capacity;
+        hint.Text = Hotkey.Registered ? $"{Hotkey.Name} fades the garden into the background" : "";
         room.Text = $"Stems {stems}{Of(caps.Stems)} · generators {generators}{Of(caps.Generators)} · labs {labs}";
 
         bool canUndo = garden.CanUndoPrune;

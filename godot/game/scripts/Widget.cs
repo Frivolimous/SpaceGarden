@@ -15,11 +15,12 @@ namespace SpaceGarden;
 // pulls it to the pointer by its weight and the links drag the rest after it; letting go keeps the momentum.
 // Right-click opens the menu. It drops to a low frame rate when nothing's happening.
 //
-// Display modes (DESIGN.md, Tending commands): Ambient, the default, fades the whole window and lets every click
-// fall through; Active shows it at full opacity with its controls (the toolbar, the readout, the menu); Minimised
-// hides the plant behind a tray icon and stops it as if the screen were locked, catching up on return. The hotkey
-// (Hotkey.Name) toggles Active and Ambient; the tray icon shows and hides the garden, and its right-click menu (the
-// same as the plant's) picks any mode.
+// Display modes (DESIGN.md, Tending commands): Active, the default, shows it at full opacity with its controls (the
+// toolbar, the readout, the menu); Ambient fades the whole window and lets every click fall through; Minimised
+// minimises the window (to the taskbar) and stops the garden as if the screen were locked, catching up on return.
+// The hotkey (Hotkey.Name) toggles Active and Ambient, and brings a minimised garden back; so does its taskbar
+// button or a click on the tray icon, whose right-click menu (the same as the plant's) picks any mode. Minimising
+// the window any other way (Win+D, say) counts as Minimised too.
 public enum DisplayMode { Active, Ambient, Minimised }
 
 public partial class Widget : Node
@@ -73,9 +74,12 @@ public partial class Widget : Node
     readonly Readout readout = new();
     readonly StatusIndicator tray = new();
 
-    public DisplayMode Mode { get; private set; } = DisplayMode.Ambient;
-    float opacity = AmbientOpacity;
+    public DisplayMode Mode { get; private set; } = DisplayMode.Active;
+    float opacity = 1;
     bool readoutPlaced;
+
+    // The readout's lines fade in over this while the pointer rests on the plant, and out after it leaves.
+    const float ReadoutFadeSeconds = 1;
 
     public float Dpi { get; private set; } = 1;
     float plantScale = 0.75f;
@@ -151,7 +155,7 @@ public partial class Widget : Node
         tray.Tooltip = $"Space Garden: click to show or hide, right-click for options. {Hotkey.Name} to tend.";
         tray.Pressed += (button, position) =>
         {
-            if (button == (long)MouseButton.Left) SetMode(Mode == DisplayMode.Minimised ? DisplayMode.Ambient : DisplayMode.Minimised);
+            if (button == (long)MouseButton.Left) SetMode(Mode == DisplayMode.Minimised ? DisplayMode.Active : DisplayMode.Minimised);
             else if (button == (long)MouseButton.Right) menu.Popup(new Rect2I(position, Vector2I.Zero));
         };
         AddChild(tray);
@@ -192,7 +196,16 @@ public partial class Widget : Node
             pressed = dragging = false;
             pressNode = null;
         }
+        // A real minimise, so the taskbar button brings it back (see FollowWindow).
+        var window = GetWindow();
+        if (mode == DisplayMode.Minimised) window.Mode = Window.ModeEnum.Minimized;
+        else if (window.Mode == Window.ModeEnum.Minimized)
+        {
+            window.Mode = Window.ModeEnum.Windowed;
+            CoverScreen(plantScale);
+        }
         readoutPlaced = false;
+        readout.TextAlpha = 0;
         readout.RefreshNow();
         activeTime = SettleSeconds; // full frame rate for the fade
         main.CheckVisibilityNow();
@@ -257,6 +270,7 @@ public partial class Widget : Node
     public override void _Process(double delta)
     {
         Garden.FruitBorrowsPush = fruitBorrowsPush; // every frame, so it carries over to a new garden too
+        FollowWindow();
         if (Hotkey.TakePress()) SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
         main.View.Visible = Mode != DisplayMode.Minimised; // every frame: a new garden gets a new view
 
@@ -309,6 +323,11 @@ public partial class Widget : Node
         bool overReadout = readout.Catches(pointer / Dpi);
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);
         var under = inWindow && !overToolbar && !overReadout ? Garden.NodeAt(ToSim(ToWorld(pointer)), HoverSlop) : null;
+        bool resting = under != null || pressed || overToolbar || readout.Over(pointer / Dpi);
+        float textWanted = resting ? 1 : 0;
+        bool textFading = readout.TextAlpha != textWanted;
+        readout.TextAlpha = Mathf.MoveToward(readout.TextAlpha, textWanted, (float)delta / ReadoutFadeSeconds);
+        fading |= textFading;
         PlaceReadout(delta);
 
         if (pressed && !Input.IsMouseButtonPressed(MouseButton.Left)) Release();
@@ -333,6 +352,14 @@ public partial class Widget : Node
         bool active = catchMouse || fading || toolbar.Visible || Garden.Held != null || Garden.Speed > SettledSpeed;
         activeTime = active ? SettleSeconds : activeTime - delta;
         SetIdle(activeTime <= 0);
+    }
+
+    // The window minimised or brought back from outside (its taskbar button, Win+D) changes the mode to match.
+    void FollowWindow()
+    {
+        bool minimised = GetWindow().Mode == Window.ModeEnum.Minimized;
+        if (minimised && Mode != DisplayMode.Minimised) SetMode(DisplayMode.Minimised);
+        else if (!minimised && Mode == DisplayMode.Minimised) SetMode(DisplayMode.Active);
     }
 
     // The readout sits centred under the plant (over it if there's no room below), kept on the screen, and glides

@@ -109,7 +109,6 @@ public partial class Main : Node2D
             Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.GeneBlobSize / 2);
 
         ShowGarden();
-        if (Hotkey.Registered) Toast($"{Hotkey.Name} to tend the garden; again to let it be.");
         if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");
         ShowUnlocks();
 
