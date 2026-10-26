@@ -174,7 +174,7 @@ The player has eight basic commands.
 4. **Connect a node to a Gravity Pot:** the node moves to the pot and locks there; nodes beyond it are pushed gently in the pot's facing direction.
 5. **Select evolution:** for the core, seedlings and other skill-based nodes.
 6. **Zoom** in or out.
-7. **Display mode:** Active (full opacity, controls visible, clickable), Ambient (transparent and click-through, the default), or Minimised (tucked into a corner or the tray). A hotkey toggles Active and Ambient.
+7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (transparent and click-through), or Minimised (to the taskbar and tray). A hotkey toggles Active and Ambient, and brings a minimised garden back.
 8. **Drag:** click and drag any node to tug the plant around on a spring. Purely tactile, no economy effect.
 
 Undo covers only the most recent prune. Wild growth leaves the freed capacity alone until the undo window passes (see Growth and pruning).
@@ -274,10 +274,10 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 | Always on top | Must | Done (prototype, menu toggle) |
 | Click-through (Ambient mode) | Must | Done (prototype) |
 | Low idle CPU / memory, pause while hidden | Must | Done (prototype) |
-| Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2). Ambient (default) fades the window to 55% and lets every click through; Active is full opacity with the toolbar, menu and readout; Minimised hides the plant to the tray and pauses it like a locked screen (caught up on return). Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) |
-| Remembers size and position | Must | Plant scale saved; the overlay covers the work area and Minimised goes to the tray, so there is no window position to keep. The display mode isn't saved: every launch starts in Ambient |
+| Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2). Active (default) is full opacity with the toolbar, menu and readout; Ambient fades the window to 55% and lets every click through; Minimised minimises the window and pauses the garden like a locked screen (caught up on return). Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) and restores a minimised garden, as do its taskbar button and the tray icon |
+| Remembers size and position | Must | Plant scale saved; the overlay covers the work area and Minimised is a plain minimise, so there is no window position to keep. The display mode isn't saved: every launch starts in Active |
 | Tray icon: show/hide, quit | Should | Done (step 2). Click to show or hide (Minimised); right-click for the menu (modes, Quit) |
-| Readout: power, genes, next unlock | Must | Done (step 2). A few tinted lines under the plant in Active mode only, with an Undo pill while the last prune can be undone |
+| Readout: power, genes, next unlock | Must | Done (step 2). A few tinted lines under the plant in Active mode, fading in over 1 s while the pointer rests on a part and out over 1 s after it leaves; an Undo pill shows while the last prune can be undone |
 | Launch on startup (opt-in) | Should | — |
 | Pinned to the desktop layer instead of on top (user choice) | Could | — |
 | Notifications for rare events (opt-in, very sparing) | Could | — |
