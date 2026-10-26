@@ -35,6 +35,8 @@ public sealed class PlantNode
     // drawing.
     public float Power;
     public bool Wilting;
+    // A lab's genes made but not yet sent: a blob leaves for the core once there are GeneBlobSize.
+    public float Genes;
     public float WiltLook;
 
     // Presentation, as the original's node intensity: the fill as shown, eased towards the real one, plus a small
@@ -96,6 +98,8 @@ public sealed class Mote
     public PlantNode From, To;
     public float T;
     public int Hops;
+    // A gene blob heads straight for the core, link by link, and never fades on the way.
+    public bool Homing;
     public uint Rgb;
 
     public Mote(PlantNode from, PlantNode to, uint rgb)

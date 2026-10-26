@@ -12,8 +12,8 @@ public sealed record SaveData(int Version, GardenSave Garden, double LastSeenUni
 
 public static class SaveFile
 {
-    // 2: the economy (power, wilting, capacity).
-    public const int Version = 2;
+    // 2: the economy (power, wilting, capacity). 3: genes and the unlock track.
+    public const int Version = 3;
 
     public static string? Path = "user://garden.json";
 

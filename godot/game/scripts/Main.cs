@@ -11,7 +11,8 @@ namespace SpaceGarden;
 // has passed since the last save, --backdrop=RRGGBB to draw a colour behind the plant, --profile=NAME to use
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
 // parts at once (for stress tests; past the usual limit and caps too), --wilt to start with every part drained and
-// wilting (to watch power flow back), --pausetest=AT,FOR to act as if hidden for FOR seconds
+// wilting (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob, or
+// half an hour of the core's own genes, sets it off), --pausetest=AT,FOR to act as if hidden for FOR seconds
 // from AT seconds after start (to test the pause), plus Screenshot's options. --screenshot runs never touch the
 // real save.
 //
@@ -35,6 +36,7 @@ public partial class Main : Node2D
     readonly Dictionary<string, string> args = new();
     Widget widget = null!;
     double saveTimer = SaveEverySeconds;
+    int unlocksShown; // how far along the unlock track the toasts have told
     Layout layout = Layout.Radial;
     int? seed;
 
@@ -70,6 +72,7 @@ public partial class Main : Node2D
         if (save != null)
         {
             Garden = Garden.FromSave(save.Garden with { Layout = layout }, seed);
+            unlocksShown = Garden.Unlocks;
             double away = Time.GetUnixTimeFromSystem() - save.LastSeenUnix;
             if (args.TryGetValue("away", out var hours)) away = double.Parse(hours) * 3600;
             caughtUp = Garden.CatchUp(away * GrowthSpeed);
@@ -102,9 +105,12 @@ public partial class Main : Node2D
             }
             Garden.SettleLooks();
         }
+        if (args.ContainsKey("nearunlock") && Garden.NextUnlock is { } next)
+            Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.GeneBlobSize / 2);
 
         ShowGarden();
         if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");
+        ShowUnlocks();
 
         Screenshot.CaptureIfRequested(this);
     }
@@ -128,6 +134,7 @@ public partial class Main : Node2D
         var borders = Garden.Borders;
         Garden = Garden.New(layout, seed);
         Garden.Borders = borders;
+        unlocksShown = 0;
         PlantAtHome();
         ShowGarden();
         Save();
@@ -185,6 +192,7 @@ public partial class Main : Node2D
         if (HiddenReason != null) return; // nothing moves or grows while hidden; growth is caught up on showing
         Garden.Step();
         Garden.Grow(delta * GrowthSpeed);
+        ShowUnlocks();
 
         saveTimer -= delta;
         if (saveTimer <= 0)
@@ -194,26 +202,56 @@ public partial class Main : Node2D
         }
     }
 
-    // A short note above the plant that fades after a few seconds.
-    void Toast(string text)
+    // Genes reaching the core passed one or more steps of the unlock track since the last note (live, or during a
+    // catch-up): one small note says what there's room for now. Nothing to choose; the caps have already risen.
+    void ShowUnlocks()
     {
+        if (Garden.Unlocks <= unlocksShown) return;
+        var gained = Tuning.UnlockTrack[unlocksShown..Garden.Unlocks];
+        unlocksShown = Garden.Unlocks;
+        int stems = gained.Sum(u => u.Stems), generators = gained.Sum(u => u.Generators), links = gained.Sum(u => u.CoreLinks);
+        var room = new List<string>();
+        if (stems > 0) room.Add(stems == 1 ? "1 more stem" : $"{stems} more stems");
+        if (generators > 0) room.Add(generators == 1 ? "1 more generator" : $"{generators} more generators");
+        if (links > 0) room.Add(links == 1 ? "a new core branch" : $"{links} new core branches");
+        if (room.Count == 0) return;
+        string list = room.Count == 1 ? room[0] : string.Join(", ", room[..^1]) + " and " + room[^1];
+        Toast($"Genes reached the core: room for {list}.", GeneTint);
+    }
+
+    // The genes' purple, lightened to read over any desktop.
+    static readonly Color GeneTint = new(0.82f, 0.74f, 1f);
+    int toastsShowing;
+
+    // A short note above the plant that fades after a few seconds. Notes showing at once stack upward, and a note
+    // near a screen edge is kept on the screen.
+    void Toast(string text, Color? colour = null)
+    {
+        const float width = 640;
         var (min, _) = Garden.Bounds();
-        var above = GetViewport().GetCanvasTransform() * new Vector2(Garden.Core.Position.X, min.Y) / widget.Dpi;
+        var above = GetViewport().GetCanvasTransform() * new Vector2(Garden.Core.Position.X, min.Y) / widget.Dpi
+            - new Vector2(0, 26 * toastsShowing++);
+        float screen = GetViewport().GetVisibleRect().Size.X / widget.Dpi;
+        float left = Math.Clamp(above.X - width / 2, 8, Math.Max(8, screen - width - 8));
         var layer = new CanvasLayer { Scale = new Vector2(widget.Dpi, widget.Dpi) };
         var label = new Label
         {
             Text = text,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Position = above - new Vector2(200, 40),
-            Size = new Vector2(400, 24),
-            LabelSettings = new LabelSettings { FontSize = 14, OutlineSize = 5, OutlineColor = new Color(0, 0, 0, 0.7f) },
+            Position = new Vector2(left, Math.Max(8, above.Y - 40)),
+            Size = new Vector2(width, 24),
+            LabelSettings = new LabelSettings { FontSize = 14, FontColor = colour ?? Colors.White, OutlineSize = 5, OutlineColor = new Color(0, 0, 0, 0.7f) },
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         layer.AddChild(label);
         AddChild(layer);
         var tween = CreateTween();
         tween.TweenProperty(label, "modulate:a", 0.0, 1.5).SetDelay(6);
-        tween.TweenCallback(Callable.From(layer.QueueFree));
+        tween.TweenCallback(Callable.From(() =>
+        {
+            toastsShowing--;
+            layer.QueueFree();
+        }));
     }
 
     void Save() => SaveFile.Write(new SaveData(SaveFile.Version, Garden.ToSave(), Time.GetUnixTimeFromSystem(), widget.PlantScale, widget.IdleFps));
