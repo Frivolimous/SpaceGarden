@@ -81,6 +81,7 @@ public sealed class Garden
         core.Fixed = garden.Planted;
         core.Age = 10;
         core.Power = core.Store;
+        core.FillLook = 1;
         return garden;
     }
 
@@ -104,7 +105,7 @@ public sealed class Garden
     public int CatchUp(double secondsAway)
     {
         int sprouted = Grow(Math.Clamp(secondsAway, 0, Tuning.CatchUpCapSeconds));
-        foreach (var node in Nodes) node.WiltLook = WiltTarget(node);
+        SettleLooks();
         if (sprouted > 0)
         {
             for (int i = 0; i < Tuning.SettleTicks; i++) Step();
@@ -369,6 +370,7 @@ public sealed class Garden
             a.Power -= amount;
             b.Power += amount;
             link.FlowPerHour = amount / hours;
+            link.FlowsToTarget = b == link.Target;
         }
 
         if (!WildGrowth) return 0;
@@ -417,6 +419,16 @@ public sealed class Garden
 
     // Fruit looks as its parent does.
     static float WiltTarget(PlantNode node) => (node.Spec.IsFruit ? node.Parent!.Wilting : node.Wilting) ? 1 : 0;
+
+    // Shows every part as it is now, with no easing (after a load or a catch-up, or a dev change to the power).
+    public void SettleLooks()
+    {
+        foreach (var node in Nodes)
+        {
+            node.WiltLook = WiltTarget(node);
+            node.FillLook = Math.Min(1, node.Spec.IsFruit ? node.Parent!.Fill : node.Fill);
+        }
+    }
 
     // ==== PHYSICS ==== \\
 
@@ -689,6 +701,13 @@ public sealed class Garden
             node.Glow = Math.Max(0, node.Glow - Tuning.GlowFadePerSecond * dt);
             float ease = Tuning.WiltLookPerSecond * dt;
             node.WiltLook = Math.Clamp(WiltTarget(node), node.WiltLook - ease, node.WiltLook + ease);
+
+            // As the original's PlantNodeView.adjustIntensity: a share of the way to the fill each tick, quicker
+            // filling than emptying. Fruit shows its parent's.
+            float fill = Math.Min(1, node.Spec.IsFruit ? node.Parent!.Fill : node.Fill);
+            node.FillLook += (fill - node.FillLook) * (fill > node.FillLook ? Tuning.FillLookRise : Tuning.FillLookFall);
+            node.BounceSpeed -= (Tuning.BounceStiffness * node.Bounce + Tuning.BounceDamping * node.BounceSpeed) * dt;
+            node.Bounce = Math.Clamp(node.Bounce + node.BounceSpeed * dt, -Tuning.BounceMax, Tuning.BounceMax);
         }
         foreach (var link in Links)
         {
@@ -696,6 +715,9 @@ public sealed class Garden
             link.FlashPhase += dt * Math.Min(Tuning.MaxFlashesPerSecond, link.FlowPerHour * Tuning.FlashesPerPowerHour);
             if (link.FlashPhase < 1) continue;
             link.Flash = 1;
+            // The part the power reached bounces (with its fruit, which share its look).
+            var reached = link.FlowsToTarget ? link.Target : link.Origin;
+            foreach (var part in reached.Fruits.Prepend(reached)) part.BounceSpeed += Tuning.BounceKick;
             // A little jitter (the original's ±10%), so links carrying the same flow drift out of step.
             link.FlashPhase = (float)(rng.NextDouble() - 0.5) * 0.2f;
         }
@@ -792,7 +814,7 @@ public sealed class Garden
             node.Wilting = n.Wilting;
             byId[n.Id] = node;
         }
-        foreach (var node in garden.Nodes) node.WiltLook = WiltTarget(node);
+        garden.SettleLooks();
         return garden;
     }
 }

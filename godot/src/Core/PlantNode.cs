@@ -37,6 +37,11 @@ public sealed class PlantNode
     public bool Wilting;
     public float WiltLook;
 
+    // Presentation, as the original's node intensity: the fill as shown, eased towards the real one, plus a small
+    // spring that a flash of power arriving kicks, so the part swells and brightens past its level and settles back.
+    public float FillLook;
+    public float Bounce, BounceSpeed;
+
     // Links allowed, counting the parent's. The spec's, except the core's, which is the garden's Capacity.CoreLinks.
     public int MaxLinks;
 
@@ -74,6 +79,7 @@ public sealed class Link
     public float Flash;
     public float FlowPerHour;
     public float FlashPhase;
+    public bool FlowsToTarget; // which way the power ran (outward, or back towards the origin)
 
     public Link(PlantNode origin, PlantNode target)
     {

@@ -95,10 +95,15 @@ public partial class GardenView : Node2D
     // to the 60 Hz tick.
     Vector2 At(PlantNode node) => V(Num.Vector2.Lerp(node.PreviousPosition, node.Position, blend));
 
-    // A wilting part (and its fruit) is dimmed, shrunk and slightly desaturated (DESIGN.md, Visual language).
-    const float WiltDim = 0.45f, WiltShrink = 0.2f, WiltDesaturate = 0.4f;
+    // A part's brightness and size are its power level (DESIGN.md, Visual language), as in the original
+    // (PlantNodeView.intensityInterpolation): its shown fill, never below FillLookFloor, plus the bounce from power
+    // arriving. Full parts are drawn as before; a drained one shrinks to a fifth and dims.
+    static float Level(PlantNode node) => Mathf.Max(Tuning.FillLookFloor, node.FillLook) + node.Bounce;
 
-    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * (1 + 0.15f * node.Glow) * (1 - WiltShrink * node.WiltLook);
+    // An empty part is already small and dim, so wilting only greys it and dims it a little more.
+    const float WiltDim = 0.2f, WiltDesaturate = 0.5f;
+
+    float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * Level(node) * (1 + 0.15f * node.Glow);
 
     static Color Wilted(Color c, float wilt)
     {
@@ -148,7 +153,7 @@ public partial class GardenView : Node2D
         foreach (var node in garden.Nodes)
         {
             var colour = Wilted(ColourOf(node.Spec), node.WiltLook);
-            colour.A = (0.3f + 0.4f * node.Glow) * (1 - 0.6f * node.WiltLook);
+            colour.A = (0.3f * Level(node) + 0.4f * node.Glow) * (1 - 0.6f * node.WiltLook);
             halos.AddRound(At(node), Size(node) * 3.6f, colour);
         }
         halos.Draw(haloLayer, Textures.Halo);
@@ -162,7 +167,7 @@ public partial class GardenView : Node2D
         {
             float size = Size(node);
             if (size < 0.2f) continue;
-            var fill = Wilted(Shade(ColourOf(node.Spec), 0.75f + 0.45f * node.Glow), node.WiltLook);
+            var fill = Wilted(Shade(ColourOf(node.Spec), 0.75f * Level(node) + 0.45f * node.Glow), node.WiltLook);
             var batch = shapes[node.Spec.Shape];
             var at = At(node);
             var (sin, cos) = MathF.SinCos(node.Rotation);

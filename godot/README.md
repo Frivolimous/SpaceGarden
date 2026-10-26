@@ -39,7 +39,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Ported from the TS game:** node sizes, masses, forces, link counts, shapes and colours (`NodeData.ts`);
   spring, repulsion and damping with the same constants (`FDGContainer.ts`, `Config.PHYSICS`); power shown as
   link flashes, as the original's power transfers were (`FDGLink.flash`): a link flashes as often as power flows
-  along it, so a busy trunk pulses and a full branch rests. (The step-1 motes are gone; travelling blobs return
+  along it, so a busy trunk pulses and a full branch rests. Each part's brightness and size follow its fill, eased as the
+  original's node intensity was (`PlantNodeView`), and a part bounces a little each time power reaches it. (The step-1 motes are gone; travelling blobs return
   for fruit and genes.)
 - **Also ported:** holding a part (the TS game's pull: `PULL_FRICTION`, `TARGET_RATIO`) and the borders
   (`EDGE_BOUNCE`, now the screen edges). Links are the TS game's soft springs, with no length limit, so a pull
@@ -49,7 +50,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   halos, grow-in animation, a 30 fps idle frame rate.
 - **Economy (step 2, first slice):** the core and generators make power, stems and labs cost upkeep (leaves halve a
   stem's), and power flows along the stems from fuller parts to emptier ones, so far tips run low first. A part that
-  can't pay wilts (drawn dimmed, smaller and greyer), stops draining, and recovers by itself; nothing is destroyed.
+  can't pay wilts (drawn greyer, on top of looking empty), stops draining, and recovers by itself; nothing is destroyed.
   Wild growth needs power to spare and stays within the caps (4 stems, 1 generator, 1 core link at the start).
   Catch-up runs the same fixed 10 s economy steps. Saves carry a version; an older one is set aside
   (`garden.v1.json`) and a new garden starts.

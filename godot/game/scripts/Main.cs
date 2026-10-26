@@ -93,12 +93,15 @@ public partial class Main : Node2D
             foreach (var node in Garden.Nodes) node.Age = 10;
         }
         if (args.ContainsKey("wilt"))
+        {
             foreach (var node in Garden.Nodes)
             {
+                if (node.Parent == null) continue; // the core never wilts
                 node.Power = 0;
-                node.Wilting = !node.Spec.IsFruit && node.Parent != null; // the core never wilts
-                node.WiltLook = node.Parent != null ? 1 : 0;
+                node.Wilting = !node.Spec.IsFruit;
             }
+            Garden.SettleLooks();
+        }
 
         ShowGarden();
         if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");

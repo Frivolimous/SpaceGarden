@@ -49,6 +49,19 @@ public static class Tuning
     public const float FlashesPerPowerHour = 0.125f;
     public const float MaxFlashesPerSecond = 3;
 
+    // A part's brightness and size follow its fill, as in the original (PlantNodeView): the shown fill moves a share
+    // of the way to the real one each tick (INTENSITY_V_INC / _DEC), and never shows below FillLookFloor.
+    public const float FillLookRise = 0.1f;
+    public const float FillLookFall = 0.05f;
+    public const float FillLookFloor = 0.2f;
+
+    // Placeholder. Each flash of power arriving kicks a part's bounce, a damped spring (about 3 swings a second,
+    // lightly damped): it swells past its level by about BounceKick / 25, dips a little below, and settles.
+    public const float BounceKick = 3f;
+    public const float BounceStiffness = 360;
+    public const float BounceDamping = 13;
+    public const float BounceMax = 0.3f;
+
     // Growth in real seconds at speed 1: a new part about every 20 minutes, so a full prototype garden (500 parts)
     // takes about a week. The prototype runs at 60x by default (one every 20 s) so the growth can be watched.
     public const double SproutEverySeconds = 20 * 60;

@@ -138,6 +138,34 @@ public class EconomyTests
         Assert.True(rushing <= 2 * 10 * Tuning.MaxFlashesPerSecond * 1.1f);
     }
 
+    [Fact]
+    public void PartsShowTheirFillAndBounceWhenPowerArrives()
+    {
+        var garden = NewGarden(new Capacity(1, 0, 1));
+        garden.WildGrowth = false;
+        var stem = Add(garden, garden.Core, NodeKind.Stem);
+        stem.Power = 0;
+        garden.SettleLooks();
+        Assert.Equal(0, stem.FillLook);
+
+        // Power rushes in: the link flashes, the stem bounces past its level, dips a little below, and settles.
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.True(garden.Links[0].FlowsToTarget);
+        float peak = 0, dip = 0;
+        for (int tick = 0; tick < 2 * Tuning.TicksPerSecond; tick++)
+        {
+            garden.Step();
+            peak = Math.Max(peak, stem.Bounce);
+            dip = Math.Min(dip, stem.Bounce);
+        }
+        Assert.InRange(peak, 0.05f, Tuning.BounceMax);
+        Assert.InRange(dip, -peak / 2, -0.001f);
+        Assert.Equal(0, garden.Core.Bounce); // the core sent it
+
+        // The shown fill catches up with the real one.
+        Assert.Equal(stem.Fill, stem.FillLook, 0.01f);
+    }
+
     // ==== WILTING ==== \\
 
     [Fact]
