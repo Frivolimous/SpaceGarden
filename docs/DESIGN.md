@@ -1,139 +1,334 @@
-# Space Garden — Revival Design
+# Space Garden — Design
 
-*Status: draft, October 2026. Built in Godot 4 (.NET); see §7.*
+*Status: draft, October 2026. Merged on Oct 26 from the design anchor (Oct 25, @Jeremy) and the first revival draft. Built in Godot 4 (.NET); see Platform. The original game's systems are inventoried in [ORIGINAL_SYSTEMS.md](ORIGINAL_SYSTEMS.md); it's preserved at the git tag `tactical-idle`.*
 
-## 1. Vision
+## Vision and pillars
 
-A small, beautiful space plant that lives on your desktop. You glance at it, tend it for a minute, and leave it be. Over days, weeks and months it grows into something that is uniquely yours.
+Space Garden is a calm desktop companion with a strategy economy underneath: a space plant that grows over days, weeks and months on top of whatever you're doing. You glance at it, tend it for a minute, and leave it be. Tech is settled: Godot, transparent always-on-top window, force-directed graph physics all working.
 
-It is a **companion first, game second**. The game is there to give tending meaning, not to demand attention.
+**Pillars**
 
-### Pillars
-1. **Beautiful at a glance.** Every idle moment should look good: swaying stems, flowing light, drifting creatures. If a mechanic makes the garden uglier or noisier, it needs a very good reason.
-2. **Slow and permanent.** The garden accumulates. Nothing you grew is taken away by the game's structure.
-3. **Never punishing.** Absence is fine. Coming back is a pleasant surprise, never a disaster.
-4. **Gentle agency.** The player makes small, meaningful choices: where to grow, what to evolve, how to shape it. No twitch, no optimisation pressure.
-5. **Lightweight presence.** Runs all day on a desktop without anyone noticing it in CPU, memory or battery.
+- **Long-term tending.** The garden lives for days to years; short check-ins, never long sessions.
+- **Growing and pruning.** Choosing where to grow and what to cut are the core verbs.
+- **Levelling up.** A visible progression arc over months.
+- **Beauty.** Clean, clear, consistent; every idle moment looks good.
 
-### Non-goals
-- Being optimal-play-driven or min-maxable.
-- Mandatory resets / prestige.
-- Requiring the window to be open to make progress.
+**High floor, high ceiling.** A neglected garden still thrives slowly; a tuned garden evolves faster. Optimisation changes speed, never safety. Strategy lives in the garden's shape, not in timely reactions. Everyone eventually sees all content.
 
-## 2. What changed, and why
+**Constraints carried from the first draft**
 
-The last iteration (v0.0.2, 2024) became a tactical idle game: a mandatory prestige loop, spells on cooldown, kill counts, frame-rate-tuned pacing. The systems themselves are good; their *framing* lost the charm.
+- **Never punishing.** Absence is fine; coming back is a pleasant surprise. Wilting (see Economy) is the only consequence of neglect, and it never destroys anything.
+- **Lightweight presence.** Runs all day without anyone noticing it in CPU, memory or battery. See Performance budget and its benchmarks.
+- **No progress gated on the window being open.** Time away is caught up (see Time model).
 
-**Decision:** the only mechanic removed is the **mandatory prestige reset** (`GameUI.nextStage` → `resetGame`). Every other system is kept and repurposed below.
+**Out of scope for now:** spells (cut), mandatory prestige resets (removed). The Almanac is peripheral: it arrives in step 4, and what form it takes is still open.
 
-The current version is preserved with a git tag (`tactical-idle`) before any changes.
+### Why the revival
 
-## 3. Core loop (new)
+The last iteration (v0.0.2, 2024) became a tactical idle game: a mandatory prestige loop, spells on cooldown, kill counts, frame-rate-tuned pacing. Its systems were good; their framing lost the charm. The revival keeps the plant, the flowing particles and the creatures, removes the reset, and rebuilds the economy around slow growth and pruning.
+
+## Core loop
 
 ```
- glance ─► notice something (a bloom, a ripe fruit, a creature, a full seedling)
+ glance ─► notice something (new growth, a wilting branch, a full seedling, a rare node)
    ▲                    │
    │                    ▼
- leave ◄── make one small choice (grow a node, prune, evolve, shape)
+ leave ◄── make one small choice (bud, prune, shape, pick an evolution)
 ```
 
 Short sessions of 30 seconds to 5 minutes, several times a day. The garden keeps growing between sessions.
 
-### Seedling evolution without reset
-Today the seedling fills up and a "Proceed" button wipes the garden to unlock the next skill tier. New flow:
+## Visual language
 
-1. The seedling fills slowly over roughly a few days of real time.
-2. When full, it **blooms**: the player picks an evolution (an existing skill from `SkillData`) that applies **immediately and permanently** to this garden.
-3. The seedling releases a seed that drifts into the sky and becomes a **star in the background starfield** (`Starfield.ts`), a visible record of every evolution. A new seedling sprouts in its place.
-4. Skill tiers unlock as the garden matures (number of blooms), not through resets.
+Every node is a simple geometric shape; meaning is carried by a small, fixed set of channels.
 
-This keeps the old progression content (tiers 1 to 4) as the long-term arc, now spread over weeks.
+| Channel | Meaning |
+| --- | --- |
+| Hue | Role: yellow = power, orange = fruit, purple = genes, green = structure, grey/white = specialist, blue = creatures |
+| Shape | Specific node type within its role; every type has a unique shape |
+| Brightness and scale | Power level: full nodes glow and swell, low nodes dim and shrink |
+| Saturation | State: wild growth (subtle tone), dormant, wilting |
+| Fruit | Modifiers on a node; later also crawler food |
 
-## 4. Repurposing existing systems
+Unique shapes double as colour-blind support. Texture and complex shapes are held in reserve if playtesting shows a state is hard to read. The garden should look consistent: wild growth differs only by a subtle tone.
 
-| System (code) | Was | Becomes |
-|---|---|---|
-| Prestige / tiers (`nextStage`, `skillTier`) | Mandatory wipe to progress | **Removed** as a reset; tiers become maturity stages (see §3) |
-| Skills (`SkillData`) | Picked between runs | Evolutions chosen at each bloom, applied live |
-| Spells (`Spells/`) | Tactical cooldown abilities | **Gardener's tools**, with cooldowns in real time |
-| └ Delete | Destroy node | Pruning shears: trim a branch. The trimmed piece becomes a small keepsake or compost |
-| └ Weight | Pin/heavy node | Shape / stake: guide the plant's form |
-| └ Buff | Temporary boost | Watering / sunlight: gentle growth boost, once or twice a day |
-| └ Turbo | Debug speed | Stays dev-only |
-| Crawlers (`CrawlerCommands/`) | Units to manage | **Garden creatures**: autonomous, mostly cosmetic, gently helpful |
-| └ Eat / Breed / Research / Power / Buff | Economy actions | Kept as natural behaviours |
-| └ Execute / GetExecuted / Frustrated / Starving | Population control, failure states | A natural life cycle: creatures age, rest, and return to the soil as nourishment. No "kill" framing |
-| Achievements (`ATSData`, `GameKnowledge`) | Requirement → reward pressure | **Gardener's Almanac**: discoveries logged with a sketch and flavour text. Rewards are cosmetic or small. "Genocide" gets reworked |
-| Scores | Run scores | Lifetime garden stats in the Almanac (age, blooms, tallest stem…) |
-| Hub + toggles (`HubPanel`) | Resource routing micro-management | Greenhouse: long-term storage and upgrades. Toggles become set-and-forget preferences |
-| Transfer blobs (`Transfers/`) | Resource packets | Kept. This is the main "living light" visual |
-| Node types (`NodeData`) | Economy pieces | Kept. Visual and structural variety matters more than balance |
-| Tutorial | Strict step gate | Gentle, skippable hints spread over the first days |
+How the rare nodes map onto the roles:
+- **Specialist (grey/white):** Resistor, Amplifier and Buffer. They change how blobs and neighbours behave rather than producing a resource.
+- **Creatures (blue):** Home.
+- **Structure (green):** the Hub counts as a stem, drawn in its own shade of green.
 
-## 5. Time model
+The plant must look good **without any UI chrome**. Controls appear only in Active display mode.
 
-The biggest technical change. Today the simulation advances once per rendered frame at 60fps (`JMTicker`), so the garden only lives while the tab is open, and it burns CPU while it does.
+## Economy
 
-### Requirements
-- **Wall-clock driven.** Simulation advances by real elapsed time, not frames.
-- **Fixed simulation step, decoupled from rendering.** For example, the sim ticks at a fixed rate (1–10 Hz is likely plenty for the economy) while rendering interpolates.
-- **Low-power idle mode.** When the player isn't interacting, drop the render rate (e.g. 10–20fps) and keep only ambient animation. Target well under 2% CPU idle.
-- **Catch-up on return, gently capped.** Store `lastSeen`. On launch, simulate the elapsed time up to a cap (e.g. 72 hours; to be tuned) without rendering, then let physics settle. Show a short "while you were away" summary: new blooms, creatures, fruit.
-- **Absence never hurts.** Catch-up must not starve nodes or kill creatures. Neglect at most slows growth.
+Three flowing resources travel visibly through the stems; capacity is a set of limits, not a collected resource. The flowing blobs are the garden's "living light", its main idle visual.
 
-### Pacing
-All rates are currently tuned for minutes of play at 60 ticks/s. They need a rebalance pass against real-world targets:
+| Resource | Colour | Source | Purpose |
+| --- | --- | --- | --- |
+| Power | Yellow | Core, generator flowers | Grows new nodes and maintains existing ones |
+| Fruit blobs | Orange | Grove flowers | Travel through stems and grow fruit at random nodes with fruit capacity |
+| Gene blobs | Purple | Lab flowers | Flow to the core first; later also to seedlings and hubs |
 
-| Milestone | Target |
-|---|---|
-| First bloom | Day 1 to 2 |
-| Each subsequent bloom | Every 2 to 5 days |
-| Noticeable visual change | Every session (each glance shows something new) |
-| Full tier-4 garden | Around 2 to 3 months |
+**Wilting.** When power runs out, growth pauses. Nodes are never destroyed. Empty nodes stop draining, so the core always ends up with a small surplus and growth resumes slowly. The core guarantees the floor.
 
-Rates should be expressed **per real second/hour** in data, not per tick.
+**Local power flow.** Power travels as blobs through the stems; there is no global pool. A branch far from power can dim on its own while the rest thrives, so generator placement matters.
 
-## 6. Desktop widget
+**Power rules**
 
-| Feature | Priority |
-|---|---|
-| Small frameless window, transparent background | Must |
-| Always-on-top **or** pinned to desktop layer (user choice) | Must |
-| Remembers size/position | Must |
-| Low idle CPU / memory | Must |
-| Tray icon: show/hide, quit | Should |
-| Launch on startup (opt-in) | Should |
-| Click-through mode (look but don't block clicks) | Should |
-| Expand to a larger "tending" view on click | Could |
-| Notifications for rare events (opt-in, very sparing) | Could |
+- The core is the main source. A generator produces half of the core's output. Core power upgrades come later, not in the MVP.
+- Stems are cheap to maintain. Leaves cut a stem's upkeep: one leaf halves it, two leaves bring it to a quarter. Leaves grow from fruit blobs, like all fruit.
+- Labs cost twice the upkeep of groves.
+- Generator, grove and lab fruits each slightly raise their flower's efficiency, up to +20% total per flower.
+- The core has no fruit in the MVP; core fruit is reserved for showing later upgrades.
 
-The plant must look good **without any UI chrome**. Sidebar, bottom bar and panels appear only in the tending view.
+Fruit, once grown, stays. Groves are needed while the garden grows; if growth stalls, they stop being useful. The unlock curve should be paced so a small number of groves always stays useful, keeping up with new stems and flowers.
 
-## 7. Platform: Godot 4 (.NET)
+Draft values, in relative units per real hour, to be tuned through play:
+
+| Node | Produces | Upkeep |
+| --- | --- | --- |
+| Core | 8 | — |
+| Generator | 4 | — |
+| Stem | — | 0.5 (0.25 with one leaf, 0.125 with two) |
+| Grove | — | 1.5 |
+| Lab | — | 3 |
+
+Sanity check on the draft: the end-of-week-one garden (31 stems, 8 generators) produces 40 against 15.5 of bare stem upkeep, leaving room for groves and labs. Rates live in data **per real hour**, never per tick.
+
+## Capacity
+
+Capacity is a set of slot limits that cap growth until research raises them. When the garden is full, the player prunes to make room.
+
+| Limit | Covers |
+| --- | --- |
+| Per-type caps | Structure and power only: stems and generators. Groves, labs and other accessory flowers are uncapped; they are limited by free link slots on stems and by power upkeep, so the player chooses the mix |
+| Wild total + per-type caps | Rare wild nodes, e.g. 5 wilds total, up to 2 Lumber Groves and 1 Volatile |
+| Seedling slots | Active seedlings |
+| Local caps | Links per node and fruit per node. Stems are fixed at 3 links including the parent, so each stem supports a branching stem, a flower plus a continuation, or two flowers at a dead end. Large stems with 4 links unlock in limited numbers in step 5. The core starts with 1 link and gains more as major unlocks (first +1 around day 3); its maximum is open |
+
+Bloomed seedlings become special versions of basic nodes and take normal slots within normal caps, so evolutions never need a separate limit.
+
+## Performance budget
+
+Plan for a soft cap of **250 main nodes** in a fully matured garden, to be refined through play.
+
+- Stress test: after optimisation, the system supports upwards of 300 main nodes with negligible idle overhead (previously around 220). A setting limits idle frame rate (15/20/30/60 fps, default 30) for further savings.
+- Fruit adds negligible load: tested at 3 fruit per main node at 220 nodes. Fruit borrows its parent's push in the physics, so it stays out of the collision grid.
+- The 250 soft cap leaves headroom for future blob and crawler load and weaker machines.
+- The sum of all capacity limits at their maximum should stay within this budget, so the capacity system enforces it. With 3-link stems, a garden with S stems, C core links and I inline (2-link) flowers has at most 2S + C + I + 1 main nodes, so the stem cap effectively sets the garden's maximum size (about 124 stems for 250 nodes). Each large stem adds one more slot.
+
+Evolutions stay within the budget because a bloomed seedling becomes a special basic node in a normal slot, not an extra node.
+
+### Benchmarks (anchor)
+
+The current numbers, measured on Oct 26 2026. Later work is compared against these; if they prove too high in use, we optimise further.
+
+Machine: i7-12700H, Windows 11. Idle at 30 fps, release-optimised C#. CPU is % of one core, median of six runs (from [spike-lite/README.md](../spike-lite/README.md)).
+
+| Garden | CPU idle | Working set | Private memory |
+| --- | --- | --- | --- |
+| Empty | 4.1% (3.0–4.8) | 246 MB | 280 MB |
+| 800 parts (two thirds fruit) | 6.4% (6.1–6.6, plus outliers when it left idle mode) | 260 MB | 283 MB |
+| Hidden (screen locked or full-screen app) | about 1.5% | — | — |
+
+- **Per frame at 800 parts:** about 0.85 ms physics, 0.3 ms drawing preparation, 0.3 ms renderer CPU, 0.5 ms GPU, in 8–10 draw calls at any size.
+- **Physics stress:** 2000 parts take 1.2 ms a tick.
+- **Where the idle cost goes:** most of it is waking to redraw and present a full-screen transparent window, which any engine pays. A bare Godot project with the same window costs about as much as the empty garden. A raylib shell measured the same CPU and only saved memory.
+
+The first draft's aim of "well under 2% idle" isn't met. These benchmarks are the baseline instead. Known levers if it's needed: a lower idle frame rate (15 or 20 fps), or a smaller window than the full work area.
+
+## Time model
+
+Implemented in step 1.
+
+- **Wall-clock driven.** Growth advances by real elapsed time, not frames.
+- **Low-power idle.** When nothing is being touched or moving, rendering drops to the idle frame rate.
+- **Catch-up on return.** The save stores when the garden was last seen; on launch the elapsed time is simulated without drawing, capped at **72 hours** (`Tuning.CatchUpCapSeconds`, to be tuned). Time hidden behind a lock screen or full-screen app is caught up the same way when the garden shows again.
+- **Absence never hurts.** Catch-up can't destroy nodes; the worst case is wilting, which recovers on its own.
+- Parked idea: a short "while you were away" summary on return (new growth, rares, blooms).
+
+## Growth and pruning
+
+Left alone, the garden grows wild until it fills its capacity; attentive players prune wild growth to make room and place buds where they want.
+
+- **Wild growth** is random and happens only when there is excess power. If wild growth doesn't produce enough generators, it slows and stops on its own.
+- **Manual buds** cost nothing. The cost is attention.
+- **Pruning** frees capacity. A full garden can only grow where the player has cut.
+- **Rare wild nodes** can't be planted. Pruning one frees its slot, and a new rare later appears by random chance, possibly a different type in a different place. Regrowth takes time.
+
+**Pruning gives nothing back.** Its rewards are built in: it frees stem and generator capacity for deliberate growth, lowers power upkeep, reshapes the garden, and rerolls rare nodes. With no return, wild growth can't be farmed. The cut itself must feel satisfying: a pruned branch dissolves with a pleasing visual effect rather than simply vanishing.
+
+## Tending commands
+
+The player has eight basic commands.
+
+1. **New sprout:** choose a basic node type and grow it at a chosen spot.
+2. **Prune:** remove any node and all of its children. No preview; undo restores the last prune only, within about 30 seconds (to be tuned).
+3. **Place a Gravity Pot:** a subtle overlay, shaped vaguely like a flower pot, placed and rotated anywhere.
+4. **Connect a node to a Gravity Pot:** the node moves to the pot and locks there; nodes beyond it are pushed gently in the pot's facing direction.
+5. **Select evolution:** for the core, seedlings and other skill-based nodes.
+6. **Zoom** in or out.
+7. **Display mode:** Active (full opacity, controls visible, clickable), Ambient (transparent and click-through, the default), or Minimised (tucked into a corner or the tray). A hotkey toggles Active and Ambient.
+8. **Drag:** click and drag any node to tug the plant around on a spring. Purely tactile, no economy effect.
+
+Undo covers only the most recent prune, so it never conflicts with wild growth filling the freed capacity.
+
+## Shaping the garden
+
+Players keep a mature garden compact and give it form through zoom and shaping tools.
+
+- **Zoom:** the player can zoom the garden in or out.
+- **Gravity Pots:** a node connected to a pot moves to it and locks in place; the rest of the branch is pushed subtly in the pot's facing direction.
+- Long branches can still spill back over, so a large garden may need several pots.
+- Wild growth respects pots, so a direction set once keeps shaping the garden.
+- Shaping tools are purely about shape, with no economy effect.
+
+**Three shaping tools.** The Gravity Pot is available from the start. The **Trellis** (pins selected nodes along a straight line) and the **Gravity Well** (pulls all nodes toward it for general directional growth) are unlockable. Shaping tools should look pretty in their own right, and their visibility can be toggled when the garden is out of focus.
+
+Proposed: shaping tools are overlays rather than graph nodes, so they don't count against the node budget, and how many you can place rises with core levels.
+
+## Node roster
+
+Nodes come in two tiers. Main nodes are called **stems** (the structure) and **flowers** (everything else: generators, groves, labs and rares); they can be grown and pruned. **Fruits** grow on stems and flowers and add minor or enhancing effects. Most flowers have 1 link and end a branch; amplifiers, resistors and possibly some new wild flowers have 2 links and sit inline, continuing a branch.
+
+| Group | Nodes | How they appear |
+| --- | --- | --- |
+| Fixed | Core | Always present, can't be pruned |
+| Plantable | Stem, Generator (yellow), Grove (orange), Lab (purple) | Wild growth or manual buds |
+| Rare wild-only | Hub, Amplifier, Resistor, Volatile, Lumber Grove, Wild Lab, Buffer, Home | Wild growth only, within wild limits |
+| Future unlock | Big Stem (large stem, 4 links) | Unlocked in limited numbers in step 5; never wild |
+| Seedling | Seedling | Separate from the wild pool (see Progression) |
+| Fruits | Leaf on stems, plus each flower's own fruit set | Grown by fruit blobs |
+
+Each flower type has its own set of fruits, all grown by fruit blobs. Leaves on stems cut the stem's power upkeep; generator, grove and lab fruits raise their flower's efficiency (see Economy).
+
+Open: Home as a random rare could delay crawlers by luck. It may work better as a plantable node unlocked by an evolution.
+
+**Specialists** (grey/white) are the utility rares: Resistor (blocks blobs), Amplifier (strengthens blobs passing through) and Buffer (temporarily boosts nearby production). With spells cut, they're the garden's only modifiers of flow and output. Their exact effects are to be designed in step 5.
+
+## Progression
+
+Research has three kinds of upgrade, and each has a home in the garden. Nothing resets: every upgrade applies immediately and permanently.
+
+| Upgrade type | Example | Where it lives |
+| --- | --- | --- |
+| Linear / numeric | +1 stem capacity, +15% power transfer | The core, as genes reach it |
+| Mechanic change / unlock | Large stems, new node in the wild pool | Seedlings |
+| Bundled major change | Labs make ×5 genes but drain ×2 power | Seedlings |
+
+**Core.** In the MVP, genes reaching the core drive the linear unlock track below. From step 5, core levels add choice-based numeric boosts. Core levels show as a deepening hue; core fruit is reserved for showing later upgrades and milestones.
+
+**Seedlings.** A seedling sprouts, the player picks its evolution path, gene blobs fill it over days, and it blooms. The evolution's effect applies permanently the moment it blooms. The seedling then becomes a special version of a basic node (for example a lab or generator), marked by a unique fruit. Pruning it removes only the special node, never the effect. All evolution effects, including bundled changes, are designed as net positives with mild drawbacks, so no choice is regretted. The original skill tree (see [ORIGINAL_SYSTEMS.md §9](ORIGINAL_SYSTEMS.md)) is the content pool to draw evolutions from.
+
+Note the order change from the first draft: the evolution path is chosen when the seedling sprouts, not when it blooms.
+
+**Wild pool.** Evolutions can add new rare types to the pool; core upgrades raise wild limits.
+
+**Linear unlock track (step 2).** Genes reaching the core raise caps automatically along a fixed sequence, with a small notification and no choices. Only stems, generators and core links unlock; groves and labs are limited by slots and power. Draft first week, to be refined through play:
+
+| When | Unlock |
+| --- | --- |
+| Start | Core (1 link), 4 stems, 1 generator |
+| \~10 min | +3 stems |
+| \~1 hr | +1 generator |
+| Day 1 evening | +3 stems |
+| Day 2 | +4 stems, +1 generator |
+| Day 3 | +1 core link, +5 stems, +1 generator |
+| Day 4 | +6 stems |
+| Day 5 | +2 generators |
+| Day 6 | +6 stems |
+| Day 7 | +2 generators |
+
+End of week one: 31 stems, 8 generators, 2 core links, at most about 65 main nodes. Gene thresholds rise faster than lab count to hold this pacing. Proposed: a third core link in week two or three, the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
+
+**Long-term pacing: TBD.** Week one has to feel right first; pacing beyond it (bloom timing, how long a garden takes to mature) gets planned once it does.
+
+Open:
+
+- How seedling slots grow. Options: a separate track, or a capstone after every N core levels (recommended).
+- Which basic node each evolution turns into, and what its unique fruit does.
+- The Hub's role. Proposed: local upgrades that boost only its own branch.
+
+## Crawlers
+
+Crawlers aren't developed until after the public beta (step 7+). When they arrive, they should feel like the garden coming alive. When they unlock in a garden's life is a placeholder until then.
+
+- They start simple, keeping the original's traits: a home node, preferences, autonomous behaviour.
+- They eat fruit. A fruit is either a modifier on its node or food for a crawler, so eating a leaf removes the stem's bonus until it regrows.
+- No "kill" framing: the original's execution, frustration and starvation states become a gentle life cycle (creatures age, rest, and return to the soil).
+- **Later layer, not in the current design:** a crawler society with buildings, ownership, automatic pruning and consuming, and rebellions to quell. Today's crawlers should leave room for it without building it.
+## Desktop widget
+
+| Feature | Priority | State |
+| --- | --- | --- |
+| Frameless window, transparent background | Must | Done (prototype) |
+| Always on top | Must | Done (prototype, menu toggle) |
+| Click-through (Ambient mode) | Must | Done (prototype) |
+| Low idle CPU / memory, pause while hidden | Must | Done (prototype) |
+| Display modes: Active / Ambient / Minimised, hotkey | Must | Step 2 |
+| Remembers size and position | Must | Plant scale saved; the overlay covers the work area, so position applies once there's a Minimised corner |
+| Tray icon: show/hide, quit | Should | Minimised mode |
+| Launch on startup (opt-in) | Should | — |
+| Pinned to the desktop layer instead of on top (user choice) | Could | — |
+| Notifications for rare events (opt-in, very sparing) | Could | — |
+
+## Platform: Godot 4 (.NET)
 
 **Decided (October 2026): Godot 4.7 with C#**, laid out like the other Godot projects: the rules in plain C# (`godot/src/Core`, no Godot), the presentation in the Godot project (`godot/game/`). The prototype in [godot/](../godot/README.md) is the starting point: the TS game's force-directed plant as a transparent, click-through, always-on-top overlay over the screen's work area.
 
 Why, over the alternatives:
 - **Web (TS + Pixi in Tauri or Electron):** heavier for an always-running widget, and transparency and click-through go through the wrapper. Godot gives native transparent, borderless windows; click-through is a few Win32 calls (`ClickThrough.cs`).
-- **A lighter shell (a custom .NET app on raylib)**, measured in [spike-lite/](../spike-lite/README.md): the same idle CPU as Godot (about 4% of a core empty and 6% at 800 parts, at 30 fps), since most of the idle cost is waking to redraw and present a full-screen transparent window, which any engine pays. Its only gain was memory (about 130 MB against 250 MB), not worth rebuilding Godot's UI, input, text, audio and export pipeline.
+- **A lighter shell (a custom .NET app on raylib)**, measured in [spike-lite/](../spike-lite/README.md): the same idle CPU as Godot, since most of the idle cost is waking to redraw and present a full-screen transparent window. Its only gain was memory (about 130 MB against 250 MB), not worth rebuilding Godot's UI, input, text, audio and export pipeline.
 
 Because the rules don't depend on Godot, the presentation layer can still be swapped later if that ever changes.
 
-## 8. Roadmap
+## Development plan
 
-**Phase 0: Preserve.** Tag `tactical-idle`. Note what's currently broken.
+Each step should leave the game playable. The garden alone, before crawlers, should be fun and rewarding enough for a public beta.
 
-**Phase 1: Foundations.** Platform decision (done: Godot, §7). Wall-clock fixed-step sim, `lastSeen` + capped catch-up, low-power idle rendering. Remove the prestige reset; implement in-place blooming.
+| Step | Name | Contents |
+| --- | --- | --- |
+| 1 | Foundation (done) | Godot widget, transparency, force-directed physics, node and fruit rendering, stress test, time model (wall-clock sim, catch-up, low-power idle) |
+| 2 | Living garden | Power economy, upkeep, wilting; visible blob flow; new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
+| 3 | Shaping → MVP | Gravity Pot, Trellis, Gravity Well; a short round of visual polish, including the prune effect. End of step = MVP |
+| 4 | Information and tracking | Information display, stat tracking, Almanac. Supports tuning |
+| 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
+| 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding. End of step = public beta candidate |
+| 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
 
-**Phase 2: Calm.** Reframe spells as tools, creatures' life cycle, Almanac, gentle tutorial. Pacing rebalance to §5 targets.
+**Design needed before each step:** the linear unlock sequence before step 2; choice-based core levels and seedling slot timing before step 5.
 
-**Phase 3: Widget.** Transparent always-on-top window, tray, autostart, compact vs. tending views.
+Open: where events and seasons, and identity features fall in the plan.
+## Parked ideas
 
-**Phase 4: Charm.** Day/night tied to local time, seasons over weeks, rare events (visiting comets, creature migrations, special blooms), seed-stars in the sky, visual polish pass.
+From the first draft, not contradicted by the anchor but not scheduled. Candidates for the "Events and surprises" and "Identity" topics:
 
-## 9. Open questions
-- Catch-up cap: 24h, 72h, a week?
+- Each bloomed seedling releases a seed that drifts up and becomes a star in the background, a visible record of every evolution.
+- Day and night tied to local time; seasons over weeks.
+- Rare events: visiting comets, creature migrations, special blooms.
+- Lifetime garden stats (age, blooms, tallest stem) as Almanac material.
+- Onboarding as gentle, skippable hints spread over the first days.
+
+## Open questions
+
 - One plant per garden, or can seeds be planted as additional plants over time?
-- Is there any "care" need (e.g. watering), or is the garden fully self-sustaining with care only as a boost?
-- Save migration: carry the old v29 saves forward, or start fresh?
-- Monetisation / distribution target (itch.io, Steam, free/open)?
+- Save migration: the new economy shares little with the old v29 saves, so starting fresh looks likely. Confirm.
+- Distribution target (itch.io, Steam, free/open), now that a public beta is planned.
+- Catch-up cap: 72 h today; keep, shorten, or lengthen?
+
+Settled since the first draft: platform (Godot); "is there any care need?" (no; neglect only slows growth, via wilting).
+
+## Next topics
+
+Design layers still to work through:
+
+- [ ] Information display, stat tracking and Almanac, including what form the Almanac takes (step 4)
+- [ ] Specialist effects: Resistor, Amplifier, Buffer (step 5)
+- [ ] Long-term pacing beyond week one
+- [ ] Choice-based core levels and seedling slot timing (step 5)
+- [ ] Which basic node each evolution becomes, and its fruit (step 5)
+- [ ] Onboarding over the first days (step 6)
+- [ ] Identity: what makes each garden uniquely yours after months
+- [ ] Events and surprises: rare blooms, seasons, day and night
+- [ ] Audio: likely silent by default
+- [ ] Final name for genes
