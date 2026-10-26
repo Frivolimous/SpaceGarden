@@ -43,6 +43,15 @@ public sealed class Garden
     }
     Capacity capacity = Capacity.Start;
 
+    // Genes that have reached the core over the garden's life, and how many steps of the unlock track they've passed
+    // (each one raised Capacity once). The view compares Unlocks with what it has shown, to say what's new.
+    public double Genes;
+    public int Unlocks;
+    public UnlockStep? NextUnlock => Unlocks < Tuning.UnlockTrack.Length ? Tuning.UnlockTrack[Unlocks] : null;
+
+    // Off, gene blobs still deliver their genes but aren't shown travelling (a catch-up, which draws nothing).
+    public bool ShowBlobs = true;
+
     // Off, the economy still runs but nothing sprouts by itself (tests, and later a "hold growth" choice).
     public bool WildGrowth = true;
 
@@ -104,7 +113,10 @@ public sealed class Garden
     // Time away: grow for it (capped), then let the physics settle so the plant isn't shown mid-tangle.
     public int CatchUp(double secondsAway)
     {
+        bool show = ShowBlobs;
+        ShowBlobs = false;
         int sprouted = Grow(Math.Clamp(secondsAway, 0, Tuning.CatchUpCapSeconds));
+        ShowBlobs = show;
         SettleLooks();
         if (sprouted > 0)
         {
@@ -153,14 +165,23 @@ public sealed class Garden
     {
         if (Nodes.Count >= Tuning.MaxNodes) return null;
         var counts = CountKinds();
-        bool Spare(PlantNode n, float cost) => !wild || (!n.Wilting && n.Fill >= Tuning.GrowFill && n.Power >= cost);
-        var branchable = Nodes.Where(n => BranchKinds(n, counts).Count > 0 && Spare(n, Tuning.SproutCost)).ToList();
-        var fruitable = Nodes.Where(n => n.CanFruit && Spare(n, Tuning.FruitSproutCost)).ToList();
-        bool fruit = branchable.Count == 0 || (fruitable.Count > 0 && rng.NextDouble() < Tuning.FruitChance);
-        if (fruit && fruitable.Count == 0) return null;
-        var parent = Pick(fruit ? fruitable : branchable);
+        // Wild growth also keeps within what the whole garden can afford (see WildSpare); a free sprout needn't.
+        var spare = wild ? WildSpare() : Spare.Unlimited;
+        bool HasPower(PlantNode n, float cost) => !wild || (!n.Wilting && n.Fill >= Tuning.GrowFill && n.Power >= cost);
+        var branchable = Nodes.Where(n => BranchKinds(n, counts, spare).Count > 0 && HasPower(n, Tuning.SproutCost)).ToList();
+        var fruitable = Nodes.Where(n => n.CanFruit && HasPower(n, Tuning.FruitSproutCost)).ToList();
+        // A free core link (a new one from an unlock) is filled first, before the other stems take the new stem cap
+        // and leave it bare: the unlock's point is a new branch from the core.
+        bool fruit = false;
+        PlantNode parent = Core;
+        if (!branchable.Contains(Core))
+        {
+            fruit = branchable.Count == 0 || (fruitable.Count > 0 && rng.NextDouble() < Tuning.FruitChance);
+            if (fruit && fruitable.Count == 0) return null;
+            parent = Pick(fruit ? fruitable : branchable);
+        }
         if (wild) parent.Power -= fruit ? Tuning.FruitSproutCost : Tuning.SproutCost;
-        return fruit ? AddFruit(parent) : AddBranch(parent, counts);
+        return fruit ? AddFruit(parent) : AddBranch(parent, counts, spare);
     }
 
     // Deeper parts are likelier, so the plant reaches outward instead of thickening at the base.
@@ -256,23 +277,52 @@ public sealed class Garden
     };
 
     // The kinds of branch this part could grow now, with their odds: near the core only stems, further out also
-    // generators and labs.
-    List<(NodeKind Kind, double Weight)> BranchKinds(PlantNode parent, (int Stems, int Generators) counts)
+    // generators and labs. A stem next to the core takes flowers too once no stem can grow there, so its free link
+    // isn't left empty for good when the stem cap is reached. (The core itself only ever grows stems.) Only kinds
+    // the garden can afford (see WildSpare) count.
+    List<(NodeKind Kind, double Weight)> BranchKinds(PlantNode parent, (int Stems, int Generators) counts,
+        Spare? spare = null)
     {
         var kinds = new List<(NodeKind, double)>();
         if (!parent.CanBranch) return kinds;
-        var odds = parent.Depth < 2 ? NearOdds : FarOdds;
-        foreach (var (kind, weight) in odds)
-            if (HasRoomFor(kind, counts)) kinds.Add((kind, weight));
+        void Consider((NodeKind, double)[] odds)
+        {
+            foreach (var (kind, weight) in odds)
+                if (HasRoomFor(kind, counts) && (spare ?? Spare.Unlimited).Affords(kind)) kinds.Add((kind, weight));
+        }
+        Consider(parent.Depth < 2 ? NearOdds : FarOdds);
+        if (kinds.Count == 0 && parent.Depth == 1) Consider(FarOdds);
         return kinds;
     }
 
     static readonly (NodeKind, double)[] NearOdds = [(NodeKind.Stem, 1)];
     static readonly (NodeKind, double)[] FarOdds = [(NodeKind.Stem, 0.74), (NodeKind.Generator, 0.14), (NodeKind.Lab, 0.12)];
 
-    PlantNode AddBranch(PlantNode parent, (int Stems, int Generators) counts)
+    // How much more upkeep an hour wild growth may add: what the garden makes, less what all its parts cost when
+    // none are wilting (wilting ones will want paying again), less a reserve. Labs keep a bigger one (a share of the
+    // production), so they never take the power that stems need to reach new room for generators; without it a
+    // garden fills with labs and stops growing. Never below zero, so a generator (no upkeep) can always grow.
+    public Spare WildSpare()
     {
-        var kinds = BranchKinds(parent, counts);
+        float production = 0, upkeep = 0;
+        foreach (var node in Nodes)
+        {
+            production += ProductionPerHour(node);
+            upkeep += UpkeepPerHour(node);
+        }
+        float spare = production - upkeep;
+        return new(Math.Max(0, spare - Tuning.WildSpareReserve), Math.Max(0, spare - Tuning.LabSpareShare * production));
+    }
+
+    public readonly record struct Spare(float Any, float Lab)
+    {
+        public static readonly Spare Unlimited = new(float.MaxValue, float.MaxValue);
+        public bool Affords(NodeKind kind) => KindUpkeepPerHour(kind) <= (kind == NodeKind.Lab ? Lab : Any);
+    }
+
+    PlantNode AddBranch(PlantNode parent, (int Stems, int Generators) counts, Spare? spare = null)
+    {
+        var kinds = BranchKinds(parent, counts, spare);
         double roll = rng.NextDouble() * kinds.Sum(k => k.Weight);
         var kind = kinds[^1].Kind;
         foreach (var (k, weight) in kinds)
@@ -335,6 +385,8 @@ public sealed class Garden
     //   - the core and generators make power into their own store (anything past full is lost);
     //   - every other part pays its upkeep from its own store. One that can't wilts and stops draining, and recovers
     //     once the power flowing in has filled it back to RecoverFill. Wilting never removes anything;
+    //   - a lab that paid makes genes, sent to the core a blob at a time; genes reaching the core raise
+    //     the caps along the unlock track (see Deliver);
     //   - power flows along each link downhill, from the fuller part to the emptier, so it spreads out from the
     //     sources and a branch far from them runs low first (there is no global pool);
     //   - every SproutEverySeconds a wild sprout grows where there's power to spare; if there's none, growth waits.
@@ -354,6 +406,15 @@ public sealed class Garden
             {
                 node.Power = 0;
                 node.Wilting = true;
+                continue;
+            }
+            float genes = GenesPerHour(node);
+            if (genes <= 0) continue;
+            node.Genes += genes * hours;
+            while (node.Genes >= Tuning.GeneBlobSize - 1e-4f) // (a whole blob, give or take rounding)
+            {
+                node.Genes = Math.Max(0, node.Genes - Tuning.GeneBlobSize);
+                SendGenes(node, Tuning.GeneBlobSize);
             }
         }
 
@@ -395,13 +456,45 @@ public sealed class Garden
     };
 
     // Power a part costs per real hour while it isn't wilting. Each leaf halves a stem's.
-    public static float UpkeepPerHour(PlantNode node) => node.Spec.Kind switch
+    public static float UpkeepPerHour(PlantNode node) => node.Spec.Kind == NodeKind.Stem
+        ? Tuning.StemUpkeepPerHour * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf))
+        : KindUpkeepPerHour(node.Spec.Kind);
+
+    // What a new part of this kind costs per hour (no fruit yet).
+    public static float KindUpkeepPerHour(NodeKind kind) => kind switch
     {
-        NodeKind.Stem => Tuning.StemUpkeepPerHour
-            * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf)),
+        NodeKind.Stem => Tuning.StemUpkeepPerHour,
         NodeKind.Lab => Tuning.LabUpkeepPerHour,
         _ => 0,
     };
+
+    // Genes a part makes per real hour while it isn't wilting: only labs, their research fruit adding a little.
+    public static float GenesPerHour(PlantNode node) => node.Spec.Kind == NodeKind.Lab
+        ? Tuning.LabGenesPerHour * (1 + Math.Min(Tuning.FruitBonusMax, node.Fruits.Count * Tuning.FruitBonusEach))
+        : 0;
+
+    // ==== GENES AND UNLOCKS ==== \\
+
+    // A lab's blob of genes leaves for the core. Its genes count at the core in this same step, so a catch-up (which
+    // runs no physics) and a live session agree; the blob is their journey made visible, a few seconds of travel up
+    // the branch. In a catch-up, or with too many already in flight, it isn't shown.
+    void SendGenes(PlantNode lab, float genes)
+    {
+        Deliver(genes);
+        if (!ShowBlobs || Motes.Count >= Tuning.MaxMotes || lab.Parent == null) return;
+        Motes.Add(new Mote(lab, lab.Parent, lab.Spec.Rgb) { Homing = true });
+    }
+
+    // Genes reach the core: each threshold of the unlock track they pass raises the caps, in order.
+    public void Deliver(double genes)
+    {
+        Genes += genes;
+        while (NextUnlock is { } next && Genes >= next.Genes)
+        {
+            Capacity = Capacity.Raise(next);
+            Unlocks++;
+        }
+    }
 
     // The whole garden's power per hour: what it makes, and what its parts that aren't wilting cost.
     public (float Production, float Upkeep) PowerBalance()
@@ -692,7 +785,8 @@ public sealed class Garden
     // and the light faded over about 0.3 s. Here power flows smoothly, so a link flashes as often as power runs
     // along it (FlashesPerPowerHour per unit per hour, at most MaxFlashesPerSecond): a busy trunk pulses, a quiet
     // twig now and then, a full branch not at all. The rate is per real second whatever the growth speed, so the
-    // plant looks the same at 1x and 60x. Motes are kept for the blobs that do travel (fruit, genes: to come).
+    // plant looks the same at 1x and 60x. Motes are the blobs that do travel: genes from the labs (see SendGenes),
+    // fruit to come.
     void UpdateMotes(float dt)
     {
         foreach (var node in Nodes)
@@ -732,7 +826,8 @@ public sealed class Garden
             var arrived = mote.To;
             arrived.Glow = 1;
             if (LinkBetween(mote.From, arrived) is { } link) link.Flash = 1;
-            var next = arrived.Spec.IsFruit || ++mote.Hops >= Tuning.MoteMaxHops ? null : NextHop(arrived, mote.From);
+            var next = mote.Homing ? arrived.Parent
+                : arrived.Spec.IsFruit || ++mote.Hops >= Tuning.MoteMaxHops ? null : NextHop(arrived, mote.From);
             if (next == null)
             {
                 Motes.RemoveAt(i);
@@ -793,7 +888,8 @@ public sealed class Garden
     public GardenSave ToSave() => new(
         Layout, GrowthClock, EconomyClock, Capacity,
         Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
-            n.Parent != null && n.Fixed, n.Power, n.Wilting)).ToList());
+            n.Parent != null && n.Fixed, n.Power, n.Wilting, n.Genes)).ToList(),
+        Genes, Unlocks);
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -803,6 +899,8 @@ public sealed class Garden
             GrowthClock = save.GrowthClock,
             EconomyClock = save.EconomyClock,
             Capacity = save.Capacity,
+            Genes = save.Genes,
+            Unlocks = save.Unlocks,
         };
         var byId = new Dictionary<int, PlantNode>();
         foreach (var n in save.Nodes)
@@ -813,6 +911,7 @@ public sealed class Garden
             node.Fixed = (parent == null && garden.Planted) || n.Pinned;
             node.Power = n.Power;
             node.Wilting = n.Wilting;
+            node.Genes = n.Genes;
             byId[n.Id] = node;
         }
         garden.SettleLooks();
@@ -826,8 +925,24 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks)
 {
     public static readonly Capacity Start = new(Tuning.StartStemCap, Tuning.StartGeneratorCap, Tuning.StartCoreLinks);
     public static readonly Capacity Unlimited = new(int.MaxValue, int.MaxValue, 2); // stress tests (--parts)
+
+    // These limits with an unlock's raises added (never past int.MaxValue, so an unlimited garden stays so).
+    public Capacity Raise(UnlockStep step) => this with
+    {
+        Stems = Add(Stems, step.Stems),
+        Generators = Add(Generators, step.Generators),
+        CoreLinks = Add(CoreLinks, step.CoreLinks),
+    };
+
+    static int Add(int a, int b) => (int)Math.Min(int.MaxValue, (long)a + b);
 }
 
-public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, bool Pinned, float Power, bool Wilting);
+// One step of the linear unlock track: once Genes have reached the core over the garden's life, the caps rise by
+// these. Only stems, generators and core links unlock (DESIGN.md: groves and labs are limited by slots and power).
+public sealed record UnlockStep(double Genes, int Stems = 0, int Generators = 0, int CoreLinks = 0);
 
-public sealed record GardenSave(Layout Layout, double GrowthClock, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes);
+public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, bool Pinned, float Power, bool Wilting,
+    float Genes = 0);
+
+public sealed record GardenSave(Layout Layout, double GrowthClock, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
+    double Genes = 0, int Unlocks = 0);

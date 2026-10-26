@@ -201,13 +201,14 @@ public partial class GardenView : Node2D
     {
         moteHalos.Begin();
         moteDots.Begin();
+        // A blob is its colour: a soft halo round a small bright bead of it (a gene blob reads purple, not white).
         foreach (var mote in garden.Motes)
         {
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
             var colour = Rgb(mote.Rgb);
-            colour.A = 0.85f;
-            moteHalos.AddRound(p, 26, colour);
-            moteDots.AddRound(p, Textures.ShapeDiameter(2.6f), Colors.White);
+            colour.A = 0.9f;
+            moteHalos.AddRound(p, 34, colour);
+            moteDots.AddRound(p, Textures.ShapeDiameter(3.4f), colour.Lightened(0.55f));
         }
         moteHalos.Draw(moteLayer, Textures.Halo);
         moteDots.Draw(moteLayer, Textures.Shape(Shape.Circle));

@@ -63,7 +63,8 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 (act as if hidden for FOR seconds from AT seconds after start, to test the pause),
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
-`--wilt` (start with every part drained and wilting, to watch power flow back), `--fpslog` (prints
+`--wilt` (start with every part drained and wilting, to watch power flow back), `--nearunlock` (start just short of
+the next unlock on the gene track, to watch one fire), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 
 ## Performance

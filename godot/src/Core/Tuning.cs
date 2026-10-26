@@ -37,7 +37,7 @@ public static class Tuning
     // From Config.PHYSICS.EDGE_BOUNCE: how hard the screen edges push parts back.
     public const float EdgeBounce = 0.1f;
 
-    // Motes (travelling blobs, for fruit and genes to come): seconds per link, and the most links one travels.
+    // Motes (travelling blobs: genes, and fruit to come): seconds per link, and the most links one travels.
     public const float MoteLinkSeconds = 0.3f;
     public const int MoteMaxHops = 14;
     public const float GlowFadePerSecond = 1.5f;
@@ -101,7 +101,7 @@ public static class Tuning
 
     // Placeholders. Wild growth needs excess power: a part sprouts only when at least GrowFill full, and the sprout
     // costs its parent SproutCost (FruitSproutCost for fruit, until fruit blobs grow it). Manual buds are free.
-    public const float GrowFill = 0.8f;
+    public const float GrowFill = 0.6f;
     public const float SproutCost = 0.5f;
     public const float FruitSproutCost = 0.2f;
 
@@ -114,4 +114,54 @@ public static class Tuning
     public const int StartStemCap = 4;
     public const int StartGeneratorCap = 1;
     public const int StartCoreLinks = 1;
+
+    // Placeholders. Wild growth adds a part only if the whole garden could still pay for it with this much power an
+    // hour to spare (production less every part's upkeep, wilting ones included, as they'll want paying again), so
+    // it can't grow into a deficit. A lab must leave LabSpareShare of the production unspent, so labs never take
+    // the power that stems need to reach new room for generators. Generators always pass.
+    public const float WildSpareReserve = 1;
+    public const float LabSpareShare = 0.3f;
+
+    // ==== GENES AND UNLOCKS ==== \\
+    // Placeholders. A lab makes genes while it isn't wilting (its research fruit add up to FruitBonusMax, as a
+    // generator's burrs do) and sends them to the core as a purple blob each time it has GeneBlobSize. Labs are the
+    // only source: the first unlock waits for the first lab's first blob.
+    public const float LabGenesPerHour = 6;  // a blob every 10 minutes (every 10 s at 60x)
+    public const float GeneBlobSize = 1;
+    public const int MaxMotes = 60; // blobs in flight at once; past it a blob's genes still arrive, unseen
+
+    // The linear unlock track (DESIGN.md, Progression, "Linear unlock track (step 2)"): genes reaching the core over
+    // the garden's life raise the caps at each threshold, in order. Placeholder thresholds, tuned with the headless
+    // pacing run (UnlockTests.MonthPacing) to land near these times in a typical wild garden; they rise faster than
+    // the labs do. "Day N" is the start of day N. Week one is the doc's draft (31 stems, 8 generators, 2 core links),
+    // except that its first two steps wait for the first lab (no lab grows before ~2-5 h), not ~10 min and ~1 h.
+    // Weeks two to four are invented, a baseline to pace against until long-term pacing is designed: a step a day
+    // in week two, then one every two days, reaching 72 stems, 17 generators and 3 core links at day 30.
+    public static readonly UnlockStep[] UnlockTrack =
+    [
+        new(1, Stems: 3),                                  // the first lab's first blob (~4 h)
+        new(12, Generators: 1),                            // ~6 h
+        new(45, Stems: 3),                                 // day 1 evening (~10 h)
+        new(330, Stems: 4, Generators: 1),                 // day 2
+        new(1000, Stems: 5, Generators: 1, CoreLinks: 1),  // day 3
+        new(1800, Stems: 6),                               // day 4
+        new(2700, Generators: 2),                          // day 5
+        new(3700, Stems: 6),                               // day 6
+        new(4900, Generators: 2),                          // day 7: 31 stems, 8 generators, 2 core links
+        new(6250, Stems: 4),                               // day 8
+        new(7700, Generators: 1),                          // day 9
+        new(9300, Stems: 4),                               // day 10
+        new(10900, Generators: 1),                         // day 11
+        new(12600, Stems: 4),                              // day 12
+        new(14400, Generators: 1),                         // day 13
+        new(16300, Stems: 4, CoreLinks: 1),                // day 14: 47 stems, 11 generators, 3 core links
+        new(20200, Stems: 5, Generators: 1),               // day 16
+        new(24200, Stems: 5),                              // day 18
+        new(28300, Generators: 2),                         // day 20
+        new(33500, Stems: 5),                              // day 22
+        new(38500, Generators: 1),                         // day 24
+        new(43500, Stems: 5),                              // day 26
+        new(48700, Generators: 2),                         // day 28
+        new(54000, Stems: 5),                              // day 30: 72 stems, 17 generators, 3 core links
+    ];
 }
