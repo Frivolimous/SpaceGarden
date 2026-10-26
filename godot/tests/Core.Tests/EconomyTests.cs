@@ -14,7 +14,8 @@ public class EconomyTests
     }
 
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        garden.SproutFrom(parent, kind) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
+        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind))
+            ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     // core - stem - stem, which forks into two stems each carrying two labs: 12 an hour of labs and 2.5 of stems
     // against the core's 8. Every link is taken, and the caps (4 stems, no generators) leave no room to grow.
@@ -293,8 +294,9 @@ public class EconomyTests
         var garden = NewGarden();
         garden.Sprout();
         foreach (var n in garden.Nodes) n.Power = 0;
-        // Twenty minutes is a sprout's worth of time, but nothing has power to spare yet.
-        Assert.Equal(0, garden.Grow(Tuning.SproutEverySeconds));
+        // A sprout is due, but nothing has power to spare yet.
+        garden.GrowthClock = Tuning.SproutEverySeconds;
+        Assert.Equal(0, garden.Grow(20 * 60));
         Assert.Equal(2, garden.Nodes.Count);
         Assert.True(garden.Grow(4 * 3600) > 0);
         Assert.True(garden.Nodes.Count > 2);
