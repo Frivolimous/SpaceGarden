@@ -293,10 +293,29 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 | Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2). Active (default) is full opacity with the toolbar, menu and readout; Ambient fades the window to 55% and lets every click through; Minimised minimises the window and pauses the garden like a locked screen (caught up on return). Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) and restores a minimised garden, as do its taskbar button and the tray icon |
 | Remembers size and position | Must | Plant scale saved; the overlay covers the work area and Minimised is a plain minimise, so there is no window position to keep. The display mode isn't saved: every launch starts in Active |
 | Tray icon: show/hide, quit | Should | Done (step 2). Click to show or hide (Minimised); right-click for the menu (modes, Quit) |
-| Readout: power, genes, next unlock | Must | Done (step 2). A few tinted lines under the plant in Active mode, fading in over 1 s while the pointer rests on a part and out over 1 s after it leaves; an Undo pill shows while the last prune can be undone |
+| Readout: the garden's stats | Must | Done (step 2, expanded in 3b). Tinted lines under the plant (over it if there's no room below) in Active mode, fading in over 1 s while the pointer rests on a part and out over 1 s after it leaves; an Undo pill shows above them while the last prune can be undone. See Information display |
+| Selected part panel | Must | Done (step 3b). A small card above the readout's lines for the part last tapped. See Information display |
 | Launch on startup (opt-in) | Should | — |
 | Pinned to the desktop layer instead of on top (user choice) | Could | — |
 | Notifications for rare events (opt-in, very sparing) | Could | — |
+
+### Information display
+
+Step 3b. The plant is stupid and the player is the brain, so the player needs the numbers a decision turns on, at a glance and without a menu. Both panels follow the readout's rules: Active mode only, shown while the pointer rests on the plant (or the panels themselves), fading in and out over 1 s. They are compact centred lines, each tinted by its role's hue, so they read on a desktop widget. The numbers come from the rules (`GardenStats`, `NodeSpecs.Info` in `godot/src/Core`), never worked out in the view.
+
+**The readout** (the whole garden), one line each:
+
+| Line | Shows | The decision it serves |
+| --- | --- | --- |
+| Power | Held against the total store (and %), made against used per hour, how many parts are wilting; turns red-orange and says "draining" when upkeep passes production | Prune or add a generator before the stores run dry |
+| Genes | Genes so far, and genes reaching the core per real minute | Whether the labs are placed well |
+| Next unlock | What it gives, its threshold, genes still to go, and an ETA at the current rate ("plant a lab" with none) | Whether to wait, or add or move labs |
+| Room | Stems and generators against their caps, core links used against allowed, fruit grown against fruit room | Where there's room to bud, and what to prune for it |
+| Flowers | Groves and labs, and the wild buds forming by kind (or that nothing grows wild without a grove) | What's about to take the free slots, to prune early |
+
+Gene income is expected, not measured: each lab's blob rate now times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). It's steady from the first moment, and the same odds tell the player what a lab's placement is worth.
+
+**The selected part panel.** Tapping a part selects it (as well as opening its toolbar, as before); the selection stays, ringed, after the toolbar closes, until another part is tapped, it's pruned, or a click lands off the plant. A dim card above the readout's lines shows its name (in its hue) and its power as a percentage of its store, a one-line description of what it does (one per node kind, in `NodeSpecs.Info`), and its own numbers: power made or upkeep per hour, fruit against its room, what's forming in it and how far along, and for a lab the share of its genes that reach the core and its genes per minute.
 
 ## Platform: Godot 4 (.NET)
 
@@ -316,8 +335,10 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | --- | --- | --- |
 | 1 | Foundation (done) | Godot widget, transparency, force-directed physics, node and fruit rendering, stress test, time model (wall-clock sim, catch-up, low-power idle) |
 | 2 | Living garden | Power economy, upkeep, wilting; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, growth blobs, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
-| 3 | Shaping → MVP | Gravity Pot, Trellis, Gravity Well; a short round of visual polish, including the prune effect. End of step = MVP |
-| 4 | Information and tracking | Information display, stat tracking, Almanac. Supports tuning |
+| 3a | Shaping | Gravity Pot, Trellis, Gravity Well |
+| 3b | Information display | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget |
+| 3c | Visual polish → MVP | A short round of visual polish, including the prune effect. End of step = MVP |
+| 4 | Information and tracking | Stat tracking over time, Almanac, any information display 3b left out. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
 | 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows wild without one). Revisit idle CPU against the benchmarks before release. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
@@ -352,7 +373,8 @@ Settled since the first draft: platform (Godot); "is there any care need?" (no; 
 
 Design layers still to work through:
 
-- [ ] Information display, stat tracking and Almanac, including what form the Almanac takes (step 4)
+- [x] Information display: the readout and the selected part panel (step 3b)
+- [ ] Stat tracking and Almanac, including what form the Almanac takes (step 4)
 - [ ] Specialist effects: Resistor, Amplifier, Buffer (step 5)
 - [ ] Long-term pacing beyond week one
 - [ ] Choice-based core levels and seedling slot timing (step 5)

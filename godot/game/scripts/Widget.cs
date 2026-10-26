@@ -11,7 +11,9 @@ namespace SpaceGarden;
 // pixels from the window's top-left corner, so a part's place in the garden is its place on the desktop. The
 // screen's edges are the garden's borders.
 //
-// Resting the pointer on a part rings it; tapping it (a click without a drag) opens its toolbar. Dragging a part
+// Resting the pointer on a part rings it; tapping it (a click without a drag) selects it and opens its toolbar. The
+// selection stays (ringed, and shown in the readout's panel) after the toolbar closes, until another part is tapped,
+// the part is pruned, or a click lands off the plant. Dragging a part
 // pulls it to the pointer by its weight and the links drag the rest after it; letting go keeps the momentum.
 // Right-click opens the menu. It drops to a low frame rate when nothing's happening.
 //
@@ -86,6 +88,10 @@ public partial class Widget : Node
 
     Vector2I dragStartMouse;
     PlantNode? pressNode;
+    PlantNode? selected;
+    // Dev aid, "-- --inspect": the readout shows as if the pointer rested on the plant, with a lab (or the core)
+    // selected, so a --screenshot run can show both.
+    readonly bool inspect = OS.GetCmdlineUserArgs().Contains("--inspect");
     bool pressed, dragging;
     double leaveTime, regionTimer, activeTime;
 
@@ -125,7 +131,11 @@ public partial class Widget : Node
         readout.UndoPressed += UndoPrune;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
         // A click anywhere off the plant lands in another window, which takes the focus: close the toolbar then.
-        window.FocusExited += toolbar.HideAway;
+        window.FocusExited += () =>
+        {
+            toolbar.HideAway();
+            if (!menu.Visible) Select(null);
+        };
 
         menu.AddSeparator("Display");
         menu.AddRadioCheckItem($"Active ({Hotkey.Name})", (int)MenuId.Active);
@@ -318,12 +328,14 @@ public partial class Widget : Node
             return;
         }
 
+        if (selected != null && !Garden.Nodes.Contains(selected)) Select(null); // pruned, or a new garden
+        if (inspect && selected == null) Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core);
         var pointer = PointerInViewport();
         bool overToolbar = toolbar.Visible && toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool overReadout = readout.Catches(pointer / Dpi);
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);
         var under = inWindow && !overToolbar && !overReadout ? Garden.NodeAt(ToSim(ToWorld(pointer)), HoverSlop) : null;
-        bool resting = under != null || pressed || overToolbar || readout.Over(pointer / Dpi);
+        bool resting = inspect || under != null || pressed || overToolbar || readout.Over(pointer / Dpi);
         float textWanted = resting ? 1 : 0;
         bool textFading = readout.TextAlpha != textWanted;
         readout.TextAlpha = Mathf.MoveToward(readout.TextAlpha, textWanted, (float)delta / ReadoutFadeSeconds);
@@ -344,7 +356,7 @@ public partial class Widget : Node
                 toolbar.Refresh();
             }
         }
-        main.View.Highlight = dragging || pressed ? pressNode : under ?? toolbar.Target;
+        main.View.Highlight = dragging || pressed ? pressNode : under ?? toolbar.Target ?? selected;
 
         bool catchMouse = pressed || overToolbar || overReadout || under != null;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
@@ -367,7 +379,7 @@ public partial class Widget : Node
     void PlaceReadout(double delta)
     {
         readout.Visible = true;
-        readout.Update(Garden, delta);
+        readout.Update(Garden, selected, main.GrowthSpeed, delta);
         var (min, max) = Garden.Bounds();
         var screen = GetViewport().GetVisibleRect().Size / Dpi;
         var size = readout.GetCombinedMinimumSize();
@@ -440,7 +452,11 @@ public partial class Widget : Node
             if (button.Pressed)
             {
                 pressNode = Garden.NodeAt(ToSim(ToWorld(button.Position)), HoverSlop);
-                if (pressNode == null) return;
+                if (pressNode == null)
+                {
+                    Select(null); // a click off the plant (where clicks fall through, losing the focus does this)
+                    return;
+                }
                 pressed = true;
                 dragging = false;
                 dragStartMouse = DisplayServer.MouseGetPosition();
@@ -463,17 +479,25 @@ public partial class Widget : Node
         }
     }
 
-    // A tap (a press without a drag) opens the part's toolbar, or closes it if it was already open.
+    // A tap (a press without a drag) selects the part and opens its toolbar, or closes it if it was already open.
     void Release()
     {
         if (!dragging && pressNode != null && Garden.Nodes.Contains(pressNode))
         {
+            Select(pressNode);
             if (toolbar.Target == pressNode) toolbar.HideAway();
             else toolbar.ShowFor(pressNode);
         }
         if (Garden.Held != null) Garden.LetGo();
         pressed = dragging = false;
         pressNode = null;
+    }
+
+    void Select(PlantNode? node)
+    {
+        if (node == selected) return;
+        selected = node;
+        readout.RefreshNow();
     }
 
     // Picking a tool does its job and closes the toolbar.

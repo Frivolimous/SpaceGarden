@@ -31,4 +31,20 @@ public static class NodeSpecs
         [NodeKind.Research] = new(NodeKind.Research, 5, 0.5f, 0.2f, 0, Shape.Pentagon, 0x9370E0),
         [NodeKind.Berry] = new(NodeKind.Berry, 5, 0.5f, 0.2f, 0, Shape.Circle, 0xF0A040),
     };
+
+    // What each kind is called and what it does, in one line, for the selected part's panel (DESIGN.md, Desktop
+    // widget). Every kind has one (NodeInfoTests checks).
+    public static readonly IReadOnlyDictionary<NodeKind, (string Name, string Description)> Info =
+        new Dictionary<NodeKind, (string, string)>
+        {
+            [NodeKind.Core] = ("Core", "The heart: makes the most power, takes in genes, never wilts."),
+            [NodeKind.Stem] = ("Stem", "Structure: carries power and blobs. Cheap upkeep, less with leaves."),
+            [NodeKind.Generator] = ("Generator", "Makes power for its branch, at half the core's rate."),
+            [NodeKind.Lab] = ("Lab", "Sends gene blobs; only those that find the core count. Costly upkeep."),
+            [NodeKind.Grove] = ("Grove", "Sends growth blobs that grow fruit and new wild parts."),
+            [NodeKind.Leaf] = ("Leaf", "Halves its stem's upkeep."),
+            [NodeKind.Burr] = ("Burr", "Raises its generator's output a little."),
+            [NodeKind.Research] = ("Research", "Raises its lab's gene output a little."),
+            [NodeKind.Berry] = ("Berry", "Raises its grove's growth output a little."),
+        };
 }

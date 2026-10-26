@@ -572,6 +572,14 @@ public sealed class Garden
         return mote;
     }
 
+    // One gene blob's walk from this lab, with nothing shown or delivered: whether it found the core (tests check
+    // GardenStats.GeneReach against it).
+    internal bool WalkGene(PlantNode lab)
+    {
+        var counts = CountKinds();
+        return Walk(lab, genes: true, ref counts, null) != null;
+    }
+
     // A lab's gene blob leaves. Only the core absorbs it; its genes count at the core in this same step, so a
     // catch-up (which runs no physics) and a live session agree, and the blob shown is their journey made visible.
     // A blob that never finds the core fades, its genes lost: labs near the core waste fewer.
