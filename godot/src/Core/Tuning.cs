@@ -48,6 +48,9 @@ public static class Tuning
     public const float LinkFlashFadePerSecond = 3.3f;
     public const float FlashesPerPowerHour = 0.125f;
     public const float MaxFlashesPerSecond = 3;
+    // Placeholder. A flash's brightness is this times the fill of the part the power reached (1: a full part's flash
+    // is as bright as the original's).
+    public const float FlashPeak = 0.6f;
 
     // A part's brightness and size follow its fill, as in the original (PlantNodeView): the shown fill moves a share
     // of the way to the real one each tick (INTENSITY_V_INC / _DEC), and never shows below FillLookFloor.

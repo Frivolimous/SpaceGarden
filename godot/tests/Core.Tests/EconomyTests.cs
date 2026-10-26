@@ -124,8 +124,17 @@ public class EconomyTests
             int count = 0;
             for (int tick = 0; tick < 10 * Tuning.TicksPerSecond; tick++)
             {
+                var before = garden.Links.Select(l => l.Flash).ToList();
                 garden.Step();
-                count += garden.Links.Count(l => l.Flash == 1);
+                for (int i = 0; i < garden.Links.Count; i++)
+                {
+                    var link = garden.Links[i];
+                    if (link.Flash <= before[i]) continue;
+                    count++;
+                    // As bright as the part it reached is full.
+                    var reached = link.FlowsToTarget ? link.Target : link.Origin;
+                    Assert.Equal(Tuning.FlashPeak * reached.Fill, link.Flash, Tolerance);
+                }
             }
             return count;
         }
