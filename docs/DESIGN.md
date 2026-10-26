@@ -1,6 +1,6 @@
 # Space Garden — Revival Design
 
-*Status: draft, October 2026. Engine-agnostic: applies whether we stay on TS/Pixi or move to Godot.*
+*Status: draft, October 2026. Built in Godot 4 (.NET); see §7.*
 
 ## 1. Vision
 
@@ -109,21 +109,21 @@ Rates should be expressed **per real second/hour** in data, not per tick.
 
 The plant must look good **without any UI chrome**. Sidebar, bottom bar and panels appear only in the tending view.
 
-## 7. Platform decision (open)
+## 7. Platform: Godot 4 (.NET)
 
-Options under discussion:
-- **Stay web (TS + Pixi)**, wrapped as a desktop app with Tauri or Electron.
-- **Port to Godot 4.**
+**Decided (October 2026): Godot 4.7 with C#**, laid out like the other Godot projects: the rules in plain C# (`godot/src/Core`, no Godot), the presentation in the Godot project (`godot/game/`). The prototype in [godot/](../godot/README.md) is the starting point: the TS game's force-directed plant as a transparent, click-through, always-on-top overlay over the screen's work area.
 
-To be decided before Phase 2 work goes deep. The trade-offs are written up separately. Everything in §3–§6 is engine-independent.
+Why, over the alternatives:
+- **Web (TS + Pixi in Tauri or Electron):** heavier for an always-running widget, and transparency and click-through go through the wrapper. Godot gives native transparent, borderless windows; click-through is a few Win32 calls (`ClickThrough.cs`).
+- **A lighter shell (a custom .NET app on raylib)**, measured in [spike-lite/](../spike-lite/README.md): the same idle CPU as Godot (about 4% of a core empty and 6% at 800 parts, at 30 fps), since most of the idle cost is waking to redraw and present a full-screen transparent window, which any engine pays. Its only gain was memory (about 130 MB against 250 MB), not worth rebuilding Godot's UI, input, text, audio and export pipeline.
 
-A Godot 4.7 .NET feel prototype is in [godot/](../godot/README.md): the TS game's force-directed plant as a transparent, click-through overlay on the desktop.
+Because the rules don't depend on Godot, the presentation layer can still be swapped later if that ever changes.
 
 ## 8. Roadmap
 
 **Phase 0: Preserve.** Tag `tactical-idle`. Note what's currently broken.
 
-**Phase 1: Foundations.** Platform decision. Wall-clock fixed-step sim, `lastSeen` + capped catch-up, low-power idle rendering. Remove the prestige reset; implement in-place blooming.
+**Phase 1: Foundations.** Platform decision (done: Godot, §7). Wall-clock fixed-step sim, `lastSeen` + capped catch-up, low-power idle rendering. Remove the prestige reset; implement in-place blooming.
 
 **Phase 2: Calm.** Reframe spells as tools, creatures' life cycle, Almanac, gentle tutorial. Pacing rebalance to §5 targets.
 
@@ -132,9 +132,8 @@ A Godot 4.7 .NET feel prototype is in [godot/](../godot/README.md): the TS game'
 **Phase 4: Charm.** Day/night tied to local time, seasons over weeks, rare events (visiting comets, creature migrations, special blooms), seed-stars in the sky, visual polish pass.
 
 ## 9. Open questions
-- Platform: web + wrapper, or Godot? (§7)
 - Catch-up cap: 24h, 72h, a week?
 - One plant per garden, or can seeds be planted as additional plants over time?
 - Is there any "care" need (e.g. watering), or is the garden fully self-sustaining with care only as a boost?
 - Save migration: carry the old v29 saves forward, or start fresh?
-- Monetisation / distribution target (itch.io, Steam, free/open)? This affects the platform choice.
+- Monetisation / distribution target (itch.io, Steam, free/open)?
