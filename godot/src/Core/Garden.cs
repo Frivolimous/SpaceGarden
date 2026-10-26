@@ -12,8 +12,9 @@ public enum Layout
 // The whole garden: its parts, the force-directed physics that holds them together (ported from the TS game's
 // FDGContainer), the motes of light flowing through them, and growth over real time.
 //
-// Two clocks: Step() is one 60 Hz physics tick and only moves things; Grow() takes real seconds and only adds
-// parts. Speeding growth up (or catching up time away) never changes how the plant moves.
+// Two clocks: Step() is one 60 Hz physics tick and only moves things; Grow() takes real seconds and runs the
+// economy (power, upkeep, wilting) and growth on them. Speeding growth up (or catching up time away) never changes
+// how the plant moves.
 public sealed class Garden
 {
     public readonly List<PlantNode> Nodes = new();
@@ -24,9 +25,26 @@ public sealed class Garden
     // Only an upright plant's core is planted; a radial one floats like any other part.
     public bool Planted => Layout == Layout.Upright;
 
-    // Seconds of motion (drives the wind), and real seconds of growth not yet spent on a sprout.
+    // Seconds of motion (drives the wind); real seconds of growth not yet spent on a sprout; and real seconds not
+    // yet run through the economy (less than one EconomyStepSeconds).
     public double Time;
     public double GrowthClock;
+    public double EconomyClock;
+
+    // The limits on growth (see Capacity). Raising CoreLinks gives the core room for another branch.
+    public Capacity Capacity
+    {
+        get => capacity;
+        set
+        {
+            capacity = value;
+            if (Nodes.Count > 0) Core.MaxLinks = value.CoreLinks;
+        }
+    }
+    Capacity capacity = Capacity.Start;
+
+    // Off, the economy still runs but nothing sprouts by itself (tests, and later a "hold growth" choice).
+    public bool WildGrowth = true;
 
     // The part the player is holding (see Grab), and where the pointer is pulling it.
     public PlantNode? Held { get; private set; }
@@ -63,25 +81,22 @@ public sealed class Garden
         var core = garden.Add(NodeSpecs.All[NodeKind.Core], null, Vector2.Zero);
         core.Fixed = garden.Planted;
         core.Age = 10;
+        core.Power = core.Store;
         return garden;
     }
 
     // ==== GROWTH ==== \\
 
-    // Spends real seconds on growth; returns how many parts sprouted.
+    // Spends real seconds on the economy and growth, in fixed steps; returns how many parts sprouted. However the
+    // time is chunked (a frame at a time, or three days at once on return), the same steps run.
     public int Grow(double seconds)
     {
-        GrowthClock += seconds;
+        EconomyClock += seconds;
         int sprouted = 0;
-        while (GrowthClock >= Tuning.SproutEverySeconds)
+        while (EconomyClock >= Tuning.EconomyStepSeconds)
         {
-            GrowthClock -= Tuning.SproutEverySeconds;
-            if (Sprout() == null)
-            {
-                GrowthClock = 0; // full: don't bank growth for later
-                break;
-            }
-            sprouted++;
+            EconomyClock -= Tuning.EconomyStepSeconds;
+            sprouted += EconomyStep(Tuning.EconomyStepSeconds);
         }
         return sprouted;
     }
@@ -90,6 +105,7 @@ public sealed class Garden
     public int CatchUp(double secondsAway)
     {
         int sprouted = Grow(Math.Clamp(secondsAway, 0, Tuning.CatchUpCapSeconds));
+        foreach (var node in Nodes) node.WiltLook = WiltTarget(node);
         if (sprouted > 0)
         {
             for (int i = 0; i < Tuning.SettleTicks; i++) Step();
@@ -98,29 +114,53 @@ public sealed class Garden
         return sprouted;
     }
 
-    // One new part somewhere on the plant, or null if it's full.
-    public PlantNode? Sprout()
-    {
-        if (Nodes.Count >= Tuning.MaxNodes) return null;
-        var branchable = Nodes.Where(n => n.CanBranch).ToList();
-        var fruitable = Nodes.Where(n => n.CanFruit).ToList();
-        bool fruit = branchable.Count == 0 || (fruitable.Count > 0 && rng.NextDouble() < Tuning.FruitChance);
-        if (fruit)
-        {
-            if (fruitable.Count == 0) return null;
-            return AddFruit(Pick(fruitable));
-        }
-        return AddBranch(Pick(branchable));
-    }
+    // A new part somewhere on the plant, for free (the first stem, stress tests), or null if there's no room.
+    public PlantNode? Sprout() => Sprout(wild: false);
 
-    // A sprout the player asked for by clicking a part: a branch if it has room, else a fruit.
+    // A sprout the player asked for by clicking a part: a branch if it has room, else a fruit. Manual buds cost no
+    // power (DESIGN.md: "Manual buds cost nothing") but keep within capacity.
     public PlantNode? SproutFrom(PlantNode node)
     {
-        if (Nodes.Count >= Tuning.MaxNodes) return null;
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
-        if (node.CanBranch) return AddBranch(node);
+        if (Nodes.Count >= Tuning.MaxNodes) return null;
+        var counts = CountKinds();
+        if (BranchKinds(node, counts).Count > 0) return AddBranch(node, counts);
         if (node.CanFruit) return AddFruit(node);
         return null;
+    }
+
+    // A sprout of a chosen kind (a branch, or that part's own fruit), if there's room for it; free, like any bud.
+    public PlantNode? SproutFrom(PlantNode node, NodeKind kind)
+    {
+        if (Nodes.Count >= Tuning.MaxNodes) return null;
+        var spec = NodeSpecs.All[kind];
+        if (spec.IsFruit) return node.Spec.Fruit == kind && node.CanFruit ? AddFruit(node) : null;
+        if (kind == NodeKind.Core || !node.CanBranch || !HasRoomFor(kind, CountKinds())) return null;
+        var sprout = AddNear(spec, node);
+        sprout.Power = Tuning.SproutCost;
+        return sprout;
+    }
+
+    public bool CanSproutFrom(PlantNode node)
+    {
+        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
+        return Nodes.Count < Tuning.MaxNodes && (node.CanFruit || BranchKinds(node, CountKinds()).Count > 0);
+    }
+
+    // Wild growth sprouts only from parts with power to spare, and the parent pays for it; a free sprout can grow
+    // anywhere with room.
+    PlantNode? Sprout(bool wild)
+    {
+        if (Nodes.Count >= Tuning.MaxNodes) return null;
+        var counts = CountKinds();
+        bool Spare(PlantNode n, float cost) => !wild || (!n.Wilting && n.Fill >= Tuning.GrowFill && n.Power >= cost);
+        var branchable = Nodes.Where(n => BranchKinds(n, counts).Count > 0 && Spare(n, Tuning.SproutCost)).ToList();
+        var fruitable = Nodes.Where(n => n.CanFruit && Spare(n, Tuning.FruitSproutCost)).ToList();
+        bool fruit = branchable.Count == 0 || (fruitable.Count > 0 && rng.NextDouble() < Tuning.FruitChance);
+        if (fruit && fruitable.Count == 0) return null;
+        var parent = Pick(fruit ? fruitable : branchable);
+        if (wild) parent.Power -= fruit ? Tuning.FruitSproutCost : Tuning.SproutCost;
+        return fruit ? AddFruit(parent) : AddBranch(parent, counts);
     }
 
     // Deeper parts are likelier, so the plant reaches outward instead of thickening at the base.
@@ -199,15 +239,56 @@ public sealed class Garden
         HoldTarget += offset;
     }
 
-    PlantNode AddBranch(PlantNode parent)
+    // How many stems and generators there are, for the caps.
+    (int Stems, int Generators) CountKinds()
     {
-        var kind = NodeKind.Stem;
-        if (parent.Depth >= 2)
+        int stems = 0, generators = 0;
+        foreach (var n in Nodes)
         {
-            double roll = rng.NextDouble();
-            kind = roll < 0.74 ? NodeKind.Stem : roll < 0.88 ? NodeKind.Generator : NodeKind.Lab;
+            if (n.Spec.Kind == NodeKind.Stem) stems++;
+            else if (n.Spec.Kind == NodeKind.Generator) generators++;
         }
-        return AddNear(NodeSpecs.All[kind], parent);
+        return (stems, generators);
+    }
+
+    // Stems and generators are capped; labs only by free links and power.
+    bool HasRoomFor(NodeKind kind, (int Stems, int Generators) counts) => kind switch
+    {
+        NodeKind.Stem => counts.Stems < Capacity.Stems,
+        NodeKind.Generator => counts.Generators < Capacity.Generators,
+        _ => true,
+    };
+
+    // The kinds of branch this part could grow now, with their odds: near the core only stems, further out also
+    // generators and labs.
+    List<(NodeKind Kind, double Weight)> BranchKinds(PlantNode parent, (int Stems, int Generators) counts)
+    {
+        var kinds = new List<(NodeKind, double)>();
+        if (!parent.CanBranch) return kinds;
+        var odds = parent.Depth < 2 ? NearOdds : FarOdds;
+        foreach (var (kind, weight) in odds)
+            if (HasRoomFor(kind, counts)) kinds.Add((kind, weight));
+        return kinds;
+    }
+
+    static readonly (NodeKind, double)[] NearOdds = [(NodeKind.Stem, 1)];
+    static readonly (NodeKind, double)[] FarOdds = [(NodeKind.Stem, 0.74), (NodeKind.Generator, 0.14), (NodeKind.Lab, 0.12)];
+
+    PlantNode AddBranch(PlantNode parent, (int Stems, int Generators) counts)
+    {
+        var kinds = BranchKinds(parent, counts);
+        double roll = rng.NextDouble() * kinds.Sum(k => k.Weight);
+        var kind = kinds[^1].Kind;
+        foreach (var (k, weight) in kinds)
+        {
+            roll -= weight;
+            if (roll >= 0) continue;
+            kind = k;
+            break;
+        }
+        var node = AddNear(NodeSpecs.All[kind], parent);
+        node.Power = Tuning.SproutCost; // what it was grown with (paid by the parent for wild growth)
+        return node;
     }
 
     PlantNode AddFruit(PlantNode parent) => AddNear(NodeSpecs.All[parent.Spec.Fruit!.Value], parent);
@@ -234,6 +315,7 @@ public sealed class Garden
             Rotation = (float)(rng.NextDouble() * Math.Tau - Math.PI),
             Spin = Tuning.SpinSpeed * (rng.Next(2) == 0 ? 1 : -1),
         };
+        if (parent == null) node.MaxLinks = Capacity.CoreLinks;
         Nodes.Add(node);
         if (parent != null)
         {
@@ -250,6 +332,94 @@ public sealed class Garden
         double a = rng.NextDouble() * Math.Tau;
         return new Vector2((float)Math.Cos(a), (float)Math.Sin(a));
     }
+
+    // ==== ECONOMY ==== \\
+
+    // One fixed step of the economy (DESIGN.md, Economy), then growth:
+    //   - the core and generators make power into their own store (anything past full is lost);
+    //   - every other part pays its upkeep from its own store. One that can't wilts and stops draining, and recovers
+    //     once the power flowing in has filled it back to RecoverFill. Wilting never removes anything;
+    //   - power flows along each link downhill, from the fuller part to the emptier, so it spreads out from the
+    //     sources and a branch far from them runs low first (there is no global pool);
+    //   - every SproutEverySeconds a wild sprout grows where there's power to spare; if there's none, growth waits.
+    // Returns how many parts sprouted.
+    int EconomyStep(double seconds)
+    {
+        float hours = (float)(seconds / 3600);
+        foreach (var node in Nodes)
+        {
+            if (node.Spec.IsFruit) continue;
+            node.Power = Math.Min(node.Store, node.Power + ProductionPerHour(node) * hours);
+            if (node.Wilting && node.Fill >= Tuning.RecoverFill) node.Wilting = false;
+            if (node.Wilting) continue;
+            float upkeep = UpkeepPerHour(node) * hours;
+            if (node.Power >= upkeep) node.Power -= upkeep;
+            else
+            {
+                node.Power = 0;
+                node.Wilting = true;
+            }
+        }
+
+        float flow = Tuning.PowerFlowPerHour * hours;
+        foreach (var link in Links)
+        {
+            if (link.Target.Spec.IsFruit) continue;
+            var (a, b) = link.Origin.Fill >= link.Target.Fill ? (link.Origin, link.Target) : (link.Target, link.Origin);
+            float diff = a.Fill - b.Fill;
+            if (diff <= 0) continue;
+            // Never more than evens out their fill, so a long step can't overshoot.
+            float amount = Math.Min(flow * diff, diff / (1 / a.Store + 1 / b.Store));
+            a.Power -= amount;
+            b.Power += amount;
+        }
+
+        if (!WildGrowth) return 0;
+        GrowthClock += seconds;
+        if (GrowthClock < Tuning.SproutEverySeconds) return 0;
+        if (Sprout(wild: true) == null)
+        {
+            GrowthClock = Tuning.SproutEverySeconds; // no power to spare, or no room: try again next step
+            return 0;
+        }
+        GrowthClock -= Tuning.SproutEverySeconds;
+        return 1;
+    }
+
+    // Power a part makes per real hour. A generator's fruit adds a little, up to FruitBonusMax.
+    public static float ProductionPerHour(PlantNode node) => node.Spec.Kind switch
+    {
+        NodeKind.Core => Tuning.CorePowerPerHour,
+        NodeKind.Generator => Tuning.GeneratorPowerPerHour
+            * (1 + Math.Min(Tuning.FruitBonusMax, node.Fruits.Count * Tuning.FruitBonusEach)),
+        _ => 0,
+    };
+
+    // Power a part costs per real hour while it isn't wilting. Each leaf halves a stem's.
+    public static float UpkeepPerHour(PlantNode node) => node.Spec.Kind switch
+    {
+        NodeKind.Stem => Tuning.StemUpkeepPerHour
+            * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf)),
+        NodeKind.Lab => Tuning.LabUpkeepPerHour,
+        _ => 0,
+    };
+
+    // The whole garden's power per hour: what it makes, and what its parts that aren't wilting cost.
+    public (float Production, float Upkeep) PowerBalance()
+    {
+        float production = 0, upkeep = 0;
+        foreach (var node in Nodes)
+        {
+            production += ProductionPerHour(node);
+            if (!node.Wilting) upkeep += UpkeepPerHour(node);
+        }
+        return (production, upkeep);
+    }
+
+    public float TotalPower() => Nodes.Sum(n => n.Power);
+
+    // Fruit looks as its parent does.
+    static float WiltTarget(PlantNode node) => (node.Spec.IsFruit ? node.Parent!.Wilting : node.Wilting) ? 1 : 0;
 
     // ==== PHYSICS ==== \\
 
@@ -515,6 +685,8 @@ public sealed class Garden
         {
             node.Age += dt;
             node.Glow = Math.Max(0, node.Glow - Tuning.GlowFadePerSecond * dt);
+            float ease = Tuning.WiltLookPerSecond * dt;
+            node.WiltLook = Math.Clamp(WiltTarget(node), node.WiltLook - ease, node.WiltLook + ease);
             float every = node.Spec.Kind switch
             {
                 NodeKind.Core => Tuning.CoreMoteEvery,
@@ -598,13 +770,19 @@ public sealed class Garden
     // ==== SAVES ==== \\
 
     public GardenSave ToSave() => new(
-        Layout, GrowthClock,
-        Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y, n.Parent != null && n.Fixed)).ToList());
+        Layout, GrowthClock, EconomyClock, Capacity,
+        Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
+            n.Parent != null && n.Fixed, n.Power, n.Wilting)).ToList());
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
     {
-        var garden = new Garden(save.Layout, seed) { GrowthClock = save.GrowthClock };
+        var garden = new Garden(save.Layout, seed)
+        {
+            GrowthClock = save.GrowthClock,
+            EconomyClock = save.EconomyClock,
+            Capacity = save.Capacity,
+        };
         var byId = new Dictionary<int, PlantNode>();
         foreach (var n in save.Nodes)
         {
@@ -612,12 +790,23 @@ public sealed class Garden
             var node = garden.Add(NodeSpecs.All[n.Kind], parent, new Vector2(n.X, n.Y));
             node.Age = 10;
             node.Fixed = (parent == null && garden.Planted) || n.Pinned;
+            node.Power = n.Power;
+            node.Wilting = n.Wilting;
             byId[n.Id] = node;
         }
+        foreach (var node in garden.Nodes) node.WiltLook = WiltTarget(node);
         return garden;
     }
 }
 
-public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, bool Pinned = false);
+// The limits on growth (DESIGN.md, Capacity): how many stems and generators the garden may have, and how many links
+// the core has. Labs and other flowers are uncapped; free links and power limit them. The unlock track raises these.
+public sealed record Capacity(int Stems, int Generators, int CoreLinks)
+{
+    public static readonly Capacity Start = new(Tuning.StartStemCap, Tuning.StartGeneratorCap, Tuning.StartCoreLinks);
+    public static readonly Capacity Unlimited = new(int.MaxValue, int.MaxValue, 2); // stress tests (--parts)
+}
 
-public sealed record GardenSave(Layout Layout, double GrowthClock, List<NodeSave> Nodes);
+public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, bool Pinned, float Power, bool Wilting);
+
+public sealed record GardenSave(Layout Layout, double GrowthClock, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes);

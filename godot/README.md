@@ -3,10 +3,11 @@
 A feel test for the revival (see the Platform section of [../docs/DESIGN.md](../docs/DESIGN.md#platform-godot-4-net)): the TS game's force-directed plant,
 ported to Godot 4.7.2 .NET as a transparent, always-on-top overlay that covers the screen's work area (all but the
 taskbar), so the plant seems to live on the desktop itself. Same layout as Eternal Dungeon and Typing Ship:
-`src/Core` is plain C# (physics, growth, motes, saves; no Godot), `game/` is the Godot project (drawing, input,
+`src/Core` is plain C# (physics, growth, the power economy, motes, saves; no Godot), `game/` is the Godot project (drawing, input,
 the overlay window).
 
-Run `sg.bat` (builds, then launches; option 5 opens the editor).
+Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` runs the core's headless tests
+(`tests/Core.Tests`, xUnit).
 
 ## Using it
 - **Rest the pointer** on a part to ring it. **Tap** it (click without dragging) for its toolbar: grow, pin in
@@ -44,6 +45,12 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor).
   heavy to drag and a leaf quick.
 - **New:** wind that sways the parts more the further they are from the core, growth on real time (a new part every 20 minutes at 1x), catch-up on return,
   halos, grow-in animation, a 30 fps idle frame rate.
+- **Economy (step 2, first slice):** the core and generators make power, stems and labs cost upkeep (leaves halve a
+  stem's), and power flows along the stems from fuller parts to emptier ones, so far tips run low first. A part that
+  can't pay wilts (drawn dimmed, smaller and greyer), stops draining, and recovers by itself; nothing is destroyed.
+  Wild growth needs power to spare and stays within the caps (4 stems, 1 generator, 1 core link at the start).
+  Catch-up runs the same fixed 10 s economy steps. Saves carry a version; an older one is set aside
+  (`garden.v1.json`) and a new garden starts.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Dev options
@@ -52,7 +59,8 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 `--profile=NAME` (use `user://NAME.json` instead of the real save), `--backdrop=RRGGBB`, `--pausetest=AT,FOR`
 (act as if hidden for FOR seconds from AT seconds after start, to test the pause),
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits),
-`--parts=N` (grow a new garden to N parts at once, past the usual 500 limit, for stress tests), `--fpslog` (prints
+`--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
+`--wilt` (start with every part drained and wilting, to watch power flow back), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 
 ## Performance
@@ -88,5 +96,5 @@ Tried on the way: fruit only meeting its own family (no borrowed push) was as ch
 overlaps); adding a push from nearby stems to that was tidy but slower than the grid (0.24 ms).
 
 ## Not in the prototype
-No crawlers, skills, seedling, UI panels, sound or tests; no tray icon or launch-on-startup; it still shows in the
+No crawlers, skills, seedling, UI panels or sound; no tray icon or launch-on-startup; it still shows in the
 taskbar.

@@ -30,6 +30,16 @@ public sealed class PlantNode
     public float Age;
     public float Glow;
 
+    // The economy (see Garden.EconomyStep). Power held, up to Store; a part that couldn't pay its upkeep is Wilting
+    // until it fills back up. Fruit holds no power and wilts with its parent. WiltLook eases 0-1 towards Wilting, for
+    // drawing.
+    public float Power;
+    public bool Wilting;
+    public float WiltLook;
+
+    // Links allowed, counting the parent's. The spec's, except the core's, which is the garden's Capacity.CoreLinks.
+    public int MaxLinks;
+
     public PlantNode(int id, NodeSpec spec, PlantNode? parent, Vector2 position)
     {
         Id = id;
@@ -37,10 +47,14 @@ public sealed class PlantNode
         Parent = parent;
         Depth = parent == null ? 0 : parent.Depth + 1;
         Position = PreviousPosition = position;
+        MaxLinks = spec.MaxLinks;
     }
 
+    public float Store => Spec.IsFruit ? 0 : Parent == null ? Tuning.CorePowerStore : Tuning.NodePowerStore;
+    public float Fill => Spec.IsFruit ? 0 : Power / Store;
+
     public int Links => Branches.Count + (Parent == null ? 0 : 1);
-    public bool CanBranch => Links < Spec.MaxLinks;
+    public bool CanBranch => Links < MaxLinks;
     public bool CanFruit => Spec.Fruit != null && Fruits.Count < Spec.MaxFruits;
 
     public IEnumerable<PlantNode> Neighbours()

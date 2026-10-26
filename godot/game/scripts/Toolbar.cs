@@ -10,6 +10,8 @@ public partial class Toolbar : PanelContainer
 {
     public event Action<Tool>? Used;
     public PlantNode? Target { get; private set; }
+    // Whether a part has room to grow (its links, and the garden's capacity).
+    public Func<PlantNode, bool> CanGrow = _ => true;
 
     readonly Dictionary<Tool, ToolButton> buttons = new();
     Tween? fade;
@@ -58,7 +60,7 @@ public partial class Toolbar : PanelContainer
     {
         if (Target == null) return;
         bool isCore = Target.Parent == null;
-        buttons[Tool.Grow].Enabled = Target.CanBranch || Target.CanFruit;
+        buttons[Tool.Grow].Enabled = CanGrow(Target);
         buttons[Tool.Pin].Enabled = !isCore;
         buttons[Tool.Pin].Active = !isCore && Target.Fixed;
         buttons[Tool.Prune].Enabled = !isCore;

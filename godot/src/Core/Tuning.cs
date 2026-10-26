@@ -54,4 +54,44 @@ public static class Tuning
     // Time away is caught up to at most this much real time.
     public const double CatchUpCapSeconds = 72 * 3600;
     public const int SettleTicks = 900;
+
+    // ==== ECONOMY ==== \\
+    // Power rates are per real hour (DESIGN.md, Economy: draft values, to be tuned through play). The economy runs
+    // in fixed steps of EconomyStepSeconds of growth time, so a live session, a catch-up and a test all take the same
+    // steps whatever chunks the time arrives in.
+    public const double EconomyStepSeconds = 10;
+
+    public const float CorePowerPerHour = 8;
+    public const float GeneratorPowerPerHour = 4;  // half the core's
+    public const float StemUpkeepPerHour = 0.5f;   // halved by each leaf: 0.25 with one, 0.125 with two
+    public const float LeafUpkeepFactor = 0.5f;
+    public const float GroveUpkeepPerHour = 1.5f;  // no groves yet; kept so labs stay at twice a grove
+    public const float LabUpkeepPerHour = 2 * GroveUpkeepPerHour;
+
+    // Placeholder: each generator fruit (burr) adds this much output, up to the doc's +20% per flower.
+    public const float FruitBonusEach = 0.2f / 3;
+    public const float FruitBonusMax = 0.2f;
+
+    // Placeholders. How much power a part holds, and how freely it flows: along a link, power runs downhill from the
+    // fuller part to the emptier (by fill, as in the original game), PowerFlowPerHour per hour at a full-to-empty
+    // difference. A long branch carrying a lot needs a steep slope, so far tips run low first: power is local.
+    public const float NodePowerStore = 1;
+    public const float CorePowerStore = 4;
+    public const float PowerFlowPerHour = 40;
+
+    // Placeholders. Wild growth needs excess power: a part sprouts only when at least GrowFill full, and the sprout
+    // costs its parent SproutCost (FruitSproutCost for fruit, until fruit blobs grow it). Manual buds are free.
+    public const float GrowFill = 0.8f;
+    public const float SproutCost = 0.5f;
+    public const float FruitSproutCost = 0.2f;
+
+    // Placeholder. A part that can't pay its upkeep wilts: it stops draining (so the power left reaches the rest) and
+    // recovers once it has filled back up to RecoverFill. Nothing is ever destroyed.
+    public const float RecoverFill = 0.5f;
+    public const float WiltLookPerSecond = 1.5f; // how fast a part's wilted look comes and goes (presentation)
+
+    // Capacity at the start (DESIGN.md, Linear unlock track: "Start"). The unlock track raises Garden.Capacity.
+    public const int StartStemCap = 4;
+    public const int StartGeneratorCap = 1;
+    public const int StartCoreLinks = 1;
 }

@@ -15,12 +15,12 @@ public sealed record NodeSpec(
 }
 
 // Ported from the TS game's data/NodeData.ts and data/Colors.ts (radius, mass, force, links, shape, colour).
-// The core gets 2 links instead of 1 so the plant can fork at the base.
+// The core's links are the garden's Capacity.CoreLinks (1 at the start, raised by unlocks), not its spec's.
 public static class NodeSpecs
 {
     public static readonly IReadOnlyDictionary<NodeKind, NodeSpec> All = new Dictionary<NodeKind, NodeSpec>
     {
-        [NodeKind.Core] = new(NodeKind.Core, 30, 30, 30, 2, Shape.Circle, 0xE5E570),
+        [NodeKind.Core] = new(NodeKind.Core, 30, 30, 30, Tuning.StartCoreLinks, Shape.Circle, 0xE5E570),
         [NodeKind.Stem] = new(NodeKind.Stem, 10, 1, 1, 3, Shape.Circle, 0x07E000, NodeKind.Leaf, 2),
         [NodeKind.Generator] = new(NodeKind.Generator, 15, 3, 3, 1, Shape.Pentagon, 0xE5E570, NodeKind.Burr, 3),
         [NodeKind.Lab] = new(NodeKind.Lab, 15, 2, 1.5f, 1, Shape.Hexagon, 0x9370E0, NodeKind.Research, 3),

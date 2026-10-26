@@ -95,6 +95,7 @@ public partial class Widget : Node
         toolbarLayer.AddChild(toolbar);
         AddChild(toolbarLayer);
         toolbar.Used += Use;
+        toolbar.CanGrow = node => Garden.CanSproutFrom(node);
         // A click anywhere off the plant lands in another window, which takes the focus: close the toolbar then.
         window.FocusExited += toolbar.HideAway;
 
