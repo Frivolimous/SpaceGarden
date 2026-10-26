@@ -105,19 +105,27 @@ public class GroveTests
     }
 
     [Fact]
-    public void GrovesFillTheRoomThenHoldTheirBlob()
+    public void GrovesFillTheRoomAndKeepSendingBlobs()
     {
         var (garden, grove) = WithAGrove();
         garden.Grow(Day);
-        // 12 blobs' worth in a day, room for 7: every part's fruit is grown, and the grove waits with a blob ready.
+        // 12 blobs' worth in a day, room for 7: every part's fruit is grown.
         Assert.Equal(7, Fruit(garden));
         Assert.All(garden.Nodes.Where(n => !n.Spec.IsFruit && n.Spec.Fruit != null), n => Assert.False(n.CanFruit));
-        Assert.Equal(1, grove.FruitBlob, 1e-3f);
 
-        // Room appears (a leaf pruned): the waiting blob leaves at the next step.
-        var leaf = garden.Nodes.First(n => n.Spec.Kind == NodeKind.Leaf);
-        garden.Prune(leaf);
-        for (int i = 0; i < 100 && Fruit(garden) < 7; i++) garden.Grow(Tuning.EconomyStepSeconds);
+        // With no room left, blobs still leave and wander the whole walk (to be seen), growing nothing.
+        garden.Motes.Clear();
+        garden.Grow(BlobHours * Hour);
+        var blob = Assert.Single(garden.Motes);
+        Assert.Equal(grove, blob.From);
+        Assert.Equal(Tuning.FruitBlobMaxHops + 1, blob.Route!.Count);
+        Assert.DoesNotContain(blob.Route, n => n.Spec.IsFruit);
+        Assert.Equal(7, Fruit(garden));
+        Assert.InRange(grove.FruitBlob, 0, 1); // not piling up
+
+        // Room appears again (a leaf pruned): blobs fill it.
+        garden.Prune(garden.Nodes.First(n => n.Spec.Kind == NodeKind.Leaf));
+        garden.Grow(Day);
         Assert.Equal(7, Fruit(garden));
     }
 

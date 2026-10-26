@@ -128,7 +128,7 @@ public static class Tuning
     // Placeholders. A grove makes fruit blobs while it isn't wilting (its berries add up to FruitBonusMax). Each blob
     // wanders the stems, a random walk that never turns straight back unless at a dead end, and at each part with
     // room for fruit grows one there FruitLandChance of the time (the original's 30%); after FruitBlobMaxHops links
-    // (the original's 30) it fades unused. While no part anywhere has room, a grove holds its next blob.
+    // (the original's 30) it fades unused, even when no part anywhere has room (the wandering is pretty to see).
     // Tuned for DESIGN.md's target (one or two groves just keep up with new stems' leaves): week one's ~54 leaves
     // plus the flowers' fruit, over about two groves, is roughly a blob every two hours each.
     public const float GroveFruitPerHour = 0.5f;

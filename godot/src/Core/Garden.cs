@@ -432,16 +432,16 @@ public sealed class Garden
                 }
             }
             float fruit = FruitBlobsPerHour(node);
-            if (fruit > 0) node.FruitBlob = Math.Min(1, node.FruitBlob + fruit * hours);
+            if (fruit > 0) node.FruitBlob += fruit * hours;
         }
 
-        // Groves' blobs leave after the loop over the parts, as the fruit they grow joins them.
-        if (Nodes.Any(n => n.FruitBlob >= 1 - 1e-4f) && HasFruitRoom())
-            foreach (var grove in Nodes.Where(n => n.FruitBlob >= 1 - 1e-4f).ToList())
-            {
-                grove.FruitBlob = 0;
-                if (SendFruit(grove) != null) sprouted++;
-            }
+        // Groves' blobs leave after the loop over the parts, as the fruit they grow joins them. A blob leaves even
+        // when there's no room for fruit anywhere: it just wanders and fades (pretty to watch).
+        foreach (var grove in Nodes.Where(n => n.FruitBlob >= 1 - 1e-4f).ToList())
+        {
+            grove.FruitBlob = Math.Max(0, grove.FruitBlob - 1);
+            if (SendFruit(grove) != null) sprouted++;
+        }
 
         float flow = Tuning.PowerFlowPerHour * hours;
         foreach (var link in Links)
@@ -507,9 +507,6 @@ public sealed class Garden
 
     // ==== FRUIT ==== \\
 
-    // Whether any part could take another fruit (and the garden another part).
-    bool HasFruitRoom() => Nodes.Count < Tuning.MaxNodes && Nodes.Any(n => FruitRoom(n) > 0);
-
     // A grove's fruit blob leaves. Where it goes is worked out now, as a random walk over the stems (see Tuning,
     // GROVES AND FRUIT), and the fruit it grows is added now too, so a catch-up (which runs no physics) and a live
     // session agree. The fruit stays hidden (its Age below zero) until the blob, shown following the same walk,
@@ -527,7 +524,7 @@ public sealed class Garden
             cameFrom = at;
             at = options[rng.Next(options.Count)];
             route.Add(at);
-            if (at.CanFruit && rng.NextDouble() < Tuning.FruitLandChance)
+            if (at.CanFruit && Nodes.Count < Tuning.MaxNodes && rng.NextDouble() < Tuning.FruitLandChance)
             {
                 fruit = AddFruit(at);
                 route.Add(fruit);

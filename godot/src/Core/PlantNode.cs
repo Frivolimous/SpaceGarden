@@ -36,7 +36,7 @@ public sealed class PlantNode
     public float Power;
     public bool Wilting;
     // A lab's genes made but not yet sent: a blob leaves for the core once there are GeneBlobSize. A grove's fruit
-    // blob in the making (0-1): it leaves at 1, or waits there while no part has room for fruit.
+    // blob in the making: it leaves at 1, whether or not any part has room for fruit.
     public float Genes;
     public float FruitBlob;
     public float WiltLook;
