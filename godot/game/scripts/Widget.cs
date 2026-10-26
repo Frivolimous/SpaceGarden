@@ -123,7 +123,7 @@ public partial class Widget : Node
         toolbar.Used += Use;
         toolbarLayer.AddChild(readout);
         readout.UndoPressed += UndoPrune;
-        toolbar.CanGrow = node => Garden.CanSproutFrom(node);
+        toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
         // A click anywhere off the plant lands in another window, which takes the focus: close the toolbar then.
         window.FocusExited += toolbar.HideAway;
 
@@ -480,9 +480,9 @@ public partial class Widget : Node
     void Use(Tool tool)
     {
         if (toolbar.Target is not { } node) return;
+        if (Toolbar.KindOf(tool) is { } kind) Garden.SproutFrom(node, kind);
         switch (tool)
         {
-            case Tool.Grow: Garden.SproutFrom(node); break;
             case Tool.Pin: Garden.TogglePin(node); break;
             case Tool.Prune:
                 main.View.Drop(Garden.Prune(node));

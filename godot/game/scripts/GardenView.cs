@@ -31,26 +31,33 @@ public partial class GardenView : Node2D
 
     readonly Garden garden;
     readonly List<Falling> falling = new();
-    readonly Node2D fallingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(), markLayer = new(), moteLayer = new();
+    readonly Node2D fallingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
+        markLayer = new(), moteLayer = new();
     readonly Batch links = new(), halos = new(), moteHalos = new(), moteDots = new();
-    readonly Dictionary<Shape, Batch> shapes = new();
+    readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
     float highlightRing;
     float blend = 1;
 
     public GardenView(Garden garden)
     {
         this.garden = garden;
-        foreach (var shape in Enum.GetValues<Shape>()) shapes[shape] = new Batch();
+        foreach (var shape in Enum.GetValues<Shape>())
+        {
+            shapes[shape] = new Batch();
+            forming[shape] = new Batch();
+        }
         shapeLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
+        formingLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
         linkLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
         moteLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
         fallingLayer.Draw += DrawFalling;
         linkLayer.Draw += DrawLinks;
         haloLayer.Draw += DrawHalos;
         shapeLayer.Draw += DrawShapes;
+        formingLayer.Draw += DrawForming;
         markLayer.Draw += DrawMarks;
         moteLayer.Draw += DrawMotes;
-        foreach (var layer in new[] { fallingLayer, linkLayer, haloLayer, shapeLayer, markLayer, moteLayer }) AddChild(layer);
+        foreach (var layer in new[] { fallingLayer, linkLayer, haloLayer, shapeLayer, formingLayer, markLayer, moteLayer }) AddChild(layer);
     }
 
     public void Drop(IEnumerable<PlantNode> nodes)
@@ -86,6 +93,7 @@ public partial class GardenView : Node2D
         linkLayer.QueueRedraw();
         haloLayer.QueueRedraw();
         shapeLayer.QueueRedraw();
+        formingLayer.QueueRedraw();
         markLayer.QueueRedraw();
         moteLayer.QueueRedraw();
     }
@@ -177,6 +185,41 @@ public partial class GardenView : Node2D
         foreach (var (shape, batch) in shapes) batch.Draw(shapeLayer, Textures.Shape(shape));
     }
 
+    // What growth blobs are forming (DESIGN.md, Economy, Blobs), over the parts. A fruit bud swells from a speck to
+    // its full size just off its part's rim, where it'll hang. A bud of a new part is a silhouette in its final hue
+    // inside its parent, growing from a speck, until it pops out (see Garden.AddNear).
+    void DrawForming()
+    {
+        foreach (var batch in forming.Values) batch.Begin();
+        foreach (var node in garden.Nodes)
+        {
+            if (node.Forming is not { } kind || node.FormingLook <= 0) continue;
+            var spec = NodeSpecs.All[kind];
+            float grown = node.FormingLook / (spec.IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth);
+            float level = Level(node) * GrowIn(node);
+            var at = At(node);
+            var (sin, cos) = MathF.SinCos(node.Rotation);
+            var colour = Wilted(ColourOf(spec), node.WiltLook);
+            float size;
+            if (spec.IsFruit)
+            {
+                size = Mathf.Lerp(0.8f, spec.Radius, grown) * level;
+                // Turning with its part, at a slot of its own.
+                var dir = new Vector2(cos, sin).Rotated(node.Fruits.Count * 2.1f);
+                at += dir * (node.Spec.Radius * Level(node) + size);
+                colour.A = 0.9f;
+            }
+            else
+            {
+                size = Mathf.Lerp(0.8f, Mathf.Min(spec.Radius, node.Spec.Radius * 0.7f), grown) * level;
+                colour = Shade(colour, 0.55f);
+                colour.A = 0.85f;
+            }
+            forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size), cos, sin, colour);
+        }
+        foreach (var (shape, batch) in forming) batch.Draw(formingLayer, Textures.Shape(shape));
+    }
+
     // Pins and the hover ring: a handful at most.
     void DrawMarks()
     {
@@ -201,8 +244,8 @@ public partial class GardenView : Node2D
     {
         moteHalos.Begin();
         moteDots.Begin();
-        // A blob is its colour: a soft halo round a small bright bead of it (a gene blob reads purple, a fruit blob
-        // orange, not white). The fruit a fruit blob grows stays hidden until it arrives (see GrowIn).
+        // A blob is its colour: a soft halo round a small bright bead of it (a gene blob reads purple, a growth blob
+        // orange, not white). The part a growth blob completes stays hidden until it arrives (see GrowIn).
         foreach (var mote in garden.Motes)
         {
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
@@ -217,8 +260,8 @@ public partial class GardenView : Node2D
 
     // ==== HELPERS ==== \\
 
-    // Parts swell in over their first second and a half, overshooting a little like a bud opening. A fruit whose
-    // blob is still on its way has an Age below zero, and isn't drawn (nor its stalk) until then.
+    // Parts swell in over their first second and a half, overshooting a little like a bud opening. A part whose
+    // completing blob is still on its way has an Age below zero, and isn't drawn (nor its stalk) until then.
     static float GrowIn(PlantNode node)
     {
         if (node.Age >= 1.5f) return 1; // grown: almost every part, almost always

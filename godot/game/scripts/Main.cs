@@ -6,7 +6,7 @@ namespace SpaceGarden;
 // and saves it every minute and on quit. The plant is never rescaled automatically; only the Size setting in the
 // menu changes it.
 //
-// Dev options (after "--"): --grow=N growth speed (default 60x; 1 is the real pace), --upright for the shelved
+// Dev options (after "--"): --grow=N growth speed (default 1, the real pace), --upright for the shelved
 // planted layout (every garden, saved ones too, is otherwise radial), --fresh to ignore the save, --seed=N, --away=HOURS to pretend that long
 // has passed since the last save, --backdrop=RRGGBB to draw a colour behind the plant, --profile=NAME to use
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
@@ -25,7 +25,7 @@ public partial class Main : Node2D
     const double VisibilityCheckSeconds = 0.5;
 
     public Garden Garden = null!;
-    public double GrowthSpeed = 60;
+    public double GrowthSpeed = 1;
     public GardenView View = null!;
 
     // Why the garden can't be seen just now, or null while it can.
@@ -85,6 +85,13 @@ public partial class Main : Node2D
         if (save != null && Widget.IdleRates.Contains(save.IdleFps)) widget.IdleFps = save.IdleFps;
         if (save == null) PlantAtHome();
         else widget.KeepOnScreen();
+        // Dev aid: a new garden with its first grove and lab already planted (nothing grows wild without a grove).
+        if (save == null && args.ContainsKey("grove"))
+        {
+            var stem = Garden.Nodes[1];
+            Garden.SproutFrom(stem, NodeKind.Grove);
+            if (Garden.SproutFrom(stem, NodeKind.Stem) is { } second) Garden.SproutFrom(second, NodeKind.Lab);
+        }
         if (args.TryGetValue("parts", out var p))
         {
             int parts = int.Parse(p);
@@ -106,7 +113,7 @@ public partial class Main : Node2D
             Garden.SettleLooks();
         }
         if (args.ContainsKey("nearunlock") && Garden.NextUnlock is { } next)
-            Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.GeneBlobSize / 2);
+            Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.BlobGenes / 2);
 
         ShowGarden();
         if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");

@@ -2,7 +2,8 @@ using Godot;
 
 namespace SpaceGarden;
 
-public enum Tool { Grow, Pin, Prune }
+// A bud of each plantable kind (DESIGN.md, Tending commands: "New sprout"), then pin and prune.
+public enum Tool { Stem, Generator, Lab, Grove, Pin, Prune }
 
 // The little pill of tools that floats above a part while the pointer rests on it. Icons are drawn, not images,
 // so they stay crisp at any scale. It fades in and out and follows its part as the plant sways.
@@ -10,8 +11,18 @@ public partial class Toolbar : PanelContainer
 {
     public event Action<Tool>? Used;
     public PlantNode? Target { get; private set; }
-    // Whether a part has room to grow (its links, and the garden's capacity).
-    public Func<PlantNode, bool> CanGrow = _ => true;
+    // Whether a part has room to grow a bud of a kind (its links, and the garden's capacity).
+    public Func<PlantNode, NodeKind, bool> CanGrow = (_, _) => true;
+
+    // The kind each bud tool grows.
+    public static NodeKind? KindOf(Tool tool) => tool switch
+    {
+        Tool.Stem => NodeKind.Stem,
+        Tool.Generator => NodeKind.Generator,
+        Tool.Lab => NodeKind.Lab,
+        Tool.Grove => NodeKind.Grove,
+        _ => null,
+    };
 
     readonly Dictionary<Tool, ToolButton> buttons = new();
     Tween? fade;
@@ -24,7 +35,11 @@ public partial class Toolbar : PanelContainer
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         row.AddThemeConstantOverride("separation", 0);
         AddChild(row);
-        foreach (var (tool, tip) in new[] { (Tool.Grow, "Grow"), (Tool.Pin, "Pin in place"), (Tool.Prune, "Prune") })
+        foreach (var (tool, tip) in new[]
+        {
+            (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
+            (Tool.Grove, "Grow a grove"), (Tool.Pin, "Pin in place"), (Tool.Prune, "Prune"),
+        })
         {
             var button = new ToolButton(tool) { TooltipText = tip };
             button.Pressed += () => Used?.Invoke(tool);
@@ -63,7 +78,8 @@ public partial class Toolbar : PanelContainer
     {
         if (Target == null) return;
         bool isCore = Target.Parent == null;
-        buttons[Tool.Grow].Enabled = CanGrow(Target);
+        foreach (var (tool, button) in buttons)
+            if (KindOf(tool) is { } kind) button.Enabled = CanGrow(Target, kind);
         buttons[Tool.Pin].Enabled = !isCore;
         buttons[Tool.Pin].Active = !isCore && Target.Fixed;
         buttons[Tool.Prune].Enabled = !isCore;
@@ -128,13 +144,19 @@ public partial class ToolButton : Control
         if (hover && Enabled) DrawCircle(c, 13, new Color(1, 1, 1, 0.13f));
         var ink = !Enabled ? new Color(1, 1, 1, 0.25f) : Active ? new Color(1, 0.9f, 0.45f) : new Color(1, 1, 1, 0.9f);
         const float w = 1.8f;
+        if (Toolbar.KindOf(tool) is { } kind)
+        {
+            // A bud: the kind's own shape in its own colour, greyed when there's no room for it.
+            var spec = NodeSpecs.All[kind];
+            var colour = GardenView.Rgb(spec.Rgb);
+            if (!Enabled) colour = new Color(1, 1, 1, 0.25f);
+            var points = GardenView.UnitPolygon(spec.Shape);
+            for (int i = 0; i < points.Length; i++) points[i] = c + points[i].Rotated(-Mathf.Pi / 2) * 7;
+            DrawColoredPolygon(points, colour);
+            return;
+        }
         switch (tool)
         {
-            case Tool.Grow: // a sprout: a stem with two leaves
-                DrawLine(c + new Vector2(0, 7), c + new Vector2(0, -3), ink, w, true);
-                DrawColoredPolygon(Leaf(c + new Vector2(0, -1), -1), ink);
-                DrawColoredPolygon(Leaf(c + new Vector2(0, 2), 1), ink);
-                break;
             case Tool.Pin: // a map pin
                 DrawCircle(c + new Vector2(0, -3), 4.5f, ink);
                 DrawCircle(c + new Vector2(0, -3), 1.6f, new Color(0.07f, 0.09f, 0.13f));
@@ -148,12 +170,4 @@ public partial class ToolButton : Control
                 break;
         }
     }
-
-    static Vector2[] Leaf(Vector2 stalk, int side) =>
-    [
-        stalk,
-        stalk + new Vector2(side * 3, -4),
-        stalk + new Vector2(side * 7, -4),
-        stalk + new Vector2(side * 4, 0),
-    ];
 }

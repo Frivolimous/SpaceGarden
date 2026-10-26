@@ -13,7 +13,8 @@ public sealed record SaveData(int Version, GardenSave Garden, double LastSeenUni
 public static class SaveFile
 {
     // 2: the economy (power, wilting, capacity). 3: genes and the unlock track. 4: groves and fruit blobs.
-    public const int Version = 4;
+    // 5: growth blobs, and the fruit and buds they form.
+    public const int Version = 5;
 
     public static string? Path = "user://garden.json";
 

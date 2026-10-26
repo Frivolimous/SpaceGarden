@@ -35,11 +35,20 @@ public sealed class PlantNode
     // drawing.
     public float Power;
     public bool Wilting;
-    // A lab's genes made but not yet sent: a blob leaves for the core once there are GeneBlobSize. A grove's fruit
-    // blob in the making: it leaves at 1, whether or not any part has room for fruit.
-    public float Genes;
-    public float FruitBlob;
+    // A lab's gene blob, or a grove's growth blob, in the making: it leaves at 1, whether or not anything will absorb
+    // it.
+    public float Blob;
     public float WiltLook;
+
+    // What growth blobs are forming here (DESIGN.md, Economy, Blobs): a fruit of its own kind, or a bud of a new
+    // branch, its kind rolled when it started; and how much growth it has absorbed (it completes at FruitGrowth or
+    // BudGrowth). A bud holds its link and its cap slot while it forms. FormingLook is the growth as shown: it rises
+    // as each blob arrives (the rules count a blob when it leaves).
+    public NodeKind? Forming;
+    public float Growth;
+    public float FormingLook;
+    public bool FormingFruit => Forming is { } kind && NodeSpecs.All[kind].IsFruit;
+    public bool FormingBud => Forming is { } kind && !NodeSpecs.All[kind].IsFruit;
 
     // Presentation, as the original's node intensity: the fill as shown, eased towards the real one, plus a small
     // spring that a flash of power arriving kicks, so the part swells and brightens past its level and settles back.
@@ -63,8 +72,9 @@ public sealed class PlantNode
     public float Fill => Spec.IsFruit ? 0 : Power / Store;
 
     public int Links => Branches.Count + (Parent == null ? 0 : 1);
-    public bool CanBranch => Links < MaxLinks;
-    public bool CanFruit => Spec.Fruit != null && Fruits.Count < Spec.MaxFruits;
+    // A forming bud holds a link, and a forming fruit a fruit slot.
+    public bool CanBranch => Links + (FormingBud ? 1 : 0) < MaxLinks;
+    public bool CanFruit => Spec.Fruit != null && Fruits.Count + (FormingFruit ? 1 : 0) < Spec.MaxFruits;
 
     public IEnumerable<PlantNode> Neighbours()
     {
@@ -99,18 +109,20 @@ public sealed class Mote
 {
     public PlantNode From, To;
     public float T;
-    public int Hops;
-    // A gene blob heads straight for the core, link by link, and never fades on the way. A fruit blob follows the
-    // Route its walk was worked out on when it left (Route[Leg] is From), ending at the fruit it grows, if any.
-    public bool Homing;
-    public List<PlantNode>? Route;
+    // A blob follows the Route its walk was worked out on when it left (Route[Leg] is From). A growth blob that a
+    // part absorbs ends there and adds Growth to what's forming as it arrives (Completes: it finished it, and the new
+    // part shows then).
+    public readonly List<PlantNode> Route;
     public int Leg;
     public uint Rgb;
+    public float Growth;
+    public bool Completes;
 
-    public Mote(PlantNode from, PlantNode to, uint rgb)
+    public Mote(List<PlantNode> route, uint rgb)
     {
-        From = from;
-        To = to;
+        Route = route;
+        From = route[0];
+        To = route[1];
         Rgb = rgb;
     }
 

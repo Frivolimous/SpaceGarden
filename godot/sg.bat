@@ -16,8 +16,8 @@ cls
 echo.
 echo   Space Garden (Godot prototype)
 echo   ------------------------------
-echo    1  Play: your garden (fast growth, 60x)
-echo    2  Play: your garden at the real pace (1x)
+echo    1  Play: your garden (real pace)
+echo    2  Play: your garden, fast (60x)
 echo    3  Play: a new garden, very fast (3600x, its own save)
 echo    4  Play: pretend a day has passed (real pace)
 echo    5  Open in the Godot editor
@@ -40,7 +40,7 @@ if not exist "%GODOT%" (
 echo   Building...
 dotnet build -v q -nologo || (pause & exit /b 1)
 if "%PICK%"=="1" start "Space Garden" "%GODOT%" --path game
-if "%PICK%"=="2" start "Space Garden" "%GODOT%" --path game -- --grow=1
+if "%PICK%"=="2" start "Space Garden" "%GODOT%" --path game -- --grow=60
 if "%PICK%"=="3" start "Space Garden" "%GODOT%" --path game -- --fresh --grow=3600 --profile=fast
 if "%PICK%"=="4" start "Space Garden" "%GODOT%" --path game -- --grow=1 --away=24
 if "%PICK%"=="5" start "Space Garden" "%GODOT%" --editor --path game
