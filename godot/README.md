@@ -10,6 +10,15 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 (`tests/Core.Tests`, xUnit).
 
 ## Using it
+- **Display modes.** It starts in **Ambient**: faded, and every click falls through to the desktop. Press
+  **Ctrl+Alt+G** (from anywhere; Windows) for **Active**: full opacity, the toolbar and menu below, and a readout
+  under the plant (power made and used an hour, how full it is, genes towards the next unlock, room left). Ctrl+Alt+G
+  again goes back to Ambient. **Minimised** (from the menu, or a click on the yellow tray icon) hides the plant and
+  pauses it like a locked screen, catching up when it's shown again; click the tray icon to bring it back, or
+  right-click it for the menu.
+- **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill above the readout puts
+  the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; wild growth waits out the window
+  so the room is still there, and a bud placed in that room, or time away, ends it.
 - **Rest the pointer** on a part to ring it. **Tap** it (click without dragging) for its toolbar: grow, pin in
   place (a yellow dot; drag a pinned part to move its pin), prune (cuts the part and everything beyond it). Tap
   again, pick a tool, click anywhere else, start a drag, or move away for a moment to close it.
@@ -21,12 +30,12 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   edges are the garden's walls.
 - The plant is never rescaled automatically, and the window never moves or resizes. **Size** in the menu sets the
   plant's scale (50-125%, scaled around the core).
-- **Right-click** for the menu: always on top, size, growth speed (1x / 60x / 3600x), idle frame rate (15 / 20 /
+- **Right-click** (Active mode) for the menu: display mode, always on top, size, growth speed (1x / 60x / 3600x), idle frame rate (15 / 20 /
   30 / 60 fps, default 30, saved; the rate while nothing is being touched or moving, and the idle CPU cost scales
   with it), new garden, quit, and (an
   experiment, on by default) "Fruit borrows its parent's push": the cheaper fruit physics described under
   Performance, switchable live to compare the feel.
-- Clicks anywhere off the plant and its toolbar go straight through to the desktop. On Windows this is done by
+- In Active mode, clicks anywhere off the plant, its toolbar and the Undo pill go straight through to the desktop. On Windows this is done by
   toggling the window's click-through style each frame (`ClickThrough.cs`), not Godot's passthrough region: on
   Windows that region also clips drawing, which made the window flash and would cut off the toolbar.
 - It saves every minute and on quit (`%APPDATA%\Space Garden Prototype\garden.json`). Reopening catches up the

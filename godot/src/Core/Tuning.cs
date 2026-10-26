@@ -71,6 +71,10 @@ public static class Tuning
     public const double FruitChance = 2.0 / 3; // about two thirds of a grown plant is fruit (65% at 500 parts)
     public static int MaxNodes = 500; // not const: the --parts dev option raises it for stress tests
 
+    // Placeholder. How long the last prune can be undone, in real seconds (counted in physics ticks, so the same at
+    // any growth speed). Wild growth holds off meanwhile, so the room the prune freed is still there for the undo.
+    public const double UndoPruneSeconds = 30;
+
     // Time away is caught up to at most this much real time.
     public const double CatchUpCapSeconds = 72 * 3600;
     public const int SettleTicks = 900;

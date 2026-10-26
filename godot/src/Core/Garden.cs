@@ -111,8 +111,10 @@ public sealed class Garden
     }
 
     // Time away: grow for it (capped), then let the physics settle so the plant isn't shown mid-tangle.
+    // A prune can't be undone after time away (the window has passed).
     public int CatchUp(double secondsAway)
     {
+        ForgetPrune();
         bool show = ShowBlobs;
         ShowBlobs = false;
         int sprouted = Grow(Math.Clamp(secondsAway, 0, Tuning.CatchUpCapSeconds));
@@ -216,7 +218,63 @@ public sealed class Garden
         Motes.RemoveAll(m => gone.Contains(m.From) || gone.Contains(m.To));
         foreach (var n in removed) linkToParent.Remove(n);
         if (Held != null && gone.Contains(Held)) LetGo();
+        lastPrune = (removed, node.Parent.Position);
+        UndoSecondsLeft = Tuning.UndoPruneSeconds;
         return removed;
+    }
+
+    // The last prune, while it can still be undone (see Tuning.UndoPruneSeconds): what fell, and where its parent
+    // was then. Only the last one: a new prune replaces it.
+    (List<PlantNode> Nodes, Vector2 ParentAt)? lastPrune;
+    public double UndoSecondsLeft { get; private set; }
+
+    // Whether the last prune can still be put back: inside the window, its parent still there with a free link (or
+    // fruit slot), and the caps and part limit still with room for it (a bud may have taken the room since).
+    public bool CanUndoPrune
+    {
+        get
+        {
+            if (lastPrune is not var (nodes, _)) return false;
+            var root = nodes[0];
+            var parent = root.Parent!;
+            if (!Nodes.Contains(parent) || Nodes.Count + nodes.Count > Tuning.MaxNodes) return false;
+            if (root.Spec.IsFruit ? parent.Fruits.Count >= parent.Spec.MaxFruits : !parent.CanBranch) return false;
+            var (stems, generators) = CountKinds();
+            stems += nodes.Count(n => n.Spec.Kind == NodeKind.Stem);
+            generators += nodes.Count(n => n.Spec.Kind == NodeKind.Generator);
+            return stems <= Capacity.Stems && generators <= Capacity.Generators;
+        }
+    }
+
+    // Puts the last prune back as it was (power, pins, fruit and all), moved along with its parent if the plant has
+    // drifted since, and growing in again. Returns what came back, or null if it can't (see CanUndoPrune).
+    public List<PlantNode>? UndoPrune()
+    {
+        if (!CanUndoPrune) return null;
+        var (nodes, parentAt) = lastPrune!.Value;
+        ForgetPrune();
+        var root = nodes[0];
+        var shift = root.Parent!.Position - parentAt;
+        (root.Spec.IsFruit ? root.Parent.Fruits : root.Parent.Branches).Add(root);
+        // Cut in growth order (a part before what grew from it), so they go back in that order.
+        foreach (var node in nodes)
+        {
+            node.Position += shift;
+            node.PreviousPosition = node.Position;
+            node.Velocity = Vector2.Zero;
+            node.Age = 0;
+            Nodes.Add(node);
+            var link = new Link(node.Parent!, node);
+            Links.Add(link);
+            linkToParent[node] = link;
+        }
+        return nodes;
+    }
+
+    void ForgetPrune()
+    {
+        lastPrune = null;
+        UndoSecondsLeft = 0;
     }
 
     // A pinned part holds still where it is (the core always is).
@@ -437,7 +495,8 @@ public sealed class Garden
         if (!WildGrowth) return 0;
         GrowthClock += seconds;
         if (GrowthClock < Tuning.SproutEverySeconds) return 0;
-        if (Sprout(wild: true) == null)
+        // While a prune can be undone, wild growth waits, so it can't take the room the undo needs.
+        if (lastPrune != null || Sprout(wild: true) == null)
         {
             GrowthClock = Tuning.SproutEverySeconds; // no power to spare, or no room: try again next step
             return 0;
@@ -531,6 +590,7 @@ public sealed class Garden
     {
         const float dt = 1f / Tuning.TicksPerSecond;
         Time += dt;
+        if (lastPrune != null && (UndoSecondsLeft -= dt) <= 0) ForgetPrune();
         foreach (var node in Nodes) node.PreviousPosition = node.Position;
 
         // Links pull only when stretched, as in the TS game; the repulsion below keeps parts apart.

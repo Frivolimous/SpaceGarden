@@ -274,9 +274,10 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 | Always on top | Must | Done (prototype, menu toggle) |
 | Click-through (Ambient mode) | Must | Done (prototype) |
 | Low idle CPU / memory, pause while hidden | Must | Done (prototype) |
-| Display modes: Active / Ambient / Minimised, hotkey | Must | Step 2 |
-| Remembers size and position | Must | Plant scale saved; the overlay covers the work area, so position applies once there's a Minimised corner |
-| Tray icon: show/hide, quit | Should | Minimised mode |
+| Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2). Ambient (default) fades the window to 55% and lets every click through; Active is full opacity with the toolbar, menu and readout; Minimised hides the plant to the tray and pauses it like a locked screen (caught up on return). Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) |
+| Remembers size and position | Must | Plant scale saved; the overlay covers the work area and Minimised goes to the tray, so there is no window position to keep. The display mode isn't saved: every launch starts in Ambient |
+| Tray icon: show/hide, quit | Should | Done (step 2). Click to show or hide (Minimised); right-click for the menu (modes, Quit) |
+| Readout: power, genes, next unlock | Must | Done (step 2). A few tinted lines under the plant in Active mode only, with an Undo pill while the last prune can be undone |
 | Launch on startup (opt-in) | Should | — |
 | Pinned to the desktop layer instead of on top (user choice) | Could | — |
 | Notifications for rare events (opt-in, very sparing) | Could | — |
