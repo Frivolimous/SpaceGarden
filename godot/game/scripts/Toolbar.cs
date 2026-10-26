@@ -20,17 +20,7 @@ public partial class Toolbar : PanelContainer
     {
         MouseFilter = MouseFilterEnum.Stop;
         Visible = false;
-        AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color(0.07f, 0.09f, 0.13f, 0.88f),
-            BorderColor = new Color(1, 1, 1, 0.14f),
-            BorderWidthLeft = 1, BorderWidthTop = 1, BorderWidthRight = 1, BorderWidthBottom = 1,
-            CornerRadiusTopLeft = 16, CornerRadiusTopRight = 16, CornerRadiusBottomLeft = 16, CornerRadiusBottomRight = 16,
-            ContentMarginLeft = 4, ContentMarginRight = 4, ContentMarginTop = 2, ContentMarginBottom = 2,
-            ShadowColor = new Color(0, 0, 0, 0.25f),
-            ShadowSize = 4,
-            AntiAliasing = true,
-        });
+        AddThemeStyleboxOverride("panel", PillStyle());
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         row.AddThemeConstantOverride("separation", 0);
         AddChild(row);
@@ -42,6 +32,19 @@ public partial class Toolbar : PanelContainer
             row.AddChild(button);
         }
     }
+
+    // The dark rounded pill the widget's few controls sit on (the toolbar, the undo button).
+    public static StyleBoxFlat PillStyle() => new()
+    {
+        BgColor = new Color(0.07f, 0.09f, 0.13f, 0.88f),
+        BorderColor = new Color(1, 1, 1, 0.14f),
+        BorderWidthLeft = 1, BorderWidthTop = 1, BorderWidthRight = 1, BorderWidthBottom = 1,
+        CornerRadiusTopLeft = 16, CornerRadiusTopRight = 16, CornerRadiusBottomLeft = 16, CornerRadiusBottomRight = 16,
+        ContentMarginLeft = 4, ContentMarginRight = 4, ContentMarginTop = 2, ContentMarginBottom = 2,
+        ShadowColor = new Color(0, 0, 0, 0.25f),
+        ShadowSize = 4,
+        AntiAliasing = true,
+    };
 
     public void ShowFor(PlantNode node)
     {

@@ -109,6 +109,7 @@ public partial class Main : Node2D
             Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.GeneBlobSize / 2);
 
         ShowGarden();
+        if (Hotkey.Registered) Toast($"{Hotkey.Name} to tend the garden; again to let it be.");
         if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");
         ShowUnlocks();
 
@@ -161,12 +162,15 @@ public partial class Main : Node2D
             + $" primitives {Performance.GetMonitor(Performance.Monitor.RenderTotalPrimitivesInFrame):0}");
     }
 
-    // Hides or shows the garden as Visibility (or --pausetest) says.
+    // On the next frame rather than within half a second (the display mode just changed).
+    public void CheckVisibilityNow() => visibilityTimer = 0;
+
+    // Hides or shows the garden as Visibility (or --pausetest, or Minimised mode) says.
     void CheckVisibility(double delta)
     {
         if ((visibilityTimer -= delta) > 0) return;
         visibilityTimer = VisibilityCheckSeconds;
-        var reason = Visibility.HiddenReason();
+        var reason = widget.Mode == DisplayMode.Minimised ? "minimised" : Visibility.HiddenReason();
         double uptime = Time.GetTicksMsec() / 1000.0;
         if (pauseTest is var (at, length) && uptime >= at && uptime < at + length) reason ??= "pause test";
 

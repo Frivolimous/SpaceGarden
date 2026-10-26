@@ -14,6 +14,14 @@ namespace SpaceGarden;
 // Resting the pointer on a part rings it; tapping it (a click without a drag) opens its toolbar. Dragging a part
 // pulls it to the pointer by its weight and the links drag the rest after it; letting go keeps the momentum.
 // Right-click opens the menu. It drops to a low frame rate when nothing's happening.
+//
+// Display modes (DESIGN.md, Tending commands): Ambient, the default, fades the whole window and lets every click
+// fall through; Active shows it at full opacity with its controls (the toolbar, the readout, the menu); Minimised
+// hides the plant behind a tray icon and stops it as if the screen were locked, catching up on return. The hotkey
+// (Hotkey.Name) toggles Active and Ambient; the tray icon shows and hides the garden, and its right-click menu (the
+// same as the plant's) picks any mode.
+public enum DisplayMode { Active, Ambient, Minimised }
+
 public partial class Widget : Node
 {
     // Idle it draws at the Idle frame rate from the menu (30 fps by default); while anything's happening, at the
@@ -34,7 +42,15 @@ public partial class Widget : Node
 
     public static readonly float[] Sizes = [0.5f, 0.75f, 1f, 1.25f];
 
-    enum MenuId { AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows, Size0 = 100, Idle0 = 200 }
+    // Ambient mode's opacity, and how long a change of mode takes to fade.
+    const float AmbientOpacity = 0.55f;
+    const float FadeSeconds = 0.3f;
+
+    enum MenuId
+    {
+        AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows,
+        Active = 10, Ambient, Minimised, Size0 = 100, Idle0 = 200,
+    }
 
     public int IdleFps
     {
@@ -54,6 +70,12 @@ public partial class Widget : Node
     readonly PopupMenu menu = new();
     readonly Toolbar toolbar = new();
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
+    readonly Readout readout = new();
+    readonly StatusIndicator tray = new();
+
+    public DisplayMode Mode { get; private set; } = DisplayMode.Ambient;
+    float opacity = AmbientOpacity;
+    bool readoutPlaced;
 
     public float Dpi { get; private set; } = 1;
     float plantScale = 0.75f;
@@ -95,10 +117,17 @@ public partial class Widget : Node
         toolbarLayer.AddChild(toolbar);
         AddChild(toolbarLayer);
         toolbar.Used += Use;
+        toolbarLayer.AddChild(readout);
+        readout.UndoPressed += UndoPrune;
         toolbar.CanGrow = node => Garden.CanSproutFrom(node);
         // A click anywhere off the plant lands in another window, which takes the focus: close the toolbar then.
         window.FocusExited += toolbar.HideAway;
 
+        menu.AddSeparator("Display");
+        menu.AddRadioCheckItem($"Active ({Hotkey.Name})", (int)MenuId.Active);
+        menu.AddRadioCheckItem("Ambient", (int)MenuId.Ambient);
+        menu.AddRadioCheckItem("Minimised (to the tray)", (int)MenuId.Minimised);
+        menu.AddSeparator();
         menu.AddCheckItem("Always on top", (int)MenuId.AlwaysOnTop);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.AlwaysOnTop), true);
         menu.AddSeparator("Size");
@@ -117,6 +146,65 @@ public partial class Widget : Node
         menu.AddItem("Quit", (int)MenuId.Quit);
         menu.IdPressed += OnMenu;
         AddChild(menu);
+
+        tray.Icon = TrayIcon();
+        tray.Tooltip = $"Space Garden: click to show or hide, right-click for options. {Hotkey.Name} to tend.";
+        tray.Pressed += (button, position) =>
+        {
+            if (button == (long)MouseButton.Left) SetMode(Mode == DisplayMode.Minimised ? DisplayMode.Ambient : DisplayMode.Minimised);
+            else if (button == (long)MouseButton.Right) menu.Popup(new Rect2I(position, Vector2I.Zero));
+        };
+        AddChild(tray);
+        Hotkey.Register();
+        ClickThrough.Opacity(opacity);
+    }
+
+    public override void _ExitTree() => Hotkey.Unregister();
+
+    // The core in miniature: a soft yellow disc with a lighter rim, drawn rather than loaded.
+    static ImageTexture TrayIcon()
+    {
+        const int size = 32;
+        var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        var core = GardenView.Rgb(NodeSpecs.All[NodeKind.Core].Rgb);
+        var c = new Vector2(size / 2f - 0.5f, size / 2f - 0.5f);
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float d = new Vector2(x, y).DistanceTo(c);
+                float a = Mathf.Clamp(13.5f - d, 0, 1);
+                var colour = d > 11 ? core.Lightened(0.5f) : core;
+                image.SetPixel(x, y, colour with { A = a });
+            }
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    // Switches display mode. Leaving Active puts its controls away and lets go of anything held.
+    public void SetMode(DisplayMode mode)
+    {
+        if (mode == Mode) return;
+        Mode = mode;
+        if (mode != DisplayMode.Active)
+        {
+            toolbar.HideAway();
+            menu.Hide();
+            if (Garden.Held != null) Garden.LetGo();
+            pressed = dragging = false;
+            pressNode = null;
+        }
+        readoutPlaced = false;
+        readout.RefreshNow();
+        activeTime = SettleSeconds; // full frame rate for the fade
+        main.CheckVisibilityNow();
+        CheckMenu();
+    }
+
+    void UndoPrune()
+    {
+        if (Garden.UndoPrune() == null) return;
+        toolbar.HideAway();
+        readout.RefreshNow();
+        activeTime = SettleSeconds;
     }
 
     // Covers the work area of the main screen. A window covering the whole monitor would be taken by Windows for a
@@ -169,10 +257,14 @@ public partial class Widget : Node
     public override void _Process(double delta)
     {
         Garden.FruitBorrowsPush = fruitBorrowsPush; // every frame, so it carries over to a new garden too
+        if (Hotkey.TakePress()) SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
+        main.View.Visible = Mode != DisplayMode.Minimised; // every frame: a new garden gets a new view
 
-        // While nobody can see the garden (Main.HiddenReason): wake only a few times a second, to notice it's back.
+        // While nobody can see the garden (Main.HiddenReason, also while Minimised): wake only a few times a second,
+        // to notice it's back.
         if (main.HiddenReason != null)
         {
+            readout.Visible = false;
             if (!hidden)
             {
                 hidden = true;
@@ -194,10 +286,30 @@ public partial class Widget : Node
             activeTime = SettleSeconds;
         }
 
+        float wanted = Mode == DisplayMode.Active ? 1 : AmbientOpacity;
+        bool fading = opacity != wanted;
+        opacity = Mathf.MoveToward(opacity, wanted, (float)delta / FadeSeconds);
+        if (ClickThrough.Supported) ClickThrough.Opacity(opacity);
+        else main.View.Modulate = new Color(1, 1, 1, opacity);
+
+        // Ambient: nothing to point at, every click falls through.
+        if (Mode != DisplayMode.Active)
+        {
+            readout.Visible = false;
+            main.View.Highlight = null;
+            if (ClickThrough.Supported) ClickThrough.Set(true);
+            else UpdateRegion(delta, passAll: true);
+            activeTime = fading || Garden.Speed > SettledSpeed ? SettleSeconds : activeTime - delta;
+            SetIdle(activeTime <= 0);
+            return;
+        }
+
         var pointer = PointerInViewport();
         bool overToolbar = toolbar.Visible && toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi);
+        bool overReadout = readout.Catches(pointer / Dpi);
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);
-        var under = inWindow && !overToolbar ? Garden.NodeAt(ToSim(ToWorld(pointer)), HoverSlop) : null;
+        var under = inWindow && !overToolbar && !overReadout ? Garden.NodeAt(ToSim(ToWorld(pointer)), HoverSlop) : null;
+        PlaceReadout(delta);
 
         if (pressed && !Input.IsMouseButtonPressed(MouseButton.Left)) Release();
 
@@ -215,12 +327,29 @@ public partial class Widget : Node
         }
         main.View.Highlight = dragging || pressed ? pressNode : under ?? toolbar.Target;
 
-        bool catchMouse = pressed || overToolbar || under != null;
+        bool catchMouse = pressed || overToolbar || overReadout || under != null;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
-        bool active = catchMouse || toolbar.Visible || Garden.Held != null || Garden.Speed > SettledSpeed;
+        bool active = catchMouse || fading || toolbar.Visible || Garden.Held != null || Garden.Speed > SettledSpeed;
         activeTime = active ? SettleSeconds : activeTime - delta;
         SetIdle(activeTime <= 0);
+    }
+
+    // The readout sits centred under the plant (over it if there's no room below), kept on the screen, and glides
+    // after the plant as it grows and sways rather than jittering with it.
+    void PlaceReadout(double delta)
+    {
+        readout.Visible = true;
+        readout.Update(Garden, delta);
+        var (min, max) = Garden.Bounds();
+        var screen = GetViewport().GetVisibleRect().Size / Dpi;
+        var size = readout.GetCombinedMinimumSize();
+        var below = ToViewport(new Num.Vector2(Garden.Core.Position.X, max.Y)) / Dpi + new Vector2(-size.X / 2, 14);
+        if (below.Y + size.Y > screen.Y - 4) below.Y = ToViewport(min).Y / Dpi - 14 - size.Y;
+        var target = below.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
+        readout.Position = readoutPlaced ? readout.Position.Lerp(target, 1 - Mathf.Exp(-6 * (float)delta)) : target;
+        readout.Size = size;
+        readoutPlaced = true;
     }
 
     // A tapped part's toolbar goes once the pointer has been off both the part and the toolbar for a while (see
@@ -237,11 +366,16 @@ public partial class Widget : Node
 
     // Fallback for other platforms: a passthrough region around the plant. (On Windows nothing outside it would be
     // drawn, hence ClickThrough there.)
-    void UpdateRegion(double delta)
+    void UpdateRegion(double delta, bool passAll = false)
     {
         regionTimer -= delta;
         if (regionTimer > 0) return;
         regionTimer = 0.25;
+        if (passAll)
+        {
+            DisplayServer.WindowSetMousePassthrough([Vector2.Zero, Vector2.Right, Vector2.One]); // a speck
+            return;
+        }
         var (min, max) = Garden.Bounds();
         var toWindow = GetViewport().GetCanvasTransform();
         var a = toWindow * (GardenView.V(min) - new Vector2(RegionMargin, RegionMargin));
@@ -262,6 +396,18 @@ public partial class Widget : Node
     // Unhandled, so the toolbar's buttons get their clicks first.
     public override void _UnhandledInput(InputEvent e)
     {
+        // Keys reach the window only once it has the focus (a click on the plant in Active mode). Off Windows there's
+        // no system-wide hotkey, so the same keys toggle the mode here.
+        if (e is InputEventKey { Pressed: true, Echo: false, CtrlPressed: true } key)
+        {
+            if (key.Keycode == Key.Z) UndoPrune();
+            else if (key.Keycode == Key.G && key.AltPressed && !Hotkey.Registered)
+                SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
+            else return;
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (Mode != DisplayMode.Active) return;
         if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left } button)
         {
             if (button.Pressed)
@@ -311,7 +457,10 @@ public partial class Widget : Node
         {
             case Tool.Grow: Garden.SproutFrom(node); break;
             case Tool.Pin: Garden.TogglePin(node); break;
-            case Tool.Prune: main.View.Drop(Garden.Prune(node)); break;
+            case Tool.Prune:
+                main.View.Drop(Garden.Prune(node));
+                readout.RefreshNow(); // the Undo pill, at once
+                break;
         }
         toolbar.HideAway();
     }
@@ -320,6 +469,9 @@ public partial class Widget : Node
     {
         switch ((MenuId)id)
         {
+            case MenuId.Active: SetMode(DisplayMode.Active); break;
+            case MenuId.Ambient: SetMode(DisplayMode.Ambient); break;
+            case MenuId.Minimised: SetMode(DisplayMode.Minimised); break;
             case MenuId.AlwaysOnTop:
                 var window = GetWindow();
                 window.AlwaysOnTop = !window.AlwaysOnTop;
@@ -342,6 +494,9 @@ public partial class Widget : Node
 
     public void CheckMenu()
     {
+        menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Active), Mode == DisplayMode.Active);
+        menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Ambient), Mode == DisplayMode.Ambient);
+        menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Minimised), Mode == DisplayMode.Minimised);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed1), main.GrowthSpeed == 1);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed60), main.GrowthSpeed == 60);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed3600), main.GrowthSpeed == 3600);
