@@ -48,6 +48,8 @@ Every node is a simple geometric shape; meaning is carried by a small, fixed set
 | Shape | Specific node type within its role; every type has a unique shape |
 | Brightness and scale | Power level: full nodes glow and swell, low nodes dim and shrink |
 | Saturation | State: wild growth (subtle tone), dormant, wilting |
+
+A wilting node is dimmed, shrunk and slightly desaturated.
 | Fruit | Modifiers on a node; later also crawler food |
 
 Unique shapes double as colour-blind support. Texture and complex shapes are held in reserve if playtesting shows a state is hard to read. The garden should look consistent: wild growth differs only by a subtle tone.
@@ -55,7 +57,7 @@ Unique shapes double as colour-blind support. Texture and complex shapes are hel
 How the rare nodes map onto the roles:
 - **Specialist (grey/white):** Resistor, Amplifier and Buffer. They change how blobs and neighbours behave rather than producing a resource.
 - **Creatures (blue):** Home.
-- **Structure (green):** the Hub counts as a stem, drawn in its own shade of green.
+- **Structure (green):** the Hub reads as a stem visually, drawn in its own shade of green. This is visual only: it doesn't take a stem slot or count against the stem cap.
 
 The plant must look good **without any UI chrome**. Controls appear only in Active display mode.
 
@@ -82,6 +84,8 @@ Three flowing resources travel visibly through the stems; capacity is a set of l
 - The core has no fruit in the MVP; core fruit is reserved for showing later upgrades.
 
 Fruit, once grown, stays. Groves are needed while the garden grows; if growth stalls, they stop being useful. The unlock curve should be paced so a small number of groves always stays useful, keeping up with new stems and flowers.
+
+**Grove tuning target.** Tune the grove's fruit blob rate so one or two groves can just keep up with leaf demand from new stems. Each new stem has room for two leaves, so week one's 27 new stems (4 to 31) mean about 54 leaves.
 
 Draft values, in relative units per real hour, to be tuned through play:
 
@@ -158,6 +162,8 @@ Left alone, the garden grows wild until it fills its capacity; attentive players
 
 **Pruning gives nothing back.** Its rewards are built in: it frees stem and generator capacity for deliberate growth, lowers power upkeep, reshapes the garden, and rerolls rare nodes. With no return, wild growth can't be farmed. The cut itself must feel satisfying: a pruned branch dissolves with a pleasing visual effect rather than simply vanishing.
 
+**Undo and wild growth.** Wild growth waits until the undo window has passed before using capacity freed by a prune, so an undo always has room to restore the branch.
+
 ## Tending commands
 
 The player has eight basic commands.
@@ -171,7 +177,7 @@ The player has eight basic commands.
 7. **Display mode:** Active (full opacity, controls visible, clickable), Ambient (transparent and click-through, the default), or Minimised (tucked into a corner or the tray). A hotkey toggles Active and Ambient.
 8. **Drag:** click and drag any node to tug the plant around on a spring. Purely tactile, no economy effect.
 
-Undo covers only the most recent prune, so it never conflicts with wild growth filling the freed capacity.
+Undo covers only the most recent prune. Wild growth leaves the freed capacity alone until the undo window passes (see Growth and pruning).
 
 ## Shaping the garden
 
@@ -251,7 +257,7 @@ Open:
 
 ## Crawlers
 
-Crawlers aren't developed until after the public beta (step 7+). When they arrive, they should feel like the garden coming alive. When they unlock in a garden's life is a placeholder until then.
+Crawlers aren't developed until after the public beta (step 7+). When they arrive, they should feel like the garden coming alive. When they unlock in a garden's life is a placeholder until then. Starting assumption: about one week into a garden's life, to be confirmed in step 7.
 
 - They start simple, keeping the original's traits: a home node, preferences, autonomous behaviour.
 - They eat fruit. A fruit is either a modifier on its node or food for a crawler, so eating a leaf removes the stem's bonus until it regrows.
@@ -293,8 +299,10 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3 | Shaping → MVP | Gravity Pot, Trellis, Gravity Well; a short round of visual polish, including the prune effect. End of step = MVP |
 | 4 | Information and tracking | Information display, stat tracking, Almanac. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
-| 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding. End of step = public beta candidate |
+| 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding. Revisit idle CPU against the benchmarks before release. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
+
+**Idle CPU before the public beta (step 6):** revisit it against the benchmarks. Current levers: a lower idle frame rate in Ambient mode, and a window sized to the plant's bounds instead of the full work area.
 
 **Design needed before each step:** the linear unlock sequence before step 2; choice-based core levels and seedling slot timing before step 5.
 
