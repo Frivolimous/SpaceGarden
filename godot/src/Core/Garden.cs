@@ -183,8 +183,8 @@ public sealed class Garden
     }
 
     // Cuts a part off with everything that grew from it; returns what was cut. The core can't be pruned. The cut
-    // branch leaves the garden at once (its power, caps and blobs), but drifts loose for a while, held together by
-    // its own stems, as the plant's push sends it off (see DriftCut).
+    // branch leaves the garden at once (its power, caps and blobs), but its parts, every link between them cut too,
+    // drift loose for a while as the plant's push sends them off (see DriftCut).
     public List<PlantNode> Prune(PlantNode node)
     {
         if (node.Parent == null) return new();
@@ -199,7 +199,7 @@ public sealed class Garden
 
         (node.Spec.IsFruit ? node.Parent.Fruits : node.Parent.Branches).Remove(node);
         Nodes.RemoveAll(gone.Contains);
-        Cut.Add(new CutBranch(removed, Links.Where(l => gone.Contains(l.Target) && l.Target != node).ToList()));
+        Cut.Add(new CutBranch(removed));
         Links.RemoveAll(l => gone.Contains(l.Target));
         Motes.RemoveAll(m => m.Route.Any(gone.Contains));
         foreach (var n in removed) linkToParent.Remove(n);
@@ -715,7 +715,7 @@ public sealed class Garden
         foreach (var node in Nodes) node.PreviousPosition = node.Position;
 
         // Links pull only when stretched, as in the TS game; the repulsion below keeps parts apart.
-        foreach (var link in Links) Pull(link, keepPins: true);
+        foreach (var link in Links) Pull(link);
 
         // A held part is pulled to the pointer by its weight, as in the TS game: light parts follow briskly, heavy
         // ones like the core lumber after it (a pinned one is carried, moving its pin). Everything else follows only
@@ -755,15 +755,15 @@ public sealed class Garden
         UpdateMotes(dt);
     }
 
-    // A link pulls its two ends together when stretched (a pinned end holds, unless it's been cut loose).
-    static void Pull(Link link, bool keepPins)
+    // A link pulls its two ends together when stretched (a pinned end holds).
+    static void Pull(Link link)
     {
         var d = link.Origin.Position - link.Target.Position;
         float dist = d.Length();
         if (dist < link.Length) return;
         float mult = Tuning.Elasticity * (link.Length - dist) / dist;
-        if (!(keepPins && link.Origin.Fixed)) link.Origin.Velocity += mult * d * link.Origin.Spec.InverseMass;
-        if (!(keepPins && link.Target.Fixed)) link.Target.Velocity -= mult * d * link.Target.Spec.InverseMass;
+        if (!link.Origin.Fixed) link.Origin.Velocity += mult * d * link.Origin.Spec.InverseMass;
+        if (!link.Target.Fixed) link.Target.Velocity -= mult * d * link.Target.Spec.InverseMass;
     }
 
     static void Turn(PlantNode node)
@@ -792,23 +792,22 @@ public sealed class Garden
             node.Velocity = Vector2.Zero;
     }
 
-    // A cut branch is the plant's force-directed physics with its link to the plant gone: its own stems still hold it
-    // together (its pins no longer hold), its parts push each other apart, and the plant's main parts and it push
-    // each other as usual, so it drifts off on its own. It goes after CutDriftSeconds. A branch is a handful of
-    // parts, gone in seconds, so every pair is pushed exactly (fruit on the plant takes no part).
+    // A cut branch is the plant's force-directed physics with every link in it gone (and its pins no longer holding):
+    // its parts push each other apart, and the plant's main parts and they push each other as usual, so they drift
+    // off on their own. They go after CutFadeSeconds. A branch is a handful of parts, gone in seconds, so every pair
+    // is pushed exactly (fruit on the plant takes no part).
     void DriftCut(float dt)
     {
         for (int i = Cut.Count - 1; i >= 0; i--)
         {
             var cut = Cut[i];
-            if ((cut.Seconds += dt) >= Tuning.CutDriftSeconds)
+            if ((cut.Seconds += dt) >= Tuning.CutFadeSeconds)
             {
                 Cut.RemoveAt(i);
                 continue;
             }
             var parts = cut.Nodes;
             foreach (var node in parts) node.PreviousPosition = node.Position;
-            foreach (var link in cut.Links) Pull(link, keepPins: false);
             for (int a = 0; a < parts.Count; a++)
             {
                 for (int b = a + 1; b < parts.Count; b++) Push(parts[a], parts[b], parts[a].Spec.Force, parts[b].Spec.Force);

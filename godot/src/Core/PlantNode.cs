@@ -105,14 +105,13 @@ public sealed class Link
     }
 }
 
-// A branch just pruned (Nodes[0] was cut from its parent), drifting loose with the links between its own parts for
-// CutDriftSeconds. Fade runs 1 to 0 over the last CutFadeSeconds, for drawing.
-public sealed class CutBranch(List<PlantNode> nodes, List<Link> links)
+// A branch just pruned (Nodes[0] was cut from its parent), every link in it cut too, its parts drifting loose for
+// CutFadeSeconds. Fade runs 1 to 0 over that time, from the cut, for drawing.
+public sealed class CutBranch(List<PlantNode> nodes)
 {
     public readonly List<PlantNode> Nodes = nodes;
-    public readonly List<Link> Links = links;
     public float Seconds;
-    public float Fade => Math.Clamp((Tuning.CutDriftSeconds - Seconds) / Tuning.CutFadeSeconds, 0, 1);
+    public float Fade => Math.Clamp(1 - Seconds / Tuning.CutFadeSeconds, 0, 1);
 }
 
 // A point of light travelling along the stems, the TS game's transfer "blob". T runs 0-1 along the current link.

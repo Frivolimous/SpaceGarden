@@ -80,24 +80,29 @@ public class PruneTests
     }
 
     [Fact]
-    public void ACutBranchDriftsOffInOnePieceThenGoes()
+    public void ACutBranchFallsApartDriftsOffAndFadesThenGoes()
     {
         var (garden, trunk, fork) = Branched();
         for (int i = 0; i < 600; i++) garden.Step(); // settled
         float before = Vector2.Distance(fork.Position, trunk.Position);
+        var leaf = fork.Branches.Single(b => b.Spec.Kind == NodeKind.Stem).Fruits[0];
+        float leafBefore = Vector2.Distance(leaf.Position, leaf.Parent!.Position);
         var removed = garden.Prune(fork);
 
         var cut = Assert.Single(garden.Cut);
         Assert.Equal(removed, cut.Nodes);
-        Assert.Equal(removed.Count - 1, cut.Links.Count); // all but the cut one
-        int driftTicks = (int)(Tuning.CutDriftSeconds * Tuning.TicksPerSecond);
-        for (int i = 0; i < driftTicks - 2; i++) garden.Step();
+        garden.Step();
+        Assert.True(cut.Fade < 1); // fading from the cut
+        int fadeTicks = (int)(Tuning.CutFadeSeconds * Tuning.TicksPerSecond);
+        for (int i = 0; i < fadeTicks - 3; i++) garden.Step();
 
         Assert.Single(garden.Cut);
         float after = Vector2.Distance(fork.Position, trunk.Position);
         Assert.True(after > before + 10, $"drifted from {before:0.0} to {after:0.0}");
-        Assert.All(cut.Links, l => Assert.InRange(Vector2.Distance(l.Origin.Position, l.Target.Position), 0, l.Length * 1.5f));
-        Assert.InRange(cut.Fade, 0, 0.1f);
+        // Nothing holds its parts together any more: even a leaf drifts off its stem.
+        float leafAfter = Vector2.Distance(leaf.Position, leaf.Parent!.Position);
+        Assert.True(leafAfter > leafBefore + 5, $"leaf from {leafBefore:0.0} to {leafAfter:0.0}");
+        Assert.InRange(cut.Fade, 0, 0.02f);
 
         for (int i = 0; i < 4; i++) garden.Step();
         Assert.Empty(garden.Cut);

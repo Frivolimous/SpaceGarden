@@ -4,8 +4,8 @@ using Num = System.Numerics;
 namespace SpaceGarden;
 
 // Draws the garden each frame, back to front: stems, the motes travelling along them, soft halos (and the glow where
-// a mote is absorbed), the parts, then pins and the ring on the part under the pointer. Branches just pruned drift
-// off with their stems and parts, fading out. Nothing here changes the garden.
+// a mote is absorbed), the parts, then pins and the ring on the part under the pointer. The parts of a branch just
+// pruned drift off loose, fading out. Nothing here changes the garden.
 //
 // Each layer is a child canvas item drawn in as few draw calls as possible, however big the plant: the stems, the
 // halos, the motes and each kind of shape are one instanced batch apiece (a textured quad per part, or per stem,
@@ -98,24 +98,22 @@ public partial class GardenView : Node2D
     // ==== LAYERS ==== \\
 
     // Each stem is a soft-edged line quad stretched from end to end (the stems thin with depth), over a wider dark
-    // one so it shows over a light window. A pruned branch drifting off keeps its own stems, fading with it.
+    // one so it shows over a light window.
     void DrawLinks()
     {
         links.Begin();
         linkEdges.Begin();
-        foreach (var link in garden.Links) AddLink(link, 1);
-        foreach (var cut in garden.Cut)
-            foreach (var link in cut.Links) AddLink(link, cut.Fade);
+        foreach (var link in garden.Links) AddLink(link);
         linkEdges.Draw(linkLayer, Textures.Line);
         links.Draw(linkLayer, Textures.Line);
     }
 
-    void AddLink(Link link, float alpha)
+    void AddLink(Link link)
     {
         // As the original's link (FDGLink.getColor): its target's colour, dim at rest and full on a power flash.
         // (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
         var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash), link.Target.WiltLook);
-        colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f) * alpha;
+        colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
         float width = LinkWidth(link.Target);
         var from = At(link.Origin);
         var along = At(link.Target) - from;
