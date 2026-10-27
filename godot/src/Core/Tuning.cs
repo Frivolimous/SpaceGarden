@@ -73,6 +73,9 @@ public static class Tuning
     // any growth speed). Growth blobs start nothing new meanwhile, so the room the prune freed is still there.
     public const double UndoPruneSeconds = 30;
 
+    // A pruned branch drifts loose for this long (real seconds, in physics ticks), fading out over the last of it.
+    public const float CutDriftSeconds = 3f, CutFadeSeconds = 1.5f;
+
     // Time away is caught up to at most this much real time.
     public const double CatchUpCapSeconds = 72 * 3600;
     public const int SettleTicks = 900;

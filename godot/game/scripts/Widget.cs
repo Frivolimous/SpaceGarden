@@ -509,7 +509,7 @@ public partial class Widget : Node
         {
             case Tool.Pin: Garden.TogglePin(node); break;
             case Tool.Prune:
-                main.View.Drop(Garden.Prune(node));
+                Garden.Prune(node); // it drifts off and fades (see Garden.Cut)
                 readout.RefreshNow(); // the Undo pill, at once
                 break;
         }

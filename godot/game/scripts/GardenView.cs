@@ -3,9 +3,9 @@ using Num = System.Numerics;
 
 namespace SpaceGarden;
 
-// Draws the garden each frame, back to front: pruned parts tumbling away, stems, the motes travelling along them,
-// soft halos (and the glow where a mote is absorbed), the parts, then pins and the ring on the part under the
-// pointer. Nothing here changes the garden.
+// Draws the garden each frame, back to front: stems, the motes travelling along them, soft halos (and the glow where
+// a mote is absorbed), the parts, then pins and the ring on the part under the pointer. Branches just pruned drift
+// off with their stems and parts, fading out. Nothing here changes the garden.
 //
 // Each layer is a child canvas item drawn in as few draw calls as possible, however big the plant: the stems, the
 // halos, the motes and each kind of shape are one instanced batch apiece (a textured quad per part, or per stem,
@@ -13,17 +13,6 @@ namespace SpaceGarden;
 // which was most of the widget's CPU time.
 public partial class GardenView : Node2D
 {
-    // A pruned part on its way out: it keeps its last motion, falls, spins and fades.
-    sealed class Falling
-    {
-        public Vector2 Position, Velocity;
-        public float Rotation, Spin, Radius, Life = 1;
-        public required NodeSpec Spec;
-    }
-
-    const float FallGravity = 260; // px/s²
-    const float FallSeconds = 1.4f;
-
     // A part's outline and fill brightness, from empty (Dim) to full (Dim + Lit): the outline bright, the fill dark.
     const float OutlineDim = 0.55f, OutlineLit = 0.6f, FillDim = 0.12f, FillLit = 0.3f;
 
@@ -40,8 +29,7 @@ public partial class GardenView : Node2D
     public bool Frozen;
 
     readonly Garden garden;
-    readonly List<Falling> falling = new();
-    readonly Node2D fallingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
+    readonly Node2D linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
         markLayer = new(), moteLayer = new();
     readonly Batch links = new(), linkEdges = new(), halos = new(), moteDots = new();
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
@@ -60,46 +48,21 @@ public partial class GardenView : Node2D
         formingLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
         linkLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
         moteLayer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
-        fallingLayer.Draw += DrawFalling;
         linkLayer.Draw += DrawLinks;
         haloLayer.Draw += DrawHalos;
         shapeLayer.Draw += DrawShapes;
         formingLayer.Draw += DrawForming;
         markLayer.Draw += DrawMarks;
         moteLayer.Draw += DrawMotes;
-        foreach (var layer in new[] { fallingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, markLayer }) AddChild(layer);
-    }
-
-    public void Drop(IEnumerable<PlantNode> nodes)
-    {
-        foreach (var n in nodes)
-            falling.Add(new Falling
-            {
-                Spec = n.Spec,
-                Position = V(n.Position),
-                Velocity = V(n.Velocity) * Tuning.TicksPerSecond + new Vector2((float)GD.RandRange(-30.0, 30.0), (float)GD.RandRange(-60.0, -10.0)),
-                Rotation = n.Rotation,
-                Spin = (float)GD.RandRange(-3.0, 3.0),
-                Radius = n.Spec.Radius,
-            });
+        foreach (var layer in new[] { linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, markLayer }) AddChild(layer);
     }
 
     public override void _Process(double delta)
     {
         if (Frozen) return;
         float dt = (float)delta;
-        for (int i = falling.Count - 1; i >= 0; i--)
-        {
-            var f = falling[i];
-            f.Velocity.Y += FallGravity * dt;
-            f.Position += f.Velocity * dt;
-            f.Rotation += f.Spin * dt;
-            f.Life -= dt / FallSeconds;
-            if (f.Life <= 0) falling.RemoveAt(i);
-        }
         highlightRing = Mathf.MoveToward(highlightRing, Highlight == null ? 0 : 1, dt * 6);
         blend = (float)Engine.GetPhysicsInterpolationFraction();
-        if (falling.Count > 0) fallingLayer.QueueRedraw();
         linkLayer.QueueRedraw();
         haloLayer.QueueRedraw();
         shapeLayer.QueueRedraw();
@@ -134,42 +97,35 @@ public partial class GardenView : Node2D
 
     // ==== LAYERS ==== \\
 
-    // Few at a time and short-lived, so drawn one by one.
-    void DrawFalling()
-    {
-        foreach (var f in falling)
-        {
-            var fill = ColourOf(f.Spec);
-            fill.A = f.Life;
-            fallingLayer.DrawColoredPolygon(Place(UnitPolygon(f.Spec.Shape), f.Position, f.Radius * (0.6f + 0.4f * f.Life), f.Rotation), fill);
-        }
-    }
-
     // Each stem is a soft-edged line quad stretched from end to end (the stems thin with depth), over a wider dark
-    // one so it shows over a light window.
+    // one so it shows over a light window. A pruned branch drifting off keeps its own stems, fading with it.
     void DrawLinks()
     {
         links.Begin();
         linkEdges.Begin();
-        foreach (var link in garden.Links)
-        {
-            // As the original's link (FDGLink.getColor): its target's colour, dim at rest and full on a power flash.
-            // (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
-            var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash), link.Target.WiltLook);
-            colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
-            float width = LinkWidth(link.Target);
-            var from = At(link.Origin);
-            var along = At(link.Target) - from;
-            float length = along.Length();
-            if (length < 0.01f) continue;
-            var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore;
-            links.AddAxes(from + along / 2, along, normal * width, colour);
-            var edge = Edge;
-            edge.A *= colour.A;
-            linkEdges.AddAxes(from + along / 2, along, normal * (width + EdgeWidth), edge);
-        }
+        foreach (var link in garden.Links) AddLink(link, 1);
+        foreach (var cut in garden.Cut)
+            foreach (var link in cut.Links) AddLink(link, cut.Fade);
         linkEdges.Draw(linkLayer, Textures.Line);
         links.Draw(linkLayer, Textures.Line);
+    }
+
+    void AddLink(Link link, float alpha)
+    {
+        // As the original's link (FDGLink.getColor): its target's colour, dim at rest and full on a power flash.
+        // (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
+        var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash), link.Target.WiltLook);
+        colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f) * alpha;
+        float width = LinkWidth(link.Target);
+        var from = At(link.Origin);
+        var along = At(link.Target) - from;
+        float length = along.Length();
+        if (length < 0.01f) return;
+        var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore;
+        links.AddAxes(from + along / 2, along, normal * width, colour);
+        var edge = Edge;
+        edge.A *= colour.A;
+        linkEdges.AddAxes(from + along / 2, along, normal * (width + EdgeWidth), edge);
     }
 
     // A stem's width: thinning with depth, a fruit's stalk thinnest.
@@ -196,26 +152,33 @@ public partial class GardenView : Node2D
 
     // Each part is its shape three times: a thin dark edge, so it stands out over a light window too; then, as in the
     // original, a crisp outline in its hue and a dark fill tinted with it a little smaller on top. Power brightens
-    // both; even a drained part keeps an outline that reads.
+    // both; even a drained part keeps an outline that reads. A pruned branch drifting off fades out as it goes.
     void DrawShapes()
     {
         foreach (var batch in shapes.Values) batch.Begin();
-        foreach (var node in garden.Nodes)
-        {
-            float size = Size(node);
-            if (size < 0.2f) continue;
-            float level = Level(node);
-            var colour = ColourOf(node.Spec);
-            var outline = Wilted(Shade(colour, OutlineDim + OutlineLit * level), node.WiltLook);
-            var fill = Wilted(Shade(colour, FillDim + FillLit * level), node.WiltLook);
-            var batch = shapes[node.Spec.Shape];
-            var at = At(node);
-            var (sin, cos) = MathF.SinCos(node.Rotation);
-            batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), cos, sin, Edge);
-            batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, outline);
-            batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), cos, sin, fill);
-        }
+        foreach (var node in garden.Nodes) AddPart(node, 1);
+        foreach (var cut in garden.Cut)
+            foreach (var node in cut.Nodes) AddPart(node, cut.Fade);
         foreach (var (shape, batch) in shapes) batch.Draw(shapeLayer, Textures.Shape(shape));
+    }
+
+    void AddPart(PlantNode node, float alpha)
+    {
+        float size = Size(node);
+        if (size < 0.2f) return;
+        float level = Level(node);
+        var colour = ColourOf(node.Spec);
+        var outline = Wilted(Shade(colour, OutlineDim + OutlineLit * level), node.WiltLook);
+        var fill = Wilted(Shade(colour, FillDim + FillLit * level), node.WiltLook);
+        var edge = Edge;
+        outline.A = fill.A = alpha;
+        edge.A *= alpha;
+        var batch = shapes[node.Spec.Shape];
+        var at = At(node);
+        var (sin, cos) = MathF.SinCos(node.Rotation);
+        batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), cos, sin, edge);
+        batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, outline);
+        batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), cos, sin, fill);
     }
 
     // What growth blobs are forming (DESIGN.md, Economy, Blobs), over the parts. A fruit bud swells from a speck to
@@ -312,13 +275,6 @@ public partial class GardenView : Node2D
         };
         var points = new Vector2[sides];
         for (int i = 0; i < sides; i++) points[i] = Vector2.FromAngle(Mathf.Tau * i / sides);
-        return points;
-    }
-
-    static Vector2[] Place(Vector2[] unit, Vector2 centre, float radius, float rotation)
-    {
-        var points = new Vector2[unit.Length];
-        for (int i = 0; i < unit.Length; i++) points[i] = centre + unit[i].Rotated(rotation) * radius;
         return points;
     }
 
