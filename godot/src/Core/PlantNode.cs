@@ -106,12 +106,18 @@ public sealed class Link
 }
 
 // A branch just pruned (Nodes[0] was cut from its parent), every link in it cut too, its parts drifting loose for
-// CutFadeSeconds. Fade runs 1 to 0 over that time, from the cut, for drawing.
+// CutFadeSeconds. FadeOf runs 1 to 0 from the cut, for drawing: each part a little quicker or slower than the next
+// (up to CutFadeJitter of the time quicker, picked by its id, so the garden's dice aren't touched).
 public sealed class CutBranch(List<PlantNode> nodes)
 {
     public readonly List<PlantNode> Nodes = nodes;
     public float Seconds;
-    public float Fade => Math.Clamp(1 - Seconds / Tuning.CutFadeSeconds, 0, 1);
+
+    public float FadeOf(PlantNode node)
+    {
+        float jitter = (uint)(node.Id * 2654435761u) % 1000 / 1000f;
+        return Math.Clamp(1 - Seconds / (Tuning.CutFadeSeconds * (1 - Tuning.CutFadeJitter * jitter)), 0, 1);
+    }
 }
 
 // A point of light travelling along the stems, the TS game's transfer "blob". T runs 0-1 along the current link.

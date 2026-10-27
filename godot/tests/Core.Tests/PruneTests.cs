@@ -92,7 +92,8 @@ public class PruneTests
         var cut = Assert.Single(garden.Cut);
         Assert.Equal(removed, cut.Nodes);
         garden.Step();
-        Assert.True(cut.Fade < 1); // fading from the cut
+        Assert.All(removed, n => Assert.True(cut.FadeOf(n) < 1)); // fading from the cut
+        Assert.True(removed.Select(cut.FadeOf).Distinct().Count() > 1); // each at its own rate
         int fadeTicks = (int)(Tuning.CutFadeSeconds * Tuning.TicksPerSecond);
         for (int i = 0; i < fadeTicks - 3; i++) garden.Step();
 
@@ -102,7 +103,7 @@ public class PruneTests
         // Nothing holds its parts together any more: even a leaf drifts off its stem.
         float leafAfter = Vector2.Distance(leaf.Position, leaf.Parent!.Position);
         Assert.True(leafAfter > leafBefore + 5, $"leaf from {leafBefore:0.0} to {leafAfter:0.0}");
-        Assert.InRange(cut.Fade, 0, 0.02f);
+        Assert.All(removed, n => Assert.InRange(cut.FadeOf(n), 0, 0.02f));
 
         for (int i = 0; i < 4; i++) garden.Step();
         Assert.Empty(garden.Cut);

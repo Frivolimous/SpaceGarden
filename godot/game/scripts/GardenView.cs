@@ -156,7 +156,7 @@ public partial class GardenView : Node2D
         foreach (var batch in shapes.Values) batch.Begin();
         foreach (var node in garden.Nodes) AddPart(node, 1);
         foreach (var cut in garden.Cut)
-            foreach (var node in cut.Nodes) AddPart(node, cut.Fade);
+            foreach (var node in cut.Nodes) AddPart(node, cut.FadeOf(node));
         foreach (var (shape, batch) in shapes) batch.Draw(shapeLayer, Textures.Shape(shape));
     }
 

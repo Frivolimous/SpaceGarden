@@ -74,7 +74,8 @@ public static class Tuning
     public const double UndoPruneSeconds = 30;
 
     // A pruned branch's parts drift loose for this long (real seconds, in physics ticks), fading out from the cut.
-    public const float CutFadeSeconds = 5f;
+    // Each part fades a little quicker or slower than the next, at most this share of the time quicker.
+    public const float CutFadeSeconds = 5f, CutFadeJitter = 0.25f;
 
     // Time away is caught up to at most this much real time.
     public const double CatchUpCapSeconds = 72 * 3600;
