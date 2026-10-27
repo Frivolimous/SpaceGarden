@@ -36,9 +36,18 @@ public partial class GardenView : Node2D
     float highlightRing;
     float blend = 1;
 
+    // Small moments (marks): a ring widening off a part as it pops out, a glint on a fruit as it appears, and a
+    // ripple out from the core as genes unlock a step of the track (seconds since each began).
+    const float PopSeconds = 0.8f, RippleSeconds = 2.4f, RippleGap = 0.4f;
+    static readonly Color RippleTint = new(0.82f, 0.74f, 1f); // the genes' purple, lightened (as the unlock note)
+    readonly List<float> ripples = new();
+    int unlocksSeen;
+    float coreGlow;
+
     public GardenView(Garden garden)
     {
         this.garden = garden;
+        unlocksSeen = garden.Unlocks;
         foreach (var shape in Enum.GetValues<Shape>())
         {
             shapes[shape] = new Batch();
@@ -62,6 +71,20 @@ public partial class GardenView : Node2D
         if (Frozen) return;
         float dt = (float)delta;
         highlightRing = Mathf.MoveToward(highlightRing, Highlight == null ? 0 : 1, dt * 6);
+        // Genes count as their blob leaves the lab, so an unlock waits for the gene blobs on their way to arrive (the
+        // core glows as each does), unless none are shown.
+        if (garden.Unlocks > unlocksSeen)
+        {
+            bool arrived = garden.Core.Glow > coreGlow;
+            if (arrived || !garden.Motes.Any(m => m.Absorbed && m.Route[^1] == garden.Core))
+            {
+                unlocksSeen = garden.Unlocks;
+                ripples.Add(0);
+            }
+        }
+        coreGlow = garden.Core.Glow;
+        for (int i = ripples.Count - 1; i >= 0; i--)
+            if ((ripples[i] += dt) >= RippleSeconds + RippleGap) ripples.RemoveAt(i);
         blend = (float)Engine.GetPhysicsInterpolationFraction();
         linkLayer.QueueRedraw();
         haloLayer.QueueRedraw();
@@ -232,7 +255,67 @@ public partial class GardenView : Node2D
             markLayer.DrawArc(At(Highlight), r, 0, Mathf.Tau, 40, new Color(0, 0, 0, 0.35f * highlightRing), 3.5f, true);
             markLayer.DrawArc(At(Highlight), r, 0, Mathf.Tau, 40, new Color(1, 1, 1, 0.8f * highlightRing), 1.5f, true);
         }
+
+        DrawMoments();
     }
+
+    // The small moments: a handful at a time, and brief. Each on a soft dark edge, like the parts.
+    void DrawMoments()
+    {
+        foreach (var node in garden.Nodes)
+        {
+            if (node.Age < 0 || node.Age >= PopSeconds) continue;
+            float t = node.Age / PopSeconds;
+            var colour = ColourOf(node.Spec).Lightened(0.35f);
+            var at = At(node);
+            if (node.Spec.IsFruit)
+            {
+                // A glint: a slim four-pointed sparkle that flares and goes, turning a little.
+                float flare = Mathf.Sin(Mathf.Pi * t);
+                float reach = node.Spec.Radius * 1.8f * flare;
+                colour = colour.Lightened(0.5f);
+                colour.A = flare;
+                float turn = -Mathf.Pi / 2 + t * 0.5f;
+                markLayer.DrawColoredPolygon(Sparkle(at, reach + 1, turn), new Color(0, 0, 0, 0.3f * flare));
+                markLayer.DrawColoredPolygon(Sparkle(at, reach, turn), colour);
+            }
+            else
+            {
+                // Quiet: wild growth pops parts out often.
+                float r = node.Spec.Radius * (1.1f + 0.8f * EaseOut(t));
+                Ring(at, r, 0.5f + 1.5f * (1 - t), colour, 0.6f * (1 - t) * (1 - t));
+            }
+        }
+
+        // The unlock ripple: two rings, one after the other, widening slowly from the core.
+        var core = garden.Core;
+        foreach (var age in ripples)
+            for (int i = 0; i < 2; i++)
+            {
+                float t = (age - i * RippleGap) / RippleSeconds;
+                if (t <= 0 || t >= 1) continue;
+                float r = core.Spec.Radius * (1.05f + 3f * EaseOut(t));
+                Ring(At(core), r, 0.5f + 3f * (1 - t), RippleTint, 0.75f * (1 - t));
+            }
+    }
+
+    void Ring(Vector2 at, float radius, float width, Color colour, float alpha)
+    {
+        colour.A = alpha;
+        markLayer.DrawArc(at, radius, 0, Mathf.Tau, 48, new Color(0, 0, 0, 0.35f * alpha), width + 2, true);
+        markLayer.DrawArc(at, radius, 0, Mathf.Tau, 48, colour, width, true);
+    }
+
+    // Four long thin points about a centre.
+    static Vector2[] Sparkle(Vector2 at, float reach, float turn)
+    {
+        var points = new Vector2[8];
+        for (int i = 0; i < 8; i++)
+            points[i] = at + Vector2.FromAngle(turn + i * Mathf.Pi / 4) * (i % 2 == 0 ? reach : reach * 0.2f);
+        return points;
+    }
+
+    static float EaseOut(float t) => 1 - (1 - t) * (1 - t) * (1 - t);
 
     void DrawMotes()
     {
