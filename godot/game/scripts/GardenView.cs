@@ -166,10 +166,13 @@ public partial class GardenView : Node2D
             colour.A = 0.15f * Level(node) * Level(node) * (1 - 0.6f * node.WiltLook); // faint, and only on full parts
             halos.AddRound(At(node), Size(node) * 3.6f, colour);
             if (node.Glow <= 0) continue;
-            var glow = Rgb(node.GlowRgb);
-            glow.A = 0.9f * node.Glow;
+            // Tight round the part and strong: the halo twice over.
+            var glow = Rgb(node.GlowRgb).Lightened(0.2f);
+            glow.A = node.Glow;
             float radius = Mathf.Max(node.Spec.Radius * GrowIn(node), Size(node));
-            halos.AddRound(At(node), radius * (4.5f + 1.5f * (1 - node.Glow)), glow);
+            float diameter = radius * (3.4f + 0.6f * (1 - node.Glow));
+            halos.AddRound(At(node), diameter, glow);
+            halos.AddRound(At(node), diameter, glow);
         }
         halos.Draw(haloLayer, Textures.Halo);
     }
@@ -298,8 +301,8 @@ public partial class GardenView : Node2D
             {
                 float t = (age - i * RippleGap) / RippleSeconds;
                 if (t <= 0 || t >= 1) continue;
-                float r = core.Spec.Radius * (1.05f + 3f * EaseOut(t));
-                Ring(At(core), r, 0.5f + 3f * (1 - t), RippleTint, 0.75f * (1 - t));
+                float r = core.Spec.Radius * (1.05f + 0.45f * EaseOut(t)); // out to half again the core's size
+                Ring(At(core), r, 0.5f + 2f * (1 - t), RippleTint, 0.75f * (1 - t));
             }
     }
 
