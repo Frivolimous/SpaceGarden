@@ -43,6 +43,9 @@ public partial class GardenView : Node2D
     readonly List<float> ripples = new();
     int unlocksSeen;
     float coreGlow;
+    readonly HashSet<PlantNode> restored = new(); // put back by an undo: they grow in again, with no moment
+
+    public void Restored(IEnumerable<PlantNode> nodes) => restored.UnionWith(nodes);
 
     public GardenView(Garden garden)
     {
@@ -262,9 +265,10 @@ public partial class GardenView : Node2D
     // The small moments: a handful at a time, and brief. Each on a soft dark edge, like the parts.
     void DrawMoments()
     {
+        if (restored.Count > 0) restored.RemoveWhere(n => n.Age >= PopSeconds || !garden.Nodes.Contains(n));
         foreach (var node in garden.Nodes)
         {
-            if (node.Age < 0 || node.Age >= PopSeconds) continue;
+            if (node.Age < 0 || node.Age >= PopSeconds || restored.Contains(node)) continue;
             float t = node.Age / PopSeconds;
             var colour = ColourOf(node.Spec).Lightened(0.35f);
             var at = At(node);

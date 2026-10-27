@@ -5,13 +5,13 @@ namespace SpaceGarden;
 // Dev aid: "-- --screenshot=out.png [--frames=N]" saves the viewport after N physics ticks (1/60 s) and quits;
 // "--at=60,600,1800" saves out_60.png, out_600.png, ... instead. The PNG keeps the window's transparency
 // (add --backdrop=101820 to see the plant against a colour). "--prune=N" prunes the biggest branch off the core's
-// first stem at tick N, to catch the cut branch drifting off.
+// first stem at tick N, to catch the cut branch drifting off; "--undo=N" undoes it at tick N.
 public static class Screenshot
 {
     public static async void CaptureIfRequested(Node owner)
     {
         string? path = null;
-        int? pruneAt = null;
+        int? pruneAt = null, undoAt = null;
         var frames = new List<int> { 60 };
         foreach (var arg in OS.GetCmdlineUserArgs())
         {
@@ -19,6 +19,7 @@ public static class Screenshot
             else if (arg.StartsWith("--frames=")) frames = new List<int> { int.Parse(arg["--frames=".Length..]) };
             else if (arg.StartsWith("--at=")) frames = arg["--at=".Length..].Split(',').Select(int.Parse).ToList();
             else if (arg.StartsWith("--prune=")) pruneAt = int.Parse(arg["--prune=".Length..]);
+            else if (arg.StartsWith("--undo=")) undoAt = int.Parse(arg["--undo=".Length..]);
         }
         if (path == null) return;
 
@@ -31,6 +32,7 @@ public static class Screenshot
                 await owner.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
                 frame++;
                 if (frame == pruneAt && owner is Main main) PruneBiggest(main.Garden);
+                if (frame == undoAt && owner is Main m && m.Garden.UndoPrune() is { } back) m.View.Restored(back);
             }
             await owner.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             var file = frames.Count == 1 ? path : path.Replace(".png", $"_{target}.png");
