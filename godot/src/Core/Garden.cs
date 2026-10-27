@@ -1030,12 +1030,14 @@ public sealed class Garden
         foreach (var link in Links)
         {
             link.Flash = Math.Max(0, link.Flash - Tuning.LinkFlashFadePerSecond * dt);
+            link.FlashAge += dt;
             link.FlashPhase += dt * Math.Min(Tuning.MaxFlashesPerSecond, link.FlowPerHour * Tuning.FlashesPerPowerHour);
             if (link.FlashPhase < 1) continue;
             // The flash is as bright as the part the power reached is full, so power trickling into a low branch
             // glimmers and only a full one flashes brightly. That part bounces (with its fruit, which share its look).
             var reached = link.FlowsToTarget ? link.Target : link.Origin;
-            link.Flash = Tuning.FlashPeak * Math.Clamp(reached.Fill, 0, 1);
+            link.Flash = link.FlashStrength = Tuning.FlashPeak * Math.Clamp(reached.Fill, 0, 1);
+            link.FlashAge = 0;
             foreach (var part in reached.Fruits.Prepend(reached)) part.BounceSpeed += Tuning.BounceKick;
             // A little jitter (the original's ±10%), so links carrying the same flow drift out of step.
             link.FlashPhase = (float)(rng.NextDouble() - 0.5) * 0.2f;

@@ -92,6 +92,8 @@ public sealed class Link
     // 0-1 light that a flash sets and that fades. Power flowing along the link (either way, per real hour, as of the
     // last economy step) sets how often it flashes; FlashPhase counts up to the next.
     public float Flash;
+    // The last flash's own brightness, and seconds since it (for the pulse drawn running along the link).
+    public float FlashStrength, FlashAge = float.MaxValue;
     public float FlowPerHour;
     public float FlashPhase;
     public bool FlowsToTarget; // which way the power ran (outward, or back towards the origin)
