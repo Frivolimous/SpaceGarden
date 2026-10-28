@@ -31,7 +31,7 @@ public partial class GardenView : Node2D
     readonly Garden garden;
     readonly Node2D linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
         markLayer = new(), moteLayer = new();
-    readonly Batch links = new(), linkEdges = new(), halos = new(), moteDots = new();
+    readonly Batch links = new(), linkEdges = new(), lit = new(), halos = new(), moteDots = new();
     // A power flash's light flooding along its stem, then draining: done before the next (at most 3 a second).
     const float FillSeconds = 0.1f, DrainSeconds = 0.2f;
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
@@ -125,24 +125,28 @@ public partial class GardenView : Node2D
 
     // ==== LAYERS ==== \\
 
-    // Each stem is a soft-edged line quad stretched from end to end (the stems thin with depth), over a wider dark
-    // one so it shows over a light window.
+    // Each stem is a soft-edged quad stretched from end to end, tapering from its parent's end to its own (the taper
+    // is in the texture: see Textures.Taper), over a wider dark one so it shows over a light window. The stems thin
+    // with depth too.
     void DrawLinks()
     {
         links.Begin();
         linkEdges.Begin();
+        lit.Begin();
         foreach (var link in garden.Links)
         {
             AddLink(link);
             if (link.FlashAge < FillSeconds + DrainSeconds) AddLit(link);
         }
-        linkEdges.Draw(linkLayer, Textures.Line);
-        links.Draw(linkLayer, Textures.Line);
+        linkEdges.Draw(linkLayer, Textures.Taper);
+        links.Draw(linkLayer, Textures.Taper);
+        lit.Draw(linkLayer, Textures.Line);
     }
 
     // A power flash lights its whole stem, as in the original, but in a wipe from the end the power came from: the
     // light floods along to the far end, then drains away from the same end it came in by. As bright as the flash
-    // (the fuller the part it reached, the brighter). Drawn over the stem at rest, in the same batch.
+    // (the fuller the part it reached, the brighter). Drawn over the stem at rest, an even width a little inside
+    // the stem's where the lit stretch is.
     void AddLit(Link link)
     {
         float age = link.FlashAge;
@@ -154,10 +158,13 @@ public partial class GardenView : Node2D
         var along = At(to) - a;
         float length = along.Length();
         if (length < 0.01f) return;
+        float middle = (head + tail) / 2; // how far along from the end the power left
+        float fromParent = link.FlowsToTarget ? middle : 1 - middle;
+        float width = LinkWidth(link.Target) * Mathf.Lerp(1, Textures.TaperEnd, fromParent) * 0.9f;
         var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.9f * link.FlashStrength), link.Target.WiltLook);
         colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
-        var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore * LinkWidth(link.Target);
-        links.AddAxes(a + along * (head + tail) / 2, along * (head - tail), normal, colour);
+        var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore * width;
+        lit.AddAxes(a + along * middle, along * (head - tail), normal, colour);
     }
 
     void AddLink(Link link)
@@ -168,7 +175,7 @@ public partial class GardenView : Node2D
         colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
         float width = LinkWidth(link.Target);
         var from = At(link.Origin);
-        var along = At(link.Target) - from;
+        var along = At(link.Target) - from; // the texture's parent end is at the origin
         float length = along.Length();
         if (length < 0.01f) return;
         var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore;
@@ -178,8 +185,9 @@ public partial class GardenView : Node2D
         linkEdges.AddAxes(from + along / 2, along, normal * (width + EdgeWidth), edge);
     }
 
-    // A stem's width: thinning with depth, a fruit's stalk thinnest.
-    static float LinkWidth(PlantNode target) => target.Spec.IsFruit ? 1.2f : Mathf.Max(1.2f, 3.4f - target.Depth * 0.18f);
+    // A stem's width at its parent's end (it tapers to TaperEnd of that at its own): thinning with depth, a fruit's
+    // stalk thinnest.
+    static float LinkWidth(PlantNode target) => target.Spec.IsFruit ? 1.3f : Mathf.Max(1.4f, 3.4f - target.Depth * 0.16f);
 
     // Under each part, a soft halo of its power; and where a mote was just absorbed, a glow of the mote's colour that
     // widens a little as it fades, so it's seen that something happened.
@@ -359,8 +367,10 @@ public partial class GardenView : Node2D
         foreach (var mote in garden.Motes)
         {
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
-            var deeper = mote.To.Parent == mote.From ? mote.To : mote.From;
-            moteDots.AddRound(p, Textures.ShapeDiameter(LinkWidth(deeper) * 0.65f), Rgb(mote.Rgb).Lightened(0.3f));
+            bool outward = mote.To.Parent == mote.From;
+            var deeper = outward ? mote.To : mote.From;
+            float width = LinkWidth(deeper) * Mathf.Lerp(1, Textures.TaperEnd, outward ? mote.T : 1 - mote.T);
+            moteDots.AddRound(p, Textures.ShapeDiameter(width * 0.65f), Rgb(mote.Rgb).Lightened(0.3f));
         }
         moteDots.Draw(moteLayer, Textures.Shape(Shape.Circle));
     }
@@ -483,17 +493,26 @@ public static class Textures
     // A stem: solid across the middle LineCore of its height, fading out to the edges for a soft, antialiased look.
     // Stretched along the stem; the quad is drawn the stem's width / LineCore tall so the solid part is the width.
     public const float LineCore = 0.7f;
-    public static readonly Texture2D Line = MakeLine();
+    public static readonly Texture2D Line = MakeLine(1);
 
-    static Texture2D MakeLine()
+    // The same, narrowing along its length (x) from its full width at the start to TaperEnd of it at the end.
+    public const float TaperEnd = 0.55f;
+    public static readonly Texture2D Taper = MakeLine(TaperEnd);
+
+    static Texture2D MakeLine(float end)
     {
         const int height = 32;
-        var image = Image.CreateEmpty(4, height, false, Image.Format.Rgba8);
-        for (int y = 0; y < height; y++)
+        int width = end < 1 ? 64 : 4;
+        var image = Image.CreateEmpty(width, height, false, Image.Format.Rgba8);
+        for (int x = 0; x < width; x++)
         {
-            float fromMiddle = Mathf.Abs((y + 0.5f) / height - 0.5f) * 2; // 0 in the middle, 1 at the edges
-            float alpha = Mathf.Clamp((1 - fromMiddle) / (1 - LineCore), 0, 1);
-            for (int x = 0; x < 4; x++) image.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            float scale = Mathf.Lerp(1, end, (x + 0.5f) / width);
+            for (int y = 0; y < height; y++)
+            {
+                float fromMiddle = Mathf.Abs((y + 0.5f) / height - 0.5f) * 2 / scale; // 0 in the middle, 1 at the edges
+                float alpha = Mathf.Clamp((1 - fromMiddle) / (1 - LineCore), 0, 1);
+                image.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
         }
         image.GenerateMipmaps();
         return ImageTexture.CreateFromImage(image);
