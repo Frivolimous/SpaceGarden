@@ -41,28 +41,22 @@ public static class Tuning
     public const float MoteLinkSeconds = 0.3f;
     public const float GlowFadePerSecond = 1.5f;
 
-    // Power shows as link flashes, as in the original game: a flash fades in about 0.3 s (its 300 ms tween). Placeholder
-    // rate: a link carrying a bare stem's upkeep flashes about every 3 s, a trunk carrying the core's output 3 times a
-    // second, never more (the original's fastest, one transfer every 20 ticks).
+    // Power shows as link flashes, as in the original game: each transfer lights its link, and the flash fades in
+    // about 0.3 s (its 300 ms tween). A transfer's flash shows at a random moment within its economy step, so links
+    // don't all flash in step (the original's ±10% timing). Placeholder: a flash is FlashPeak times as bright as the
+    // part the power reached is full (1: a full part's flash is as bright as the original's).
     public const float LinkFlashFadePerSecond = 3.3f;
-    public const float FlashesPerPowerHour = 0.01f;
-    public const float MaxFlashesPerSecond = 3;
-    // Placeholder. A flash's brightness is this times the fill of the part the power reached (1: a full part's flash
-    // is as bright as the original's).
     public const float FlashPeak = 0.6f;
 
     // A part's brightness and size follow its fill, as in the original (PlantNodeView): the shown fill moves a share
-    // of the way to the real one each tick (INTENSITY_V_INC / _DEC), and never shows below FillLookFloor.
+    // of the way to the real one each tick (INTENSITY_V_INC / _DEC). Its level (intensityInterpolation) is the shown
+    // fill, never below FillLookFloor; past full it rises a tenth as fast (OverFillLook), up to FillLookMax. Its size
+    // is its radius times its level.
     public const float FillLookRise = 0.1f;
     public const float FillLookFall = 0.05f;
     public const float FillLookFloor = 0.2f;
-
-    // Placeholder. Each flash of power arriving kicks a part's bounce, a damped spring (about 3 swings a second,
-    // lightly damped): it swells past its level by about BounceKick / 25, dips a little below, and settles.
-    public const float BounceKick = 3f;
-    public const float BounceStiffness = 360;
-    public const float BounceDamping = 13;
-    public const float BounceMax = 0.3f;
+    public const float OverFillLook = 0.1f;
+    public const float FillLookMax = 2;
 
     // Growth is in real seconds at speed 1 (the prototype's default; its menu has faster speeds for testing). A free
     // Sprout() (the first stem, stress tests) grows fruit FruitChance of the time.
@@ -82,44 +76,39 @@ public static class Tuning
     public const int SettleTicks = 900;
 
     // ==== ECONOMY ==== \\
-    // Power rates are per real hour (DESIGN.md, Economy: draft values, to be tuned through play). The economy runs
-    // in fixed steps of EconomyStepSeconds of growth time, so a live session, a catch-up and a test all take the same
-    // steps whatever chunks the time arrives in.
-    public const double EconomyStepSeconds = 1; // short enough that blobs leave one at a time, every few seconds
+    // Power is the original game's (its Config NodeBase and Nodes, and PlantNodePower), its per-tick numbers times 60
+    // to make them per second (DESIGN.md, Economy): it fills and drains in seconds, a lively light show, and doesn't
+    // set the garden's pace (the unlock track does). The economy runs in fixed steps of EconomyStepSeconds of growth
+    // time, so a live session, a catch-up and a test all take the same steps whatever chunks the time arrives in. A
+    // step is one power transfer: the original's powerDelay, 20 ticks give or take 10% (18.75 here, exact in binary,
+    // so the steps don't drift with the chunks).
+    public const double EconomyStepSeconds = 0.3125;
 
-    // Rescaled with the blobs (DESIGN.md, Economy): the doc's draft table times PowerScale, the ratios kept, and the
-    // stores and flow scaled alike, so power fills and drains over the same hours as before.
-    public const float PowerScale = 60;
-    public const float CorePowerPerHour = 8 * PowerScale;
-    public const float GeneratorPowerPerHour = 4 * PowerScale;  // half the core's
-    public const float StemUpkeepPerHour = 0.5f * PowerScale;   // halved by each leaf
+    // How much power a part holds (powerMax). A new part starts empty.
+    public const float NodePowerStore = 100;
+    public const float CorePowerStore = 3 * NodePowerStore;
+    public const float LabPowerStore = 2 * NodePowerStore;
+
+    // Power made, and upkeep, per second when full. Both follow the part's fill: a source makes its rate times its
+    // fill (none past full), a drain costs its rate times its fill, so nothing ever quite empties or wilts.
+    public const float CorePowerPerSecond = 0.4f * 60;
+    public const float GeneratorPowerPerSecond = 0.2f * 60;  // half the core's
+    public const float StemUpkeepPerSecond = 0.05f * 60;     // halved by each leaf
     public const float LeafUpkeepFactor = 0.5f;
-    public const float GroveUpkeepPerHour = 1.5f * PowerScale;
-    public const float LabUpkeepPerHour = 3f * PowerScale;
+    public const float GroveUpkeepPerSecond = 0.1f * 60;
+    public const float LabUpkeepPerSecond = 0.1f * 60;
 
     // Placeholder: each flower fruit (a generator's burr, a lab's research, a grove's berry) adds this much to its
     // flower's output, up to the doc's +20% per flower.
     public const float FruitBonusEach = 0.2f / 3;
     public const float FruitBonusMax = 0.2f;
 
-    // Placeholder. Generators, labs and groves work at this share of their rate when empty, rising to full when
-    // full (none while wilting).
-    public const float OutputFloor = 0f;
-
-    // Placeholders. How much power a part holds, and how freely it flows: along a link, power runs downhill from the
-    // fuller part to the emptier (by fill, as in the original game), PowerFlowPerHour per hour at a full-to-empty
-    // difference. A long branch carrying a lot needs a steep slope, so far tips run low first: power is local.
-    public const float NodePowerStore = 1 * PowerScale;
-    public const float CorePowerStore = 4 * PowerScale;
-    public const float PowerFlowPerHour = 40 * PowerScale;
-
-    // Placeholder. The power a new part starts with (free: buds and grown parts don't cost their parent anything).
-    public const float SproutPower = 0.01f * PowerScale;
-
-    // Placeholder. A part that can't pay its upkeep wilts: it stops draining (so the power left reaches the rest) and
-    // recovers once it has filled back up to RecoverFill. Nothing is ever destroyed.
-    public const float RecoverFill = 0.5f;
-    public const float WiltLookPerSecond = 1.5f; // how fast a part's wilted look comes and goes (presentation)
+    // Power transfer (the original's attemptTransferPower): each step, a part fuller than SendFill sends a clump of
+    // power (powerClump) to its emptiest neighbour that's less full than itself, emptiest by fill over weight
+    // (powerWeight: stems, then the core, count as emptier than they are, so power heads out along the stems).
+    public const float SendFill = 0.25f;
+    public const float CoreClump = 15, NodeClump = 10, FlowerClump = 5; // flowers: labs and groves
+    public const float CoreWeight = 1.5f, StemWeight = 1.1f;
 
     // Capacity at the start (DESIGN.md, Linear unlock track: "Start"). The unlock track raises Garden.Capacity.
     public const int StartStemCap = 4;
@@ -128,7 +117,7 @@ public static class Tuning
 
     // ==== BLOBS ==== \\
     // Draft rates (DESIGN.md, Economy, Blobs), to tune in play. Flowers make blobs at these rates when full of power,
-    // in proportion to their fill when lower, and none while wilting (their own fruit add up to FruitBonusMax).
+    // in proportion to their fill when lower (their own fruit add up to FruitBonusMax).
     // Both kinds wander the stems at random, never turning straight back unless at a dead end, and fade after
     // BlobMaxHops links (the original's 30) if nothing absorbed them.
     public const int BlobMaxHops = 30;

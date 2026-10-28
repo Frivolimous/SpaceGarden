@@ -10,8 +10,8 @@ namespace SpaceGarden;
 // planted layout (every garden, saved ones too, is otherwise radial), --fresh to ignore the save, --seed=N, --away=HOURS to pretend that long
 // has passed since the last save, --backdrop=RRGGBB to draw a colour behind the plant, --profile=NAME to use
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
-// parts at once (for stress tests; past the usual limit and caps too), --wilt to start with every part drained and
-// wilting (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob
+// parts at once (for stress tests; past the usual limit and caps too), --drain to start with every part but the core
+// empty (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob
 // sets it off), --pausetest=AT,FOR to act as if hidden for FOR seconds
 // from AT seconds after start (to test the pause), plus Screenshot's options. --screenshot runs never touch the
 // real save.
@@ -102,14 +102,10 @@ public partial class Main : Node2D
             for (int i = 0; i < 1800; i++) Garden.Step(); // half a minute's settling
             foreach (var node in Garden.Nodes) node.Age = 10;
         }
-        if (args.ContainsKey("wilt"))
+        if (args.ContainsKey("drain"))
         {
             foreach (var node in Garden.Nodes)
-            {
-                if (node.Parent == null) continue; // the core never wilts
-                node.Power = 0;
-                node.Wilting = !node.Spec.IsFruit;
-            }
+                if (node.Parent != null) node.Power = 0;
             Garden.SettleLooks();
         }
         if (args.ContainsKey("nearunlock") && Garden.NextUnlock is { } next)

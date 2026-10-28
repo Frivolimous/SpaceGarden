@@ -3,7 +3,6 @@ namespace SpaceGarden.Core.Tests;
 public class EconomyTests
 {
     const float Tolerance = 1e-4f;
-    const float P = Tuning.PowerScale; // the draft table's units, rescaled with the blobs
     static readonly Capacity Roomy = new(100, 100, 2);
 
     static Garden NewGarden(Capacity? capacity = null)
@@ -18,8 +17,8 @@ public class EconomyTests
         (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind))
             ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
-    // core - stem - stem, which forks into two stems each carrying two labs: 12 an hour of labs and 2.5 of stems
-    // against the core's 8. Every link is taken, and the caps (4 stems, no generators) leave no room to grow.
+    // core - stem - stem, which forks into two stems each carrying two labs: 24 a second of labs and 12 of stems
+    // against the core's 24. Every link is taken, and the caps (4 stems, no generators) leave no room to grow.
     static (Garden Garden, PlantNode Fork, PlantNode Hungry) Overloaded()
     {
         var garden = NewGarden(new Capacity(4, 0, 1));
@@ -33,31 +32,51 @@ public class EconomyTests
         return (garden, fork, right);
     }
 
-    static int Wilting(Garden garden) => garden.Nodes.Count(n => n.Wilting);
     static int MainNodes(Garden garden) => garden.Nodes.Count(n => !n.Spec.IsFruit);
 
-    // ==== POWER BALANCE ==== \\
+    // ==== POWER ==== \\
 
     [Fact]
-    public void CoreAloneMakesEightAnHour()
+    public void RatesFollowTheOriginal()
     {
-        var garden = NewGarden();
-        Assert.Equal((8 * P, 0f), garden.PowerBalance());
-    }
-
-    [Fact]
-    public void RatesFollowTheDraftTable()
-    {
+        // Per second when full: the original's per-tick numbers times 60.
         var garden = NewGarden(Roomy);
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         var generator = Add(garden, stem, NodeKind.Generator);
-        var lab = Add(garden, stem, NodeKind.Lab);
-        foreach (var node in garden.Nodes) node.Power = node.Store;
+        var fork = Add(garden, stem, NodeKind.Stem);
+        var lab = Add(garden, fork, NodeKind.Lab);
+        var grove = Add(garden, fork, NodeKind.Grove);
+        Assert.Equal(24, Garden.FullProductionPerSecond(garden.Core), Tolerance);
+        Assert.Equal(12, Garden.FullProductionPerSecond(generator), Tolerance);
+        Assert.Equal(3, Garden.FullUpkeepPerSecond(stem), Tolerance);
+        Assert.Equal(6, Garden.FullUpkeepPerSecond(lab), Tolerance);
+        Assert.Equal(6, Garden.FullUpkeepPerSecond(grove), Tolerance);
+        Assert.Equal((300f, 100f, 200f), (garden.Core.Store, stem.Store, lab.Store));
+        var (production, upkeep) = garden.FullPowerBalance();
+        Assert.Equal(36, production, Tolerance);
+        Assert.Equal(18, upkeep, Tolerance);
+    }
 
-        Assert.Equal(4 * P, Garden.ProductionPerHour(generator));
-        Assert.Equal(3 * P, Garden.UpkeepPerHour(lab));
-        Assert.Equal(0.5f * P, Garden.UpkeepPerHour(stem));
-        Assert.Equal((12 * P, 3.5f * P), garden.PowerBalance());
+    [Fact]
+    public void EverythingFollowsItsFill()
+    {
+        // Sources make, and drains cost, their rate times their fill: the core too. A full source makes nothing.
+        var garden = NewGarden(Roomy);
+        var stem = Add(garden, garden.Core, NodeKind.Stem);
+        var generator = Add(garden, stem, NodeKind.Generator);
+        foreach (var node in new[] { garden.Core, stem, generator })
+        {
+            node.Power = 0;
+            Assert.Equal(0, Garden.ProductionPerSecond(node) + Garden.UpkeepPerSecond(node));
+        }
+        garden.Core.Power = garden.Core.Store / 2;
+        generator.Power = generator.Store / 4;
+        stem.Power = stem.Store / 2;
+        Assert.Equal(12, Garden.ProductionPerSecond(garden.Core), Tolerance);
+        Assert.Equal(3, Garden.ProductionPerSecond(generator), Tolerance);
+        Assert.Equal(1.5f, Garden.UpkeepPerSecond(stem), Tolerance);
+        garden.Core.Power = garden.Core.Store;
+        Assert.Equal(0, Garden.ProductionPerSecond(garden.Core));
     }
 
     [Fact]
@@ -66,9 +85,9 @@ public class EconomyTests
         var garden = NewGarden(Roomy);
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         Add(garden, stem, NodeKind.Leaf);
-        Assert.Equal(0.25f * P, Garden.UpkeepPerHour(stem));
+        Assert.Equal(1.5f, Garden.FullUpkeepPerSecond(stem), Tolerance);
         Add(garden, stem, NodeKind.Leaf);
-        Assert.Equal(0.125f * P, Garden.UpkeepPerHour(stem));
+        Assert.Equal(0.75f, Garden.FullUpkeepPerSecond(stem), Tolerance);
     }
 
     [Fact]
@@ -77,36 +96,79 @@ public class EconomyTests
         var garden = NewGarden(Roomy);
         var generator = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Generator);
         for (int i = 0; i < 3; i++) Add(garden, generator, NodeKind.Burr);
-        generator.Power = generator.Store;
-        Assert.Equal(4 * P * 1.2f, Garden.ProductionPerHour(generator), Tolerance);
-    }
-
-    [Fact]
-    public void AGeneratorMakesLessPowerWhenLow()
-    {
-        // From OutputFloor of its rate when empty to all of it when full.
-        var garden = NewGarden(Roomy);
-        var generator = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Generator);
-        generator.Power = 0;
-        Assert.Equal(4 * P * Tuning.OutputFloor, Garden.ProductionPerHour(generator), Tolerance);
         generator.Power = generator.Store / 2;
-        Assert.Equal(4 * P * (1 + Tuning.OutputFloor) / 2, Garden.ProductionPerHour(generator), Tolerance);
-        garden.Core.Power = 0;
-        Assert.Equal(8 * P, Garden.ProductionPerHour(garden.Core)); // the core always makes its full rate
+        Assert.Equal(12 * 1.2f, Garden.FullProductionPerSecond(generator), Tolerance);
+        Assert.Equal(12 * 1.2f / 2, Garden.ProductionPerSecond(generator), Tolerance);
     }
 
     [Fact]
-    public void PowerIsConservedWhileNothingIsFull()
+    public void NewPartsStartEmpty()
     {
-        // A drained garden with a surplus: every hour it gains exactly production minus upkeep (nothing overflows).
-        var garden = NewGarden(new Capacity(1, 0, 1));
+        var garden = NewGarden(Roomy);
         var stem = Add(garden, garden.Core, NodeKind.Stem);
-        garden.Core.Power = 0;
-        stem.Power = 0.2f;
-        float before = garden.TotalPower();
-        garden.Grow(600);
-        Assert.False(stem.Wilting);
-        Assert.Equal(before + (8 - 0.5f) * P / 6, garden.TotalPower(), 0.01f); // (float rounding, at these sizes)
+        Assert.Equal(0, stem.Power);
+        Assert.Equal(garden.Core.Store, garden.Core.Power); // a new garden's core starts full
+    }
+
+    [Fact]
+    public void PowerIsMadeAndSpentButNeverLostInTransfer()
+    {
+        // Over a step the garden gains exactly what it makes less what it costs, at the fills it started with: the
+        // clumps sent move power without losing any.
+        var garden = NewGarden(new Capacity(2, 0, 1));
+        garden.WildGrowth = false;
+        var a = Add(garden, garden.Core, NodeKind.Stem);
+        var b = Add(garden, a, NodeKind.Stem);
+        garden.Core.Power = 200;
+        a.Power = 60;
+        b.Power = 10;
+        float dt = (float)Tuning.EconomyStepSeconds;
+        for (int step = 0; step < 20; step++)
+        {
+            var (production, upkeep) = garden.PowerBalance();
+            float expected = garden.TotalPower() + (production - upkeep) * dt;
+            garden.Grow(Tuning.EconomyStepSeconds);
+            Assert.Equal(expected, garden.TotalPower(), 1e-3f);
+        }
+    }
+
+    [Fact]
+    public void PowerGoesOutInClumpsToTheEmptiestNeighbour()
+    {
+        // core - trunk, the trunk forking into an empty-ish stem and a lab: the core sends the trunk a clump of 15,
+        // and the trunk sends 10 to the stem, which counts as emptier for its weight, not to the lab.
+        var garden = NewGarden(new Capacity(2, 0, 1));
+        garden.WildGrowth = false;
+        var trunk = Add(garden, garden.Core, NodeKind.Stem);
+        var stem = Add(garden, trunk, NodeKind.Stem);
+        var lab = Add(garden, trunk, NodeKind.Lab);
+        trunk.Power = 50;
+        stem.Power = 20; // 0.2, over its weight 0.18
+        lab.Power = 38;  // 0.19
+        var before = garden.Nodes.ToDictionary(n => n, n => n.Power);
+        var production = garden.Nodes.ToDictionary(n => n, Garden.ProductionPerSecond);
+        var upkeep = garden.Nodes.ToDictionary(n => n, Garden.UpkeepPerSecond);
+        garden.Grow(Tuning.EconomyStepSeconds);
+        float Moved(PlantNode n) =>
+            n.Power - before[n] - (production[n] - upkeep[n]) * (float)Tuning.EconomyStepSeconds;
+        Assert.Equal(-15, Moved(garden.Core), 1e-3f);
+        Assert.Equal(15 - 10, Moved(trunk), 1e-3f);
+        Assert.Equal(10, Moved(stem), 1e-3f);
+        Assert.Equal(0, Moved(lab), 1e-3f);
+    }
+
+    [Fact]
+    public void APartAtAQuarterOrLessSendsNothing()
+    {
+        var garden = NewGarden(new Capacity(2, 0, 1));
+        garden.WildGrowth = false;
+        var a = Add(garden, garden.Core, NodeKind.Stem);
+        var b = Add(garden, a, NodeKind.Stem);
+        garden.Core.Power = 0.24f * garden.Core.Store;
+        a.Power = 24;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.Equal(0, b.Power); // a, at 24%, kept its power to itself
+        Assert.True(a.Power < 24); // and the core, at 24%, sent it none
     }
 
     [Fact]
@@ -117,142 +179,140 @@ public class EconomyTests
         var a = Add(garden, garden.Core, NodeKind.Stem);
         var b = Add(garden, a, NodeKind.Stem);
         var c = Add(garden, b, NodeKind.Stem);
-        foreach (var n in garden.Nodes) n.Power = 0;
+        garden.Grow(3);
+        Assert.True(garden.Core.Fill > a.Fill && a.Fill > b.Fill && b.Fill >= c.Fill,
+            string.Join(" ", garden.Nodes.Select(n => n.Fill)));
         garden.Grow(60);
-        Assert.True(garden.Core.Fill > a.Fill && a.Fill > b.Fill && b.Fill >= c.Fill);
-        garden.Grow(6 * 3600);
-        Assert.All(garden.Nodes, n => Assert.True(n.Fill > 0.9f)); // a gentle slope carries the upkeep out
+        Assert.All(garden.Nodes, n => Assert.True(n.Fill > 0.5f, $"{n.Spec.Kind} at {n.Fill}")); // full in a minute
     }
 
     [Fact]
-    public void LinksFlashAsOftenAsPowerRunsAlongThem()
+    public void FillsKeepMovingOnceSettled()
     {
-        // core - stem - stem, the last drained: power rushes out along both links and they flash busily. Once the
-        // plant has filled up only the stems' upkeep still flows, a trickle, and they flash only now and then.
+        // The clumps keep the fills rocking around their balance rather than settling on it.
+        var (garden, _, hungry) = Overloaded();
+        garden.Grow(600);
+        var fills = new List<float>();
+        for (int step = 0; step < 100; step++)
+        {
+            garden.Grow(Tuning.EconomyStepSeconds);
+            fills.Add(hungry.Fill);
+        }
+        Assert.True(fills.Max() - fills.Min() > 0.05f, $"{fills.Min()} to {fills.Max()}");
+    }
+
+    [Fact]
+    public void EachTransferFlashesItsLinkOnce()
+    {
+        // core - stem - stem, the far stem empty: power goes out along both links. Each clump sent flashes its link
+        // once, within the step, as bright as the part it reached is full.
         var garden = NewGarden(new Capacity(2, 0, 1));
         garden.WildGrowth = false;
         var near = Add(garden, garden.Core, NodeKind.Stem);
-        var far = Add(garden, near, NodeKind.Stem);
-        far.Power = 0;
+        Add(garden, near, NodeKind.Stem);
+        near.Power = 50;
         garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.All(garden.Links, l => Assert.True(l.FlowPerHour > 0));
-
-        // Flashes on any link over 10 real seconds (the flow rate holds between economy steps).
-        int Flashes()
+        int[] flashes = new int[garden.Links.Count];
+        for (int tick = 0; tick < Tuning.EconomyStepSeconds * Tuning.TicksPerSecond + 1; tick++)
         {
-            int count = 0;
-            for (int tick = 0; tick < 10 * Tuning.TicksPerSecond; tick++)
+            var before = garden.Links.Select(l => l.Flash).ToList();
+            garden.Step();
+            for (int i = 0; i < garden.Links.Count; i++)
             {
-                var before = garden.Links.Select(l => l.Flash).ToList();
-                garden.Step();
-                for (int i = 0; i < garden.Links.Count; i++)
-                {
-                    var link = garden.Links[i];
-                    if (link.Flash <= before[i]) continue;
-                    count++;
-                    // As bright as the part it reached is full.
-                    var reached = link.FlowsToTarget ? link.Target : link.Origin;
-                    Assert.Equal(Tuning.FlashPeak * reached.Fill, link.Flash, Tolerance);
-                }
+                var link = garden.Links[i];
+                if (link.Flash <= before[i]) continue;
+                flashes[i]++;
+                Assert.True(link.FlowsToTarget);
+                Assert.Equal(Tuning.FlashPeak * link.Target.Fill, link.Flash, Tolerance);
             }
-            return count;
         }
-        int rushing = Flashes();
-
-        garden.Grow(6 * 3600);
-        Assert.All(garden.Links, l => Assert.True(l.FlowPerHour < 1.1f * P));
-        int trickling = Flashes();
-        Assert.True(rushing > 3 * trickling, $"{rushing} flashes while filling, {trickling} once full");
-        Assert.True(rushing <= 2 * 10 * Tuning.MaxFlashesPerSecond * 1.1f);
+        Assert.Equal([1, 1], flashes);
     }
 
     [Fact]
-    public void PartsShowTheirFillAndBounceWhenPowerArrives()
+    public void PartsShowTheirFill()
     {
         var garden = NewGarden(new Capacity(1, 0, 1));
         garden.WildGrowth = false;
         var stem = Add(garden, garden.Core, NodeKind.Stem);
-        stem.Power = 0;
+        var leaf = Add(garden, stem, NodeKind.Leaf);
         garden.SettleLooks();
         Assert.Equal(0, stem.FillLook);
 
-        // Power rushes in: the link flashes, the stem bounces past its level, dips a little below, and settles.
-        garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.True(garden.Links[0].FlowsToTarget);
-        float peak = 0, dip = 0;
-        for (int tick = 0; tick < 2 * Tuning.TicksPerSecond; tick++)
-        {
-            garden.Step();
-            peak = Math.Max(peak, stem.Bounce);
-            dip = Math.Min(dip, stem.Bounce);
-        }
-        Assert.InRange(peak, 0.05f, Tuning.BounceMax);
-        Assert.InRange(dip, -peak / 2, -0.001f);
-        Assert.Equal(0, garden.Core.Bounce); // the core sent it
+        // The shown fill eases after the real one as power arrives; a fruit shows its part's.
+        garden.Grow(5);
+        for (int tick = 0; tick < 2 * Tuning.TicksPerSecond; tick++) garden.Step();
+        Assert.Equal(stem.Fill, stem.FillLook, 0.05f);
+        Assert.Equal(stem.FillLook, leaf.FillLook, 0.05f);
 
-        // The shown fill catches up with the real one.
-        Assert.Equal(stem.Fill, stem.FillLook, 0.01f);
+        // Past full shows past full (the view swells it only a little).
+        stem.Power = 1.5f * stem.Store;
+        garden.SettleLooks();
+        Assert.Equal(1.5f, stem.FillLook, Tolerance);
     }
 
-    // ==== WILTING ==== \\
+    // ==== OVERLOAD ==== \\
 
-    // Grows for hours, a minute at a time, and returns every part that wilted meanwhile. (An overload cycles: the
-    // hungry labs wilt, stop draining, refill to RecoverFill, recover and drain again, so one moment can miss it.)
-    static HashSet<PlantNode> WiltedDuring(Garden garden, int hours)
+    // The average fill of each part over an hour, a few seconds at a time.
+    static Dictionary<PlantNode, float> AverageFills(Garden garden)
     {
-        var wilted = new HashSet<PlantNode>();
-        for (int minute = 0; minute < hours * 60; minute++)
+        var sums = garden.Nodes.Where(n => !n.Spec.IsFruit).ToDictionary(n => n, _ => 0f);
+        const int samples = 720;
+        for (int i = 0; i < samples; i++)
         {
-            garden.Grow(60);
-            wilted.UnionWith(garden.Nodes.Where(n => n.Wilting));
+            garden.Grow(5);
+            foreach (var n in sums.Keys) sums[n] += n.Fill / samples;
         }
-        return wilted;
+        return sums;
     }
 
     [Fact]
-    public void OverloadWiltsButNeverDestroys()
+    public void AnOverloadSettlesLowButNeverDestroys()
     {
         var (garden, _, _) = Overloaded();
         var parts = garden.Nodes.ToList();
-        Assert.NotEmpty(WiltedDuring(garden, 12));
+        Assert.True(GardenStats.Of(garden).Overloaded);
+        garden.Grow(12 * 3600);
         Assert.All(parts, n => Assert.Contains(n, garden.Nodes));
         Assert.All(garden.Nodes, n => Assert.True(n.Power >= 0));
-        Assert.False(garden.Core.Wilting);
-        var (production, _) = garden.PowerBalance();
-        Assert.True(production == 8 * P);
+        // The core only sends while fuller than SendFill, so it never runs dry.
+        Assert.True(garden.Core.Fill > Tuning.SendFill - Tuning.CoreClump / Tuning.CorePowerStore);
+        var fills = AverageFills(garden);
+        Assert.True(fills.Values.Average() < 0.75f, $"{fills.Values.Average()}");
     }
 
     [Fact]
-    public void FarTipsWiltFirst()
+    public void FarTipsRunLowest()
     {
         var (garden, fork, _) = Overloaded();
-        var wilted = WiltedDuring(garden, 12);
-        Assert.DoesNotContain(fork.Parent!, wilted); // the trunk, next to the core, keeps going
-        Assert.Contains(wilted, n => n.Spec.Kind == NodeKind.Lab);
+        garden.Grow(600);
+        var fills = AverageFills(garden);
+        var labs = fills.Where(f => f.Key.Spec.Kind == NodeKind.Lab).Select(f => f.Value).ToList();
+        Assert.True(fills[fork.Parent!] > labs.Max(), $"trunk {fills[fork.Parent!]}, labs {string.Join(" ", labs)}");
     }
 
     [Fact]
-    public void PruningTheOverloadRecovers()
+    public void PruningTheOverloadRaisesTheRest()
     {
         var (garden, _, hungry) = Overloaded();
-        Assert.NotEmpty(WiltedDuring(garden, 12));
-
-        garden.Prune(hungry); // 6.5 an hour of upkeep left against 8
-        garden.Grow(12 * 3600);
-        Assert.Empty(WiltedDuring(garden, 6));
+        garden.Grow(600);
+        var before = AverageFills(garden);
+        var kept = garden.Nodes.Where(n => n.Spec.Kind == NodeKind.Lab && n.Parent != hungry).ToList();
+        garden.Prune(hungry);
+        garden.ForgetPrune();
+        Assert.False(GardenStats.Of(garden).Overloaded); // 3 stems and 2 labs: 21 a second against the core's 24
+        var after = AverageFills(garden);
+        Assert.All(kept, lab => Assert.True(after[lab] > before[lab] + 0.1f, $"{before[lab]} -> {after[lab]}"));
     }
 
     [Fact]
-    public void WiltingNodesRecoverByThemselves()
+    public void AnEmptyPartFillsByItself()
     {
-        // A part at zero power, wilted, with the core beside it: it refills and recovers with no help.
         var garden = NewGarden(new Capacity(1, 0, 1));
         var stem = Add(garden, garden.Core, NodeKind.Stem);
-        stem.Power = 0;
-        stem.Wilting = true;
-        garden.Core.Power = 0;
-        garden.Grow(3600);
-        Assert.False(stem.Wilting);
+        garden.Core.Power = 0.3f * garden.Core.Store;
+        garden.Grow(60);
+        Assert.True(stem.Fill > 0.5f && garden.Core.Fill > 0.5f, $"core {garden.Core.Fill}, stem {stem.Fill}");
     }
 
     // ==== CAPACITY ==== \\
@@ -316,17 +376,16 @@ public class EconomyTests
     [Fact]
     public void WildGrowthDoesntWaitForPower()
     {
-        // The plant is stupid: a drained garden's grove still sends what blobs it can, and they grow buds that only
-        // add to the drain. Pruning is the player's job.
+        // The plant is stupid: a low garden's grove still sends what blobs it can, and they grow buds that only add
+        // to the load, past what the garden can keep full. Pruning is the player's job.
         var garden = NewGarden(new Capacity(30, 0, 1));
         var stem = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
         Add(garden, stem, NodeKind.Grove);
         for (int i = 0; i < 4; i++) stem = Add(garden, stem, NodeKind.Stem);
         for (int i = 0; i < 2; i++) Add(garden, stem, NodeKind.Lab);
         garden.Grow(3 * 24 * 3600);
-        var (production, upkeep) = garden.PowerBalance();
         Assert.True(MainNodes(garden) > 12);
-        Assert.True(Wilting(garden) > 0 || upkeep > production - 1, $"+{production} -{upkeep}");
+        Assert.True(GardenStats.Of(garden).Overloaded);
     }
 
     // ==== CATCH-UP ==== \\
@@ -349,7 +408,6 @@ public class EconomyTests
             Assert.Equal(e.Spec.Kind, a.Spec.Kind);
             Assert.Equal(e.Parent?.Id, a.Parent?.Id);
             Assert.Equal(e.Power, a.Power, Tolerance);
-            Assert.Equal(e.Wilting, a.Wilting);
             Assert.Equal(e.Forming, a.Forming);
             Assert.Equal(e.Growth, a.Growth, Tolerance);
         }
@@ -377,7 +435,6 @@ public class EconomyTests
         once.CatchUp(10 * 3600);
         for (int i = 0; i < (int)(10 * 3600 / 7); i++) live.Grow(7); // uneven chunks
         live.Grow(10 * 3600 % 7);
-        Assert.Equal(Wilting(once), Wilting(live));
         Assert.Equal(once.TotalPower(), live.TotalPower(), 1e-3f);
     }
 

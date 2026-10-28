@@ -19,7 +19,7 @@ Space Garden is a calm desktop companion with a strategy economy underneath: a s
 
 **Constraints carried from the first draft**
 
-- **Never punishing.** Absence is fine; coming back is a pleasant surprise. Wilting (see Economy) is the only consequence of neglect, and it never destroys anything.
+- **Never punishing.** Absence is fine; coming back is a pleasant surprise. The only consequence of neglect is a garden running low on power (see Economy), working slower, and it never destroys anything.
 - **Lightweight presence.** Runs all day without anyone noticing it in CPU, memory or battery. See Performance budget and its benchmarks.
 - **No progress gated on the window being open.** Time away is caught up (see Time model).
 
@@ -32,7 +32,7 @@ The last iteration (v0.0.2, 2024) became a tactical idle game: a mandatory prest
 ## Core loop
 
 ```
- glance ─► notice something (new growth, a wilting branch, a full seedling, a rare node)
+ glance ─► notice something (new growth, a dim branch, a full seedling, a rare node)
    ▲                    │
    │                    ▼
  leave ◄── make one small choice (bud, prune, shape, pick an evolution)
@@ -49,10 +49,8 @@ Every node is a simple geometric shape; meaning is carried by a small, fixed set
 | Hue | Role: yellow = power, orange = fruit, purple = genes, green = structure, grey/white = specialist, blue = creatures |
 | Shape | Specific node type within its role; every type has a unique shape |
 | Brightness and scale | Power level: full nodes glow and swell, low nodes dim and shrink |
-| Saturation | State: wild growth (subtle tone), dormant, wilting |
+| Saturation | State: wild growth (subtle tone), dormant |
 | Fruit | Modifiers on a node; later also crawler food |
-
-A wilting node is dimmed, shrunk and slightly desaturated.
 
 Unique shapes double as colour-blind support. Texture and complex shapes are held in reserve if playtesting shows a state is hard to read. The garden should look consistent: wild growth differs only by a subtle tone.
 
@@ -75,9 +73,11 @@ Three flowing resources move visibly through the stems; capacity is a set of lim
 
 There is no core trickle of growth: groves are the only source, and a new garden has none. The player plants the first grove by hand (step 6's onboarding points there first).
 
-**Wilting.** When power runs out, a node wilts. Nodes are never destroyed. Empty nodes stop draining, so the core always ends up with a small surplus and the garden recovers slowly. The core guarantees the floor.
+**Power is a light show, not the pace.** Power fills and drains in seconds, as in the original, and keeps moving: the fills rock around a balance that shifts as the plant changes, never settling. It doesn't set the garden's pace (the unlock track does, through genes); it shows the garden's health, and a low garden works slower.
 
-**Flower output follows power.** Groves, labs and generators produce at their full rate when fully powered, less when low (down to half when empty, to tune), and nothing while wilting. The core always produces at full rate. The half-rate floor keeps a generator among drained parts from dying away: with no floor, power flows out of it faster than its falling output can make it.
+**Everything follows its fill.** The core and generators make power in proportion to their fill (none once full). Every part's upkeep is in proportion to its fill too, so a part never quite empties. Groves and labs send blobs in proportion to their fill. An overloaded garden (one that would cost more full than it can make full) doesn't break: it settles lower, its far flowers lowest and slowest, until the player prunes or adds a generator. Nodes are never destroyed. A new node starts empty and fills from its parent.
+
+**Wilting (a design concept, not in the game).** Nothing wilts as a state: low power is shown only by a dim, shrunken node. Wilting stays a concept to reach for if neglect ever needs a stronger signal: a node out of power stops draining and is drawn dimmed, shrunk and slightly desaturated until it refills.
 
 **Blobs.** Growth and gene blobs both do the same stupid random walk along the stems: never straight back unless at a dead end, fading after 30 links.
 - **Gene blobs** pass every node by and are absorbed (100%) only by the core. A lab far from the core loses many of its genes on the way.
@@ -87,13 +87,15 @@ There is no core trickle of growth: groves are the only source, and a new garden
 
 Draft rates, to tune in play, at real speed: a fully powered grove sends a growth blob about every 3 s and a lab a gene blob about every 5 s. A gene blob carries one whole gene, so the player can see and count them; the 0.1 per blob is growth blobs only. At these rates wild growth fills the caps within minutes of an unlock, so the unlock track (genes) sets the garden's pace.
 
-**Local power flow.** Each node stores its own power, which flows along links from fuller nodes to emptier ones; there is no global pool. As in the original, a link flashes each time power moves along it (brighter when the receiving node is fuller), and each node's brightness and size follow its fill, with a small bounce when power arrives. A branch far from power can dim on its own while the rest thrives, so generator placement matters.
+**Local power flow.** Each node stores its own power, which moves along links in clumps, as in the original (`PlantNodePower.attemptTransferPower`); there is no global pool. About three times a second, each node fuller than a quarter sends a clump (the core 15, stems and generators 10, groves and labs 5) to its emptiest neighbour that's less full than itself. Emptiest is judged by fill over weight: stems weigh 1.1 and the core 1.5, so power heads out along the stems. Clumps, not a smooth flow, are what keep the fills moving. Each clump flashes its link (brighter when the receiving node is fuller), at its own moment so the links don't flash in step, and each node's brightness and size follow its fill. A branch far from power runs lower on its own while the rest thrives, so generator placement matters.
+
+**Size follows fill** as in the original (`PlantNodeView.intensityInterpolation`): a node's scale is its shown fill, never below 0.2; past full it grows only a tenth as fast, up to twice its size. The shown fill eases after the real one, faster rising than falling. There's no artificial bounce: the clumps arriving are the motion.
 
 **Power rules**
 
 - The core is the main source. A generator produces half of the core's output. Core power upgrades come later, not in the MVP.
 - Stems are cheap to maintain. Leaves cut a stem's upkeep: one leaf halves it, two leaves bring it to a quarter. Leaves grow from growth blobs, like all fruit.
-- Labs cost twice the upkeep of groves.
+- Labs and groves cost the same upkeep, as in the original (for now; this was "labs cost twice groves"), and a lab holds twice as much.
 - Generator, grove and lab fruits each slightly raise their flower's efficiency, up to +20% total per flower.
 - The core has no fruit in the MVP; core fruit is reserved for showing later upgrades.
 
@@ -101,19 +103,19 @@ Fruit, once grown, stays. Groves are needed while the garden grows; if growth st
 
 **Grove tuning target.** Tune the grove's growth blob rate so one or two groves can just keep up with leaf demand from new stems as well as their share of wild buds. Each new stem has room for two leaves, so week one's 27 new stems (4 to 31) mean about 54 leaves.
 
-Draft values, in relative units per real hour, to be tuned through play:
+Values copied from the original game (its per-tick numbers times 60), to be tuned through play. Rates are per real second when full, and scale with fill:
 
-| Node | Produces | Upkeep |
-| --- | --- | --- |
-| Core | 8 | — |
-| Generator | 4 | — |
-| Stem | — | 0.5 (0.25 with one leaf, 0.125 with two) |
-| Grove | — | 1.5 |
-| Lab | — | 3 |
+| Node | Holds | Produces | Upkeep |
+| --- | --- | --- | --- |
+| Core | 300 | 24 | — |
+| Generator | 100 | 12 | — |
+| Stem | 100 | — | 3 (1.5 with one leaf, 0.75 with two) |
+| Grove | 100 | — | 6 |
+| Lab | 200 | — | 6 |
 
-Sanity check on the draft: the end-of-week-one garden (31 stems, 8 generators) produces 40 against 15.5 of bare stem upkeep, leaving room for groves and labs. Rates live in data **per real hour**, never per tick.
+Sanity check: the core alone keeps 8 bare stems full; the end-of-week-one garden (31 stems, 8 generators) makes 120 against 93 of bare stem upkeep, or 23 with every stem in two leaves, leaving room for groves and labs.
 
-In the game the table is scaled by 60 (`Tuning.PowerScale`), with the ratios kept, to match the blobs' real-speed rates. Stores and flow are scaled alike, so power still fills and drains over the same hours, and a link carrying a stem's upkeep flashes about every 3 s.
+Tuning guide for later (Jeremy's, to discuss): transfer rates a little above the generation amounts; bigger stores to slow the overall fill speed, with the size curve reworked so nodes still visibly grow and shrink near the top of the range.
 
 ## Capacity
 
@@ -164,7 +166,7 @@ Implemented in step 1.
 - **Wall-clock driven.** Growth advances by real elapsed time, not frames.
 - **Low-power idle.** When nothing is being touched or moving, rendering drops to the idle frame rate.
 - **Catch-up on return.** The save stores when the garden was last seen; on launch the elapsed time is simulated without drawing, capped at **72 hours** (`Tuning.CatchUpCapSeconds`, to be tuned). Time hidden behind a lock screen or full-screen app is caught up the same way when the garden shows again.
-- **Absence never hurts.** Catch-up can't destroy nodes; the worst case is wilting, which recovers on its own.
+- **Absence never hurts.** Catch-up can't destroy nodes; the worst case is an overloaded garden running low, which the player fixes by pruning.
 - Parked idea: a short "while you were away" summary on return (new growth, rares, blooms).
 
 ## Growth and pruning
@@ -307,7 +309,7 @@ Step 3b. The plant is stupid and the player is the brain, so the player needs th
 
 | Line | Shows | The decision it serves |
 | --- | --- | --- |
-| Power | Held against the total store (and %), made against used per hour, how many parts are wilting; turns red-orange and says "draining" when upkeep passes production | Prune or add a generator before the stores run dry |
+| Power | Held against the total store (and %), made against used per second; turns red-orange and says "overloaded" when the garden would cost more full than it can make full | Prune or add a generator so the garden can run full |
 | Genes | Genes so far, and genes reaching the core per real minute | Whether the labs are placed well |
 | Next unlock | What it gives, its threshold, genes still to go, and an ETA at the current rate ("plant a lab" with none) | Whether to wait, or add or move labs |
 | Room | Stems and generators against their caps, core links used against allowed, fruit grown against fruit room | Where there's room to bud, and what to prune for it |
@@ -315,7 +317,7 @@ Step 3b. The plant is stupid and the player is the brain, so the player needs th
 
 Gene income is expected, not measured: each lab's blob rate now times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). It's steady from the first moment, and the same odds tell the player what a lab's placement is worth.
 
-**The selected part panel.** Tapping a part selects it (as well as opening its toolbar, as before); the selection stays, ringed, after the toolbar closes, until another part is tapped, it's pruned, or a click lands off the plant. A dim card above the readout's lines shows its name (in its hue) and its power as a percentage of its store, a one-line description of what it does (one per node kind, in `NodeSpecs.Info`), and its own numbers: power made or upkeep per hour, fruit against its room, what's forming in it and how far along, and for a lab the share of its genes that reach the core and its genes per minute.
+**The selected part panel.** Tapping a part selects it (as well as opening its toolbar, as before); the selection stays, ringed, after the toolbar closes, until another part is tapped, it's pruned, or a click lands off the plant. A dim card above the readout's lines shows its name (in its hue) and its power held against its store, a one-line description of what it does (one per node kind, in `NodeSpecs.Info`), and its own numbers: power made or upkeep per second, fruit against its room, what's forming in it and how far along, and for a lab the share of its genes that reach the core and its genes per minute.
 
 ## Platform: Godot 4 (.NET)
 

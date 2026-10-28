@@ -47,7 +47,6 @@ public class UnlockTests
         // Its blobs can only reach the core (lab - stem - core), at nearly full power: about six genes an hour.
         Assert.InRange(garden.Genes, 0.75 * Tuning.LabBlobsPerHour * Tuning.BlobGenes, Tuning.LabBlobsPerHour * Tuning.BlobGenes);
         Assert.InRange(lab.Blob, 0, 1);
-        Assert.False(lab.Wilting);
     }
 
     [Fact]
@@ -95,24 +94,21 @@ public class UnlockTests
     }
 
     [Fact]
-    public void AWiltingLabMakesNoGenes()
+    public void AnEmptyLabMakesNoGenes()
     {
         var (garden, lab) = WithALab();
-        lab.Power = 0;
-        lab.Wilting = true;
-        foreach (var n in garden.Nodes) if (n != lab) n.Power = 0;
+        foreach (var n in garden.Nodes) n.Power = 0;
         garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.True(lab.Wilting);
         Assert.Equal(0, lab.Blob);
     }
 
     [Fact]
     public void ALowLabMakesFewerGenes()
     {
-        var (garden, lab) = WithALab();
+        var (_, lab) = WithALab();
         Assert.Equal(Tuning.LabBlobsPerHour, Garden.BlobsPerHour(lab), 1e-4f);
-        lab.Power = 0;
-        Assert.Equal(Tuning.LabBlobsPerHour * Tuning.OutputFloor, Garden.BlobsPerHour(lab), 1e-4f);
+        lab.Power = lab.Store / 4;
+        Assert.Equal(Tuning.LabBlobsPerHour / 4, Garden.BlobsPerHour(lab), 1e-4f);
     }
 
     [Fact]
@@ -239,12 +235,18 @@ public class UnlockTests
     [Fact]
     public void RaisedCapsGiveWildGrowthRoom()
     {
-        // The player plants a grove and a lab, then leaves it: the unlocks the lab earns fill with wild stems.
+        // The player plants a grove and a lab, and after a day prunes the wild flowers that took every free link: the
+        // unlocks the lab earns fill with wild stems.
         var garden = Planted();
         var stem = garden.Nodes[1];
         Add(garden, stem, NodeKind.Grove);
         Add(garden, Add(garden, stem, NodeKind.Stem), NodeKind.Lab); // leaving the second stem a free link
         garden.Grow(Day);
+        while (garden.Nodes.FirstOrDefault(n => n.Depth > 3 && n.Spec.Kind is NodeKind.Grove or NodeKind.Generator) is { } wild)
+        {
+            garden.Prune(wild);
+            garden.ForgetPrune();
+        }
         int stemsBefore = Count(garden, NodeKind.Stem);
         int unlocks = garden.Unlocks;
         garden.Grow(3 * Day);
@@ -273,8 +275,13 @@ public class UnlockTests
             + $"{Count(garden, NodeKind.Generator)}/{garden.Capacity.Generators} generators, "
             + $"{Count(garden, NodeKind.Lab)} labs, {Count(garden, NodeKind.Grove)} groves, {garden.Core.Links}/{garden.Capacity.CoreLinks} core links, "
             + $"{garden.Nodes.Count(n => !n.Spec.IsFruit)} main, {garden.Nodes.Count(n => n.Spec.IsFruit)} fruit, "
-            + $"{garden.Nodes.Count(n => n.Wilting)} wilting ({string.Join(" ", garden.Nodes.Where(n => n.Wilting).GroupBy(n => n.Spec.Kind).Select(g => $"{g.Count()} {g.Key}"))}), genes {garden.Genes:0}, +{production:0.0}/h -{upkeep:0.0}/h";
+            + $"labs at {Fills(garden, NodeKind.Lab)}, groves at {Fills(garden, NodeKind.Grove)}, genes {garden.Genes:0}, "
+            + $"+{production:0.0}/s -{upkeep:0.0}/s";
     }
+
+    // The average fill of a kind of part, as a percentage.
+    static string Fills(Garden garden, NodeKind kind) =>
+        garden.Nodes.Where(n => n.Spec.Kind == kind).Select(n => n.Fill).DefaultIfEmpty(0).Average().ToString("0%");
 
     sealed record Run(double[,] Fired, double[,] GenesAt, int[] WeekOne, int[] Month);
 

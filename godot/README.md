@@ -58,12 +58,12 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   heavy to drag and a leaf quick.
 - **New:** wind that sways the parts more the further they are from the core, growth on real time (a new part every 20 minutes at 1x), catch-up on return,
   halos, grow-in animation, a 30 fps idle frame rate.
-- **Economy (step 2, first slice):** the core and generators make power, stems and labs cost upkeep (leaves halve a
-  stem's), and power flows along the stems from fuller parts to emptier ones, so far tips run low first. A part that
-  can't pay wilts (drawn greyer, on top of looking empty), stops draining, and recovers by itself; nothing is destroyed.
-  Wild growth needs power to spare and stays within the caps (4 stems, 1 generator, 1 core link at the start).
-  Catch-up runs the same fixed 10 s economy steps. Saves carry a version; an older one is set aside
-  (`garden.v1.json`) and a new garden starts.
+- **Economy:** power is the original game's (`PlantNodePower`): the core and generators make power and stems, groves
+  and labs cost upkeep (leaves halve a stem's), all in proportion to their fill, and about three times a second each
+  part sends a clump of power to its emptiest neighbour, so far tips run low first and the fills never settle. Nothing
+  wilts and nothing is destroyed; an overloaded garden just runs lower. Wild growth stays within the caps (4 stems,
+  1 generator, 1 core link at the start). Catch-up runs the same fixed economy steps. Saves carry a version; an older
+  one is set aside (`garden.v1.json`) and a new garden starts.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Dev options
@@ -73,7 +73,7 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 (act as if hidden for FOR seconds from AT seconds after start, to test the pause),
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
-`--wilt` (start with every part drained and wilting, to watch power flow back), `--nearunlock` (start just short of
+`--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of
 the next unlock on the gene track, to watch one fire), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 

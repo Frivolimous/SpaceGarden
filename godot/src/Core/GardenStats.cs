@@ -4,15 +4,16 @@ namespace SpaceGarden.Core;
 // caps, its flowers, what's forming, and how fast genes reach the core. Worked out from the garden as it is now; it
 // changes nothing.
 public sealed record GardenStats(
-    float PowerHeld, float PowerStore, float Production, float Upkeep, int Wilting,
+    float PowerHeld, float PowerStore, float Production, float Upkeep, float FullProduction, float FullUpkeep,
     int Stems, int Generators, int Groves, int Labs, int CoreLinksUsed, Capacity Capacity,
     int Fruit, int FruitRoom, IReadOnlyDictionary<NodeKind, int> BudsForming,
     double Genes, double GenesPerHour, UnlockStep? NextUnlock)
 {
     public float PowerFill => PowerStore > 0 ? PowerHeld / PowerStore : 0;
 
-    // More upkeep than production: the garden is running down, and something wilts once the stores are empty.
-    public bool Draining => Upkeep > Production;
+    // The garden costs more when full than it can make when full, so it can't stay full: it settles lower, its far
+    // flowers lowest and working slowest. (Production and upkeep now both follow the fills, so they always meet.)
+    public bool Overloaded => FullUpkeep > FullProduction;
 
     // Genes still needed for the next unlock, and how long they take at the current rate, in growth seconds (null:
     // nothing left to unlock, or no genes on their way).
@@ -21,9 +22,10 @@ public sealed record GardenStats(
 
     public static GardenStats Of(Garden garden)
     {
-        var (production, upkeep) = garden.PowerBalance();
+        var (production, upkeep) = garden.PowerBalance(); // per second
+        var (fullProduction, fullUpkeep) = garden.FullPowerBalance();
         float held = 0, store = 0;
-        int wilting = 0, stems = 0, generators = 0, groves = 0, labs = 0, fruit = 0, fruitRoom = 0;
+        int stems = 0, generators = 0, groves = 0, labs = 0, fruit = 0, fruitRoom = 0;
         double genesPerHour = 0;
         var buds = new Dictionary<NodeKind, int>();
         foreach (var n in garden.Nodes)
@@ -36,7 +38,6 @@ public sealed record GardenStats(
             held += n.Power;
             store += n.Store;
             fruitRoom += n.Spec.MaxFruits;
-            if (n.Wilting) wilting++;
             if (n.FormingBud) buds[n.Forming!.Value] = buds.GetValueOrDefault(n.Forming!.Value) + 1;
             switch (n.Spec.Kind)
             {
@@ -49,7 +50,7 @@ public sealed record GardenStats(
                     break;
             }
         }
-        return new GardenStats(held, store, production, upkeep, wilting, stems, generators, groves, labs,
+        return new GardenStats(held, store, production, upkeep, fullProduction, fullUpkeep, stems, generators, groves, labs,
             garden.Core.Branches.Count, garden.Capacity, fruit, fruitRoom, buds, garden.Genes, genesPerHour, garden.NextUnlock);
     }
 
