@@ -153,11 +153,10 @@ public partial class GardenView : Node2D
         float head = Mathf.Min(1, age / FillSeconds);
         float tail = Mathf.Clamp((age - FillSeconds) / DrainSeconds, 0, 1);
         if (head - tail < 0.01f) return;
-        var (from, to) = link.FlowsToTarget ? (link.Origin, link.Target) : (link.Target, link.Origin);
-        var a = At(from);
-        var along = At(to) - a;
+        if (Span(link) is not var (start, end)) return;
+        var (a, b) = link.FlowsToTarget ? (start, end) : (end, start);
+        var along = b - a;
         float length = along.Length();
-        if (length < 0.01f) return;
         float middle = (head + tail) / 2; // how far along from the end the power left
         float fromParent = link.FlowsToTarget ? middle : 1 - middle;
         float width = LinkWidth(link.Target) * Mathf.Lerp(1, Textures.TaperEnd, fromParent) * 0.9f;
@@ -174,15 +173,27 @@ public partial class GardenView : Node2D
         var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f), link.Target.WiltLook);
         colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
         float width = LinkWidth(link.Target);
-        var from = At(link.Origin);
-        var along = At(link.Target) - from; // the texture's parent end is at the origin
+        if (Span(link) is not var (from, to)) return;
+        var along = to - from; // the texture's parent end is at the origin
         float length = along.Length();
-        if (length < 0.01f) return;
         var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore;
         links.AddAxes(from + along / 2, along, normal * width, colour);
         var edge = Edge;
         edge.A *= colour.A;
         linkEdges.AddAxes(from + along / 2, along, normal * (width + EdgeWidth), edge);
+    }
+
+    // Where a stem shows: from its parent's rim to its own (the parts hide the rest), so its whole taper is seen.
+    // Null while the two overlap.
+    (Vector2 From, Vector2 To)? Span(Link link)
+    {
+        var a = At(link.Origin);
+        var along = At(link.Target) - a;
+        float length = along.Length();
+        float rimA = Size(link.Origin) * 0.85f, rimB = Size(link.Target) * 0.85f; // as drawn: a drained part is smaller
+        if (length - rimA - rimB < 0.5f) return null;
+        var dir = along / length;
+        return (a + dir * rimA, a + along - dir * rimB);
     }
 
     // A stem's width at its parent's end (it tapers to TaperEnd of that at its own): thinning with depth, a fruit's
@@ -496,7 +507,7 @@ public static class Textures
     public static readonly Texture2D Line = MakeLine(1);
 
     // The same, narrowing along its length (x) from its full width at the start to TaperEnd of it at the end.
-    public const float TaperEnd = 0.55f;
+    public const float TaperEnd = 0.4f;
     public static readonly Texture2D Taper = MakeLine(TaperEnd);
 
     static Texture2D MakeLine(float end)
