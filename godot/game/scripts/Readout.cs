@@ -158,7 +158,7 @@ public partial class Readout : VBoxContainer
         nodePanel.Visible = nodeGap.Visible = node != null;
         if (node == null) return;
         var (name, description) = NodeSpecs.Info[node.Spec.Kind];
-        nodeTitle.Text = $"{name} · {node.Fill * 100:0}% power" + (node.Wilting ? " · wilting" : "");
+        nodeTitle.Text = $"{name} · {node.Power:0.##} / {node.Store:0.##} power" + (node.Wilting ? " · wilting" : "");
         nodeTitle.LabelSettings.FontColor = GardenView.Rgb(node.Spec.Rgb).Lightened(0.35f);
         nodeText.Text = description;
 

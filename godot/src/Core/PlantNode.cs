@@ -26,9 +26,10 @@ public sealed class PlantNode
     public Vector2 RepelPush;
 
     // Presentation state the rules keep so a save or a catch-up carries it: seconds since it sprouted (for the
-    // grow-in), and a 0-1 glow that a passing mote sets and that fades.
+    // grow-in), and a 0-1 glow that a blob absorbed here sets, in the blob's colour, and that fades.
     public float Age;
     public float Glow;
+    public uint GlowRgb;
 
     // The economy (see Garden.EconomyStep). Power held, up to Store; a part that couldn't pay its upkeep is Wilting
     // until it fills back up. Fruit holds no power and wilts with its parent. WiltLook eases 0-1 towards Wilting, for
@@ -91,6 +92,8 @@ public sealed class Link
     // 0-1 light that a flash sets and that fades. Power flowing along the link (either way, per real hour, as of the
     // last economy step) sets how often it flashes; FlashPhase counts up to the next.
     public float Flash;
+    // The last flash's own brightness, and seconds since it (for the pulse drawn running along the link).
+    public float FlashStrength, FlashAge = float.MaxValue;
     public float FlowPerHour;
     public float FlashPhase;
     public bool FlowsToTarget; // which way the power ran (outward, or back towards the origin)
@@ -101,6 +104,21 @@ public sealed class Link
         Target = target;
         float r = origin.Spec.Radius + target.Spec.Radius;
         Length = target.Spec.IsFruit ? r : r * 1.5f;
+    }
+}
+
+// A branch just pruned (Nodes[0] was cut from its parent), every link in it cut too, its parts drifting loose for
+// CutFadeSeconds. FadeOf runs 1 to 0 from the cut, for drawing: each part a little quicker or slower than the next
+// (up to CutFadeJitter of the time quicker, picked by its id, so the garden's dice aren't touched).
+public sealed class CutBranch(List<PlantNode> nodes)
+{
+    public readonly List<PlantNode> Nodes = nodes;
+    public float Seconds;
+
+    public float FadeOf(PlantNode node)
+    {
+        float jitter = (uint)(node.Id * 2654435761u) % 1000 / 1000f;
+        return Math.Clamp(1 - Seconds / (Tuning.CutFadeSeconds * (1 - Tuning.CutFadeJitter * jitter)), 0, 1);
     }
 }
 
@@ -117,6 +135,8 @@ public sealed class Mote
     public uint Rgb;
     public float Growth;
     public bool Completes;
+    // Whether the part at the end of its route absorbs it (else it fades there).
+    public bool Absorbed;
 
     public Mote(List<PlantNode> route, uint rgb)
     {

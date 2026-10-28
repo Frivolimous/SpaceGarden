@@ -89,7 +89,9 @@ public class UnlockTests
         }
         Assert.Empty(garden.Motes); // it arrived and was absorbed
         Assert.Equal([lab, lab.Parent!], visited);
-        Assert.True(garden.Core.Glow > 0);
+        Assert.True(garden.Core.Glow > 0); // the core flashes the lab's purple as it absorbs it
+        Assert.Equal(lab.Spec.Rgb, garden.Core.GlowRgb);
+        Assert.Equal(0, lab.Parent!.Glow); // the stem it passed doesn't
     }
 
     [Fact]

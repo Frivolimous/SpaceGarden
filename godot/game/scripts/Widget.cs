@@ -224,7 +224,8 @@ public partial class Widget : Node
 
     void UndoPrune()
     {
-        if (Garden.UndoPrune() == null) return;
+        if (Garden.UndoPrune() is not { } back) return;
+        main.View.Restored(back); // growing back in, but not new: no pops or glints
         toolbar.HideAway();
         readout.RefreshNow();
         activeTime = SettleSeconds;
@@ -509,7 +510,7 @@ public partial class Widget : Node
         {
             case Tool.Pin: Garden.TogglePin(node); break;
             case Tool.Prune:
-                main.View.Drop(Garden.Prune(node));
+                Garden.Prune(node); // it drifts off and fades (see Garden.Cut)
                 readout.RefreshNow(); // the Undo pill, at once
                 break;
         }

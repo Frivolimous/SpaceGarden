@@ -20,6 +20,8 @@ public sealed class Garden
     public readonly List<PlantNode> Nodes = new();
     public readonly List<Link> Links = new();
     public readonly List<Mote> Motes = new();
+    // Branches just pruned, drifting loose for a few seconds before they go (see DriftCut).
+    public readonly List<CutBranch> Cut = new();
     public readonly Layout Layout;
     public PlantNode Core => Nodes[0];
     // Only an upright plant's core is planted; a radial one floats like any other part.
@@ -180,7 +182,9 @@ public sealed class Garden
         return candidates[^1];
     }
 
-    // Cuts a part off with everything that grew from it; returns what fell. The core can't be pruned.
+    // Cuts a part off with everything that grew from it; returns what was cut. The core can't be pruned. The cut
+    // branch leaves the garden at once (its power, caps and blobs), but its parts, every link between them cut too,
+    // drift loose for a while as the plant's push sends them off (see DriftCut).
     public List<PlantNode> Prune(PlantNode node)
     {
         if (node.Parent == null) return new();
@@ -195,18 +199,19 @@ public sealed class Garden
 
         (node.Spec.IsFruit ? node.Parent.Fruits : node.Parent.Branches).Remove(node);
         Nodes.RemoveAll(gone.Contains);
+        Cut.Add(new CutBranch(removed));
         Links.RemoveAll(l => gone.Contains(l.Target));
         Motes.RemoveAll(m => m.Route.Any(gone.Contains));
         foreach (var n in removed) linkToParent.Remove(n);
         if (Held != null && gone.Contains(Held)) LetGo();
-        lastPrune = (removed, node.Parent.Position);
+        lastPrune = (removed, removed.Select(n => n.Position - node.Parent.Position).ToList());
         UndoSecondsLeft = Tuning.UndoPruneSeconds;
         return removed;
     }
 
-    // The last prune, while it can still be undone (see Tuning.UndoPruneSeconds): what fell, and where its parent
-    // was then. Only the last one: a new prune replaces it.
-    (List<PlantNode> Nodes, Vector2 ParentAt)? lastPrune;
+    // The last prune, while it can still be undone (see Tuning.UndoPruneSeconds): what was cut, and where each part
+    // was then from its parent. Only the last one: a new prune replaces it.
+    (List<PlantNode> Nodes, List<Vector2> FromParent)? lastPrune;
     public double UndoSecondsLeft { get; private set; }
 
     // Whether the last prune can still be put back: inside the window, its parent still there with a free link (or
@@ -233,15 +238,16 @@ public sealed class Garden
     public List<PlantNode>? UndoPrune()
     {
         if (!CanUndoPrune) return null;
-        var (nodes, parentAt) = lastPrune!.Value;
+        var (nodes, fromParent) = lastPrune!.Value;
         ForgetPrune();
         var root = nodes[0];
-        var shift = root.Parent!.Position - parentAt;
-        (root.Spec.IsFruit ? root.Parent.Fruits : root.Parent.Branches).Add(root);
-        // Cut in growth order (a part before what grew from it), so they go back in that order.
-        foreach (var node in nodes)
+        Cut.RemoveAll(c => c.Nodes[0] == root); // if it's still drifting
+        (root.Spec.IsFruit ? root.Parent!.Fruits : root.Parent!.Branches).Add(root);
+        // Cut in growth order (a part before what grew from it), so they go back in that order, where they were.
+        for (int i = 0; i < nodes.Count; i++)
         {
-            node.Position += shift;
+            var node = nodes[i];
+            node.Position = root.Parent.Position + fromParent[i];
             node.PreviousPosition = node.Position;
             node.Velocity = Vector2.Zero;
             node.Age = 0;
@@ -289,7 +295,7 @@ public sealed class Garden
     // Moves the whole garden by offset (to bring a plant back onto a screen it's no longer on).
     public void Translate(Vector2 offset)
     {
-        foreach (var node in Nodes)
+        foreach (var node in Nodes.Concat(Cut.SelectMany(c => c.Nodes)))
         {
             node.Position += offset;
             node.PreviousPosition += offset;
@@ -489,11 +495,11 @@ public sealed class Garden
     public static float Output(PlantNode node) =>
         node.Wilting ? 0 : Tuning.OutputFloor + (1 - Tuning.OutputFloor) * Math.Clamp(node.Fill, 0, 1);
 
-    // Power a part makes per real hour now: the core always its full rate, a generator in proportion to its fill
+    // Power a part makes per real hour now: in proportion to its fill
     // (its fruit adding a little, up to FruitBonusMax).
     public static float ProductionPerHour(PlantNode node) => node.Spec.Kind switch
     {
-        NodeKind.Core => Tuning.CorePowerPerHour,
+        NodeKind.Core => Tuning.CorePowerPerHour * Output(node),
         NodeKind.Generator => Tuning.GeneratorPowerPerHour * FruitBonus(node) * Output(node),
         _ => 0,
     };
@@ -502,10 +508,10 @@ public sealed class Garden
     static float FruitBonus(PlantNode node) =>
         1 + Math.Min(Tuning.FruitBonusMax, node.Fruits.Count * Tuning.FruitBonusEach);
 
-    // Power a part costs per real hour while it isn't wilting. Each leaf halves a stem's.
+    // Power a part costs per real hour while it isn't wilting. Each leaf halves a stem's. Upkeep based on output.
     public static float UpkeepPerHour(PlantNode node) => node.Spec.Kind == NodeKind.Stem
-        ? Tuning.StemUpkeepPerHour * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf))
-        : KindUpkeepPerHour(node.Spec.Kind);
+        ? Tuning.StemUpkeepPerHour * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf)) * Output(node)
+        : KindUpkeepPerHour(node.Spec.Kind) * Output(node);
 
     // What a new part of this kind costs per hour (no fruit yet).
     public static float KindUpkeepPerHour(NodeKind kind) => kind switch
@@ -586,8 +592,9 @@ public sealed class Garden
     void SendGenes(PlantNode lab, ref Counts counts)
     {
         var route = RouteIfShown();
-        if (Walk(lab, genes: true, ref counts, route) != null) Deliver(Tuning.BlobGenes);
-        Show(route, lab);
+        bool found = Walk(lab, genes: true, ref counts, route) != null;
+        if (found) Deliver(Tuning.BlobGenes);
+        if (Show(route, lab) is { } mote) mote.Absorbed = found;
     }
 
     // A grove's growth blob leaves. Where it goes and what it does are settled now, from the garden's own dice, so a
@@ -607,6 +614,7 @@ public sealed class Garden
         if (Show(route, grove) is { } mote)
         {
             mote.Growth = Tuning.BlobGrowth;
+            mote.Absorbed = true;
             mote.Completes = grown != null;
             if (grown != null) grown.Age = -(route!.Count - 1) * Tuning.MoteLinkSeconds;
         }
@@ -707,15 +715,7 @@ public sealed class Garden
         foreach (var node in Nodes) node.PreviousPosition = node.Position;
 
         // Links pull only when stretched, as in the TS game; the repulsion below keeps parts apart.
-        foreach (var link in Links)
-        {
-            var d = link.Origin.Position - link.Target.Position;
-            float dist = d.Length();
-            if (dist < link.Length) continue;
-            float mult = Tuning.Elasticity * (link.Length - dist) / dist;
-            if (!link.Origin.Fixed) link.Origin.Velocity += mult * d * link.Origin.Spec.InverseMass;
-            if (!link.Target.Fixed) link.Target.Velocity -= mult * d * link.Target.Spec.InverseMass;
-        }
+        foreach (var link in Links) Pull(link);
 
         // A held part is pulled to the pointer by its weight, as in the TS game: light parts follow briskly, heavy
         // ones like the core lumber after it (a pinned one is carried, moving its pin). Everything else follows only
@@ -733,37 +733,88 @@ public sealed class Garden
         }
 
         Repel();
+        DriftCut(dt);
 
         foreach (var node in Nodes)
         {
-            node.Rotation += node.Spin;
-            if (node.Rotation > MathF.PI) node.Rotation -= MathF.Tau;
-            else if (node.Rotation < -MathF.PI) node.Rotation += MathF.Tau;
             if (node.Fixed)
             {
+                Turn(node);
                 node.Velocity = Vector2.Zero;
                 continue;
             }
-
-            if (node != Core) ApplyLightAndWind(node);
-            if (Borders is var (min, max))
-            {
-                var r = new Vector2(node.Spec.Radius);
-                var inside = Vector2.Clamp(node.Position, min + r, max - r);
-                node.Velocity += (inside - node.Position) * Tuning.EdgeBounce;
-            }
-
-            node.Velocity *= Tuning.Damp;
-            if (Math.Abs(node.Velocity.X) > Tuning.MinVelocity || Math.Abs(node.Velocity.Y) > Tuning.MinVelocity)
-                node.Position += node.Velocity;
-            else
-                node.Velocity = Vector2.Zero;
+            Move(node);
         }
+        foreach (var cut in Cut)
+            foreach (var node in cut.Nodes) Move(node);
 
         Speed = 0;
-        foreach (var node in Nodes) Speed = Math.Max(Speed, Vector2.Distance(node.Position, node.PreviousPosition));
+        foreach (var node in Nodes.Concat(Cut.SelectMany(c => c.Nodes)))
+            Speed = Math.Max(Speed, Vector2.Distance(node.Position, node.PreviousPosition));
 
         UpdateMotes(dt);
+    }
+
+    // A link pulls its two ends together when stretched (a pinned end holds).
+    static void Pull(Link link)
+    {
+        var d = link.Origin.Position - link.Target.Position;
+        float dist = d.Length();
+        if (dist < link.Length) return;
+        float mult = Tuning.Elasticity * (link.Length - dist) / dist;
+        if (!link.Origin.Fixed) link.Origin.Velocity += mult * d * link.Origin.Spec.InverseMass;
+        if (!link.Target.Fixed) link.Target.Velocity -= mult * d * link.Target.Spec.InverseMass;
+    }
+
+    static void Turn(PlantNode node)
+    {
+        node.Rotation += node.Spin;
+        if (node.Rotation > MathF.PI) node.Rotation -= MathF.Tau;
+        else if (node.Rotation < -MathF.PI) node.Rotation += MathF.Tau;
+    }
+
+    // Light, wind, the borders, then damping and movement.
+    void Move(PlantNode node)
+    {
+        Turn(node);
+        if (node != Core) ApplyLightAndWind(node);
+        if (Borders is var (min, max))
+        {
+            var r = new Vector2(node.Spec.Radius);
+            var inside = Vector2.Clamp(node.Position, min + r, max - r);
+            node.Velocity += (inside - node.Position) * Tuning.EdgeBounce;
+        }
+
+        node.Velocity *= Tuning.Damp;
+        if (Math.Abs(node.Velocity.X) > Tuning.MinVelocity || Math.Abs(node.Velocity.Y) > Tuning.MinVelocity)
+            node.Position += node.Velocity;
+        else
+            node.Velocity = Vector2.Zero;
+    }
+
+    // A cut branch is the plant's force-directed physics with every link in it gone (and its pins no longer holding):
+    // its parts push each other apart, and the plant's main parts and they push each other as usual, so they drift
+    // off on their own. They go after CutFadeSeconds. A branch is a handful of parts, gone in seconds, so every pair
+    // is pushed exactly (fruit on the plant takes no part).
+    void DriftCut(float dt)
+    {
+        for (int i = Cut.Count - 1; i >= 0; i--)
+        {
+            var cut = Cut[i];
+            if ((cut.Seconds += dt) >= Tuning.CutFadeSeconds)
+            {
+                Cut.RemoveAt(i);
+                continue;
+            }
+            var parts = cut.Nodes;
+            foreach (var node in parts) node.PreviousPosition = node.Position;
+            for (int a = 0; a < parts.Count; a++)
+            {
+                for (int b = a + 1; b < parts.Count; b++) Push(parts[a], parts[b], parts[a].Spec.Force, parts[b].Spec.Force);
+                foreach (var node in Nodes)
+                    if (!node.Spec.IsFruit) Push(parts[a], node, parts[a].Spec.Force, node.Spec.Force);
+            }
+        }
     }
 
     // Parts push each other apart by force * force / distance squared, as in the TS game. Checking every pair grows
@@ -979,12 +1030,14 @@ public sealed class Garden
         foreach (var link in Links)
         {
             link.Flash = Math.Max(0, link.Flash - Tuning.LinkFlashFadePerSecond * dt);
+            link.FlashAge += dt;
             link.FlashPhase += dt * Math.Min(Tuning.MaxFlashesPerSecond, link.FlowPerHour * Tuning.FlashesPerPowerHour);
             if (link.FlashPhase < 1) continue;
             // The flash is as bright as the part the power reached is full, so power trickling into a low branch
             // glimmers and only a full one flashes brightly. That part bounces (with its fruit, which share its look).
             var reached = link.FlowsToTarget ? link.Target : link.Origin;
-            link.Flash = Tuning.FlashPeak * Math.Clamp(reached.Fill, 0, 1);
+            link.Flash = link.FlashStrength = Tuning.FlashPeak * Math.Clamp(reached.Fill, 0, 1);
+            link.FlashAge = 0;
             foreach (var part in reached.Fruits.Prepend(reached)) part.BounceSpeed += Tuning.BounceKick;
             // A little jitter (the original's ±10%), so links carrying the same flow drift out of step.
             link.FlashPhase = (float)(rng.NextDouble() - 0.5) * 0.2f;
@@ -997,8 +1050,6 @@ public sealed class Garden
             if (mote.T < 1) continue;
 
             var arrived = mote.To;
-            arrived.Glow = 1;
-            if (LinkBetween(mote.From, arrived) is { } link) link.Flash = 1;
             var route = mote.Route;
             var next = ++mote.Leg + 1 < route.Count ? route[mote.Leg + 1] : null;
             if (next == null)
@@ -1007,6 +1058,12 @@ public sealed class Garden
                 // (see SendGrowth) and the silhouette goes.
                 if (mote.Completes) arrived.FormingLook = 0;
                 else if (mote.Growth > 0) arrived.FormingLook = Math.Min(arrived.Growth, arrived.FormingLook + mote.Growth);
+                // A blob that's absorbed flashes its part in its own colour; one that fades unabsorbed just goes.
+                if (mote.Absorbed)
+                {
+                    arrived.Glow = 1;
+                    arrived.GlowRgb = mote.Rgb;
+                }
                 Motes.RemoveAt(i);
                 continue;
             }
@@ -1015,9 +1072,6 @@ public sealed class Garden
             mote.T -= 1;
         }
     }
-
-    Link? LinkBetween(PlantNode a, PlantNode b) =>
-        b.Parent == a ? linkToParent[b] : a.Parent == b ? linkToParent[a] : null;
 
     // ==== QUERIES ==== \\
 

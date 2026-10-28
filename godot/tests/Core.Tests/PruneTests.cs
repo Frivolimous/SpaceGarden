@@ -80,6 +80,49 @@ public class PruneTests
     }
 
     [Fact]
+    public void ACutBranchFallsApartDriftsOffAndFadesThenGoes()
+    {
+        var (garden, trunk, fork) = Branched();
+        for (int i = 0; i < 600; i++) garden.Step(); // settled
+        float before = Vector2.Distance(fork.Position, trunk.Position);
+        var leaf = fork.Branches.Single(b => b.Spec.Kind == NodeKind.Stem).Fruits[0];
+        float leafBefore = Vector2.Distance(leaf.Position, leaf.Parent!.Position);
+        var removed = garden.Prune(fork);
+
+        var cut = Assert.Single(garden.Cut);
+        Assert.Equal(removed, cut.Nodes);
+        garden.Step();
+        Assert.All(removed, n => Assert.True(cut.FadeOf(n) < 1)); // fading from the cut
+        Assert.True(removed.Select(cut.FadeOf).Distinct().Count() > 1); // each at its own rate
+        int fadeTicks = (int)(Tuning.CutFadeSeconds * Tuning.TicksPerSecond);
+        for (int i = 0; i < fadeTicks - 3; i++) garden.Step();
+
+        Assert.Single(garden.Cut);
+        float after = Vector2.Distance(fork.Position, trunk.Position);
+        Assert.True(after > before + 10, $"drifted from {before:0.0} to {after:0.0}");
+        // Nothing holds its parts together any more: even a leaf drifts off its stem.
+        float leafAfter = Vector2.Distance(leaf.Position, leaf.Parent!.Position);
+        Assert.True(leafAfter > leafBefore + 5, $"leaf from {leafBefore:0.0} to {leafAfter:0.0}");
+        Assert.All(removed, n => Assert.InRange(cut.FadeOf(n), 0, 0.02f));
+
+        for (int i = 0; i < 4; i++) garden.Step();
+        Assert.Empty(garden.Cut);
+    }
+
+    [Fact]
+    public void UndoWhileItDriftsPutsItBackWhereItWas()
+    {
+        var (garden, trunk, fork) = Branched();
+        var offset = fork.Position - trunk.Position;
+        garden.Prune(fork);
+        for (int i = 0; i < 60; i++) garden.Step();
+
+        garden.UndoPrune();
+        Assert.Empty(garden.Cut);
+        Assert.Equal(trunk.Position + offset, fork.Position);
+    }
+
+    [Fact]
     public void OnlyTheLastPruneCanBeUndone()
     {
         var (garden, trunk, fork) = Branched();
