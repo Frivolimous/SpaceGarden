@@ -495,11 +495,11 @@ public sealed class Garden
     public static float Output(PlantNode node) =>
         node.Wilting ? 0 : Tuning.OutputFloor + (1 - Tuning.OutputFloor) * Math.Clamp(node.Fill, 0, 1);
 
-    // Power a part makes per real hour now: the core always its full rate, a generator in proportion to its fill
+    // Power a part makes per real hour now: in proportion to its fill
     // (its fruit adding a little, up to FruitBonusMax).
     public static float ProductionPerHour(PlantNode node) => node.Spec.Kind switch
     {
-        NodeKind.Core => Tuning.CorePowerPerHour,
+        NodeKind.Core => Tuning.CorePowerPerHour * Output(node),
         NodeKind.Generator => Tuning.GeneratorPowerPerHour * FruitBonus(node) * Output(node),
         _ => 0,
     };
@@ -508,10 +508,10 @@ public sealed class Garden
     static float FruitBonus(PlantNode node) =>
         1 + Math.Min(Tuning.FruitBonusMax, node.Fruits.Count * Tuning.FruitBonusEach);
 
-    // Power a part costs per real hour while it isn't wilting. Each leaf halves a stem's.
+    // Power a part costs per real hour while it isn't wilting. Each leaf halves a stem's. Upkeep based on output.
     public static float UpkeepPerHour(PlantNode node) => node.Spec.Kind == NodeKind.Stem
-        ? Tuning.StemUpkeepPerHour * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf))
-        : KindUpkeepPerHour(node.Spec.Kind);
+        ? Tuning.StemUpkeepPerHour * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf)) * Output(node)
+        : KindUpkeepPerHour(node.Spec.Kind) * Output(node);
 
     // What a new part of this kind costs per hour (no fruit yet).
     public static float KindUpkeepPerHour(NodeKind kind) => kind switch

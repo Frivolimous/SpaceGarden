@@ -95,7 +95,7 @@ public static class Tuning
     public const float StemUpkeepPerHour = 0.5f * PowerScale;   // halved by each leaf
     public const float LeafUpkeepFactor = 0.5f;
     public const float GroveUpkeepPerHour = 1.5f * PowerScale;
-    public const float LabUpkeepPerHour = 2 * GroveUpkeepPerHour;
+    public const float LabUpkeepPerHour = 3f * PowerScale;
 
     // Placeholder: each flower fruit (a generator's burr, a lab's research, a grove's berry) adds this much to its
     // flower's output, up to the doc's +20% per flower.
@@ -104,7 +104,7 @@ public static class Tuning
 
     // Placeholder. Generators, labs and groves work at this share of their rate when empty, rising to full when
     // full (none while wilting).
-    public const float OutputFloor = 0.5f;
+    public const float OutputFloor = 0f;
 
     // Placeholders. How much power a part holds, and how freely it flows: along a link, power runs downhill from the
     // fuller part to the emptier (by fill, as in the original game), PowerFlowPerHour per hour at a full-to-empty
@@ -114,7 +114,7 @@ public static class Tuning
     public const float PowerFlowPerHour = 40 * PowerScale;
 
     // Placeholder. The power a new part starts with (free: buds and grown parts don't cost their parent anything).
-    public const float SproutPower = 0.5f * PowerScale;
+    public const float SproutPower = 0.01f * PowerScale;
 
     // Placeholder. A part that can't pay its upkeep wilts: it stops draining (so the power left reaches the rest) and
     // recovers once it has filled back up to RecoverFill. Nothing is ever destroyed.
