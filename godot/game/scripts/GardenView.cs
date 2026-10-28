@@ -31,8 +31,9 @@ public partial class GardenView : Node2D
     readonly Garden garden;
     readonly Node2D linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
         markLayer = new(), moteLayer = new();
-    readonly Batch links = new(), linkEdges = new(), pulses = new(), halos = new(), moteDots = new();
-    const float PulseSeconds = 0.45f; // a power flash's run along its stem
+    readonly Batch links = new(), linkEdges = new(), halos = new(), moteDots = new();
+    // A power flash's light flooding along its stem, then draining: done before the next (at most 3 a second).
+    const float FillSeconds = 0.1f, DrainSeconds = 0.2f;
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
     float highlightRing;
     float blend = 1;
@@ -130,43 +131,40 @@ public partial class GardenView : Node2D
     {
         links.Begin();
         linkEdges.Begin();
-        pulses.Begin();
         foreach (var link in garden.Links)
         {
             AddLink(link);
-            if (link.FlashAge < PulseSeconds) AddPulse(link);
+            if (link.FlashAge < FillSeconds + DrainSeconds) AddLit(link);
         }
         linkEdges.Draw(linkLayer, Textures.Line);
         links.Draw(linkLayer, Textures.Line);
-        pulses.Draw(linkLayer, Textures.Halo);
     }
 
-    // A power flash runs along its stem as a soft bright streak, from the part the power left to the part it reached,
-    // as bright as the flash (the fuller the part it reached, the brighter).
-    void AddPulse(Link link)
+    // A power flash lights its whole stem, as in the original, but in a wipe from the end the power came from: the
+    // light floods along to the far end, then drains away from the same end it came in by. As bright as the flash
+    // (the fuller the part it reached, the brighter). Drawn over the stem at rest, in the same batch.
+    void AddLit(Link link)
     {
-        float t = link.FlashAge / PulseSeconds;
+        float age = link.FlashAge;
+        float head = Mathf.Min(1, age / FillSeconds);
+        float tail = Mathf.Clamp((age - FillSeconds) / DrainSeconds, 0, 1);
+        if (head - tail < 0.01f) return;
         var (from, to) = link.FlowsToTarget ? (link.Origin, link.Target) : (link.Target, link.Origin);
         var a = At(from);
         var along = At(to) - a;
         float length = along.Length();
         if (length < 0.01f) return;
-        var dir = along / length;
-        var colour = Wilted(ColourOf(link.Target.Spec).Lightened(0.45f), link.Target.WiltLook);
-        colour.A = (0.6f + 0.4f * link.FlashStrength / Tuning.FlashPeak) * Mathf.Sin(Mathf.Pi * t) * GrowIn(link.Target);
-        float streak = Mathf.Min(length * 0.6f, 26);
-        float width = LinkWidth(link.Target) * 3.2f;
-        pulses.AddAxes(a + along * EaseInOut(t), dir * streak, new Vector2(-dir.Y, dir.X) * width, colour);
+        var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.9f * link.FlashStrength), link.Target.WiltLook);
+        colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
+        var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore * LinkWidth(link.Target);
+        links.AddAxes(a + along * (head + tail) / 2, along * (head - tail), normal, colour);
     }
-
-    static float EaseInOut(float t) => t * t * (3 - 2 * t);
 
     void AddLink(Link link)
     {
-        // As the original's link (FDGLink.getColor): its target's colour, dim at rest, lifting a little on a power
-        // flash (the flash itself runs along it: see AddPulse). (The original rested at 30%; 45% keeps the stems
-        // readable over a dark desktop.)
-        var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.25f * link.Flash), link.Target.WiltLook);
+        // As the original's link (FDGLink.getColor): its target's colour, dim at rest (lit by a power flash: see
+        // AddLit). (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
+        var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f), link.Target.WiltLook);
         colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
         float width = LinkWidth(link.Target);
         var from = At(link.Origin);
