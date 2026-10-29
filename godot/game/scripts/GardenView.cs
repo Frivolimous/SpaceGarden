@@ -482,6 +482,8 @@ public partial class GardenView : Node2D
             markLayer.DrawCircle(dot, 4.2f, new Color(0.93f, 0.22f, 0.2f));
         }
 
+        if (backdropAlpha > 0) DrawLinkCounts();
+
         if (Highlight != null && highlightRing > 0)
         {
             float r = Highlight.Spec.Radius * GrowIn(Highlight) + 4 + 2 * (1 - highlightRing);
@@ -493,7 +495,33 @@ public partial class GardenView : Node2D
         DrawMoments();
     }
 
-    // The small moments: a handful at a time, and brief. Each on a soft dark edge, like the parts.
+    // In build mode, on each part that can have 2 or more links: its links used against the most it can have (a
+    // forming bud's counts, as it holds one), white with only its parent's (1/N), red when full (N/N), yellow between.
+    // Drawn at screen size, so the text stays crisp at any plant scale.
+    static readonly Color LinksFew = new(1, 1, 1), LinksSome = new(1, 0.88f, 0.35f), LinksFull = new(1, 0.38f, 0.33f);
+
+    void DrawLinkCounts()
+    {
+        var font = ThemeDB.FallbackFont;
+        float k = GetViewport().GetCanvasTransform().X.Length(); // screen pixels per garden unit
+        int size = Mathf.Max(9, Mathf.RoundToInt(13 * k));
+        float alpha = backdropAlpha;
+        foreach (var node in garden.Nodes)
+        {
+            if (node.Spec.IsFruit || node.MaxLinks < 2) continue;
+            int used = node.Links + (node.FormingBud ? 1 : 0);
+            var colour = used >= node.MaxLinks ? LinksFull : used <= 1 ? LinksFew : LinksSome;
+            string text = $"{used}/{node.MaxLinks}";
+            var extent = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);
+            markLayer.DrawSetTransform(At(node), 0, new Vector2(1 / k, 1 / k));
+            var origin = new Vector2(-extent.X / 2, font.GetAscent(size) - extent.Y / 2);
+            markLayer.DrawStringOutline(font, origin, text, HorizontalAlignment.Left, -1, size, 4, new Color(0, 0, 0, 0.8f * alpha));
+            markLayer.DrawString(font, origin, text, HorizontalAlignment.Left, -1, size, colour with { A = alpha });
+        }
+        markLayer.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+    }
+
+    // The small moments:a handful at a time, and brief. Each on a soft dark edge, like the parts.
     void DrawMoments()
     {
         if (restored.Count > 0) restored.RemoveWhere(n => n.Age >= PopSeconds || !garden.Nodes.Contains(n));
