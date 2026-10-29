@@ -368,7 +368,13 @@ Core links: 2 / 2
 Groves: 4, Labs: 9
 ```
 
-Gen and Drain are what the garden makes and costs at full; Drain turns red when it's more than Gen (the garden is overloaded). Genes is the total so far against the next unlock's threshold. The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
+Gen and Drain are what the garden makes and costs at full; Gen's value is coloured by how it compares with Drain (see below). Genes is the total so far against the next unlock's threshold. The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
+
+**Colour coding** (Jeremy, Oct 29): the labels stay white and the values are tinted.
+- **Power** (a part's, and the garden's total): white when full, shading to yellow above full (all yellow at 125%) and to red below it (all red at 50% and under).
+- **Gen**: white when it matches Drain, shading to yellow as it makes more (all yellow at 125% of Drain) and to red as it makes less (all red at 80%, since an overload matters sooner than a low store).
+- **Genes**: purple shading to white as the total nears the next unlock.
+- **Stems, Generators, Core links**: red with none left, otherwise yellow with little left, shading to white as more is left.
 
 **The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient**, **Minimise** and **Settings**, which close it. The Almanac (step 4) and Research (step 5) join later: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
 

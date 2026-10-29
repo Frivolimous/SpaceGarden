@@ -12,7 +12,7 @@ public partial class Card : PanelContainer
     const double RefreshSeconds = 0.5;
 
     static readonly Color Ink = new(1, 1, 1, 0.9f);
-    static readonly Color WarnInk = new(1f, 0.5f, 0.45f);
+    static readonly Color HighInk = new(1, 0.88f, 0.35f), LowInk = new(1, 0.38f, 0.33f), GeneInk = new(0.62f, 0.45f, 1f);
     static readonly Color GardenTint = GardenView.Rgb(NodeSpecs.All[NodeKind.Core].Rgb);
 
     readonly Label heading;
@@ -92,7 +92,7 @@ public partial class Card : PanelContainer
         var stats = NodeStats.Of(node);
         heading.Text = spec.Name;
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
-        Line(ref used, $"Power: {stats.Power:0} / {stats.Store:0}");
+        Line(ref used, ("Power: ", Ink), ($"{stats.Power:0} / {stats.Store:0}", PowerInk(stats.Power, stats.Store)));
         if (stats.Makes > 0) Line(ref used, $"Makes: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
         if (stats.Upkeep > 0) Line(ref used, $"Upkeep: {stats.Upkeep * speed:0}/s");
         if (spec.Kind == NodeKind.Grove) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
@@ -109,13 +109,14 @@ public partial class Card : PanelContainer
     {
         heading.Text = "Garden";
         heading.LabelSettings.FontColor = GardenTint.Lightened(0.35f);
-        Line(ref used, $"Power: {stats.PowerHeld:0} / {stats.PowerStore:0}");
+        Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0} / {stats.PowerStore:0}", PowerInk(stats.PowerHeld, stats.PowerStore)));
         // At full, as the overload is judged: steady, where the live rates rock with the fills.
-        Line(ref used, ($"Gen: {stats.FullProduction * speed:0}/s, ", Ink),
-            ($"Drain: {stats.FullUpkeep * speed:0}/s", stats.Overloaded ? WarnInk : Ink));
+        Line(ref used, ("Gen: ", Ink), ($"{stats.FullProduction * speed:0}/s", GenInk(stats.FullProduction, stats.FullUpkeep)),
+            ($", Drain: {stats.FullUpkeep * speed:0}/s", Ink));
         if (stats.NextUnlock is { } next)
         {
-            Line(ref used, $"Genes: {Math.Floor(stats.Genes):0} / {next.Genes:0}");
+            Line(ref used, ("Genes: ", Ink),
+                ($"{Math.Floor(stats.Genes):0} / {next.Genes:0}", GeneInk.Lerp(Ink, (float)Math.Clamp(stats.Genes / next.Genes, 0, 1))));
             string when = stats.SecondsToNext is { } eta ? $" (ETA {Eta(eta / speed)})" : stats.Labs == 0 ? " (plant a lab)" : "";
             Line(ref used, $"Next: {Gives(next)}{when}");
         }
@@ -126,9 +127,9 @@ public partial class Card : PanelContainer
         }
         Line(ref used, ("", Ink)); // a gap before the caps
         var caps = stats.Capacity;
-        Line(ref used, $"Stems: {stats.Stems}{Of(caps.Stems)}");
-        Line(ref used, $"Generators: {stats.Generators}{Of(caps.Generators)}");
-        Line(ref used, $"Core links: {stats.CoreLinksUsed} / {caps.CoreLinks}");
+        Line(ref used, ("Stems: ", Ink), ($"{stats.Stems}{Of(caps.Stems)}", RoomInk(stats.Stems, caps.Stems)));
+        Line(ref used, ("Generators: ", Ink), ($"{stats.Generators}{Of(caps.Generators)}", RoomInk(stats.Generators, caps.Generators)));
+        Line(ref used, ("Core links: ", Ink), ($"{stats.CoreLinksUsed} / {caps.CoreLinks}", RoomInk(stats.CoreLinksUsed, caps.CoreLinks)));
         Line(ref used, $"Groves: {stats.Groves}, Labs: {stats.Labs}");
     }
 
@@ -163,6 +164,24 @@ public partial class Card : PanelContainer
     public void RefreshNow() => refreshTimer = 0;
 
     static string Of(int cap) => cap == int.MaxValue ? "" : $" / {cap}";
+
+    // The values' colours (Jeremy, Oct 29). Power: white when full, towards yellow above it (all yellow at 125%),
+    // towards red below it (all red at 50% and under).
+    static Color PowerInk(float held, float store) => Level(store > 0 ? held / store : 1, 0.5f);
+
+    // What the garden makes at full against what it costs at full: yellow as it makes more (all yellow at 125%), red
+    // as it makes less (all red at 80%: an overload matters sooner than an emptying store).
+    static Color GenInk(float made, float cost) => Level(cost > 0 ? made / cost : 2, 0.8f);
+
+    static Color Level(float ratio, float allLow)
+    {
+        if (ratio >= 1) return Ink.Lerp(HighInk, Math.Clamp((ratio - 1) / 0.25f, 0, 1));
+        return Ink.Lerp(LowInk, Math.Clamp((1 - ratio) / (1 - allLow), 0, 1));
+    }
+
+    // Room under a cap: red with none left, else yellow with little left towards white with all of it.
+    static Color RoomInk(int used, int cap) =>
+        cap == int.MaxValue || cap <= 0 ? Ink : used >= cap ? LowInk : HighInk.Lerp(Ink, (cap - used) / (float)cap);
 
     // A short time to wait, in real seconds: "under 1m", "25m", "4h 47m", "2d 3h".
     public static string Eta(double seconds)
