@@ -23,7 +23,7 @@ Space Garden is a calm desktop companion with a strategy economy underneath: a s
 - **Lightweight presence.** Runs all day without anyone noticing it in CPU, memory or battery. See Performance budget and its benchmarks.
 - **No progress gated on the window being open.** Time away is caught up (see Time model).
 
-**Out of scope for now:** spells (cut), mandatory prestige resets (removed). The Almanac is peripheral: it arrives in step 4, and what form it takes is still open.
+**Out of scope for now:** spells (cut), mandatory prestige resets (removed). The Almanac is peripheral: a journal of moments, arriving in step 4.
 
 ### Why the revival
 
@@ -170,7 +170,7 @@ Implemented in step 1.
 - **Low-power idle.** When nothing is being touched or moving, rendering drops to the idle frame rate.
 - **Catch-up on return.** The save stores when the garden was last seen; on launch the elapsed time is simulated without drawing, capped at **72 hours** (`Tuning.CatchUpCapSeconds`, to be tuned). Time hidden behind a lock screen or full-screen app is caught up the same way when the garden shows again.
 - **Absence never hurts.** Catch-up can't destroy nodes; the worst case is an overloaded garden running low, which the player fixes by pruning.
-- Parked idea: a short "while you were away" summary on return (new growth, rares, blooms).
+- **While you were away** (step 4): on return, a short note says what changed (new growth, unlocks reached, power dips), drawn from the tracking and the Almanac.
 
 ## Growth and pruning
 
@@ -415,9 +415,9 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3c | Visual polish → MVP (done) | A short round of visual polish, including the prune effect; then the power economy reworked to the original's clumps. End of step = MVP, reached Oct 29 |
 | 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
 | 3e | Manual planting (done) | A manual bud starts at once and forms like a wild one; every node bud grows on its own at its parent's fill (about 2 minutes at full), growth blobs hurry it, and fruit still grows only from blobs. Planting stays free, and a garden with no grove needs no special case. See Growth and pruning |
-| 4 | Information and tracking | Stat tracking over time, Almanac, any information display 3b left out. Supports tuning |
+| 4 | Information and tracking | Lifetime totals and four time series with tiered history (save v8), a debug-only export, the Almanac as a journal of moments, a "while you were away" note, power visuals at the top of the range; then a real-week tuning pass of the unlock track and gene income. See Step 4 below |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
-| 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows wild without one). Revisit idle CPU against the benchmarks before release. End of step = public beta candidate |
+| 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows wild without one). Revisit idle CPU against the benchmarks before release. Achievements: Steam achievements only, with no in-game toast or list; test whether Steam's overlay toast shows over the transparent window, and keep a clean path without Steam. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
 
 **Idle CPU before the public beta (step 6):** revisit it against the benchmarks. Current levers: a lower idle frame rate in Ambient mode, and a window sized to the plant's bounds instead of the full work area.
@@ -425,6 +425,37 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 **Design needed before each step:** the linear unlock sequence before step 2; choice-based core levels and seedling slot timing before step 5.
 
 Open: where events and seasons, and identity features fall in the plan.
+
+### Step 4: information and tracking (decided Oct 29)
+
+**Tracking, kept small.**
+- **Lifetime totals:** garden age, genes earned, parts grown, parts pruned, wild buds, unlocks reached.
+- **Time series, four metrics only:** stored power, Gen, Drain, and genes reaching the core.
+- **History is tiered:** per minute for the last day, per hour for the last month, per day beyond that. The totals and history go in the save, which bumps it to **version 8**.
+
+**Tuning first.**
+- A debug-only export writes the time series and totals to a file, CSV or JSON.
+- Player-facing graphs wait until play shows which numbers matter.
+
+**The Almanac is a journal of moments.**
+- Milestones are logged automatically, such as "First grove emerged" or "Second core link unlocked".
+- A catalogue of node kinds waits for step 5's rare nodes.
+- There is no big stats page.
+- It opens as a larger panel from the Almanac slot in the core's menu. The panel sits in the cards' fixed spot and closes the way they do.
+
+**No advanced stats on the cards.** They stay as trimmed in 3d.
+
+**While you were away.**
+- On return from a catch-up, a short note says what changed: new growth, unlocks reached, power dips.
+- It draws on the tracking and journal data.
+
+**Power visuals at the top of the range** are a separate task in this step: parts should still visibly grow and shrink now that stores are larger.
+
+**A real-week tuning pass** ends the step, once tracking and the export work:
+- Run a real garden for a week, then retune the week-one unlock track from the data.
+- With the same data, check the gene income ceiling: whether flat gene income (labs need to sit near the core) is a real problem, before step 5 adds progression on top.
+
+**Achievements are deferred to step 6** (see the plan).
 ## Parked ideas
 
 From the first draft, not contradicted by the anchor but not scheduled. Candidates for the "Events and surprises" and "Identity" topics:
@@ -453,8 +484,8 @@ Design layers still to work through:
 - [x] Information display: the readout and the selected part panel (step 3b)
 - [x] UI revision (step 3d): hovering shows nothing but the ring; one card in a fixed spot; the core's half-ring menu; the core tappable in Ambient mode to wake the garden. Build mode itself is unchanged, now opened from the core's menu
 - [x] Manual planting (step 3e): free, a bud that starts at once and grows on its own like every node bud, hurried by growth blobs (see Growth and pruning)
-- [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework)
-- [ ] Stat tracking and Almanac, including what form the Almanac takes (step 4)
+- [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework; scheduled in step 4)
+- [x] Stat tracking and Almanac (step 4): small lifetime totals and four time series, a debug export, the Almanac as a journal of moments (see Step 4)
 - [ ] Specialist effects: Resistor, Amplifier, Buffer (step 5)
 - [ ] Long-term pacing beyond week one
 - [ ] Choice-based core levels and seedling slot timing (step 5)
