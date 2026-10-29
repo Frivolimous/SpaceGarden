@@ -37,7 +37,7 @@ public partial class GardenView : Node2D
     public ShapingTool? HotTool;
     float toolsAlpha, backdropAlpha, backdropRadius;
     Vector2 backdropCentre;
-    static readonly Color Backdrop = Color.FromHtml("1c2430"); // a dark slate grey
+    static readonly Color Backdrop = Color.FromHtml("171a1f"); // a dark grey, barely cool
 
     readonly Garden garden;
     readonly Node2D backdropLayer = new(), shapingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(),
