@@ -4,8 +4,8 @@ using Num = System.Numerics;
 namespace SpaceGarden;
 
 // Draws the garden each frame, back to front: stems, the motes travelling along them, soft halos (and the glow where
-// a mote is absorbed), the parts, then pins and the ring on the part under the pointer. The parts of a branch just
-// pruned drift off loose, fading out. Nothing here changes the garden.
+// a mote is absorbed), the parts, then the core's marks and the ring on the part under the pointer. The parts of a
+// branch just pruned drift off loose, fading out. Nothing here changes the garden.
 //
 // Each layer is a child canvas item drawn in as few draw calls as possible, however big the plant: the stems, the
 // halos, the motes and each kind of shape are one instanced batch apiece (a textured quad per part, or per stem,
@@ -24,6 +24,12 @@ public partial class GardenView : Node2D
     static readonly Color Edge = new(0, 0, 0, 0.55f);
 
     public PlantNode? Highlight;
+
+    // Something wants the player's look (GardenStats.Needs): a red dot on the core. CoreHover: the pointer is on the
+    // core in Ambient mode, where a tap wakes the garden, and the core brightens a little.
+    public bool Attention;
+    public bool CoreHover;
+    float coreHover;
 
     // While the garden can't be seen nothing is redrawn (Godot then renders nothing at all).
     public bool Frozen;
@@ -104,6 +110,7 @@ public partial class GardenView : Node2D
         if (Frozen) return;
         float dt = (float)delta;
         highlightRing = Mathf.MoveToward(highlightRing, Highlight == null ? 0 : 1, dt * 6);
+        coreHover = Mathf.MoveToward(coreHover, CoreHover ? 1 : 0, dt * 5);
         // Genes count as their blob leaves the lab, so an unlock waits for the gene blobs on their way to arrive (the
         // core glows as each does), unless none are shown.
         if (garden.Unlocks > unlocksSeen)
@@ -460,16 +467,19 @@ public partial class GardenView : Node2D
         foreach (var (shape, batch) in forming) batch.Draw(formingLayer, Textures.Shape(shape));
     }
 
-    // Pins and the hover ring: a handful at most.
+    // The core's light while the pointer is on it in Ambient mode, its red dot, and the hover ring.
     void DrawMarks()
     {
         DrawHandles();
-        foreach (var node in garden.Nodes)
+        var core = garden.Core;
+        if (coreHover > 0)
+            markLayer.DrawCircle(At(core), Size(core) * 1.02f, ColourOf(core.Spec).Lightened(0.6f) with { A = 0.22f * coreHover });
+        if (Attention)
         {
-            if (!node.Fixed || node.Parent == null) continue;
-            float r = Mathf.Max(2, Size(node) * 0.32f);
-            markLayer.DrawCircle(At(node), r, new Color(1, 0.9f, 0.45f));
-            markLayer.DrawArc(At(node), r, 0, Mathf.Tau, 16, new Color(0, 0, 0, 0.5f), 1, true);
+            // Over the core's upper right, on a soft dark edge.
+            var dot = At(core) + new Vector2(0.62f, -0.62f) * Mathf.Max(Size(core), core.Spec.Radius * 0.6f);
+            markLayer.DrawCircle(dot, 5.5f, new Color(0, 0, 0, 0.55f));
+            markLayer.DrawCircle(dot, 4.2f, new Color(0.93f, 0.22f, 0.2f));
         }
 
         if (Highlight != null && highlightRing > 0)

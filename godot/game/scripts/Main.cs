@@ -14,7 +14,8 @@ namespace SpaceGarden;
 // empty (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob
 // sets it off), --build to open in build mode, --shaping to place one of each shaping tool (or --shaping=N at physics
 // tick N, with --screenshot), --pausetest=AT,FOR to act as if hidden for FOR seconds
-// from AT seconds after start (to test the pause), plus Screenshot's options. --screenshot runs never touch the
+// from AT seconds after start (to test the pause), plus Screenshot's options and the widget's (--inspect[=core|garden],
+// --coremenu[=SLOT], --ambient, --corehover, --attention: see Widget.DevFlags). --screenshot runs never touch the
 // real save.
 //
 // While nobody can see the garden (screen locked, display off, a full-screen app on its monitor: see Visibility) it

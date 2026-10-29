@@ -1,6 +1,7 @@
 namespace SpaceGarden.Core.Tests;
 
-// The hover readout's numbers (GardenStats) and the selected part's panel text (each NodeSpec's Name and Description).
+// The garden card's numbers (GardenStats), the part card's (NodeStats), the core's red dot (Attention), and each
+// NodeSpec's Name and Description.
 public class StatsTests
 {
     static Garden NewGarden(Capacity capacity)
@@ -25,7 +26,7 @@ public class StatsTests
             Assert.False(string.IsNullOrWhiteSpace(info.Name), $"{kind} has no name");
             Assert.False(string.IsNullOrWhiteSpace(info.Description), $"{kind} has no description");
             Assert.DoesNotContain('\n', info.Description);
-            Assert.True(info.Description.Length <= 80, $"{kind}'s description is too long for the panel");
+            Assert.True(info.Description.Length <= 80, $"{kind}'s description is too long for one line");
         }
     }
 
@@ -137,5 +138,105 @@ public class StatsTests
 
         Assert.Null((stats with { GenesPerHour = 0 }).SecondsToNext); // no labs: never
         Assert.Null((stats with { NextUnlock = null }).SecondsToNext); // the track done
+    }
+
+    // ==== ATTENTION ==== \\
+
+    [Fact]
+    public void AnOverloadedGardenWantsALook()
+    {
+        var garden = NewGarden(new Capacity(4, 1, 1));
+        var trunk = Add(garden, garden.Core, NodeKind.Stem);
+        Assert.Empty(GardenStats.NeedsOf(garden));
+        Assert.Empty(GardenStats.Of(garden).Needs);
+        var branch = Add(garden, Add(garden, trunk, NodeKind.Stem), NodeKind.Stem);
+        Add(garden, trunk, NodeKind.Lab);
+        Add(garden, branch.Parent!, NodeKind.Lab);
+        Add(garden, branch, NodeKind.Lab); // 27 a second against the core's 24 (see above)
+        Assert.Equal([Attention.Overloaded], GardenStats.NeedsOf(garden));
+        Assert.Equal(GardenStats.NeedsOf(garden), GardenStats.Of(garden).Needs);
+    }
+
+    // ==== PART CARD ==== \\
+
+    [Fact]
+    public void TheCoresCardShowsWhatItMakesAndSends()
+    {
+        var garden = NewGarden(new Capacity(4, 1, 2));
+        Add(garden, garden.Core, NodeKind.Stem);
+        garden.Core.Power = 300;
+        var core = NodeStats.Of(garden.Core);
+        Assert.Equal((300f, 800f), (core.Power, core.Store));
+        Assert.Equal(24, core.Makes, 4); // at full, steady whatever its fill
+        Assert.Equal(28.8f, core.Sends, 4);
+        Assert.Equal(0, core.Upkeep);
+        Assert.Equal((1, 2), (core.Links, core.MaxLinks)); // against the garden's core links
+        Assert.Null(core.Forming);
+    }
+
+    [Fact]
+    public void AStemsUpkeepCountsItsLeaves()
+    {
+        var garden = NewGarden(new Capacity(4, 1, 1));
+        var stem = Add(garden, garden.Core, NodeKind.Stem);
+        Add(garden, stem, NodeKind.Stem);
+        Assert.Equal(3, NodeStats.Of(stem).Upkeep, 4);
+        Add(garden, stem, NodeKind.Leaf);
+        var card = NodeStats.Of(stem);
+        Assert.Equal(2.25f, card.Upkeep, 4);
+        Assert.Equal(0, card.Makes);
+        Assert.Equal((2, 3), (card.Links, card.MaxLinks)); // its parent and its branch
+    }
+
+    [Fact]
+    public void FlowersShowWhatTheyMakeNotWhatArrives()
+    {
+        var garden = NewGarden(new Capacity(4, 1, 1));
+        var stem = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
+        var lab = Add(garden, stem, NodeKind.Lab);
+        var grove = Add(garden, stem, NodeKind.Grove);
+        foreach (var n in garden.Nodes) n.Power = 0; // empty: the card still says what they make when full
+
+        var labCard = NodeStats.Of(lab);
+        Assert.Equal(720, labCard.GenesPerHour, 3); // a gene a blob, every 5 s, before any is lost on the way
+        Assert.Equal(0, labCard.GrowthBlobsPerHour);
+        Assert.Equal(6, labCard.Upkeep, 4);
+        Assert.True(GardenStats.GenesPerHourFrom(garden, lab) < labCard.GenesPerHour); // what reaches the core
+
+        Assert.Equal(1200, NodeStats.Of(grove).GrowthBlobsPerHour, 3);
+        Add(garden, grove, NodeKind.Berry);
+        Assert.Equal(1320, NodeStats.Of(grove).GrowthBlobsPerHour, 3); // a berry adds a tenth
+        Assert.Equal(0, NodeStats.Of(grove).GenesPerHour);
+        Assert.Equal(1, NodeStats.Of(grove).Links);
+    }
+
+    [Fact]
+    public void FormingShowsHowFarAlongItIs()
+    {
+        var garden = NewGarden(new Capacity(4, 1, 1));
+        var stem = Add(garden, garden.Core, NodeKind.Stem);
+        stem.Forming = NodeKind.Lab;
+        stem.Growth = Tuning.BudGrowth * 0.6f;
+        var card = NodeStats.Of(stem);
+        Assert.Equal(NodeKind.Lab, card.Forming);
+        Assert.Equal(0.6f, card.FormingProgress, 4);
+
+        stem.Forming = NodeKind.Leaf;
+        stem.Growth = Tuning.FruitGrowth * 0.25f;
+        Assert.Equal(0.25f, NodeStats.Of(stem).FormingProgress, 4);
+    }
+
+    // Pinning went in step 3d; a save from before it, with parts pinned, still loads.
+    [Fact]
+    public void AnOldSavesPinsAreIgnored()
+    {
+        var options = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+        };
+        var node = System.Text.Json.JsonSerializer.Deserialize<NodeSave>(
+            """{"Id":3,"Kind":"Stem","ParentId":0,"X":1,"Y":2,"Pinned":true,"Power":50}""", options)!;
+        Assert.Equal((3, NodeKind.Stem, 50f), (node.Id, node.Kind, node.Power));
     }
 }

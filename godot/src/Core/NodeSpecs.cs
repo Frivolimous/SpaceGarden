@@ -6,7 +6,8 @@ public enum Shape { Circle, Triangle, Square, Pentagon, Hexagon }
 
 // One kind of plant part, all its numbers in one place, as the TS game's Nodes config. MaxLinks counts the link to
 // the parent too (as in the TS game), so a stem with 3 has two branches; fruits have none and hang from their parent
-// outside that count. Name and Description are for the selected part's panel (DESIGN.md, Desktop widget).
+// outside that count. Name heads the part's card (DESIGN.md, Information display); Description, a line on what it
+// does, is off the card since step 3d and kept for the Almanac.
 public sealed record NodeSpec(NodeKind Kind)
 {
     public required string Name { get; init; }
