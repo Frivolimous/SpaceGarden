@@ -62,16 +62,20 @@ public sealed class PlantNode
         Depth = parent == null ? 0 : parent.Depth + 1;
         Position = PreviousPosition = position;
         MaxLinks = spec.MaxLinks;
+        Store = StoreOf(spec);
     }
 
-    public float Store => Spec.Kind switch
+    // How much power it holds (none for fruit), and how full it is.
+    public readonly float Store;
+    public float Fill => Store == 0 ? 0 : Power / Store;
+
+    static float StoreOf(NodeSpec spec) => spec.Kind switch
     {
-        _ when Spec.IsFruit => 0,
+        _ when spec.IsFruit => 0,
         NodeKind.Core => Tuning.CorePowerStore,
         NodeKind.Lab => Tuning.LabPowerStore,
         _ => Tuning.NodePowerStore,
     };
-    public float Fill => Spec.IsFruit ? 0 : Power / Store;
 
     public int Links => Branches.Count + (Parent == null ? 0 : 1);
     // A forming bud holds a link, and a forming fruit a fruit slot.
