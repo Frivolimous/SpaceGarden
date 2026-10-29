@@ -27,16 +27,17 @@ public static class ShapingLook
 
     // A flower pot holding a part of radius r centred at `at`, opening the way u points: a rim straight across the
     // part's middle, a little wider than the bowl, and under it a round bowl just bigger than the part, so the part
-    // sits in it up to its middle.
+    // sits in it up to its middle. The bowl is centred on the part, so the gap round it is even, sides and bottom;
+    // the rim covers its top.
     public static void Pot(CanvasItem ci, Vector2 at, Vector2 u, float r, Color tint)
     {
         const int steps = 16;
         var side = new Vector2(-u.Y, u.X);
         float bowl = r + ShapingTool.PotGap, rim = ShapingTool.PotRim, lip = bowl + ShapingTool.PotLip;
-        var under = at - u * rim; // the bowl hangs from the rim's underside
+        var under = at - u * rim; // the rim's underside
         var points = new Vector2[steps + 1];
         float start = u.Angle() + Mathf.Pi / 2; // one side of the rim, round the bottom to the other
-        for (int i = 0; i <= steps; i++) points[i] = under + Vector2.FromAngle(start + Mathf.Pi * i / steps) * bowl;
+        for (int i = 0; i <= steps; i++) points[i] = at + Vector2.FromAngle(start + Mathf.Pi * i / steps) * bowl;
         Outlined(ci, points, tint, 1);
         Outlined(ci, [at + side * lip, at - side * lip, under - side * lip, under + side * lip], tint, 1);
     }
