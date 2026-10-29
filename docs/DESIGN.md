@@ -290,7 +290,7 @@ Note the order change from the first draft: the evolution path is chosen when th
 
 Jeremy's draft, meant to reach the end in about seven days. At the current economy it doesn't: gene income stays near 50,000 a day, so a garden ends week one with 19 stems, 6 generators and 2 core links (41 main nodes, 6–10 labs, 5–9 groves, about 95 fruit). The track ends here; long-term pacing comes later.
 
-The timings assume a smart player actively tending (see Vision and pillars): the pacing simulation scripts one. It checks in every two hours while awake (16 hours a day), plants the first grove and lab at once, keeps labs within four links of the core (further out, most of their gene blobs wander off), fills the stem cap nearest the core and the generator cap where the plant is hungriest, keeps a grove per 15 stems, and prunes wild groves past that and labs that wilt or drain the garden. Wild growth fills every free link within minutes of an unlock or a prune, so between check-ins the plant fills itself with wild labs and groves. A garden with no labs makes no genes and unlocks nothing, and one with no grove doesn't grow. Proposed: the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
+The timings assume a smart player actively tending (see Vision and pillars): the pacing simulation scripts one. It checks in every two hours while awake (16 hours a day), plants the first grove and lab at once, keeps labs within four links of the core (further out, most of their gene blobs wander off), fills the stem cap nearest the core and the generator cap where the plant is hungriest, keeps a grove per 15 stems, and prunes wild groves past that and labs that run dry or drain the garden. Wild growth fills every free link within minutes of an unlock or a prune, so between check-ins the plant fills itself with wild labs and groves. A garden with no labs makes no genes and unlocks nothing, and one with no grove doesn't grow. Proposed: the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
 
 **Long-term pacing: TBD.** Week one has to feel right first; pacing beyond it (bloom timing, how long a garden takes to mature) gets planned once it does.
 
@@ -361,10 +361,12 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | Step | Name | Contents |
 | --- | --- | --- |
 | 1 | Foundation (done) | Godot widget, transparency, force-directed physics, node and fruit rendering, stress test, time model (wall-clock sim, catch-up, low-power idle) |
-| 2 | Living garden | Power economy, upkeep, wilting; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, growth blobs, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
+| 2 | Living garden (done) | Power economy, upkeep; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, growth blobs, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
 | 3a | Shaping (done) | Gravity Pot, Trellis, Gravity Well, placed and connected in build mode. See Shaping the garden |
-| 3b | Information display | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget |
-| 3c | Visual polish → MVP | A short round of visual polish, including the prune effect. End of step = MVP |
+| 3b | Information display (done) | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget |
+| 3c | Visual polish → MVP (done) | A short round of visual polish, including the prune effect; then the power economy reworked to the original's clumps. End of step = MVP, reached Oct 29 |
+| 3d | UI revision (to do) | Revisit how information and building are shown: the hover readout and the selected part panel (today the readout shows on every hover and gets in the way), how build mode reads, and the core tappable in Ambient mode to wake the garden. Design discussed before building. See Next topics |
+| 3e | Manual planting (to do) | Explore whether planting by hand should cost something (growth motes, a store of them, or a bud that motes then finish) and what a garden with no grove does. Exploration and design first. See Next topics |
 | 4 | Information and tracking | Stat tracking over time, Almanac, any information display 3b left out. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
 | 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows wild without one). Revisit idle CPU against the benchmarks before release. End of step = public beta candidate |
@@ -389,7 +391,7 @@ From the first draft, not contradicted by the anchor but not scheduled. Candidat
 
 None at the moment.
 
-Settled since the first draft: platform (Godot); "is there any care need?" (no; neglect only slows growth, via wilting). Settled in the pacing pass: no power blobs (power stays link flashes and node brightness, at a cadence of every few seconds); blob rates are at real speed. Settled Oct 26:
+Settled since the first draft: platform (Godot); "is there any care need?" (no; neglect only slows growth, by running the garden low on power). Settled in the pacing pass: no power blobs (power stays link flashes and node brightness, at a cadence of every few seconds); blob rates are at real speed. Settled Oct 26:
 - **One plant per garden.**
 - **No save migration until release.** Old v29 saves are not carried over, and prototype save formats may break freely before release.
 - **Distribution:** probably Steam.
@@ -401,6 +403,9 @@ Settled since the first draft: platform (Godot); "is there any care need?" (no; 
 Design layers still to work through:
 
 - [x] Information display: the readout and the selected part panel (step 3b)
+- [ ] UI revision (step 3d): redesign the hover readout and selected part panel so they inform without getting in the way; how build mode and arranging read; the core tappable in Ambient mode to wake the garden
+- [ ] Manual planting (step 3e): should a manual bud cost growth motes? A mote store to spend from, or a bud that starts and motes finish? Or only wild growth and pruning? With no grove: does one grow slowly on its own, can one always be planted, or does the core make a few motes and grow a grove first?
+- [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework)
 - [ ] Stat tracking and Almanac, including what form the Almanac takes (step 4)
 - [ ] Specialist effects: Resistor, Amplifier, Buffer (step 5)
 - [ ] Long-term pacing beyond week one

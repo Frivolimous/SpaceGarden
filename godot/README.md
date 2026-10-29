@@ -11,8 +11,10 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 
 ## Using it
 - **Display modes.** It starts in **Active**: full opacity, the toolbar and menu below, and a readout under the
-  plant (power made and used an hour, how full it is, genes towards the next unlock, room left) that fades in over
-  1 s while the pointer rests on a part and out again after it leaves. **Ctrl+Alt+G** (from anywhere; Windows)
+  plant (power held and its store, made against used; genes and their rate; the next unlock and its ETA; room against
+  the caps; flowers and the wild buds forming) that fades in over 1 s while the pointer rests on a part and out again
+  after it leaves. Above it, a card for the selected part (the last one tapped): its name, power, what it does and
+  its own numbers. **Ctrl+Alt+G** (from anywhere; Windows)
   switches to **Ambient**: faded, and every click falls through to the desktop; again to come back. **Minimised**
   (from the menu, a click on the yellow tray icon, or minimising the window any other way) minimises the window and
   pauses the garden like a locked screen, catching up when it's shown again. Its taskbar button, Ctrl+Alt+G or the
@@ -20,18 +22,23 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill above the readout puts
   the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; wild growth waits out the window
   so the room is still there, and a bud placed in that room, or time away, ends it.
-- **Rest the pointer** on a part to ring it. **Tap** it (click without dragging) for its toolbar: grow, pin in
-  place (a yellow dot; drag a pinned part to move its pin), prune (cuts the part and everything beyond it). Tap
+- **Rest the pointer** on a part to ring it. **Tap** it (click without dragging) for its toolbar: grow a stem,
+  generator, lab or grove from it, pin in place (a yellow dot; drag a pinned part to move its pin), prune (cuts the
+  part and everything beyond it), and Unhook if it's tied to a pot or trellis. Tapping also selects it. Tap
   again, pick a tool, click anywhere else, start a drag, or move away for a moment to close it.
 - **Fruit** (leaves, burrs, research pods) ignores the pointer: it can't be hovered, tapped or dragged, and clicks
   on it fall through to the desktop.
+- **Build mode** (the menu, or Ctrl+B with the garden focused) arranges the garden: an opaque disc round the plant
+  and a bar of shaping tools (Gravity Pot, Trellis, Gravity Well, as the gene track unlocks them). Drag a tool off
+  the bar to place it, drag its body, knob or posts to move and turn it, and drop a part on a pot or trellis to tie
+  it. Done or Escape ends it. See Shaping the garden in DESIGN.md.
 - The plant floats free, as in the TS game (the radial layout; the core isn't planted).
 - **Drag any part, the core included**: it's pulled to the pointer and the rest follows only through the links, at
   its real weight. Letting go keeps the momentum: fling it and the plant glides on and slows to rest. The screen
   edges are the garden's walls.
 - The plant is never rescaled automatically, and the window never moves or resizes. **Size** in the menu sets the
   plant's scale (50-125%, scaled around the core).
-- **Right-click** (Active mode) for the menu: display mode, always on top, size, growth speed (1x / 60x / 3600x), idle frame rate (15 / 20 /
+- **Right-click** (Active mode) for the menu: display mode, build mode, always on top, size, growth speed (1x / 60x / 3600x), idle frame rate (15 / 20 /
   30 / 60 fps, default 30, saved; the rate while nothing is being touched or moving, and the idle CPU cost scales
   with it), new garden, quit, and (an
   experiment, on by default) "Fruit borrows its parent's push": the cheaper fruit physics described under
@@ -50,20 +57,21 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   spring, repulsion and damping with the same constants (`FDGContainer.ts`, `Config.PHYSICS`); power shown as
   link flashes, as the original's power transfers were (`FDGLink.flash`): a link flashes as often as power flows
   along it, so a busy trunk pulses and a full branch rests. Each part's brightness and size follow its fill, eased as the
-  original's node intensity was (`PlantNodeView`), and a part bounces a little each time power reaches it. (The step-1 motes are gone; travelling blobs return
-  for fruit and genes.)
+  original's node intensity was (`PlantNodeView`); the arriving clumps are the motion, with no added bounce.
+  Travelling blobs carry growth from groves and genes from labs.
 - **Also ported:** holding a part (the TS game's pull: `PULL_FRICTION`, `TARGET_RATIO`) and the borders
   (`EDGE_BOUNCE`, now the screen edges). Links are the TS game's soft springs, with no length limit, so a pull
   stretches them and they drag the rest along. The held part is pulled by its weight, so the core is slow and
   heavy to drag and a leaf quick.
-- **New:** wind that sways the parts more the further they are from the core, growth on real time (a new part every 20 minutes at 1x), catch-up on return,
+- **New:** wind that sways the parts more the further they are from the core, growth on real time (wild buds wherever a grove's growth blobs land), catch-up on return,
   halos, grow-in animation, a 30 fps idle frame rate.
 - **Economy:** power is the original game's (`PlantNodePower`): the core and generators make power and stems, groves
   and labs cost upkeep (leaves halve a stem's), all in proportion to their fill, and about three times a second each
   part sends a clump of power to its emptiest neighbour, so far tips run low first and the fills never settle. Nothing
   wilts and nothing is destroyed; an overloaded garden just runs lower. Wild growth stays within the caps (4 stems,
-  1 generator, 1 core link at the start). Catch-up runs the same fixed economy steps. Saves carry a version; an older
-  one is set aside (`garden.v1.json`) and a new garden starts.
+  1 generator, 1 core link at the start), raised as genes reach the core along the unlock track. Catch-up runs the
+  same fixed economy steps. Saves carry a version (now 7); an older one is set aside (`garden.v6.json` and so on)
+  and a new garden starts.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Dev options
@@ -71,7 +79,10 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 `--profile=NAME` (use `user://NAME.json` instead of the real save), `--backdrop=RRGGBB`, `--pausetest=AT,FOR`
 (act as if hidden for FOR seconds from AT seconds after start, to test the pause),
-`--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits),
+`--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits; with it,
+`--prune=N` and `--undo=N` prune the biggest branch and undo it at tick N), `--shaping[=N]` (places one of each
+shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (the readout shows as if hovered,
+with a part selected),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of
 the next unlock on the gene track, to watch one fire), `--fpslog` (prints
@@ -110,5 +121,5 @@ Tried on the way: fruit only meeting its own family (no borrowed push) was as ch
 overlaps); adding a push from nearby stems to that was tidy but slower than the grid (0.24 ms).
 
 ## Not in the prototype
-No crawlers, skills, seedling, UI panels or sound; no tray icon or launch-on-startup; it still shows in the
-taskbar.
+No crawlers, skills, seedlings, rares, stat tracking or Almanac, or sound; no launch-on-startup; it still shows in
+the taskbar.
