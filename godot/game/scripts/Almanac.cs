@@ -51,7 +51,6 @@ public partial class Almanac : PanelContainer
         {
             MouseFilter = MouseFilterEnum.Pass,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            CustomMinimumSize = new Vector2(0, ListHeight),
         };
         column.AddChild(scroll);
         list = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -87,6 +86,8 @@ public partial class Almanac : PanelContainer
 
     public void Update(Garden garden, double delta)
     {
+        // As tall as its moments, scrolling past ListHeight (a young garden's is short).
+        if (IsOpen) scroll.CustomMinimumSize = new Vector2(0, Mathf.Min(ListHeight, list.GetCombinedMinimumSize().Y));
         if (!IsOpen || (refreshTimer -= delta) > 0) return;
         refreshTimer = RefreshSeconds;
         var tracking = garden.Tracking;
@@ -94,7 +95,11 @@ public partial class Almanac : PanelContainer
         if (tracking == shownFor && tracking.Journal.Count == shownEntries) return;
         shownFor = tracking;
         shownEntries = tracking.Journal.Count;
-        foreach (var child in list.GetChildren()) child.QueueFree();
+        foreach (var child in list.GetChildren())
+        {
+            list.RemoveChild(child); // at once, so the list's height is the new rows'
+            child.QueueFree();
+        }
         for (int i = tracking.Journal.Count - 1; i >= 0; i--)
         {
             var entry = tracking.Journal[i];

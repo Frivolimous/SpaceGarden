@@ -82,6 +82,15 @@ public partial class CoreMenu : Control
             if (button.Tool == tool) button.Active = on;
     }
 
+    // Where its slots are while it's open (in the menu's layer's units), to keep the cards clear of it.
+    public Rect2? Extent()
+    {
+        if (!IsOpen) return null;
+        var rect = buttons[0].GetGlobalRect();
+        foreach (var button in buttons) rect = rect.Merge(button.GetGlobalRect());
+        return rect;
+    }
+
     // Whether the pointer is on one of its slots (in the menu's layer's units).
     public bool Over(Vector2 point) => IsOpen && buttons.Any(b => b.GetGlobalRect().Grow(2).HasPoint(point));
 

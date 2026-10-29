@@ -589,9 +589,11 @@ public partial class Widget : Node
         undoPlaced = true;
     }
 
-    // The cards (the garden's above the part's) are set down as they open beside the plant, level with the core: to its
-    // right, or its left if there's more room there (the plant usually lives at the screen's bottom right). Then they
-    // stay put while open, their top corner on that side fixed (only pushed back onto the screen past an edge).
+    // The cards (the garden's above the part's) are set down as they open beside the plant and the core's menu, level
+    // with the core: to the right if they fit there, else the left if they fit there, else whichever side has more room
+    // (the plant usually lives at the screen's bottom right). Then they stay put while open, their top corner on that
+    // side fixed (only pushed back onto the screen past an edge). The Almanac, wider and taller, is set down afresh as it
+    // opens and closes.
     void PlaceCard()
     {
         if (!partCard.Visible && !gardenCard.Visible && !almanac.Visible)
@@ -606,9 +608,15 @@ public partial class Widget : Node
             const float gap = 16, top = 60; // the card's top this far above the core
             var (min, max) = Garden.Bounds();
             float left = ToViewport(min).X / Dpi, right = ToViewport(max).X / Dpi;
+            if (coreMenu.Extent() is { } menu) // a young plant is narrower than the menu's ring
+            {
+                left = Mathf.Min(left, menu.Position.X);
+                right = Mathf.Max(right, menu.End.X);
+            }
             var core = ToViewport(Garden.Core.Position) / Dpi;
             float roomRight = screen.X - right - gap, roomLeft = left - gap;
-            cardOnLeft = roomRight < Mathf.Max(size.X, 200) && roomLeft > roomRight;
+            float wanted = Mathf.Max(size.X, 200);
+            cardOnLeft = roomRight < wanted && (roomLeft >= wanted || roomLeft > roomRight);
             cardAnchor = new Vector2(cardOnLeft ? left - gap : right + gap, core.Y - top);
         }
         var at = cardAnchor.Value - new Vector2(cardOnLeft ? size.X : 0, 0);
@@ -879,6 +887,7 @@ public partial class Widget : Node
     void SetAlmanac(bool on)
     {
         coreMenu.SetActive(Tool.Almanac, on);
+        cardAnchor = null; // set down again for its own size (see PlaceCard)
         if (!on)
         {
             almanac.Close();
