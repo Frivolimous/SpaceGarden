@@ -109,11 +109,11 @@ public static class Tuning
     // each tick, and each main part linked to it (its parent, and what grows straight out of it) is pushed PotPush,
     // over its mass, the way the pot faces (about five times the wind's strength on a stem). A Gravity Well pulls
     // every part, core and fruit too, WellPull towards it, alike whatever its weight (like gravity), easing off within
-    // WellEase of its centre: a free plant drifts to the well at about 4 units a second. A part on a trellis slides
+    // WellEase of its centre: a free plant drifts to the well at about 3 units a second. A part on a trellis slides
     // along it, its sliding damped by TrellisSlide each tick.
     public const float PotFollow = 0.12f;
     public const float PotPush = 0.012f;
-    public const float WellPull = 0.0015f;
+    public const float WellPull = 0.001f;
     public const float WellEase = 40;
     public const float TrellisSlide = 0.9f;
 
