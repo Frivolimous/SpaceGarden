@@ -609,8 +609,9 @@ public partial class Widget : Node
                 var at = ToSim(ToWorld(button.Position));
                 var handle = HandleAt(at);
                 pressNode = handle == null ? Garden.NodeAt(at, HoverSlop) : null;
-                // A potted part is locked: in build mode, taking it takes its pot (a tap still opens the part's toolbar).
-                if (Building && pressNode?.TiedTo is { Kind: ShapingKind.Pot } held)
+                // A potted part is locked: taking it takes its pot, in build mode or not (a tap still opens the part's
+                // toolbar).
+                if (pressNode?.TiedTo is { Kind: ShapingKind.Pot } held)
                 {
                     StartMoving(held, ShapingHandle.Body, at);
                     movingPart = pressNode;
