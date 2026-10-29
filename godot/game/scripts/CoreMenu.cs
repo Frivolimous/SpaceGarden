@@ -14,8 +14,8 @@ public partial class CoreMenu : Control
     // The slots, in order round the ring from left to right.
     static readonly (Tool Tool, string Label)[] Slots =
     [
-        (Tool.Info, "Garden info"), (Tool.Build, "Build mode"), (Tool.Ambient, "Ambient"), (Tool.Minimise, "Minimise"),
-        (Tool.Settings, "Settings"),
+        (Tool.Info, "Garden info"), (Tool.Build, "Build mode"), (Tool.Ambient, $"Ambient ({Hotkey.Name})"),
+        (Tool.Minimise, "Minimise"), (Tool.Settings, "Settings"),
     ];
 
     const float Gap = 14; // between the core's edge and the slots' inner edge

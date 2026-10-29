@@ -154,7 +154,7 @@ public class StatsTests
         Assert.Equal(28.8f, core.Sends, 4);
         Assert.Equal(0, core.Upkeep);
         garden.Core.Power = 800;
-        Assert.Equal(0, NodeStats.Of(garden.Core).Makes); // none once full
+        Assert.Equal(24, NodeStats.Of(garden.Core).Makes, 4); // full, it makes nothing: the card shows its full rate
         Assert.Equal((1, 2), (core.Links, core.MaxLinks)); // against the garden's core links
         Assert.Null(core.Forming);
     }

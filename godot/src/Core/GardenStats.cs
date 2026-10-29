@@ -99,7 +99,7 @@ public sealed record GardenStats(
 // power a second; GrowthBlobsPerHour is a grove's growth blobs, GenesPerHour the genes a lab's blobs carry as they
 // leave (production, not what reaches the core: see GardenStats.GeneReach). Links counts the parent's, against
 // MaxLinks (the core's is Capacity.CoreLinks). Forming is the fruit or bud forming in it, if any, and how far along
-// it is, 0-1.
+// it is, 0-1. A full core or generator makes nothing, so its card shows Makes at its full rate instead.
 public sealed record NodeStats(
     float Power, float Store, float Makes, float Sends, float Upkeep, float GrowthBlobsPerHour, float GenesPerHour,
     int Links, int MaxLinks, NodeKind? Forming, float FormingProgress)
@@ -112,7 +112,7 @@ public sealed record NodeStats(
             ? Math.Clamp(node.Growth / (NodeSpecs.All[kind].IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth), 0, 1)
             : 0;
         return new NodeStats(node.Power, node.Store,
-            Garden.ProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
+            node.Power >= node.Store ? Garden.FullProductionPerSecond(node) : Garden.ProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
             Garden.UpkeepPerSecond(node),
             spec.Kind == NodeKind.Grove ? blobs : 0, spec.Kind == NodeKind.Lab ? blobs * Tuning.BlobGenes : 0,
             node.Links, node.MaxLinks, node.Forming, progress);
