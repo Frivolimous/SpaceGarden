@@ -370,7 +370,7 @@ Groves: 4, Labs: 9
 
 Gen and Drain are what the garden makes and costs at full; Gen's value is coloured by how it compares with Drain (see below). Genes is the total so far against the next unlock's threshold. The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
 
-**Colour coding** (Jeremy, Oct 29): the labels stay white and the values are tinted.
+**Colour coding** (Jeremy, Oct 29): only the value, or a fraction's numerator, is tinted; labels and denominators stay white.
 - **Power** (a part's, and the garden's total): white when full, shading to yellow above full (all yellow at 125%) and to red below it (all red at 50% and under).
 - **Gen**: white when it matches Drain, shading to yellow as it makes more (all yellow at 125% of Drain) and to red as it makes less (all red at 80%, since an overload matters sooner than a low store).
 - **Genes**: purple shading to white as the total nears the next unlock.

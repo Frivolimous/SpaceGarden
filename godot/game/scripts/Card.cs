@@ -92,7 +92,7 @@ public partial class Card : PanelContainer
         var stats = NodeStats.Of(node);
         heading.Text = spec.Name;
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
-        Line(ref used, ("Power: ", Ink), ($"{stats.Power:0} / {stats.Store:0}", PowerInk(stats.Power, stats.Store)));
+        Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
         if (stats.Makes > 0) Line(ref used, $"Makes: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
         if (stats.Upkeep > 0) Line(ref used, $"Upkeep: {stats.Upkeep * speed:0}/s");
         if (spec.Kind == NodeKind.Grove) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
@@ -109,14 +109,16 @@ public partial class Card : PanelContainer
     {
         heading.Text = "Garden";
         heading.LabelSettings.FontColor = GardenTint.Lightened(0.35f);
-        Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0} / {stats.PowerStore:0}", PowerInk(stats.PowerHeld, stats.PowerStore)));
+        Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0}", PowerInk(stats.PowerHeld, stats.PowerStore)),
+            ($" / {stats.PowerStore:0}", Ink));
         // At full, as the overload is judged: steady, where the live rates rock with the fills.
         Line(ref used, ("Gen: ", Ink), ($"{stats.FullProduction * speed:0}/s", GenInk(stats.FullProduction, stats.FullUpkeep)),
             ($", Drain: {stats.FullUpkeep * speed:0}/s", Ink));
         if (stats.NextUnlock is { } next)
         {
             Line(ref used, ("Genes: ", Ink),
-                ($"{Math.Floor(stats.Genes):0} / {next.Genes:0}", GeneInk.Lerp(Ink, (float)Math.Clamp(stats.Genes / next.Genes, 0, 1))));
+                ($"{Math.Floor(stats.Genes):0}", GeneInk.Lerp(Ink, (float)Math.Clamp(stats.Genes / next.Genes, 0, 1))),
+                ($" / {next.Genes:0}", Ink));
             string when = stats.SecondsToNext is { } eta ? $" (ETA {Eta(eta / speed)})" : stats.Labs == 0 ? " (plant a lab)" : "";
             Line(ref used, $"Next: {Gives(next)}{when}");
         }
@@ -127,9 +129,11 @@ public partial class Card : PanelContainer
         }
         Line(ref used, ("", Ink)); // a gap before the caps
         var caps = stats.Capacity;
-        Line(ref used, ("Stems: ", Ink), ($"{stats.Stems}{Of(caps.Stems)}", RoomInk(stats.Stems, caps.Stems)));
-        Line(ref used, ("Generators: ", Ink), ($"{stats.Generators}{Of(caps.Generators)}", RoomInk(stats.Generators, caps.Generators)));
-        Line(ref used, ("Core links: ", Ink), ($"{stats.CoreLinksUsed} / {caps.CoreLinks}", RoomInk(stats.CoreLinksUsed, caps.CoreLinks)));
+        Line(ref used, ("Stems: ", Ink), ($"{stats.Stems}", RoomInk(stats.Stems, caps.Stems)), (Of(caps.Stems), Ink));
+        Line(ref used, ("Generators: ", Ink), ($"{stats.Generators}", RoomInk(stats.Generators, caps.Generators)),
+            (Of(caps.Generators), Ink));
+        Line(ref used, ("Core links: ", Ink), ($"{stats.CoreLinksUsed}", RoomInk(stats.CoreLinksUsed, caps.CoreLinks)),
+            ($" / {caps.CoreLinks}", Ink));
         Line(ref used, $"Groves: {stats.Groves}, Labs: {stats.Labs}");
     }
 
