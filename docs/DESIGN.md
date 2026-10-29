@@ -71,7 +71,7 @@ Three flowing resources move visibly through the stems; capacity is a set of lim
 | Growth blobs | Orange | Grove flowers | Wander the stems and grow fruit and new wild nodes where they're absorbed |
 | Gene blobs | Purple | Lab flowers | Wander the stems; only the core absorbs them (later also seedlings and hubs) |
 
-There is no core trickle of growth: groves are the only source, and a new garden has none. The player plants the first grove by hand (step 6's onboarding points there first).
+There is no core trickle of growth: groves are the only source of growth blobs, and a new garden has none. The player plants the first grove by hand (step 6's onboarding points there first); its bud grows on its own, like every node bud (see Growth and pruning), so a garden with no grove needs no special case.
 
 **Power is a light show, not the pace.** Power fills and drains in seconds, as in the original, and keeps moving: the fills rock around a balance that shifts as the plant changes, never settling. It doesn't set the garden's pace (the unlock track does, through genes); it shows the garden's health, and a low garden works slower.
 
@@ -83,7 +83,7 @@ There is no core trickle of growth: groves are the only source, and a new garden
 - **Gene blobs** pass every node by and are absorbed (100%) only by the core. A lab far from the core loses many of its genes on the way.
 - **Growth blobs** are absorbed at 30% by a node with nothing forming, and at 100% by a node with a fruit or bud already forming. A full node (no fruit room and no free link) never absorbs.
 - **Fruit or node.** A blob absorbed fresh at a node with a free link slot and room under the caps rolls between starting a fruit and starting a node bud (50/50, to tune); otherwise it starts a fruit. A wild node's type is rolled when its bud starts, and the bud holds its link and its cap slot until it's done. Each new fruit or bud on a node starts again at 30%.
-- **Forming.** Each absorbed blob adds 0.1; a fruit completes at 1.0 and a node bud at 3.0. A forming fruit grows in scale beside its node. A forming node shows as a silhouette inside its parent, growing from a speck, in its final hue; it doesn't exist in the physics until it's complete, then pops out as its link extends. Buds can't be cancelled: the player prunes after one emerges.
+- **Forming.** Each absorbed blob adds 0.1; a fruit completes at 1.0 and a node bud at 3.0. A node bud, wild or manual, also grows on its own (see Growth and pruning); a fruit grows only from blobs. A forming fruit grows in scale beside its node. A forming node shows as a full-sized silhouette inside its parent from the moment it starts, dark and grey at first and brightening into its final hue as it grows, so a new bud is plain to see; it doesn't exist in the physics until it's complete, then pops out as its link extends. Buds can't be cancelled: the player prunes after one emerges.
 
 Draft rates, to tune in play, at real speed: a fully powered grove sends a growth blob about every 3 s and a lab a gene blob about every 5 s. A gene blob carries one whole gene, so the player can see and count them; the 0.1 per blob is growth blobs only. At these rates wild growth fills the caps within minutes of an unlock, so the unlock track (genes) sets the garden's pace.
 
@@ -177,19 +177,26 @@ Implemented in step 1.
 Once it has a grove, the garden grows wild until it fills its capacity; attentive players prune wild growth to make room and place buds where they want.
 
 - **Wild growth** is random: it's wherever growth blobs land (see Economy, Blobs), with no check on power. Wild growth that drains the garden is the player's to prune. Once a garden has a grove, wild buds can be groves too; a garden with none grows nothing wild.
-- **Manual buds** cost nothing. The cost is attention. The player picks the type (stem, generator, lab or grove), and the bud grows at once.
+- **Manual buds** cost nothing. The cost is attention. The player picks the type (stem, generator, lab or grove) and the spot, and a bud starts there at once: the same silhouette inside its parent as a wild bud, holding its link and cap slot from the start. A part forms one bud at a time; a fruit forming there gives way to the player's bud.
+- **Buds grow on their own.** Every node bud, wild or manual, grows slowly by itself, at a fixed rate scaled by its parent's fill, so buds on dim branches grow slower: about 2 minutes from speck to emergence at full fill (`Tuning.BudSelfGrowSeconds`, a draft), and none at all on an empty part. Growth blobs still speed a bud up and are absorbed at 100% as before (at full fill one blob is worth about 4 s of growing alone). Wild and manual buds differ only in how they start: a wild bud from a growth blob, a manual one from the player. Fruit never grows on its own, only from growth blobs, so groves keep their purpose.
+- **Tuning the self-growth rate:** fast enough that a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is noticeably faster. At the draft rate a new garden's first grove, planted at once, emerges in about 2 minutes (its stem fills from the core almost at once), and a bud beside that grove then takes under a minute.
 - **Pruning** frees capacity. A full garden can only grow where the player has cut.
 - **Rare wild nodes** can't be planted. Pruning one frees its slot, and a new rare later appears by random chance, possibly a different type in a different place. Regrowth takes time.
 
 **Pruning gives nothing back.** Its rewards are built in: it frees stem and generator capacity for deliberate growth, lowers power upkeep, reshapes the garden, and rerolls rare nodes. With no return, wild growth can't be farmed. The cut itself must feel satisfying: every link in the pruned branch is cut, and its loose parts drift off as the plant's push (and their own) sends them away, fading out from the moment of the cut over a few seconds (`Tuning.CutFadeSeconds`, 5 s).
 
-**Undo and wild growth.** While a prune can be undone, growth blobs start no new buds anywhere and no new fruit on the pruned branch's parent (they still feed what's already forming), so an undo always has room to restore the branch.
+**Undo and wild growth.** While a prune can be undone, growth blobs start no new buds anywhere and no new fruit on the pruned branch's parent (they still feed what's already forming), so an undo always has room to restore the branch. A manual bud may still take the freed room (it holds the slot at once), which ends the chance to undo.
+
+Settled Oct 29 (Jeremy, step 3e), ruled out for manual planting:
+- **No mote store or spending:** manual buds stay free; attention is the cost.
+- **Not wild growth only:** the player keeps planting by hand.
+- **The plant doesn't grow its own first grove,** and **the core makes no motes:** a grove can always be planted, and grows on its own like any bud.
 
 ## Tending commands
 
 The player has eight basic commands.
 
-1. **New sprout:** choose a basic node type and grow it at a chosen spot.
+1. **New sprout:** choose a basic node type and start a bud of it at a chosen spot; it forms and emerges on its own (see Growth and pruning).
 2. **Prune:** remove any node and all of its children. No preview; undo restores the last prune only, within about 30 seconds (to be tuned).
 3. **Place a shaping tool** (Gravity Pot, Trellis, Gravity Well) in build mode: a subtle overlay, placed, moved and turned anywhere (see Shaping the garden).
 4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and the nodes linked to it (its parent and what grows straight out of it) are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
@@ -366,7 +373,7 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3b | Information display (done) | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget |
 | 3c | Visual polish → MVP (done) | A short round of visual polish, including the prune effect; then the power economy reworked to the original's clumps. End of step = MVP, reached Oct 29 |
 | 3d | UI revision (to do) | Revisit how information and building are shown: the hover readout and the selected part panel (today the readout shows on every hover and gets in the way), how build mode reads, and the core tappable in Ambient mode to wake the garden. Design discussed before building. See Next topics |
-| 3e | Manual planting (to do) | Explore whether planting by hand should cost something (growth motes, a store of them, or a bud that motes then finish) and what a garden with no grove does. Exploration and design first. See Next topics |
+| 3e | Manual planting (done) | A manual bud starts at once and forms like a wild one; every node bud grows on its own at its parent's fill (about 2 minutes at full), growth blobs hurry it, and fruit still grows only from blobs. Planting stays free, and a garden with no grove needs no special case. See Growth and pruning |
 | 4 | Information and tracking | Stat tracking over time, Almanac, any information display 3b left out. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
 | 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows wild without one). Revisit idle CPU against the benchmarks before release. End of step = public beta candidate |
@@ -396,7 +403,7 @@ Settled since the first draft: platform (Godot); "is there any care need?" (no; 
 - **No save migration until release.** Old v29 saves are not carried over, and prototype save formats may break freely before release.
 - **Distribution:** probably Steam.
 - **Catch-up cap:** keep 72 h for now; tweak later if play shows a need.
-- **Core links:** the core starts with 1 link and gains +1 at day 3 (already in the unlock track); the code's current 2 is a bug.
+- **Core links:** the core starts with 1 link and gains +1 at 15,000 genes, about 8 hours in (in the unlock track).
 
 ## Next topics
 
@@ -404,7 +411,7 @@ Design layers still to work through:
 
 - [x] Information display: the readout and the selected part panel (step 3b)
 - [ ] UI revision (step 3d): redesign the hover readout and selected part panel so they inform without getting in the way; how build mode and arranging read; the core tappable in Ambient mode to wake the garden
-- [ ] Manual planting (step 3e): should a manual bud cost growth motes? A mote store to spend from, or a bud that starts and motes finish? Or only wild growth and pruning? With no grove: does one grow slowly on its own, can one always be planted, or does the core make a few motes and grow a grove first?
+- [x] Manual planting (step 3e): free, a bud that starts at once and grows on its own like every node bud, hurried by growth blobs (see Growth and pruning)
 - [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework)
 - [ ] Stat tracking and Almanac, including what form the Almanac takes (step 4)
 - [ ] Specialist effects: Resistor, Amplifier, Buffer (step 5)

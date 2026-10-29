@@ -52,6 +52,13 @@ public partial class GardenView : Node2D
     float highlightRing;
     float blend = 1;
 
+    // A bud of a new part starts this far towards grey and this dark (a share of its hue's brightness), and brightens
+    // into its full hue as it grows (see DrawForming). Placeholders.
+    const float BudStartGrey = 0.6f, BudStartShade = 0.4f;
+    // And has a thin, almost white rim this wide (garden units, as OutlineWidth), to stand out inside its parent.
+    const float BudRimWidth = 1f;
+    static readonly Color BudRim = new(0.92f, 0.95f, 0.92f, 0.85f);
+
     // Small moments (marks): a ring widening off a part as it pops out, a glint on a fruit as it appears, and a
     // ripple out from the core as genes unlock a step of the track (seconds since each began).
     const float PopSeconds = 0.8f, RippleSeconds = 2.4f, RippleGap = 0.4f;
@@ -425,14 +432,15 @@ public partial class GardenView : Node2D
     }
 
     // What growth blobs are forming (DESIGN.md, Economy, Blobs), over the parts. A fruit bud swells from a speck to
-    // its full size just off its part's rim, where it'll hang. A bud of a new part is a silhouette in its final hue
-    // inside its parent, growing from a speck, until it pops out (see Garden.AddNear).
+    // its full size just off its part's rim, where it'll hang. A bud of a new part is a full-sized silhouette inside its
+    // parent from the moment it starts, dark and grey, brightening into its final hue as it grows, until it pops out
+    // (see Garden.AddNear).
     void DrawForming()
     {
         foreach (var batch in forming.Values) batch.Begin();
         foreach (var node in garden.Nodes)
         {
-            if (node.Forming is not { } kind || node.FormingLook <= 0) continue;
+            if (node.Forming is not { } kind || (node.FormingLook <= 0 && !node.FormingBud)) continue;
             var spec = NodeSpecs.All[kind];
             float grown = node.FormingLook / (spec.IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth);
             float level = Level(node) * GrowIn(node);
@@ -451,9 +459,17 @@ public partial class GardenView : Node2D
             }
             else
             {
-                // Bright, to show inside its parent's dark fill.
-                size = Mathf.Lerp(0.8f, Mathf.Min(spec.Radius, node.Spec.Radius * 0.7f), grown) * level;
-                colour.A = 0.75f;
+                // Full size at once, so a new bud is plain to see; dark and grey at first, its hue coming in as it
+                // grows, bright at the end to show inside its parent's dark fill.
+                size = Mathf.Min(spec.Radius, node.Spec.Radius * 0.7f) * level;
+                float l = colour.Luminance;
+                var dark = Shade(colour.Lerp(new Color(l, l, l), BudStartGrey), BudStartShade);
+                colour = dark.Lerp(colour, Mathf.Clamp(grown, 0, 1));
+                // A thin, almost white rim round it, so it reads against the parent's fill however dark it starts
+                // (opaque on top, so the rim doesn't show through).
+                var rim = BudRim with { A = BudRim.A * level };
+                forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size + BudRimWidth), cos, sin, rim);
+                colour.A = 1;
             }
             forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size), cos, sin, colour);
         }

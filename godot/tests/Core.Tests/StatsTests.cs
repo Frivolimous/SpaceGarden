@@ -11,7 +11,7 @@ public class StatsTests
     }
 
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind))
+        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.GrowBranch(parent, kind))
             ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     // ==== NODE INFO ==== \\

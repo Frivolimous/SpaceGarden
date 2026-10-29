@@ -77,7 +77,7 @@ public static class SmartPlayer
         .Where(n => n.Spec.Kind == NodeKind.Lab && which(n)).MaxBy(n => n.Depth);
 
     // A bud of this kind at a free link: the nearest the core, the furthest, or the one in the middle (by depth).
-    // Only stems grow on the core. Returns whether one grew.
+    // Only stems grow on the core. Returns whether one started (it forms, then emerges).
     static bool Bud(Garden garden, NodeKind kind, bool nearFirst, bool middle = false, int maxDepth = int.MaxValue,
         bool hungriest = false)
     {
@@ -88,6 +88,6 @@ public static class SmartPlayer
             .ThenBy(n => nearFirst ? n.Depth : -n.Depth).ThenBy(n => n.Id).ToList();
         if (spots.Count == 0) return false;
         var spot = middle ? spots.OrderBy(n => n.Depth).ElementAt(spots.Count / 2) : spots[0];
-        return garden.SproutFrom(spot, kind) != null;
+        return garden.SproutFrom(spot, kind);
     }
 }

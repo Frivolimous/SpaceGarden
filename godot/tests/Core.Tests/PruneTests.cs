@@ -8,7 +8,7 @@ public class PruneTests
 
     // Fruit only grows from groves' blobs now, so tests grow it directly.
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind)) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
+        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.GrowBranch(parent, kind)) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     // core - trunk - fork, the fork carrying a lab with a research fruit and a stem with a leaf. The caps (3 stems,
     // no generators) are full.

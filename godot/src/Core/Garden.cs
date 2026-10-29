@@ -78,6 +78,7 @@ public sealed class Garden
     readonly List<((int X, int Y) Key, Cell Cell)> occupied = new();
     readonly List<PlantNode> farReaching = new();
     readonly List<PlantNode> sending = new(); // flowers with a blob ready, this economy step
+    readonly List<PlantNode> budding = new(); // parts whose bud grew whole on its own, this economy step
     readonly List<(PlantNode From, PlantNode To, float Power)> transfers = new(); // clumps of power moving, this economy step
     readonly Random looks = new(); // for what's only shown (when a flash shows), so the garden's own dice match a catch-up
     long ticks;
@@ -153,21 +154,35 @@ public sealed class Garden
         return fruit ? AddFruit(parent) : AddBranch(parent, Roll(BranchKinds(parent, counts)));
     }
 
-    // A bud the player asked for (DESIGN.md: "Manual buds cost nothing"): a branch of the chosen kind, grown at once,
-    // if the part (or the part a fruit hangs from) has a free link and the caps have room. Never fruit: only growth
-    // blobs grow it. Groves grow only this way.
-    public PlantNode? SproutFrom(PlantNode node, NodeKind kind)
+    // A bud the player asked for (DESIGN.md: "Manual buds cost nothing"): a bud of the chosen kind starts forming in
+    // the part (or the part a fruit hangs from) at once, if it has a free link and the caps have room, holding its
+    // link and cap slot from now on. It grows on its own like any bud (see GrowBuds) and growth blobs hurry it. A
+    // fruit forming there gives way to it (the player's pick over the wild one); a bud already forming there doesn't.
+    // Never fruit: only growth blobs grow it. Groves start only this way. Returns whether the bud started.
+    public bool SproutFrom(PlantNode node, NodeKind kind)
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
-        return CanSproutFrom(node, kind) ? AddBranch(node, kind) : null;
+        if (!CanSproutFrom(node, kind)) return false;
+        node.Forming = kind;
+        node.Growth = 0;
+        node.FormingLook = 0;
+        return true;
     }
 
     public bool CanSproutFrom(PlantNode node, NodeKind kind)
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
         var spec = NodeSpecs.All[kind];
-        return !spec.IsFruit && kind != NodeKind.Core && node.CanBranch && Nodes.Count < Tuning.MaxNodes
-            && HasRoomFor(kind, CountKinds());
+        return !spec.IsFruit && kind != NodeKind.Core && node.CanBranch && !node.FormingBud
+            && Nodes.Count < Tuning.MaxNodes && HasRoomFor(kind, CountKinds());
+    }
+
+    // A branch of the chosen kind, grown at once, where SproutFrom would start one: for tests and dev aids (the
+    // player's buds form).
+    public PlantNode? GrowBranch(PlantNode node, NodeKind kind)
+    {
+        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
+        return CanSproutFrom(node, kind) ? AddBranch(node, kind) : null;
     }
 
     // A fruit of the part's own kind, if it has room: for tests only (players can't grow fruit; growth blobs do).
@@ -566,6 +581,7 @@ public sealed class Garden
     //   - every other part pays upkeep in proportion to its fill, so it never quite empties: nothing wilts;
     //   - flowers make blobs in proportion to their fill: labs gene blobs, groves growth blobs, each sent off on its
     //     walk as it's made (see SendGenes, SendGrowth);
+    //   - every bud forming grows a little on its own, in proportion to its part's fill (see GrowBuds);
     //   - each part fuller than SendFill sends a clump of power to its emptiest neighbour that's less full than it
     //     (see SendTo). Clumps, not a smooth flow, so the fills never settle: they rock around a moving balance, and
     //     a branch far from the sources runs lower (there is no global pool).
@@ -583,7 +599,7 @@ public sealed class Garden
 
         // Blobs leave after the loop over the parts, as what they grow joins them. A blob leaves even when nothing
         // will absorb it: it just wanders and fades (pretty to watch).
-        int grew = 0;
+        int grew = GrowBuds(dt);
         sending.Clear();
         foreach (var node in Nodes)
             if (node.Blob >= 1 - 1e-4f) sending.Add(node);
@@ -837,6 +853,32 @@ public sealed class Garden
         node.Forming = null;
         node.Growth = 0;
         return NodeSpecs.All[kind].IsFruit ? AddFruit(node) : AddBranch(node, kind, emerge: true);
+    }
+
+    // Every bud forming, wild or the player's, grows on its own (DESIGN.md, Growth and pruning): a whole bud in
+    // BudSelfGrowSeconds while its part is full, slower as the part runs lower. Fruit doesn't: only growth blobs grow
+    // it. Returns how many buds completed.
+    int GrowBuds(float dt)
+    {
+        budding.Clear();
+        foreach (var node in Nodes)
+        {
+            if (!node.FormingBud) continue;
+            float growth = Tuning.BudGrowth / Tuning.BudSelfGrowSeconds * Output(node) * dt;
+            node.Growth += growth;
+            node.FormingLook = Math.Min(node.Growth, node.FormingLook + growth);
+            if (node.Growth >= Tuning.BudGrowth - 1e-4f) budding.Add(node);
+        }
+        // The new parts join after the loop over the parts.
+        foreach (var node in budding)
+        {
+            var kind = node.Forming!.Value;
+            node.Forming = null;
+            node.Growth = 0;
+            node.FormingLook = 0;
+            AddBranch(node, kind, emerge: true);
+        }
+        return budding.Count;
     }
 
     // ==== GENES AND UNLOCKS ==== \\
