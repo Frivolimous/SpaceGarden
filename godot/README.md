@@ -18,7 +18,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   when it's shown again. Its taskbar button, Ctrl+Alt+G or the tray icon bring it back in Active. Only one running
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
-  (grow a stem, generator, lab or grove from it, on parts with room for branches; prune it and everything beyond
+  (grow a stem, generator, lab or grove from it, on parts with room for branches; the kind growing there now has a
+  pulsing outline; prune it and everything beyond
   it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
   ("Drain: 6/s", "Genes: 12/min", what's
   forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for

@@ -101,6 +101,7 @@ public partial class Toolbar : PanelContainer
             {
                 button.Visible = buds;
                 button.Enabled = CanGrow(Target, kind);
+                button.Forming = Target.Forming == kind; // its bud is growing here now
             }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
     }
@@ -133,6 +134,7 @@ public partial class ToolButton : Control
     public event Action? Pressed;
     public bool Enabled = true;
     public bool Active;
+    public bool Forming; // a bud tool whose kind is growing on the part now: outlined, pulsing
     public string? Badge; // a small count in the corner (how many more of a shaping tool can be placed)
     public readonly Tool Tool;
     // Drawn on a disc of its own, in the pill's look (the core's menu, where the buttons stand apart).
@@ -140,6 +142,7 @@ public partial class ToolButton : Control
     public bool Hover { get; private set; }
 
     public const float DiscRadius = 16;
+    const float FormingPulseSeconds = 1.2f;
     static readonly Color DiscFill = new(0.07f, 0.09f, 0.13f, 0.92f);
 
     public ToolButton(Tool tool, bool disc = false)
@@ -185,10 +188,20 @@ public partial class ToolButton : Control
             // A bud: the kind's own shape in its own colour, greyed when there's no room for it.
             var spec = NodeSpecs.All[kind];
             var colour = GardenView.Rgb(spec.Rgb);
-            if (!Enabled) colour = new Color(1, 1, 1, 0.25f);
+            // While its bud grows on the part, it keeps its colour (the part has no room for another just then) and
+            // a pulsing outline in it rings it.
+            if (!Enabled && !Forming) colour = new Color(1, 1, 1, 0.25f);
             var points = GardenView.UnitPolygon(spec.Shape);
             for (int i = 0; i < points.Length; i++) points[i] = c + points[i].Rotated(-Mathf.Pi / 2) * 7;
             DrawColoredPolygon(points, colour);
+            if (Forming)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin((float)Time.GetTicksMsec() / 1000 * Mathf.Tau / FormingPulseSeconds);
+                var ring = new Vector2[points.Length + 1];
+                for (int i = 0; i < points.Length; i++) ring[i] = c + (points[i] - c) * (1.55f + 0.2f * pulse);
+                ring[^1] = ring[0];
+                DrawPolyline(ring, colour with { A = 0.35f + 0.55f * pulse }, 1.4f, true);
+            }
             return;
         }
         switch (tool)
