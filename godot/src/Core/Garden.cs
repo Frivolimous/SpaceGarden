@@ -351,8 +351,8 @@ public sealed class Garden
     // What a pot holds, if anything.
     public PlantNode? Potted(ShapingTool pot) => Nodes.FirstOrDefault(n => n.TiedTo == pot);
 
-    // A pot is drawn (and caught) bigger round a big part: in proportion to its part's size, from a flower's up.
-    public float PotScale(ShapingTool pot) => Math.Max(1.4f, Potted(pot) is { } node ? node.Spec.Radius / 10 : 0);
+    // The radius of the part a pot holds (or EmptyPot's, empty): the pot is drawn and caught just outside it.
+    public float PotRadius(ShapingTool pot) => Potted(pot)?.Spec.Radius ?? ShapingTool.EmptyPot;
 
     // The tool under the pointer, and which bit of it: a handle (a pot's knob, a trellis's end) wherever one is within
     // its reach, as they're small and sit on or by their tool's body; else the body nearest the pointer.
@@ -373,10 +373,9 @@ public sealed class Garden
             switch (tool.Kind)
             {
                 case ShapingKind.Pot:
-                    float s = PotScale(tool);
-                    var u = tool.Facing;
-                    Consider(tool, ShapingHandle.Turn, tool.Position + u * ShapingTool.PotKnob * s, ShapingTool.HandleReach);
-                    Consider(tool, ShapingHandle.Body, tool.Position - u * ShapingTool.PotDepth * s / 2, ShapingTool.PotMouth * s);
+                    float r = PotRadius(tool);
+                    Consider(tool, ShapingHandle.Turn, tool.Position + tool.Facing * (r + ShapingTool.PotKnob), ShapingTool.HandleReach);
+                    Consider(tool, ShapingHandle.Body, tool.Position, r + ShapingTool.PotGap + ShapingTool.PotWall);
                     break;
                 case ShapingKind.Trellis:
                     var (a, b) = tool.Ends;

@@ -93,6 +93,7 @@ public partial class Widget : Node
     Vector2? barAt; // where the shaping bar was set down (centred above it), this time in build mode
     Vector2 movePointer, moveStart; // where the pointer is, and was when it took the tool (viewport pixels)
     bool moveReleased;
+    PlantNode? movingPart; // the potted part pressed to take its pot, if that's how it was taken
     float opacity = 1;
     bool readoutPlaced;
 
@@ -275,6 +276,7 @@ public partial class Widget : Node
         toolTap = true;
         movePointer = moveStart = PointerInViewport();
         moveReleased = false;
+        movingPart = null;
     }
 
     // A held tool follows the pointer as the window's own mouse events give it, so the button's release and where it
@@ -314,6 +316,12 @@ public partial class Widget : Node
         movingTool = null;
         if (toolTap && fromBar)
             tool.Position = ToSim(ToWorld((shapingBar.Position + new Vector2(shapingBar.Size.X / 2, shapingBar.Size.Y + 40)) * Dpi));
+        else if (toolTap && movingPart is { } part)
+        {
+            Select(part);
+            if (toolbar.Target == part) toolbar.HideAway();
+            else toolbar.ShowFor(part);
+        }
         else if (toolTap)
         {
             if (toolbar.TargetTool == tool) toolbar.HideAway();
@@ -487,7 +495,7 @@ public partial class Widget : Node
         else if (toolbar.TargetTool is { } tool)
         {
             if (!Garden.Shaping.Contains(tool) || !Building) toolbar.HideAway();
-            else toolbar.Follow(ToViewport(tool.Position) / Dpi, ShapingTool.PotMouth * plantScale, viewport);
+            else toolbar.Follow(ToViewport(tool.Position) / Dpi, 20 * plantScale, viewport);
         }
         main.View.Highlight = dragging || pressed ? pressNode : under ?? toolbar.Target ?? selected;
         main.View.HotTool = dragging ? DropTarget(world) : movingTool ?? underTool?.Tool ?? toolbar.TargetTool;
@@ -601,6 +609,15 @@ public partial class Widget : Node
                 var at = ToSim(ToWorld(button.Position));
                 var handle = HandleAt(at);
                 pressNode = handle == null ? Garden.NodeAt(at, HoverSlop) : null;
+                // A potted part is locked: in build mode, taking it takes its pot (a tap still opens the part's toolbar).
+                if (Building && pressNode?.TiedTo is { Kind: ShapingKind.Pot } held)
+                {
+                    StartMoving(held, ShapingHandle.Body, at);
+                    movingPart = pressNode;
+                    pressNode = null;
+                    GetViewport().SetInputAsHandled();
+                    return;
+                }
                 if (pressNode == null)
                 {
                     if ((handle ?? (Building ? Garden.ShapingAt(at, HoverSlop) : null)) is { } hit)

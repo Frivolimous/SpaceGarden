@@ -41,7 +41,7 @@ public partial class GardenView : Node2D
 
     readonly Garden garden;
     readonly Node2D backdropLayer = new(), shapingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(),
-        formingLayer = new(), markLayer = new(), moteLayer = new();
+        formingLayer = new(), potLayer = new(), markLayer = new(), moteLayer = new();
     // Stems are tapered (links, linkEdges); fruit stalks and the lit stretch of a power flash are straight.
     readonly Batch links = new(), linkEdges = new(), straight = new(), halos = new(), moteDots = new();
     const float MoteRadius = 2; // a blob's dot, in garden units (the original's)
@@ -83,7 +83,8 @@ public partial class GardenView : Node2D
         moteLayer.Draw += DrawMotes;
         backdropLayer.Draw += DrawBackdrop;
         shapingLayer.Draw += DrawShaping;
-        foreach (var layer in new[] { backdropLayer, shapingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, markLayer })
+        potLayer.Draw += DrawPots;
+        foreach (var layer in new[] { backdropLayer, shapingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, potLayer, markLayer })
             AddChild(layer);
     }
 
@@ -122,6 +123,7 @@ public partial class GardenView : Node2D
         if (backdropAlpha > 0) FollowBackdrop(dt);
         backdropLayer.QueueRedraw();
         shapingLayer.QueueRedraw();
+        potLayer.QueueRedraw();
         linkLayer.QueueRedraw();
         haloLayer.QueueRedraw();
         shapeLayer.QueueRedraw();
@@ -171,7 +173,7 @@ public partial class GardenView : Node2D
         var (lo, hi) = (V(min), V(max));
         foreach (var tool in garden.Shaping)
         {
-            var reach = new Vector2(1, 1) * (tool.Kind == ShapingKind.Trellis ? 12 : ShapingTool.PotKnob * garden.PotScale(tool) + 8);
+            var reach = new Vector2(1, 1) * (tool.Kind == ShapingKind.Trellis ? 12 : garden.PotRadius(tool) + ShapingTool.PotKnob + 8);
             var (a, b) = tool.Kind == ShapingKind.Trellis ? tool.Ends : (tool.Position, tool.Position);
             lo = lo.Min(V(a) - reach).Min(V(b) - reach);
             hi = hi.Max(V(a) + reach).Max(V(b) + reach);
@@ -198,24 +200,44 @@ public partial class GardenView : Node2D
         backdropLayer.DrawArc(backdropCentre, backdropRadius * 0.9f, 0, Mathf.Tau, 96, ShapingLook.Tint with { A = 0.08f * a }, 1, true);
     }
 
-    // The tools, under the plant: a potted part sits in its pot's mouth, and parts on a trellis lie along it.
+    // A tool's tint as shown: as clear as the display mode allows, brighter under the pointer (or as a drop target).
+    Color TintOf(ShapingTool tool)
+    {
+        var tint = ShapingLook.Tint with { A = toolsAlpha * (tool == HotTool ? 1 : 0.75f) };
+        return tool == HotTool ? tint.Lightened(0.25f) : tint;
+    }
+
+    // The size a pot is drawn round: its part as drawn now (a drained part is smaller), or an empty pot's.
+    float PotRadius(ShapingTool pot) => garden.Potted(pot) is { } part ? Size(part) : ShapingTool.EmptyPot;
+
+    // Pots, over the parts: each a half ring cupping its part's back, chevrons rising past the part the way it faces.
+    void DrawPots()
+    {
+        if (toolsAlpha <= 0.01f || garden.Shaping.Count == 0) return;
+        float time = (float)garden.Time;
+        foreach (var pot in garden.Shaping)
+        {
+            if (pot.Kind != ShapingKind.Pot) continue;
+            var part = garden.Potted(pot);
+            var at = part != null ? At(part) : V(pot.Position);
+            var u = V(pot.Facing);
+            float r = PotRadius(pot);
+            ShapingLook.Pot(potLayer, at, u, r, TintOf(pot));
+            if (part != null) ShapingLook.Rising(potLayer, at, u, r, TintOf(pot), time);
+        }
+    }
+
+    // Trellises and wells, under the plant, so parts on a trellis lie along it.
     void DrawShaping()
     {
         if (toolsAlpha <= 0.01f || garden.Shaping.Count == 0) return;
         float time = (float)garden.Time;
         foreach (var tool in garden.Shaping)
         {
-            var tint = ShapingLook.Tint with { A = toolsAlpha * (tool == HotTool ? 1 : 0.75f) };
-            if (tool == HotTool) tint = tint.Lightened(0.25f);
+            var tint = TintOf(tool);
             var at = V(tool.Position);
             switch (tool.Kind)
             {
-                case ShapingKind.Pot:
-                    var u = V(tool.Facing);
-                    float s = garden.PotScale(tool);
-                    ShapingLook.Pot(shapingLayer, at, u, s, tint);
-                    if (garden.Potted(tool) != null) ShapingLook.Rising(shapingLayer, at, u, s, tint, time);
-                    break;
                 case ShapingKind.Trellis:
                     var (a, b) = tool.Ends;
                     ShapingLook.Trellis(shapingLayer, V(a), V(b), tint);
@@ -236,10 +258,9 @@ public partial class GardenView : Node2D
             var tint = ShapingLook.Tint with { A = toolsAlpha * (tool == HotTool ? 1 : 0.6f) };
             if (tool.Kind == ShapingKind.Pot)
             {
-                float s = garden.PotScale(tool);
                 var u = V(tool.Facing);
-                var knob = V(tool.Position) + u * ShapingTool.PotKnob * s;
-                markLayer.DrawDashedLine(V(tool.Position) + u * 12 * s, knob - u * 4, tint with { A = tint.A * 0.4f }, 1, 3, true, true);
+                var knob = V(tool.Position) + u * (garden.PotRadius(tool) + ShapingTool.PotKnob);
+                markLayer.DrawDashedLine(V(tool.Position) + u * (PotRadius(tool) + 3), knob - u * 4, tint with { A = tint.A * 0.4f }, 1, 3, true, true);
                 ShapingLook.Knob(markLayer, knob, 3.5f, tint);
             }
             else if (tool.Kind == ShapingKind.Trellis)

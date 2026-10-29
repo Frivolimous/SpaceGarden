@@ -214,7 +214,7 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 
 | Tool | What it does | Holds | Unlocks |
 | --- | --- | --- | --- |
-| Gravity Pot | The node dropped on it moves to the pot's mouth and is locked there. Only the main nodes linked to it (its parent, and those growing straight out of it) are pushed gently the way the pot faces; nodes further out just follow them through their links. New buds on the potted node head that way too | One node (dropping another swaps it) | 1 from the start, +1 at 15,000 genes |
+| Gravity Pot | The node dropped on it moves to the pot and is locked there; the pot is drawn as a half ring cupping the node's back (the side away from the way it faces), just outside its edge, over the plant. Only the main nodes linked to it (its parent, and those growing straight out of it) are pushed gently the way the pot faces; nodes further out just follow them through their links. New buds on the potted node head that way too | One node (dropping another swaps it) | 1 from the start, +1 at 15,000 genes |
 | Trellis | A straight line between two posts. The nodes dropped on it are held on the line but slide along it, so the plant's own push spaces them out, like an espalier wire | Any number | 1 at 7,200 genes |
 | Gravity Well | Pulls every main node faintly towards it. The core takes the whole pull back, so the plant leans towards the well rather than drifting into it | Nothing | 1 at 70,000 genes |
 
@@ -223,10 +223,10 @@ Fruit is never tied or pulled: it follows its node. A pruned node lets go of its
 **Build mode** is where the garden is arranged: the plant menu's "Build mode" (or Ctrl+B with the garden focused) in Active mode; Done, Escape or leaving Active ends it.
 - A dark, opaque disc fades in round the plant and its tools, catching every click on it, so arranging never clicks through to the desktop.
 - A bar above the disc holds the three tools (each with how many more the caps allow, greyed with what unlocks it until then) and Done. Pressing a tool takes a new one off the bar and carries it until let go; a tap sets it down just under the bar.
-- Drag a tool's body to move it, a pot's knob (beyond its mouth) to turn it, a trellis's end posts to swing and stretch it. Handles come before nodes under the pointer, since a pot's knob sits where its branch grows. Tapping a tool opens a small toolbar with Remove; dragging a tool back onto the bar also puts it away.
+- Drag a tool's body to move it, a pot's knob (just beyond its node) to turn it, a trellis's end posts to swing and stretch it. A potted node is locked, so pressing it takes its pot (a tap still opens the node's toolbar). Handles come before nodes under the pointer, since a pot's knob sits where its branch grows. Tapping a tool opens a small toolbar with Remove; dragging a tool back onto the bar also puts it away.
 - Dragging a node and letting go over a pot or trellis ties it there. A tied node's toolbar gains Unhook.
 
-**How they show.** A pale moonlight blue, no role's hue, in the parts' outline look (dark edge, crisp outline, dark fill), under the plant. Each moves gently: chevrons rise out of a holding pot's mouth, rings draw slowly in to a well. Faint while tending in Active mode (the pointer passes through them), full in build mode, hidden in Ambient and Minimised. Saved with the garden, with what they hold (save version 7).
+**How they show.** A pale moonlight blue, no role's hue, in the parts' outline look (dark edge, crisp outline, dark fill): trellises and wells under the plant, pots over it. Each moves gently: chevrons rise past a holding pot's node, rings draw slowly in to a well. Faint while tending in Active mode (the pointer passes through them), full in build mode, hidden in Ambient and Minimised. Saved with the garden, with what they hold (save version 7).
 
 Open, for the gardening mode in Jeremy's todo:
 - Whether build mode grows into the planned gardening mode (opaque radius, arranging the plant and the guides) or stays separate. The pieces are meant to move: the backdrop and the bar are presentation only, and placement goes through `Garden.Place`, `Tie` and `Remove`.

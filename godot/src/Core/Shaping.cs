@@ -17,15 +17,17 @@ public enum ShapingHandle { Body, Turn, EndA, EndB }
 
 public sealed class ShapingTool
 {
-    // Sizes in garden units. A pot is drawn and caught at its scale (bigger round a big part: see Garden.PotScale).
-    public const float PotMouth = 15, PotBase = 10, PotDepth = 22, PotKnob = 34;
+    // Sizes in garden units. A pot is a half ring cupping its part's back (away from the way it faces), from PotGap
+    // outside the part's edge to PotGap + PotWall (see Garden.PotRadius), its turning knob PotKnob beyond the part.
+    // An empty pot is sized for EmptyPot.
+    public const float PotGap = 1.5f, PotWall = 3.5f, PotKnob = 16, EmptyPot = 10;
     public const float WellRadius = 16;
     public const float TrellisLength = 160, TrellisMinLength = 50;
     // How far from a handle (a pot's knob, a trellis's end) the pointer still takes it, besides the pointer's slop.
     public const float HandleReach = 14;
 
     public readonly ShapingKind Kind;
-    // A pot's mouth (where its part sits), a trellis's middle, a well's centre.
+    // Where a pot's part sits, a trellis's middle, a well's centre.
     public Vector2 Position;
     // The way a pot faces (its part's branch is pushed this way), or a trellis's line.
     public float Angle;

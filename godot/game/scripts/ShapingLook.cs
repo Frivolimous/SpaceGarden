@@ -25,28 +25,33 @@ public static class ShapingLook
         _ => "Pulls the whole plant gently towards it.",
     };
 
-    // A flower pot, its mouth at `at` (where its part sits) and opening the way u points, s times its usual size.
-    public static void Pot(CanvasItem ci, Vector2 at, Vector2 u, float s, Color tint)
+    // A pot: a half ring cupping the back of a part of radius r centred at `at` (the side away from u, the way it
+    // faces), just outside the part's edge, with its rim's two ends level across the part's middle.
+    public static void Pot(CanvasItem ci, Vector2 at, Vector2 u, float r, Color tint)
     {
-        var side = new Vector2(-u.Y, u.X);
-        var top = at - u * 3 * s; // the part sits in the mouth, a little proud of the rim
-        float mouth = ShapingTool.PotMouth * s, bottom = ShapingTool.PotBase * s, depth = ShapingTool.PotDepth * s;
-        float rim = 5 * s, body = mouth * 0.86f;
-        var under = top - u * rim;
-        Outlined(ci, [under + side * body, under - side * body, top - u * depth - side * bottom, top - u * depth + side * bottom], tint, s);
-        Outlined(ci, [top + side * mouth, top - side * mouth, under - side * mouth, under + side * mouth], tint, s);
+        const int steps = 16;
+        float inner = r + ShapingTool.PotGap, outer = inner + ShapingTool.PotWall;
+        float start = u.Angle() + Mathf.Pi / 2; // one rim end, then round the back to the other
+        var points = new Vector2[2 * (steps + 1)];
+        for (int i = 0; i <= steps; i++)
+        {
+            var dir = Vector2.FromAngle(start + Mathf.Pi * i / steps);
+            points[i] = at + dir * outer;
+            points[2 * steps + 1 - i] = at + dir * inner;
+        }
+        Outlined(ci, points, tint, 1);
     }
 
-    // The pot's push, shown: small chevrons rising out of its mouth the way it faces, fading as they go.
-    public static void Rising(CanvasItem ci, Vector2 at, Vector2 u, float s, Color tint, float time)
+    // The pot's push, shown: small chevrons rising past its part (radius r) the way it faces, fading as they go.
+    public static void Rising(CanvasItem ci, Vector2 at, Vector2 u, float r, Color tint, float time)
     {
         var side = new Vector2(-u.Y, u.X);
         for (int i = 0; i < 3; i++)
         {
             float phase = Mathf.PosMod(time * 0.3f + i / 3f, 1);
-            var p = at + u * (16 + 26 * phase) * s;
+            var p = at + u * (r + 6 + 20 * phase);
             var colour = tint with { A = tint.A * 0.55f * Mathf.Sin(Mathf.Pi * phase) };
-            Vector2[] chevron = [p - u * 3 * s + side * 3.5f * s, p, p - u * 3 * s - side * 3.5f * s];
+            Vector2[] chevron = [p - u * 3 + side * 3.5f, p, p - u * 3 - side * 3.5f];
             ci.DrawPolyline(chevron, Edge with { A = Edge.A * colour.A }, 3, true);
             ci.DrawPolyline(chevron, colour, 1.3f, true);
         }
@@ -113,7 +118,10 @@ public static class ShapingLook
     {
         switch (tool)
         {
-            case Tool.Pot: Pot(ci, c + new Vector2(0, -3), Vector2.Up, 0.42f, tint); break;
+            case Tool.Pot: // a part (a dot) in its cup
+                ci.DrawCircle(c + new Vector2(0, -1), 3.5f, tint with { A = tint.A * 0.6f });
+                Pot(ci, c + new Vector2(0, -1), Vector2.Up, 4.5f, tint);
+                break;
             case Tool.Trellis: Trellis(ci, c + new Vector2(-8, 5), c + new Vector2(8, -5), tint, 0.6f); break;
             case Tool.Well: Well(ci, c, tint, 0.1f, 0.45f); break;
         }
