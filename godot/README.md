@@ -65,7 +65,9 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   spring, repulsion and damping with the same constants (`FDGContainer.ts`, `Config.PHYSICS`); power shown as
   link flashes, as the original's power transfers were (`FDGLink.flash`): a link flashes as often as power flows
   along it, so a busy trunk pulses and a full branch rests. Each part's brightness and size follow its fill, eased as the
-  original's node intensity was (`PlantNodeView`); the arriving clumps are the motion, with no added bounce.
+  original's node intensity was (`PlantNodeView`), but along the square of the fill so they still move near full,
+  where the bigger stores keep a tended garden; past full a part swells at half its overfill, up to 1.5 times its
+  size (`FillLookCurve`, `OverFillLook`, `FillLookMax`). The arriving clumps are the motion, with no added bounce.
   Travelling blobs carry growth from groves and genes from labs.
 - **Also ported:** holding a part (the TS game's pull: `PULL_FRICTION`, `TARGET_RATIO`) and the borders
   (`EDGE_BOUNCE`, now the screen edges). Links are the TS game's soft springs, with no length limit, so a pull

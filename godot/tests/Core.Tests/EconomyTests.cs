@@ -255,6 +255,26 @@ public class EconomyTests
         Assert.Equal(1.5f, stem.FillLook, Tolerance);
     }
 
+    [Fact]
+    public void LevelReadsAcrossTheRange()
+    {
+        // A fifth empty, whole when full, rising all the way and never jumping.
+        Assert.Equal(Tuning.FillLookFloor, PlantNode.LevelOf(0), Tolerance);
+        Assert.Equal(1, PlantNode.LevelOf(1), Tolerance);
+        for (float fill = 0; fill < 1.5f; fill += 0.01f)
+        {
+            float step = PlantNode.LevelOf(fill + 0.01f) - PlantNode.LevelOf(fill);
+            Assert.InRange(step, 0, 0.03f);
+        }
+        // Flat near empty, steep near full: where a tended garden lives (70-105%), a part at 75% and one at 95% look
+        // well apart, further than their fills.
+        Assert.True(PlantNode.LevelOf(0.1f) - PlantNode.LevelOf(0) < 0.01f);
+        Assert.True(PlantNode.LevelOf(0.95f) - PlantNode.LevelOf(0.75f) > 1.3f * 0.2f);
+        // Past full it still swells as clumps arrive (a stem's clump is about 8% of its store), up to FillLookMax.
+        Assert.True(PlantNode.LevelOf(1.08f) - PlantNode.LevelOf(1) > 0.03f);
+        Assert.Equal(Tuning.FillLookMax, PlantNode.LevelOf(10), Tolerance);
+    }
+
     // ==== FRUIT ==== \
 
     // core - stem carrying a leaf, both empty, no wild buds.

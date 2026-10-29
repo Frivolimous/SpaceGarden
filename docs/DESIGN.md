@@ -91,7 +91,7 @@ Draft rates, to tune in play, at real speed: a fully powered grove sends a growt
 
 **Fruit holds power** as in the original (`PlantNodePower.powerFruits`): each fruit holds 100 and costs nothing. A part at least 60% full feeds its emptiest fruit (15 a second) while that fruit is less full than the part, so new fruit start empty and brighten as they fill, and a garden's fruit only glow where their parts have power to spare. Fruit sends nothing on, and its effect (a leaf cutting its stem's upkeep, and so on) doesn't depend on its fill.
 
-**Size follows fill** as in the original (`PlantNodeView.intensityInterpolation`): a node's scale is its shown fill, never below 0.2; past full it grows only a tenth as fast, up to twice its size. The shown fill eases after the real one, faster rising than falling. There's no artificial bounce: the clumps arriving are the motion.
+**Size follows fill**, as in the original (`PlantNodeView.intensityInterpolation`) but reworked for the larger stores (step 4). A node's scale and brightness run from 0.2 empty to 1 full along the square of its shown fill (`FillLookCurve`): flat near empty, so low nodes don't jump about, and steep near full, where a tended garden spends its time (about 70-105% full). Past full a node swells at half its overfill (`OverFillLook`), up to 1.5 times its size. The original's straight line, with a tenth past full, left a node at 75% and one at 95% looking alike, and an overfull stem barely moving. The shown fill eases after the real one, faster rising than falling. There's no artificial bounce: the clumps arriving are the motion.
 
 **Power rules**
 
@@ -449,7 +449,7 @@ Open: where events and seasons, and identity features fall in the plan.
 - On return from a catch-up, a short note says what changed: new growth, unlocks reached, power dips.
 - It draws on the tracking and journal data.
 
-**Power visuals at the top of the range** are a separate task in this step: parts should still visibly grow and shrink now that stores are larger.
+**Power visuals at the top of the range** (done): parts still visibly grow and shrink now that stores are larger. Size and brightness follow the square of the fill, and past full a part swells at half its overfill (see Size follows fill).
 
 **A real-week tuning pass** ends the step, once tracking and the export work:
 - Run a real garden for a week, then retune the week-one unlock track from the data.
@@ -484,7 +484,7 @@ Design layers still to work through:
 - [x] Information display: the readout and the selected part panel (step 3b)
 - [x] UI revision (step 3d): hovering shows nothing but the ring; one card in a fixed spot; the core's half-ring menu; the core tappable in Ambient mode to wake the garden. Build mode itself is unchanged, now opened from the core's menu
 - [x] Manual planting (step 3e): free, a bud that starts at once and grows on its own like every node bud, hurried by growth blobs (see Growth and pruning)
-- [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework; scheduled in step 4)
+- [x] Power visuals at the top of the range (step 4): size and brightness follow the square of the fill, steep near full, and swell at half the overfill past it (see Size follows fill)
 - [x] Stat tracking and Almanac (step 4): small lifetime totals and four time series, a debug export, the Almanac as a journal of moments (see Step 4)
 - [ ] Specialist effects: Resistor, Amplifier, Buffer (step 5)
 - [ ] Long-term pacing beyond week one
