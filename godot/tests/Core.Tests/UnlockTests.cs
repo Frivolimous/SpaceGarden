@@ -353,7 +353,7 @@ public class UnlockTests
         }
         var run = Month(Log, days);
         var medians = new List<double>();
-        int due = TargetHours.Count(h => h <= days * 24);
+        int due = TargetHours.Count(h => h < days * 24);
         for (int u = 0; u < due; u++)
         {
             var hours = Enumerable.Range(0, run.Fired.GetLength(0)).Select(s => run.Fired[s, u]).Order().ToList();

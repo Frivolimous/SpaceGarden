@@ -5,9 +5,10 @@ namespace SpaceGarden.Core.Tests;
 //   - prunes wild groves past the ones it wants (the farthest first);
 //   - prunes drains: while the garden would cost more than it makes at full power, the lab furthest from the core
 //     goes (wild ones are usually far out), then any lab too far out for its genes to find the core;
+//   - makes room: when the stem or generator cap has room but no free link, prunes the farthest flowers (MakeRoom);
+//   - fills the stem cap with stems, nearest the core first;
 //   - adds labs near the core (within MaxLabDepth) while the power to spare covers one, keeping a small reserve and
 //     a free link for the plant to grow on;
-//   - fills the stem cap with stems, nearest the core first;
 //   - fills the generator cap with generators where the plant is hungriest (lowest on power);
 //   - keeps a grove for every GroveEvery stems, planted mid-plant.
 public static class SmartPlayer
@@ -22,9 +23,10 @@ public static class SmartPlayer
     public static void Tend(Garden garden)
     {
         PruneDrains(garden);
+        MakeRoom(garden);
+        while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
         while (Spare(garden) >= Tuning.LabUpkeepPerSecond + Reserve && FreeLinks(garden) > 1
             && Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth)) { }
-        while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
         while (Bud(garden, NodeKind.Generator, nearFirst: false, hungriest: true)) { }
         while (Count(garden, NodeKind.Grove) < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
         // The player doesn't undo, and the 30 s undo window passes (counted in physics ticks, which a pacing run
@@ -38,6 +40,23 @@ public static class SmartPlayer
     const int MaxLabDepth = 4;
 
     static int FreeLinks(Garden garden) => garden.Nodes.Count(n => !n.Spec.IsFruit && n.CanBranch);
+
+    // While the stem or generator cap has room but no link can take one (wild flowers took them all), the farthest
+    // flower off a stem goes, a lab before a grove, always keeping one of each: its link then takes a stem or generator.
+    static void MakeRoom(Garden garden)
+    {
+        while ((NeedsRoom(garden, NodeKind.Stem, garden.Capacity.Stems)
+                || NeedsRoom(garden, NodeKind.Generator, garden.Capacity.Generators))
+            && garden.Nodes
+                .Where(n => n.Spec.Kind is NodeKind.Lab or NodeKind.Grove && n.Parent!.Spec.Kind == NodeKind.Stem
+                    && Count(garden, n.Spec.Kind) > 1)
+                .OrderBy(n => n.Spec.Kind == NodeKind.Lab ? 0 : 1).ThenByDescending(n => n.Depth)
+                .FirstOrDefault() is { } flower)
+            garden.Prune(flower);
+    }
+
+    static bool NeedsRoom(Garden garden, NodeKind kind, int cap) => Count(garden, kind) < cap
+        && !garden.Nodes.Any(n => !n.Spec.IsFruit && n.Parent != null && garden.CanSproutFrom(n, kind));
 
     static int Count(Garden garden, NodeKind kind) => garden.Nodes.Count(n => n.Spec.Kind == kind);
 
