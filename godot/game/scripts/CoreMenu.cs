@@ -4,8 +4,8 @@ namespace SpaceGarden;
 
 // The core's menu (DESIGN.md, Information display): a half ring of round buttons under the core (over it if there's
 // no room below), so the space above stays clear for the core's toolbar and the shaping bar. Each slot's name shows
-// beside it while the pointer is on it. Slots are spread evenly round the half ring and it widens as more join (the
-// Almanac and Research, later). It fades in and out; the widget opens it on a tap of the core and closes it on
+// beside it while the pointer is on it. Slots are spread evenly round the half ring and it widens as more join
+// (Research, later). It fades in and out; the widget opens it on a tap of the core and closes it on
 // another, a tap anywhere else, Escape or a pick.
 public partial class CoreMenu : Control
 {
@@ -14,8 +14,8 @@ public partial class CoreMenu : Control
     // The slots, in order round the ring from left to right.
     static readonly (Tool Tool, string Label)[] Slots =
     [
-        (Tool.Info, "Garden info"), (Tool.Build, "Build mode"), (Tool.Ambient, $"Ambient ({Hotkey.Name})"),
-        (Tool.Minimise, "Minimise"), (Tool.Settings, "Settings"),
+        (Tool.Info, "Garden info"), (Tool.Almanac, "Almanac"), (Tool.Build, "Build mode"),
+        (Tool.Ambient, $"Ambient ({Hotkey.Name})"), (Tool.Minimise, "Minimise"), (Tool.Settings, "Settings"),
     ];
 
     const float Gap = 14; // between the core's edge and the slots' inner edge
@@ -80,6 +80,15 @@ public partial class CoreMenu : Control
     {
         foreach (var button in buttons)
             if (button.Tool == tool) button.Active = on;
+    }
+
+    // Where its slots are while it's open (in the menu's layer's units), to keep the cards clear of it.
+    public Rect2? Extent()
+    {
+        if (!IsOpen) return null;
+        var rect = buttons[0].GetGlobalRect();
+        foreach (var button in buttons) rect = rect.Merge(button.GetGlobalRect());
+        return rect;
     }
 
     // Whether the pointer is on one of its slots (in the menu's layer's units).

@@ -9,7 +9,7 @@ namespace SpaceGarden;
 public enum Tool
 {
     Stem, Generator, Lab, Grove, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
-    Info, Build, Ambient, Minimise, Settings,
+    Info, Almanac, Build, Ambient, Minimise, Settings,
 }
 
 // The little pill of tools that floats above a tapped part (or above a shaping tool tapped in build mode, with just
@@ -246,6 +246,11 @@ public partial class ToolButton : Control
                 DrawArc(c, 8, 0, Mathf.Tau, 24, ink, 1.4f, true);
                 DrawCircle(c + new Vector2(0, -3.8f), 1.3f, ink);
                 DrawLine(c + new Vector2(0, -0.8f), c + new Vector2(0, 4.5f), ink, w, true);
+                break;
+            case Tool.Almanac: // an open book
+                DrawPolyline([c + new Vector2(-7, -4), c + new Vector2(0, -2.5f), c + new Vector2(7, -4), c + new Vector2(7, 5),
+                    c + new Vector2(0, 6.5f), c + new Vector2(-7, 5), c + new Vector2(-7, -4)], ink, w, true);
+                DrawLine(c + new Vector2(0, -2.5f), c + new Vector2(0, 6.5f), ink, w, true);
                 break;
             case Tool.Build: // the pot, as on the shaping bar, in the button's ink
                 ShapingLook.DrawIcon(this, Tool.Pot, c + new Vector2(0, 1), ink);
