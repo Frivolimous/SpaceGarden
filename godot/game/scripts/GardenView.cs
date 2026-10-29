@@ -33,7 +33,7 @@ public partial class GardenView : Node2D
         markLayer = new(), moteLayer = new();
     // Stems are tapered (links, linkEdges); fruit stalks and the lit stretch of a power flash are straight.
     readonly Batch links = new(), linkEdges = new(), straight = new(), halos = new(), moteDots = new();
-    const float MoteMinRadius = 1.6f; // a blob's dot, in garden units (about 2.5 px across at the default size)
+    const float MoteRadius = 2; // a blob's dot, in garden units (the original's)
     // A power flash's light flooding along its stem, then draining: done before the next (at most 3 a second).
     const float FillSeconds = 0.1f, DrainSeconds = 0.2f;
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
@@ -221,9 +221,10 @@ public partial class GardenView : Node2D
         return (a + dir * rimA, a + along - dir * rimB);
     }
 
-    // A stem's width at its parent's end (it tapers to TaperEnd of that at its own): thinning with depth. A fruit's
-    // stalk is thinnest, and even.
-    static float LinkWidth(PlantNode target) => target.Spec.IsFruit ? 1.2f : Mathf.Max(1.4f, 3.4f - target.Depth * 0.16f);
+    // A stem's width at its parent's end: every stem alike, tapering to StemEndWidth at its own (Textures.TaperEnd).
+    // A fruit's stalk is thinner, and even.
+    public const float StemWidth = 2, StemEndWidth = 1; // the original's stems were an even 2
+    static float LinkWidth(PlantNode target) => target.Spec.IsFruit ? 1.2f : StemWidth;
 
     // Under each part, a soft halo of its power; and where a mote was just absorbed, a glow of the mote's colour that
     // widens a little as it fades, so it's seen that something happened.
@@ -398,17 +399,13 @@ public partial class GardenView : Node2D
     void DrawMotes()
     {
         moteDots.Begin();
-        // A blob is a small dot of its colour (a gene blob purple, a growth blob orange) as wide as the stem it
-        // travels along, under the parts, so it slips along the stems and in and out of them. The part a growth blob
-        // completes stays hidden until it arrives (see GrowIn).
+        // A blob is a small dot of its colour (a gene blob purple, a growth blob orange), as in the original a fixed
+        // size, under the parts, so it slips along the stems and in and out of them. The part a growth blob completes
+        // stays hidden until it arrives (see GrowIn).
         foreach (var mote in garden.Motes)
         {
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
-            bool outward = mote.To.Parent == mote.From;
-            var deeper = outward ? mote.To : mote.From;
-            float width = LinkWidth(deeper) * Mathf.Lerp(1, Textures.TaperEnd, outward ? mote.T : 1 - mote.T);
-            // Never smaller than MoteMinRadius, or it's lost on the thin ends of the stems.
-            moteDots.AddRound(p, Textures.ShapeDiameter(Mathf.Max(MoteMinRadius, width * 0.65f)), Rgb(mote.Rgb).Lightened(0.4f));
+            moteDots.AddRound(p, Textures.ShapeDiameter(MoteRadius), Rgb(mote.Rgb).Lightened(0.4f));
         }
         moteDots.Draw(moteLayer, Textures.Shape(Shape.Circle));
     }
@@ -536,7 +533,7 @@ public static class Textures
     public static readonly Texture2D Line = MakeLine(1);
 
     // The same, narrowing along its length (x) from its full width at the start to TaperEnd of it at the end.
-    public const float TaperEnd = 0.4f;
+    public const float TaperEnd = GardenView.StemEndWidth / GardenView.StemWidth;
     public static readonly Texture2D Taper = MakeLine(TaperEnd);
 
     static Texture2D MakeLine(float end)
