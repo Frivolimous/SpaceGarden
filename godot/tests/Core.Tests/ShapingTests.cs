@@ -5,7 +5,7 @@ namespace SpaceGarden.Core.Tests;
 public class ShapingTests
 {
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        garden.SproutFrom(parent, kind) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
+        garden.GrowBranch(parent, kind) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     // core - trunk - a - b - c, a line of stems, with every tool allowed and nothing growing.
     static (Garden Garden, PlantNode Trunk, PlantNode Tip) Line(int seed = 7)
@@ -279,7 +279,7 @@ public class ShapingTests
         int up = 0;
         for (int i = 0; i < 20; i++)
         {
-            var bud = garden.SproutFrom(tip, NodeKind.Stem)!;
+            var bud = garden.GrowBranch(tip, NodeKind.Stem)!;
             if (bud.Position.Y < tip.Position.Y) up++;
             garden.Prune(bud);
             garden.ForgetPrune();

@@ -133,6 +133,11 @@ public static class Tuning
     public const float BudChance = 0.5f;
     public const float FruitGrowth = 1;
     public const float BudGrowth = 3;
+    // Every bud, wild or the player's, also grows on its own (fruit never does): a whole bud in BudSelfGrowSeconds
+    // while its part is full, in proportion to the part's fill when lower. A draft (Jeremy, step 3e): fast enough that
+    // a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is plainly
+    // faster (at full fill a blob's BlobGrowth is 4 s of growing alone, and a grove makes one every 3 s).
+    public const float BudSelfGrowSeconds = 120;
     // Placeholders. A completed bud starts this far out (a share of its link's length) and pops out at this speed.
     public const float EmergeStart = 0.3f;
     public const float EmergeSpeed = 1.2f;

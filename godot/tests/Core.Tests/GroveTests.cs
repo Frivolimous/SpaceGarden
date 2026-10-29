@@ -14,7 +14,7 @@ public class GroveTests
     }
 
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind))
+        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.GrowBranch(parent, kind))
             ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     static int Fruit(Garden garden) => garden.Nodes.Count(n => n.Spec.IsFruit);
@@ -79,7 +79,7 @@ public class GroveTests
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         Add(garden, stem, NodeKind.Grove);
         Add(garden, stem, NodeKind.Grove);
-        Assert.Null(garden.SproutFrom(stem, NodeKind.Grove)); // its 3 links are taken
+        Assert.Null(garden.GrowBranch(stem, NodeKind.Grove)); // its 3 links are taken
     }
 
     [Fact]
@@ -87,8 +87,8 @@ public class GroveTests
     {
         var (garden, grove) = WithAGrove();
         Assert.False(garden.CanSproutFrom(grove, NodeKind.Stem)); // a grove's only link is its parent's
-        Assert.Null(garden.SproutFrom(grove, NodeKind.Berry));
-        Assert.Null(garden.SproutFrom(grove.Parent!, NodeKind.Leaf));
+        Assert.Null(garden.GrowBranch(grove, NodeKind.Berry));
+        Assert.Null(garden.GrowBranch(grove.Parent!, NodeKind.Leaf));
         Assert.Equal(0, Fruit(garden));
     }
 

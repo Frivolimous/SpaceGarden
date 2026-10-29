@@ -14,7 +14,7 @@ public class EconomyTests
     }
 
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
-        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.SproutFrom(parent, kind))
+        (NodeSpecs.All[kind].IsFruit ? garden.GrowFruit(parent) : garden.GrowBranch(parent, kind))
             ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
     // core - stem - stem, which forks into two stems each carrying two labs: 24 a second of labs and 12 of stems
@@ -379,8 +379,8 @@ public class EconomyTests
     {
         var garden = NewGarden();
         Assert.Equal(1, garden.Core.MaxLinks);
-        Assert.NotNull(garden.SproutFrom(garden.Core, NodeKind.Stem));
-        Assert.Null(garden.SproutFrom(garden.Core, NodeKind.Stem));
+        Assert.NotNull(garden.GrowBranch(garden.Core, NodeKind.Stem));
+        Assert.Null(garden.GrowBranch(garden.Core, NodeKind.Stem));
     }
 
     [Fact]
@@ -389,8 +389,8 @@ public class EconomyTests
         var garden = NewGarden();
         Add(garden, garden.Core, NodeKind.Stem);
         garden.Capacity = garden.Capacity with { CoreLinks = 2 };
-        Assert.NotNull(garden.SproutFrom(garden.Core, NodeKind.Stem));
-        Assert.Null(garden.SproutFrom(garden.Core, NodeKind.Stem));
+        Assert.NotNull(garden.GrowBranch(garden.Core, NodeKind.Stem));
+        Assert.Null(garden.GrowBranch(garden.Core, NodeKind.Stem));
     }
 
     [Fact]
@@ -399,10 +399,10 @@ public class EconomyTests
         var garden = NewGarden(); // start: 4 stems, 1 generator
         var tip = garden.Core;
         for (int i = 0; i < 4; i++) tip = Add(garden, tip, NodeKind.Stem);
-        Assert.Null(garden.SproutFrom(tip, NodeKind.Stem));
+        Assert.Null(garden.GrowBranch(tip, NodeKind.Stem));
         Add(garden, tip, NodeKind.Generator);
-        Assert.Null(garden.SproutFrom(tip, NodeKind.Generator));
-        Assert.NotNull(garden.SproutFrom(tip.Parent!, NodeKind.Lab)); // labs: only links and power limit them
+        Assert.Null(garden.GrowBranch(tip, NodeKind.Generator));
+        Assert.NotNull(garden.GrowBranch(tip.Parent!, NodeKind.Lab)); // labs: only links and power limit them
     }
 
     [Fact]
@@ -412,11 +412,11 @@ public class EconomyTests
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         Add(garden, stem, NodeKind.Stem);
         Add(garden, stem, NodeKind.Stem);
-        Assert.Null(garden.SproutFrom(stem, NodeKind.Stem)); // 3 links, counting the parent
+        Assert.Null(garden.GrowBranch(stem, NodeKind.Stem)); // 3 links, counting the parent
         Add(garden, stem, NodeKind.Leaf);
         Add(garden, stem, NodeKind.Leaf);
-        Assert.Null(garden.SproutFrom(stem, NodeKind.Leaf));
-        Assert.Null(garden.SproutFrom(stem, NodeKind.Burr)); // not a stem's fruit
+        Assert.Null(garden.GrowBranch(stem, NodeKind.Leaf));
+        Assert.Null(garden.GrowBranch(stem, NodeKind.Burr)); // not a stem's fruit
     }
 
     [Fact]

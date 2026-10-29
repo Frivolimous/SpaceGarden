@@ -90,8 +90,8 @@ public partial class Main : Node2D
         if (save == null && args.ContainsKey("grove"))
         {
             var stem = Garden.Nodes[1];
-            Garden.SproutFrom(stem, NodeKind.Grove);
-            if (Garden.SproutFrom(stem, NodeKind.Stem) is { } second) Garden.SproutFrom(second, NodeKind.Lab);
+            Garden.GrowBranch(stem, NodeKind.Grove);
+            if (Garden.GrowBranch(stem, NodeKind.Stem) is { } second) Garden.GrowBranch(second, NodeKind.Lab);
         }
         if (args.TryGetValue("parts", out var p))
         {
