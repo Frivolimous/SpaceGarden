@@ -224,7 +224,9 @@ public partial class GardenView : Node2D
             var u = V(pot.Facing);
             float r = PotRadius(pot);
             ShapingLook.Pot(potLayer, at, u, r, TintOf(pot));
-            if (part != null) ShapingLook.Rising(potLayer, at, u, r, TintOf(pot), time);
+            // The push shown only in build mode (fading with the backdrop): tending, the pot is quiet.
+            if (part != null && backdropAlpha > 0)
+                ShapingLook.Rising(potLayer, at, u, r, TintOf(pot) with { A = TintOf(pot).A * backdropAlpha }, time);
         }
     }
 
@@ -244,7 +246,8 @@ public partial class GardenView : Node2D
                     ShapingLook.Trellis(shapingLayer, V(a), V(b), tint);
                     break;
                 case ShapingKind.Well:
-                    ShapingLook.Well(shapingLayer, at, tint, time);
+                    // Only in build mode (fading with the backdrop): tending, a well isn't seen at all.
+                    if (backdropAlpha > 0) ShapingLook.Well(shapingLayer, at, tint with { A = tint.A * backdropAlpha }, time);
                     break;
             }
         }
