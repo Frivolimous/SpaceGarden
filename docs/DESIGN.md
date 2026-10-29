@@ -191,8 +191,8 @@ The player has eight basic commands.
 
 1. **New sprout:** choose a basic node type and grow it at a chosen spot.
 2. **Prune:** remove any node and all of its children. No preview; undo restores the last prune only, within about 30 seconds (to be tuned).
-3. **Place a Gravity Pot:** a subtle overlay, shaped vaguely like a flower pot, placed and rotated anywhere.
-4. **Connect a node to a Gravity Pot:** the node moves to the pot and locks there; nodes beyond it are pushed gently in the pot's facing direction.
+3. **Place a shaping tool** (Gravity Pot, Trellis, Gravity Well) in build mode: a subtle overlay, placed, moved and turned anywhere (see Shaping the garden).
+4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and nodes beyond it are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
 5. **Select evolution:** for the core, seedlings and other skill-based nodes.
 6. **Zoom** in or out.
 7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (transparent and click-through), or Minimised (to the taskbar and tray). A hotkey toggles Active and Ambient, and brings a minimised garden back.
@@ -210,9 +210,30 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 - Wild growth respects pots, so a direction set once keeps shaping the garden.
 - Shaping tools are purely about shape, with no economy effect.
 
-**Three shaping tools.** The Gravity Pot is available from the start. The **Trellis** (pins selected nodes along a straight line) and the **Gravity Well** (pulls all nodes toward it for general directional growth) are unlockable. Shaping tools should look pretty in their own right, and their visibility can be toggled when the garden is out of focus.
+**Three shaping tools** (step 3a, done). They're overlays, not graph nodes, so they take no node slot and count against no cap but their own. The rules are in `godot/src/Core/Shaping.cs` and `Garden.cs` (Shaping), their strengths in `Tuning` (Shaping).
 
-Proposed: shaping tools are overlays rather than graph nodes, so they don't count against the node budget, and how many you can place rises with core levels.
+| Tool | What it does | Holds | Unlocks |
+| --- | --- | --- | --- |
+| Gravity Pot | The node dropped on it moves to the pot's mouth and is locked there. Every main node beyond it on its branch is pushed gently the way the pot faces, and new growth beyond it buds that way too | One node (dropping another swaps it) | 1 from the start, +1 at 15,000 genes |
+| Trellis | A straight line between two posts. The nodes dropped on it are held on the line but slide along it, so the plant's own push spaces them out, like an espalier wire | Any number | 1 at 7,200 genes |
+| Gravity Well | Pulls every main node faintly towards it. The core takes the whole pull back, so the plant leans towards the well rather than drifting into it | Nothing | 1 at 70,000 genes |
+
+Fruit is never tied or pulled: it follows its node. A pruned node lets go of its tool; undoing the prune ties it again if the tool is still there (and a pot still free). Pruning or removing never refunds or costs anything.
+
+**Build mode** is where the garden is arranged: the plant menu's "Build mode" (or Ctrl+B with the garden focused) in Active mode; Done, Escape or leaving Active ends it.
+- A dark, opaque disc fades in round the plant and its tools, catching every click on it, so arranging never clicks through to the desktop.
+- A bar above the disc holds the three tools (each with how many more the caps allow, greyed with what unlocks it until then) and Done. Pressing a tool takes a new one off the bar and carries it until let go; a tap sets it down just under the bar.
+- Drag a tool's body to move it, a pot's knob (beyond its mouth) to turn it, a trellis's end posts to swing and stretch it. Handles come before nodes under the pointer, since a pot's knob sits where its branch grows. Tapping a tool opens a small toolbar with Remove; dragging a tool back onto the bar also puts it away.
+- Dragging a node and letting go over a pot or trellis ties it there. A tied node's toolbar gains Unhook.
+
+**How they show.** A pale moonlight blue, no role's hue, in the parts' outline look (dark edge, crisp outline, dark fill), under the plant. Each moves gently: chevrons rise out of a holding pot's mouth, rings draw slowly in to a well. Faint while tending in Active mode (the pointer passes through them), full in build mode, hidden in Ambient and Minimised. Saved with the garden, with what they hold (save version 7).
+
+Open, for the gardening mode in Jeremy's todo:
+- Whether build mode grows into the planned gardening mode (opaque radius, arranging the plant and the guides) or stays separate. The pieces are meant to move: the backdrop and the bar are presentation only, and placement goes through `Garden.Place`, `Tie` and `Remove`.
+- Whether the garden should pause or hold wild growth while arranging. It doesn't now.
+- How the disc should behave round a very large plant (it grows with the plant and its tools, and can cover most of the screen).
+- Whether tools should be tappable outside build mode at all (now they're inert there), and whether to show tool counts somewhere outside build mode.
+- How many of each tool later steps allow (proposed: rising with core levels).
 
 ## Node roster
 
@@ -251,20 +272,20 @@ Note the order change from the first draft: the evolution path is chosen when th
 
 **Wild pool.** Evolutions can add new rare types to the pool; core upgrades raise wild limits.
 
-**Linear unlock track (step 2).** Genes reaching the core raise caps automatically along a fixed sequence, with a small notification and no choices. Genes come only from labs (the core makes none), so the track starts once the player plants a lab. Only stems, generators and core links unlock; groves and labs are limited by slots and power. "Day N" means the start of day N. Draft week one, to be refined through play (thresholds in `Tuning.cs`):
+**Linear unlock track (step 2).** Genes reaching the core raise caps automatically along a fixed sequence, with a small notification and no choices. Genes come only from labs (the core makes none), so the track starts once the player plants a lab. Only stems, generators, core links and shaping tools unlock; groves and labs are limited by slots and power. "Day N" means the start of day N. Draft week one, to be refined through play (thresholds in `Tuning.cs`):
 
 | Genes (total) | Unlock | Lands (pacing run, median) |
 | --- | --- | --- |
-| Start | Core (1 link), 4 stems, 1 generator | — |
+| Start | Core (1 link), 4 stems, 1 generator, 1 Gravity Pot | — |
 | 200 | +3 stems | 20 min |
 | 1,500 | +1 generator | 1.2 hr |
-| 7,200 | +4 stems, +1 generator | 4.5 hr |
-| 15,000 | +1 core link, +1 stem, +1 generator | 8 hr |
-| 70,000 | +4 stems, +1 generator | Day 2 (31 hr) |
+| 7,200 | +4 stems, +1 generator, +1 Trellis | 4.5 hr |
+| 15,000 | +1 core link, +1 stem, +1 generator, +1 Gravity Pot | 8 hr |
+| 70,000 | +4 stems, +1 generator, +1 Gravity Well | Day 2 (31 hr) |
 | 200,000 | +3 stems, +1 generator | Day 4 (93 hr) |
 | 470,000 | +3 stems, +1 generator | Day 7–8 for some gardens |
 | 1,000,000 | +3 stems, +1 generator | Not by day 8 |
-| 2,500,000 | +5 stems, +2 generators (30 stems, 10 generators, 2 core links) | Not by day 8 |
+| 2,500,000 | +5 stems, +2 generators (30 stems, 10 generators, 2 core links; 2 pots, a trellis and a well) | Not by day 8 |
 
 Jeremy's draft, meant to reach the end in about seven days. At the current economy it doesn't: gene income stays near 50,000 a day, so a garden ends week one with 19 stems, 6 generators and 2 core links (41 main nodes, 6–10 labs, 5–9 groves, about 95 fruit). The track ends here; long-term pacing comes later.
 
@@ -299,6 +320,7 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 | Tray icon: show/hide, quit | Should | Done (step 2). Click to show or hide (Minimised); right-click for the menu (modes, Quit) |
 | Readout: the garden's stats | Must | Done (step 2, expanded in 3b). Tinted lines under the plant (over it if there's no room below) in Active mode, fading in over 1 s while the pointer rests on a part and out over 1 s after it leaves; an Undo pill shows above them while the last prune can be undone. See Information display |
 | Selected part panel | Must | Done (step 3b). A small card above the readout's lines for the part last tapped. See Information display |
+| Build mode | Must | Done (step 3a). Within Active: an opaque disc round the plant, the shaping bar, tools to move, turn and remove. See Shaping the garden |
 | Launch on startup (opt-in) | Should | — |
 | Pinned to the desktop layer instead of on top (user choice) | Could | — |
 | Notifications for rare events (opt-in, very sparing) | Could | — |
@@ -339,7 +361,7 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | --- | --- | --- |
 | 1 | Foundation (done) | Godot widget, transparency, force-directed physics, node and fruit rendering, stress test, time model (wall-clock sim, catch-up, low-power idle) |
 | 2 | Living garden | Power economy, upkeep, wilting; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, growth blobs, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
-| 3a | Shaping | Gravity Pot, Trellis, Gravity Well |
+| 3a | Shaping (done) | Gravity Pot, Trellis, Gravity Well, placed and connected in build mode. See Shaping the garden |
 | 3b | Information display | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget |
 | 3c | Visual polish → MVP | A short round of visual polish, including the prune effect. End of step = MVP |
 | 4 | Information and tracking | Stat tracking over time, Almanac, any information display 3b left out. Supports tuning |

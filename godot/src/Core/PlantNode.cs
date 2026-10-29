@@ -18,6 +18,10 @@ public sealed class PlantNode
     public float Rotation;
     public float Spin;
     public bool Fixed;
+    // The pot or trellis holding it, if any (see Garden.Tie), and the way the nearest pot back along its branch
+    // pushes it (zero if none: see Garden.Shape).
+    public ShapingTool? TiedTo;
+    public Vector2 Lean;
     // The push from distant parts, kept between the ticks it's worked out on (see Garden.Repel).
     public Vector2 FarPush;
     // Its push on the rest of the plant: its own force, plus its fruit's when fruit only meets its family.

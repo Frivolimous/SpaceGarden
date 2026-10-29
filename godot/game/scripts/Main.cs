@@ -12,7 +12,8 @@ namespace SpaceGarden;
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
 // parts at once (for stress tests; past the usual limit and caps too), --drain to start with every part but the core
 // empty (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob
-// sets it off), --pausetest=AT,FOR to act as if hidden for FOR seconds
+// sets it off), --build to open in build mode, --shaping to place one of each shaping tool (or --shaping=N at physics
+// tick N, with --screenshot), --pausetest=AT,FOR to act as if hidden for FOR seconds
 // from AT seconds after start (to test the pause), plus Screenshot's options. --screenshot runs never touch the
 // real save.
 //
@@ -110,6 +111,8 @@ public partial class Main : Node2D
         }
         if (args.ContainsKey("nearunlock") && Garden.NextUnlock is { } next)
             Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.BlobGenes / 2);
+        if (args.TryGetValue("shaping", out var shaping) && shaping == "") PlaceShaping(); // else Screenshot does
+        if (args.ContainsKey("build")) widget.SetBuilding(true);
 
         ShowGarden();
         if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");
@@ -123,6 +126,46 @@ public partial class Main : Node2D
     {
         Garden.Translate(widget.HomeSpot() - Garden.Core.Position);
         Garden.Sprout();
+    }
+
+    // Dev aid, --shaping (now, or --shaping=N at physics tick N): one of each shaping tool, their caps raised to allow
+    // it. A pot where the stem with the biggest branch beyond it stands, holding it and facing a little up from its
+    // way out; a trellis across the end of another branch, holding the stems there; and a well off to one side.
+    public void PlaceShaping()
+    {
+        Garden.Capacity = Garden.Capacity with
+        {
+            Pots = Math.Max(1, Garden.Capacity.Pots),
+            Trellises = Math.Max(1, Garden.Capacity.Trellises),
+            Wells = Math.Max(1, Garden.Capacity.Wells),
+        };
+        var core = Garden.Core.Position;
+        int Size(PlantNode n) => 1 + n.Branches.Sum(Size);
+        var stems = Garden.Nodes.Where(n => n.Spec.Kind == NodeKind.Stem && n.Depth >= 2).OrderByDescending(Size).ToList();
+        if (stems.Count == 0) return;
+        var potted = stems[0];
+        var away = System.Numerics.Vector2.Normalize(potted.Position - core);
+        if (Garden.Place(ShapingKind.Pot, potted.Position, MathF.Atan2(away.Y, away.X) - 0.7f) is { } pot) Garden.Tie(potted, pot);
+
+        var others = Garden.Nodes.Where(n => !n.Spec.IsFruit && n.Branches.Count == 0 && n.Depth >= 2
+            && !IsBeyond(n, potted)).Take(3).ToList();
+        if (others.Count > 0 && Garden.Place(ShapingKind.Trellis, default) is { } trellis)
+        {
+            var middle = others.Aggregate(System.Numerics.Vector2.Zero, (sum, n) => sum + n.Position) / others.Count;
+            var out_ = System.Numerics.Vector2.Normalize(middle - core);
+            trellis.Position = middle + out_ * 30;
+            trellis.Angle = MathF.Atan2(out_.X, -out_.Y); // across the way out
+            trellis.Length = 220;
+            foreach (var n in others) Garden.Tie(n, trellis);
+        }
+        Garden.Place(ShapingKind.Well, core + new System.Numerics.Vector2(away.Y, -away.X) * 260);
+
+        static bool IsBeyond(PlantNode n, PlantNode of)
+        {
+            for (var p = n; p != null; p = p.Parent)
+                if (p == of) return true;
+            return false;
+        }
     }
 
     void ShowGarden()
@@ -220,6 +263,10 @@ public partial class Main : Node2D
         if (stems > 0) room.Add(stems == 1 ? "1 more stem" : $"{stems} more stems");
         if (generators > 0) room.Add(generators == 1 ? "1 more generator" : $"{generators} more generators");
         if (links > 0) room.Add(links == 1 ? "a new core branch" : $"{links} new core branches");
+        int pots = gained.Sum(u => u.Pots), trellises = gained.Sum(u => u.Trellises), wells = gained.Sum(u => u.Wells);
+        if (pots > 0) room.Add(pots == 1 ? "another Gravity Pot" : $"{pots} more Gravity Pots");
+        if (trellises > 0) room.Add(trellises == 1 ? "a Trellis" : $"{trellises} Trellises");
+        if (wells > 0) room.Add(wells == 1 ? "a Gravity Well" : $"{wells} Gravity Wells");
         if (room.Count == 0) return;
         string list = room.Count == 1 ? room[0] : string.Join(", ", room[..^1]) + " and " + room[^1];
         Toast($"Genes reached the core: room for {list}.", GeneTint);

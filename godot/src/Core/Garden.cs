@@ -22,6 +22,8 @@ public sealed class Garden
     public readonly List<Mote> Motes = new();
     // Branches just pruned, drifting loose for a few seconds before they go (see DriftCut).
     public readonly List<CutBranch> Cut = new();
+    // The shaping tools placed (see Shaping.cs).
+    public readonly List<ShapingTool> Shaping = new();
     public readonly Layout Layout;
     public PlantNode Core => Nodes[0];
     // Only an upright plant's core is planted; a radial one floats like any other part.
@@ -253,6 +255,9 @@ public sealed class Garden
             node.PreviousPosition = node.Position;
             node.Velocity = Vector2.Zero;
             node.Age = 0;
+            // Still tied, unless its tool has gone since, or its pot has taken another part.
+            if (node.TiedTo is { } tool && (!Shaping.Contains(tool) || (tool.Kind == ShapingKind.Pot && Potted(tool) != null)))
+                node.TiedTo = null;
             Nodes.Add(node);
             var link = new Link(node.Parent!, node);
             Links.Add(link);
@@ -302,7 +307,142 @@ public sealed class Garden
             node.Position += offset;
             node.PreviousPosition += offset;
         }
+        foreach (var tool in Shaping) tool.Position += offset;
         HoldTarget += offset;
+    }
+
+    // ==== SHAPING ==== \\
+
+    // Whether there's room under the caps for another tool of this kind.
+    public bool CanPlace(ShapingKind kind) => Shaping.Count(t => t.Kind == kind) < Capacity.Of(kind);
+
+    // A new tool here (a pot facing angle, a trellis along it), or null if the caps have no room for it.
+    public ShapingTool? Place(ShapingKind kind, Vector2 at, float angle = -MathF.PI / 2)
+    {
+        if (!CanPlace(kind)) return null;
+        var tool = new ShapingTool(kind, at, kind == ShapingKind.Trellis ? 0 : angle);
+        Shaping.Add(tool);
+        return tool;
+    }
+
+    // Takes a tool away, letting go of what it held.
+    public void Remove(ShapingTool tool)
+    {
+        Shaping.Remove(tool);
+        foreach (var node in Nodes.Concat(Cut.SelectMany(c => c.Nodes)))
+            if (node.TiedTo == tool) node.TiedTo = null;
+    }
+
+    // Ties a part to a pot (which lets go of the part it held: a pot holds one) or a trellis. A well holds nothing, and
+    // fruit can't be tied. Returns whether it was.
+    public bool Tie(PlantNode node, ShapingTool tool)
+    {
+        if (tool.Kind == ShapingKind.Well || node.Spec.IsFruit || !Shaping.Contains(tool)) return false;
+        if (tool.Kind == ShapingKind.Pot)
+            foreach (var other in Nodes)
+                if (other.TiedTo == tool) other.TiedTo = null;
+        node.TiedTo = tool;
+        node.Velocity = Vector2.Zero;
+        return true;
+    }
+
+    public void Untie(PlantNode node) => node.TiedTo = null;
+
+    // What a pot holds, if anything.
+    public PlantNode? Potted(ShapingTool pot) => Nodes.FirstOrDefault(n => n.TiedTo == pot);
+
+    // A pot is drawn (and caught) bigger round a big part: in proportion to its part's size, from a flower's up.
+    public float PotScale(ShapingTool pot) => Math.Max(1.4f, Potted(pot) is { } node ? node.Spec.Radius / 10 : 0);
+
+    // The tool under the pointer, and which bit of it: its handles first (a pot's knob, a trellis's ends), then the
+    // tool nearest the pointer.
+    public (ShapingTool Tool, ShapingHandle Handle)? ShapingAt(Vector2 point, float slop)
+    {
+        (ShapingTool, ShapingHandle)? best = null;
+        float bestDist = float.MaxValue;
+        void Consider(ShapingTool tool, ShapingHandle handle, float dist, float reach)
+        {
+            if (dist > reach + slop || dist >= bestDist) return;
+            best = (tool, handle);
+            bestDist = dist;
+        }
+        foreach (var tool in Shaping)
+        {
+            switch (tool.Kind)
+            {
+                case ShapingKind.Pot:
+                    float s = PotScale(tool);
+                    var u = tool.Facing;
+                    Consider(tool, ShapingHandle.Turn, Vector2.Distance(point, tool.Position + u * ShapingTool.PotKnob * s), 5);
+                    Consider(tool, ShapingHandle.Body, Vector2.Distance(point, tool.Position - u * ShapingTool.PotDepth * s / 2),
+                        ShapingTool.PotMouth * s);
+                    break;
+                case ShapingKind.Trellis:
+                    var (a, b) = tool.Ends;
+                    Consider(tool, ShapingHandle.EndA, Vector2.Distance(point, a), 6);
+                    Consider(tool, ShapingHandle.EndB, Vector2.Distance(point, b), 6);
+                    Consider(tool, ShapingHandle.Body, Vector2.Distance(point, tool.OnLine(point)), 6);
+                    break;
+                case ShapingKind.Well:
+                    Consider(tool, ShapingHandle.Body, Vector2.Distance(point, tool.Position), ShapingTool.WellRadius);
+                    break;
+            }
+        }
+        return best;
+    }
+
+    // The tools' pushes and pulls, before the parts move (DESIGN.md, Shaping the garden):
+    //   - every part beyond a potted one on its branch is pushed the way the nearest pot back along it faces (its Lean,
+    //     worked out from the parent's: parts are listed in the order they grew, a parent before its children);
+    //   - a well pulls every part towards it, the core taking the opposite push for all of them, so the plant leans
+    //     towards the well rather than drifting into it.
+    // (Pots and trellises hold their parts after they move: see Hold.)
+    void Shape()
+    {
+        if (Shaping.Count == 0)
+        {
+            foreach (var node in Nodes) node.Lean = Vector2.Zero;
+            return;
+        }
+        foreach (var node in Nodes)
+        {
+            var parent = node.Parent;
+            node.Lean = parent == null ? Vector2.Zero
+                : parent.TiedTo is { Kind: ShapingKind.Pot } pot ? pot.Facing
+                : parent.Lean;
+            if (node.TiedTo == null && !node.Spec.IsFruit) node.Velocity += node.Lean * Tuning.PotPush;
+        }
+
+        var recoil = Vector2.Zero;
+        foreach (var well in Shaping)
+        {
+            if (well.Kind != ShapingKind.Well) continue;
+            foreach (var node in Nodes)
+            {
+                if (node == Core || node.Spec.IsFruit) continue; // fruit follows its part
+                var d = well.Position - node.Position;
+                float dist = d.Length();
+                if (dist < 0.5f) continue;
+                var pull = d / dist * (Tuning.WellPull * Math.Min(1, dist / Tuning.WellEase));
+                node.Velocity += pull;
+                recoil += pull * node.Spec.Mass;
+            }
+        }
+        Core.Velocity -= recoil * Core.Spec.InverseMass;
+    }
+
+    // A potted part is drawn to its pot and held there; a part on a trellis is held on its line, free to slide along it.
+    void Hold(PlantNode node, ShapingTool tool)
+    {
+        if (tool.Kind == ShapingKind.Pot)
+        {
+            node.Position = Vector2.Lerp(node.Position, tool.Position, Tuning.PotFollow);
+            node.Velocity = Vector2.Zero;
+            return;
+        }
+        node.Position = tool.OnLine(node.Position);
+        var along = tool.Facing;
+        node.Velocity = along * Vector2.Dot(node.Velocity, along) * Tuning.TrellisSlide;
     }
 
     // How many stems and generators there are, counting the buds forming (they hold their slot), for the caps.
@@ -377,13 +517,16 @@ public sealed class Garden
 
     PlantNode AddFruit(PlantNode parent) => AddNear(NodeSpecs.All[parent.Spec.Fruit!.Value], parent);
 
-    // Places a new part just off its parent, heading away from the grandparent (and upward when upright). A bud that
-    // formed inside its parent (emerge) starts deep inside it and pops out, its link extending.
+    // Places a new part just off its parent, heading away from the grandparent (and upward when upright), and the way
+    // a pot pushes there, if one does (wild growth respects pots). A bud that formed inside its parent (emerge) starts
+    // deep inside it and pops out, its link extending.
     PlantNode AddNear(NodeSpec spec, PlantNode parent, bool emerge = false)
     {
         Vector2 away = parent.Parent == null
             ? (Layout == Layout.Upright ? -Vector2.UnitY : RandomDirection())
             : Vector2.Normalize(parent.Position - parent.Parent.Position + new Vector2(0.001f, 0));
+        var lean = parent.TiedTo is { Kind: ShapingKind.Pot } pot ? pot.Facing : parent.Lean;
+        if (lean != Vector2.Zero) away = Vector2.Normalize(away + lean + new Vector2(0.001f, 0));
         if (Layout == Layout.Upright) away = Vector2.Normalize(away - 0.6f * Vector2.UnitY);
         float angle = (float)(rng.NextDouble() - 0.5) * 1.6f;
         var dir = Vector2.Transform(away, Matrix3x2.CreateRotation(angle));
@@ -778,9 +921,16 @@ public sealed class Garden
 
         Repel();
         DriftCut(dt);
+        Shape();
 
         foreach (var node in Nodes)
         {
+            if (node.TiedTo is { Kind: ShapingKind.Pot } pot)
+            {
+                Turn(node);
+                Hold(node, pot);
+                continue;
+            }
             if (node.Fixed)
             {
                 Turn(node);
@@ -788,6 +938,7 @@ public sealed class Garden
                 continue;
             }
             Move(node);
+            if (node.TiedTo is { } trellis) Hold(node, trellis);
         }
         foreach (var cut in Cut)
             foreach (var node in cut.Nodes) Move(node);
@@ -1148,7 +1299,9 @@ public sealed class Garden
         Layout, EconomyClock, Capacity,
         Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
             n.Parent != null && n.Fixed, n.Power, n.Blob, n.Forming, n.Growth)).ToList(),
-        Genes, Unlocks);
+        Genes, Unlocks,
+        Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
+            Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList());
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -1173,17 +1326,26 @@ public sealed class Garden
             node.Growth = n.Growth;
             byId[n.Id] = node;
         }
+        foreach (var s in save.Shaping ?? [])
+        {
+            var tool = new ShapingTool(s.Kind, new Vector2(s.X, s.Y), s.Angle, s.Length);
+            garden.Shaping.Add(tool);
+            foreach (var id in s.Tied)
+                if (byId.TryGetValue(id, out var node)) node.TiedTo = tool;
+        }
         garden.SettleLooks();
         return garden;
     }
 }
 
 // The limits on growth (DESIGN.md, Capacity): how many stems and generators the garden may have, and how many links
-// the core has. Labs and other flowers are uncapped; free links and power limit them. The unlock track raises these.
-public sealed record Capacity(int Stems, int Generators, int CoreLinks)
+// the core has, and how many of each shaping tool may be placed. Labs and other flowers are uncapped; free links and
+// power limit them. The unlock track raises these.
+public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots = Tuning.StartPotCap, int Trellises = 0,
+    int Wells = 0)
 {
     public static readonly Capacity Start = new(Tuning.StartStemCap, Tuning.StartGeneratorCap, Tuning.StartCoreLinks);
-    public static readonly Capacity Unlimited = new(int.MaxValue, int.MaxValue, 2); // stress tests (--parts)
+    public static readonly Capacity Unlimited = new(int.MaxValue, int.MaxValue, 2, 3, 3, 3); // stress tests (--parts)
 
     // These limits with an unlock's raises added (never past int.MaxValue, so an unlimited garden stays so).
     public Capacity Raise(UnlockStep step) => this with
@@ -1191,17 +1353,29 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks)
         Stems = Add(Stems, step.Stems),
         Generators = Add(Generators, step.Generators),
         CoreLinks = Add(CoreLinks, step.CoreLinks),
+        Pots = Add(Pots, step.Pots),
+        Trellises = Add(Trellises, step.Trellises),
+        Wells = Add(Wells, step.Wells),
+    };
+
+    public int Of(ShapingKind kind) => kind switch
+    {
+        ShapingKind.Pot => Pots,
+        ShapingKind.Trellis => Trellises,
+        _ => Wells,
     };
 
     static int Add(int a, int b) => (int)Math.Min(int.MaxValue, (long)a + b);
 }
 
 // One step of the linear unlock track: once Genes have reached the core over the garden's life, the caps rise by
-// these. Only stems, generators and core links unlock (DESIGN.md: groves and labs are limited by slots and power).
-public sealed record UnlockStep(double Genes, int Stems = 0, int Generators = 0, int CoreLinks = 0);
+// these. Only stems, generators, core links and shaping tools unlock (DESIGN.md: groves and labs are limited by slots
+// and power).
+public sealed record UnlockStep(double Genes, int Stems = 0, int Generators = 0, int CoreLinks = 0, int Pots = 0,
+    int Trellises = 0, int Wells = 0);
 
 public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, bool Pinned, float Power,
     float Blob = 0, NodeKind? Forming = null, float Growth = 0);
 
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
-    double Genes = 0, int Unlocks = 0);
+    double Genes = 0, int Unlocks = 0, List<ShapingSave>? Shaping = null);

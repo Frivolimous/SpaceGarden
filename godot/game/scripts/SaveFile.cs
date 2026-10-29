@@ -14,7 +14,8 @@ public static class SaveFile
 {
     // 2: the economy (power, wilting, capacity). 3: genes and the unlock track. 4: groves and fruit blobs.
     // 5: growth blobs, and the fruit and buds they form. 6: power in the original game's units, and no wilting.
-    public const int Version = 6;
+    // 7: shaping tools (pots, trellises, wells), what they hold, and their caps.
+    public const int Version = 7;
 
     public static string? Path = "user://garden.json";
 

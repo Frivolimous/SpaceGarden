@@ -102,6 +102,20 @@ public static class Tuning
     public const int StartStemCap = 4;
     public const int StartGeneratorCap = 1;
     public const int StartCoreLinks = 1;
+    public const int StartPotCap = 1;
+
+    // ==== SHAPING ==== \\
+    // Placeholders, per 60 Hz tick (DESIGN.md, Shaping the garden). A potted part moves PotFollow of the way to its pot
+    // each tick, and every main part beyond it on its branch is pushed PotPush the way the pot faces (gently: about
+    // the wind's strength). A Gravity Well pulls every main part WellPull towards it, easing off within WellEase of
+    // its centre: faint, as it pulls the whole plant and the core takes all of it back (stronger stretches the core's
+    // links). Fruit follows its part. A part on a trellis slides along it, its sliding damped by TrellisSlide each
+    // tick.
+    public const float PotFollow = 0.12f;
+    public const float PotPush = 0.004f;
+    public const float WellPull = 0.0007f;
+    public const float WellEase = 40;
+    public const float TrellisSlide = 0.9f;
 
     // ==== BLOBS ==== \\
     // Flowers make blobs at their kind's rate (NodeSpec.BlobsPerHour: a grove one every 3 s, a lab one every 5 s) when
@@ -137,9 +151,9 @@ public static class Tuning
     [
         new(200, Stems: 3),
         new(1_500, Generators: 1),
-        new(7_200, Stems: 4, Generators: 1),
-        new(15_000, Stems: 1, Generators: 1, CoreLinks: 1),
-        new(70_000, Stems: 4, Generators: 1),
+        new(7_200, Stems: 4, Generators: 1, Trellises: 1),
+        new(15_000, Stems: 1, Generators: 1, CoreLinks: 1, Pots: 1),
+        new(70_000, Stems: 4, Generators: 1, Wells: 1),
         new(200_000, Stems: 3, Generators: 1),
         new(470_000, Stems: 3, Generators: 1),
         new(1_000_000, Stems: 3, Generators: 1),

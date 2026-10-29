@@ -150,7 +150,7 @@ public class UnlockTests
         // A big delivery passes several thresholds at once, each applied in turn.
         garden.Deliver(Tuning.UnlockTrack[4].Genes);
         Assert.Equal(5, garden.Unlocks);
-        Assert.Equal(new Capacity(16, 5, 2), garden.Capacity); // five steps in: 16 stems, 5 generators, 2 core links
+        Assert.Equal(new Capacity(16, 5, 2, Pots: 2, Trellises: 1, Wells: 1), garden.Capacity); // five steps in: 16 stems, 5 generators, 2 core links, 2 pots, a trellis and a well
         Assert.Equal(2, garden.Core.MaxLinks);
     }
 
@@ -161,7 +161,7 @@ public class UnlockTests
         garden.Deliver(1e9);
         Assert.Null(garden.NextUnlock);
         Assert.Equal(9, garden.Unlocks);
-        Assert.Equal(new Capacity(30, 10, 2), garden.Capacity); // DESIGN.md: 30 stems, 10 generators, 2 core links
+        Assert.Equal(new Capacity(30, 10, 2, Pots: 2, Trellises: 1, Wells: 1), garden.Capacity); // DESIGN.md: 30 stems, 10 generators, 2 core links; 2 pots, a trellis, a well
     }
 
     [Fact]
