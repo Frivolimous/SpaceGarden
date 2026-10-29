@@ -687,6 +687,11 @@ public sealed class Garden
     public static float ProductionPerSecond(PlantNode node) =>
         node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * Output(node);
 
+    // What the cards show it making: its full rate once full (when it makes nothing, idling, not starved), else
+    // what it makes now.
+    public static float ShownProductionPerSecond(PlantNode node) =>
+        node.Power >= node.Store ? FullProductionPerSecond(node) : ProductionPerSecond(node);
+
     // What a part makes per second when full (its fruit adding a little each: see FruitBonus).
     public static float FullProductionPerSecond(PlantNode node) =>
         Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node);
