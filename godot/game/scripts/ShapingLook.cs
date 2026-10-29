@@ -22,7 +22,7 @@ public static class ShapingLook
     {
         ShapingKind.Pot => "Drop a part on it: the part is held there, and its branch grows the way the pot faces.",
         ShapingKind.Trellis => "Drop parts on it: they're held along its line.",
-        _ => "Pulls the whole plant gently towards it.",
+        _ => "Pulls the whole plant towards it, core and all. Pot the core to keep the plant where it is.",
     };
 
     // A flower pot holding a part of radius r centred at `at`, opening the way u points: a rim straight across the

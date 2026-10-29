@@ -396,8 +396,8 @@ public sealed class Garden
     //   - each main part linked to a potted one (growing straight out of it, or its parent) is pushed the way the pot
     //     faces (its Lean, summed if it's next to more than one pot), as a force: a stem feels all of it, the heavy core
     //     a thirtieth. Parts further away only follow through their links;
-    //   - a well pulls every part towards it, the core taking the opposite push for all of them, so the plant leans
-    //     towards the well rather than drifting into it.
+    //   - a well pulls every part towards it, the core and fruit too, alike whatever their weight, like gravity: a free
+    //     plant drifts whole to the well and settles round it; one held back (its core in a pot) hangs towards it.
     // (Pots and trellises hold their parts after they move: see Hold.)
     void Shape()
     {
@@ -416,22 +416,17 @@ public sealed class Garden
         foreach (var node in Nodes)
             if (node.TiedTo == null && !node.Spec.IsFruit) node.Velocity += node.Lean * Tuning.PotPush * node.Spec.InverseMass;
 
-        var recoil = Vector2.Zero;
         foreach (var well in Shaping)
         {
             if (well.Kind != ShapingKind.Well) continue;
             foreach (var node in Nodes)
             {
-                if (node == Core || node.Spec.IsFruit) continue; // fruit follows its part
                 var d = well.Position - node.Position;
                 float dist = d.Length();
                 if (dist < 0.5f) continue;
-                var pull = d / dist * (Tuning.WellPull * Math.Min(1, dist / Tuning.WellEase));
-                node.Velocity += pull;
-                recoil += pull * node.Spec.Mass;
+                node.Velocity += d / dist * (Tuning.WellPull * Math.Min(1, dist / Tuning.WellEase));
             }
         }
-        Core.Velocity -= recoil * Core.Spec.InverseMass;
     }
 
     // A potted part is drawn to its pot and held there; a part on a trellis is held on its line, free to slide along it.

@@ -159,19 +159,36 @@ public class ShapingTests
     // ==== GRAVITY WELL ==== \\
 
     [Fact]
-    public void AWellPullsThePlantTowardsItWithoutDraggingItAway()
+    public void AWellPullsTheWholePlantToIt()
     {
+        // Core and all: a free plant drifts to the well, like gravity.
+        var (garden, _, tip) = Line();
+        var well = garden.Place(ShapingKind.Well, garden.Core.Position + new Vector2(500, 0))!;
+        float coreWas = Vector2.Distance(garden.Core.Position, well.Position);
+        float tipWas = Vector2.Distance(tip.Position, well.Position);
+        Run(garden, 3600);
+        float coreNow = Vector2.Distance(garden.Core.Position, well.Position);
+        Assert.True(coreNow < coreWas - 100, $"the core went from {coreWas} to {coreNow} from the well");
+        Assert.True(Vector2.Distance(tip.Position, well.Position) < tipWas - 100);
+    }
+
+    [Fact]
+    public void APottedCoreKeepsThePlantAndItHangsTowardsTheWell()
+    {
+        // The core held in a pot: the plant stays, and its parts hang towards the well instead.
         var (plain, _, _) = Line();
-        var (pulled, _, _) = Line();
-        var well = pulled.Place(ShapingKind.Well, pulled.Core.Position + new Vector2(500, 0))!;
-        var coreAt = pulled.Core.Position;
+        var (held, _, _) = Line();
+        var coreAt = held.Core.Position;
+        var pot = held.Place(ShapingKind.Pot, coreAt)!;
+        held.Tie(held.Core, pot);
+        var pot2 = plain.Place(ShapingKind.Pot, plain.Core.Position)!; // the same pot, with no well
+        plain.Tie(plain.Core, pot2);
+        held.Place(ShapingKind.Well, coreAt + new Vector2(500, 0));
         Run(plain, 1800);
-        Run(pulled, 1800);
+        Run(held, 1800);
         static float Reach(Garden g) => g.Nodes.Skip(1).Average(n => n.Position.X - g.Core.Position.X);
-        Assert.True(Reach(pulled) > Reach(plain) + 5, $"reaching {Reach(pulled)} towards the well against {Reach(plain)}");
-        // The core takes the parts' pull back, so the plant leans rather than drifting into the well.
-        Assert.True(pulled.Core.Position.X <= coreAt.X + 1, $"the core moved {pulled.Core.Position.X - coreAt.X} towards the well");
-        Assert.True(Vector2.Distance(pulled.Core.Position, well.Position) > 400);
+        Assert.True(Reach(held) > Reach(plain) + 15, $"reaching {Reach(held)} towards the well against {Reach(plain)}");
+        Assert.True(Vector2.Distance(held.Core.Position, coreAt) < 0.5f);
     }
 
     // ==== CAPS, SAVES, PRUNES ==== \\

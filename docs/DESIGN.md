@@ -216,9 +216,9 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 | --- | --- | --- | --- |
 | Gravity Pot | The node dropped on it moves to the pot and is locked there; the pot is drawn over the plant as a flower pot the node sits in up to its middle: a rim straight across the node's middle and a round bowl just bigger than the node, on the side away from the way it faces. Only the main nodes linked to it (its parent, and those growing straight out of it) are pushed gently the way the pot faces; nodes further out just follow them through their links. New buds on the potted node head that way too | One node (dropping another swaps it) | 1 from the start, +1 at 15,000 genes |
 | Trellis | A straight line between two posts. The nodes dropped on it are held on the line but slide along it, so the plant's own push spaces them out, like an espalier wire | Any number | 1 at 7,200 genes |
-| Gravity Well | Pulls every main node faintly towards it. The core takes the whole pull back, so the plant leans towards the well rather than drifting into it | Nothing | 1 at 70,000 genes |
+| Gravity Well | Pulls every node towards it, the core and fruit too, alike whatever their weight, like gravity. A free plant drifts to the well and settles round it; to keep the plant where it is, put its core in a pot, and it hangs towards the well instead | Nothing | 1 at 70,000 genes |
 
-Fruit is never tied or pulled: it follows its node. A pruned node lets go of its tool; undoing the prune ties it again if the tool is still there (and a pot still free). Pruning or removing never refunds or costs anything.
+Fruit is never tied or pushed by a pot: it follows its node (a well pulls it along with everything else). A pruned node lets go of its tool; undoing the prune ties it again if the tool is still there (and a pot still free). Pruning or removing never refunds or costs anything.
 
 **Build mode** is where the garden is arranged: the plant menu's "Build mode" (or Ctrl+B with the garden focused) in Active mode; Done, Escape or leaving Active ends it.
 - A dark, opaque disc fades in round the plant and its tools, catching every click on it, so arranging never clicks through to the desktop.
