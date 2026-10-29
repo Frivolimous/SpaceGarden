@@ -477,6 +477,35 @@ Open: where events and seasons, and identity features fall in the plan.
 - With the same data, check the gene income ceiling: whether flat gene income (labs need to sit near the core) is a real problem, before step 5's progression is built on top.
 
 **Achievements are deferred to step 6** (see the plan).
+
+### Step 5: questions to settle
+
+Step 5 (Evolutions and rares) has a scope but no design yet. It opens with the real-week tuning check (see Step 4), which runs while these are decided; its data may move the numbers but shouldn't block the shape. Background: Progression (core, seedlings, wild pool), the node tables (rare wild-only, Big Stem, Seedling), Specialists, and the original skill tree in [ORIGINAL_SYSTEMS.md §9](ORIGINAL_SYSTEMS.md) as the content pool.
+
+1. **Sub-steps.** Build it in parts (for example 5a core levels, 5b seedlings and evolutions, 5c rares and the Codex), and in what order.
+2. **Core levels and the unlock track.**
+   - Does the linear track end at week one with core levels taking over after it, or do levels start earlier and run alongside it?
+   - What's a level: a gene threshold, and on what curve?
+   - What does a choice offer: pick one of two or three numeric boosts? Which boosts make the first pool (caps, power transfer, generation, blob speed or reach, wild limits, shaping tool counts)?
+   - Are choices ever rerolled, skipped or banked?
+3. **Where choices are made, and how the player learns one is waiting.** The core menu has room reserved for a Research slot. The red attention dot was dropped in 3d, so what signals a waiting choice instead (a lit slot, a journal moment, the core's hue)?
+4. **Seedling slots.** A separate track, or a capstone after every N core levels (recommended earlier)? When does the first one open?
+5. **Seedlings themselves.**
+   - Where does one sprout: planted by the player on a free link like a bud, or offered somewhere fixed?
+   - How many evolution paths are offered at sprout, and from what pool?
+   - Filling: gene blobs fill it over days. Does that compete with the core for genes, and how long is a bloom?
+   - Does it draw power while it fills?
+6. **The first evolutions.** Which ones ship first (candidates already named: smarter gene blobs that head for the core, Big Stem unlock, labs ×5 genes for ×2 drain, new rares in the wild pool, Home as a plantable node). For each: which basic node it becomes when it blooms, and what its unique fruit does.
+7. **Big Stem.** Unlocked by an evolution or a core level, how many, and does it ever grow wild (currently: never)?
+8. **The rare wild pool.**
+   - Which rares come first: Hub, Amplifier, Resistor, Volatile, Lumber Grove, Wild Lab, Buffer, Home.
+   - Chance of a wild bud being rare, and the caps (total and per type, e.g. 5 wilds, up to 2 Lumber Groves and 1 Volatile).
+   - Rerolls: only by pruning (as now designed), or something more?
+   - How a rare looks different at a glance.
+9. **Each rare's effect.** Specialists: Resistor (blocks blobs), Amplifier (strengthens blobs passing through), Buffer (temporarily boosts nearby production); exact rules and numbers. Also the Hub (proposed: local upgrades for its own branch), Volatile, Lumber Grove, Wild Lab, and Home (a rare, or plantable via an evolution, since a random Home could delay crawlers by luck).
+10. **The Almanac's Codex tab.** What an entry shows, and when one is added (first seen, first bloomed).
+11. **Journal moments** for step 5 (first rare, first seedling sprouted and bloomed, each core level), and what the "while you were away" note adds.
+12. **Save.** Version 9, with older saves set aside as before.
 ## Parked ideas
 
 From the first draft, not contradicted by the anchor but not scheduled. Candidates for the "Events and surprises" and "Identity" topics:
