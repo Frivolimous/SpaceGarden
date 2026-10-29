@@ -93,14 +93,12 @@ public class StatsTests
         Add(garden, lab, NodeKind.Research);
         right.Forming = NodeKind.Lab; // a wild bud on its way
         foreach (var n in garden.Nodes) n.Power = n.Store / 2;
-        grove.Wilting = true;
 
         var stats = GardenStats.Of(garden);
         Assert.Equal(4, stats.Stems);
         Assert.Equal(1, stats.Generators);
         Assert.Equal(1, stats.Groves);
         Assert.Equal(1, stats.Labs);
-        Assert.Equal(1, stats.Wilting);
         Assert.Equal(1, stats.CoreLinksUsed);
         Assert.Equal(garden.Capacity, stats.Capacity);
         Assert.Equal(2, stats.Fruit);
@@ -113,17 +111,18 @@ public class StatsTests
     }
 
     [Fact]
-    public void DrainingWhenUpkeepPassesProduction()
+    public void OverloadedWhenUpkeepAtFullPassesProduction()
     {
+        // Whatever the fills: what the garden would cost full against what it would make full.
         var garden = NewGarden(new Capacity(4, 1, 1));
         var trunk = Add(garden, garden.Core, NodeKind.Stem);
-        Assert.False(GardenStats.Of(garden).Draining);
+        Assert.False(GardenStats.Of(garden).Overloaded);
         Add(garden, trunk, NodeKind.Lab);
-        var branch = Add(garden, trunk, NodeKind.Stem);
-        Add(garden, branch, NodeKind.Lab); // 2 stems and 2 labs: 7 an hour against the core's 8, still fine
-        Assert.False(GardenStats.Of(garden).Draining);
+        var branch = Add(garden, Add(garden, trunk, NodeKind.Stem), NodeKind.Stem);
+        Add(garden, branch.Parent!, NodeKind.Lab); // 3 stems and 2 labs: 21 a second against the core's 24, fine
+        Assert.False(GardenStats.Of(garden).Overloaded);
         Add(garden, branch, NodeKind.Lab);
-        Assert.True(GardenStats.Of(garden).Draining); // a third lab: 10 an hour
+        Assert.True(GardenStats.Of(garden).Overloaded); // a third lab: 27 a second
     }
 
     [Fact]

@@ -4,16 +4,16 @@ namespace SpaceGarden.Core.Tests;
 // the plant is stupid, so this is the brain. Each check-in it
 //   - prunes wild groves past the ones it wants (the farthest first);
 //   - prunes drains: while the garden would cost more than it makes at full power, the lab furthest from the core
-//     goes (wild ones are usually far out), then any lab wilting or too far out for its genes to find the core;
+//     goes (wild ones are usually far out), then any lab too far out for its genes to find the core;
 //   - adds labs near the core (within MaxLabDepth) while the power to spare covers one, keeping a small reserve and
 //     a free link for the plant to grow on;
 //   - fills the stem cap with stems, nearest the core first;
-//   - fills the generator cap with generators where the plant is hungriest (wilting or lowest on power);
+//   - fills the generator cap with generators where the plant is hungriest (lowest on power);
 //   - keeps a grove for every GroveEvery stems, planted mid-plant.
 public static class SmartPlayer
 {
     const int GroveEvery = 15;
-    const float Reserve = 1;
+    const float Reserve = 1; // power a second
 
     // Check-ins every two hours while awake: planted at 9:00, asleep from 1:00 to 9:00.
     public const double CheckHours = 2;
@@ -22,7 +22,7 @@ public static class SmartPlayer
     public static void Tend(Garden garden)
     {
         PruneDrains(garden);
-        while (Spare(garden) >= Tuning.LabUpkeepPerHour + Reserve && FreeLinks(garden) > 1
+        while (Spare(garden) >= Tuning.LabUpkeepPerSecond + Reserve && FreeLinks(garden) > 1
             && Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth)) { }
         while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
         while (Bud(garden, NodeKind.Generator, nearFirst: false, hungriest: true)) { }
@@ -41,13 +41,9 @@ public static class SmartPlayer
 
     static int Count(Garden garden, NodeKind kind) => garden.Nodes.Count(n => n.Spec.Kind == kind);
 
-    // What the garden would make at full power, less what all its parts cost (wilting ones too).
-    static float Spare(Garden garden) => garden.Nodes.Sum(n => n.Spec.Kind switch
-    {
-        NodeKind.Core => Tuning.CorePowerPerHour,
-        NodeKind.Generator => Tuning.GeneratorPowerPerHour,
-        _ => 0,
-    } - Garden.UpkeepPerHour(n));
+    // What the garden would make at full power, less what all its parts would cost: below 0 it's overloaded, and
+    // settles lower, its far labs lowest and slowest.
+    static float Spare(Garden garden) => garden.FullPowerBalance() is var (made, used) ? made - used : 0;
 
     static void PruneDrains(Garden garden)
     {
@@ -55,7 +51,7 @@ public static class SmartPlayer
         while (Count(garden, NodeKind.Grove) > GrovesWanted(garden)
             && garden.Nodes.Where(n => n.Spec.Kind == NodeKind.Grove).MaxBy(n => n.Depth) is { } grove) garden.Prune(grove);
         while (Spare(garden) < 0 && FarthestLab(garden, _ => true) is { } lab) garden.Prune(lab);
-        while (FarthestLab(garden, n => n.Wilting || n.Depth > MaxLabDepth) is { } lab) garden.Prune(lab);
+        while (FarthestLab(garden, n => n.Depth > MaxLabDepth) is { } lab) garden.Prune(lab);
     }
 
     static PlantNode? FarthestLab(Garden garden, Func<PlantNode, bool> which) => garden.Nodes
@@ -69,7 +65,7 @@ public static class SmartPlayer
         var spots = garden.Nodes
             .Where(n => !n.Spec.IsFruit && (n.Parent != null || kind == NodeKind.Stem) && n.Depth < maxDepth
                 && garden.CanSproutFrom(n, kind))
-            .OrderBy(n => hungriest ? n.Fill + (n.Wilting ? -1 : 0) : 0)
+            .OrderBy(n => hungriest ? n.Fill : 0)
             .ThenBy(n => nearFirst ? n.Depth : -n.Depth).ThenBy(n => n.Id).ToList();
         if (spots.Count == 0) return false;
         var spot = middle ? spots.OrderBy(n => n.Depth).ElementAt(spots.Count / 2) : spots[0];

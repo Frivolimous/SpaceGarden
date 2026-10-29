@@ -31,15 +31,12 @@ public sealed class PlantNode
     public float Glow;
     public uint GlowRgb;
 
-    // The economy (see Garden.EconomyStep). Power held, up to Store; a part that couldn't pay its upkeep is Wilting
-    // until it fills back up. Fruit holds no power and wilts with its parent. WiltLook eases 0-1 towards Wilting, for
-    // drawing.
+    // The economy (see Garden.EconomyStep). Power held, about up to Store (a transfer can top it a little past).
+    // Fruit holds no power.
     public float Power;
-    public bool Wilting;
     // A lab's gene blob, or a grove's growth blob, in the making: it leaves at 1, whether or not anything will absorb
     // it.
     public float Blob;
-    public float WiltLook;
 
     // What growth blobs are forming here (DESIGN.md, Economy, Blobs): a fruit of its own kind, or a bud of a new
     // branch, its kind rolled when it started; and how much growth it has absorbed (it completes at FruitGrowth or
@@ -51,10 +48,8 @@ public sealed class PlantNode
     public bool FormingFruit => Forming is { } kind && NodeSpecs.All[kind].IsFruit;
     public bool FormingBud => Forming is { } kind && !NodeSpecs.All[kind].IsFruit;
 
-    // Presentation, as the original's node intensity: the fill as shown, eased towards the real one, plus a small
-    // spring that a flash of power arriving kicks, so the part swells and brightens past its level and settles back.
+    // Presentation, as the original's node intensity: the fill as shown, eased towards the real one.
     public float FillLook;
-    public float Bounce, BounceSpeed;
 
     // Links allowed, counting the parent's. The spec's, except the core's, which is the garden's Capacity.CoreLinks.
     public int MaxLinks;
@@ -69,7 +64,13 @@ public sealed class PlantNode
         MaxLinks = spec.MaxLinks;
     }
 
-    public float Store => Spec.IsFruit ? 0 : Parent == null ? Tuning.CorePowerStore : Tuning.NodePowerStore;
+    public float Store => Spec.Kind switch
+    {
+        _ when Spec.IsFruit => 0,
+        NodeKind.Core => Tuning.CorePowerStore,
+        NodeKind.Lab => Tuning.LabPowerStore,
+        _ => Tuning.NodePowerStore,
+    };
     public float Fill => Spec.IsFruit ? 0 : Power / Store;
 
     public int Links => Branches.Count + (Parent == null ? 0 : 1);
@@ -89,13 +90,12 @@ public sealed class Link
 {
     public readonly PlantNode Origin, Target;
     public readonly float Length;
-    // 0-1 light that a flash sets and that fades. Power flowing along the link (either way, per real hour, as of the
-    // last economy step) sets how often it flashes; FlashPhase counts up to the next.
+    // 0-1 light that a flash sets and that fades: each power transfer along the link flashes it, FlashIn seconds
+    // after the economy step that made it (see Tuning.FlashPeak).
     public float Flash;
-    // The last flash's own brightness, and seconds since it (for the pulse drawn running along the link).
+    // The last flash's own brightness, and seconds since it (for the wipe drawn along the link).
     public float FlashStrength, FlashAge = float.MaxValue;
-    public float FlowPerHour;
-    public float FlashPhase;
+    public float FlashIn = -1; // seconds to a flash still to show, or below 0 for none
     public bool FlowsToTarget; // which way the power ran (outward, or back towards the origin)
 
     public Link(PlantNode origin, PlantNode target)

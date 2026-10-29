@@ -3,7 +3,6 @@ namespace SpaceGarden.Core.Tests;
 public class GroveTests
 {
     const double Hour = 3600, Day = 24 * Hour;
-    const float P = Tuning.PowerScale; // the draft table's units, rescaled with the blobs
     static readonly double BlobHours = 1 / Tuning.GroveBlobsPerHour;
 
     static Garden NewGarden(Capacity? capacity = null, int seed = 7)
@@ -46,12 +45,11 @@ public class GroveTests
     // ==== RATES ==== \\
 
     [Fact]
-    public void AGroveCostsHalfALab()
+    public void AGroveCostsAsMuchAsALab()
     {
-        var (garden, grove) = WithAGrove();
-        Assert.Equal(1.5f * P, Garden.UpkeepPerHour(grove));
-        Assert.Equal(Tuning.LabUpkeepPerHour, 2 * Garden.UpkeepPerHour(grove));
-        Assert.Equal((8 * P, 2.5f * P), garden.PowerBalance());
+        var (_, grove) = WithAGrove();
+        Assert.Equal(6, Garden.FullUpkeepPerSecond(grove));
+        Assert.Equal(Tuning.LabUpkeepPerSecond, Garden.FullUpkeepPerSecond(grove));
     }
 
     [Fact]
@@ -59,9 +57,9 @@ public class GroveTests
     {
         var (_, grove) = WithAGrove();
         Assert.Equal(Tuning.GroveBlobsPerHour, Garden.BlobsPerHour(grove), 1e-4f);
+        grove.Power = grove.Store / 4;
+        Assert.Equal(Tuning.GroveBlobsPerHour / 4, Garden.BlobsPerHour(grove), 1e-4f);
         grove.Power = 0;
-        Assert.Equal(Tuning.GroveBlobsPerHour * Tuning.OutputFloor, Garden.BlobsPerHour(grove), 1e-4f);
-        grove.Wilting = true;
         Assert.Equal(0, Garden.BlobsPerHour(grove));
     }
 
@@ -227,22 +225,19 @@ public class GroveTests
     public void LeavesFromBlobsCutStemUpkeep()
     {
         var (garden, _) = WithAGrove();
-        var (_, before) = garden.PowerBalance();
+        var (_, before) = garden.FullPowerBalance();
         GrowUntil(garden, () => Fruit(garden) == 7);
-        var (_, after) = garden.PowerBalance();
-        // Both stems carry two leaves: 0.125 each instead of 0.5.
-        Assert.Equal(before - 2 * (0.5f - 0.125f) * P, after, 1e-4f);
+        var (_, after) = garden.FullPowerBalance();
+        // Both stems carry two leaves: 0.75 a second each instead of 3.
+        Assert.Equal(before - 2 * (3 - 0.75f), after, 1e-4f);
     }
 
     [Fact]
-    public void AWiltingGroveMakesNoBlobs()
+    public void AnEmptyGroveMakesNoBlobs()
     {
         var (garden, grove) = WithAGrove();
-        grove.Power = 0;
-        grove.Wilting = true;
-        foreach (var n in garden.Nodes) if (n != grove) n.Power = 0;
+        foreach (var n in garden.Nodes) n.Power = 0;
         garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.True(grove.Wilting);
         Assert.Equal(0, grove.Blob);
     }
 
@@ -327,7 +322,7 @@ public class GroveTests
     public void WildGrowthIgnoresPower()
     {
         // The plant is stupid: with one grove planted and left alone it grows whatever it rolls, labs that drain it
-        // and more groves included, until wilting stops its groves.
+        // and more groves included, however low that leaves it.
         foreach (var seed in new[] { 1, 2, 3, 4 })
         {
             var garden = NewGarden(new Capacity(40, 2, 1), seed);

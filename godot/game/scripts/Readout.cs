@@ -4,7 +4,7 @@ namespace SpaceGarden;
 
 // Quiet lines under the plant in Active mode, so the garden can be read without a menu (DESIGN.md, Desktop widget):
 // what a player tending it needs to decide what to grow, cut or move. Its power (held against its store, made against
-// used, wilting), its genes and how fast they reach the core, the next unlock and when it comes at that rate, the caps
+// used, overloaded or not), its genes and how fast they reach the core, the next unlock and when it comes at that rate, the caps
 // used (stems, generators, core links, fruit), its flowers, and the wild buds on their way. Each line is tinted by its
 // role's hue (DESIGN.md, Visual language). Above them, in a panel of its own, the selected part: what it is, its
 // power, what it does, and its own numbers. While the last prune can be undone, an Undo pill sits on top, counting
@@ -130,10 +130,9 @@ public partial class Readout : VBoxContainer
 
         var stats = GardenStats.Of(garden);
         power.Text = $"Power {stats.PowerHeld:#,0} of {stats.PowerStore:#,0} ({stats.PowerFill * 100:0}%)"
-            + $" · makes {stats.Production:#,0}, uses {stats.Upkeep:#,0} an hour"
-            + (stats.Wilting > 0 ? $" · {stats.Wilting} wilting" : "");
-        power.LabelSettings.FontColor = (stats.Draining ? WarnTint : PowerTint) with { A = 0.9f };
-        if (stats.Draining) power.Text += " · draining";
+            + $" · makes {stats.Production * growthSpeed:#,0}, uses {stats.Upkeep * growthSpeed:#,0} a second";
+        power.LabelSettings.FontColor = (stats.Overloaded ? WarnTint : PowerTint) with { A = 0.9f };
+        if (stats.Overloaded) power.Text += " · overloaded";
 
         genes.Text = $"Genes {stats.Genes:#,0} · +{stats.GenesPerHour / 60 * growthSpeed:#,0.#} a minute reach the core";
         unlock.Text = stats.NextUnlock is not { } next ? "Every unlock reached"
@@ -158,14 +157,14 @@ public partial class Readout : VBoxContainer
         nodePanel.Visible = nodeGap.Visible = node != null;
         if (node == null) return;
         var (name, description) = NodeSpecs.Info[node.Spec.Kind];
-        nodeTitle.Text = $"{name} · {node.Power:0.##} / {node.Store:0.##} power" + (node.Wilting ? " · wilting" : "");
+        nodeTitle.Text = $"{name} · {node.Power:0.##} / {node.Store:0.##} power";
         nodeTitle.LabelSettings.FontColor = GardenView.Rgb(node.Spec.Rgb).Lightened(0.35f);
         nodeText.Text = description;
 
         var detail = new List<string>();
-        float made = Garden.ProductionPerHour(node), upkeep = Garden.UpkeepPerHour(node);
-        if (made > 0) detail.Add($"makes {made:#,0} an hour");
-        if (upkeep > 0) detail.Add($"upkeep {upkeep:#,0} an hour");
+        float made = Garden.ProductionPerSecond(node), upkeep = Garden.UpkeepPerSecond(node);
+        if (made > 0) detail.Add($"makes {made * growthSpeed:#,0.#} a second");
+        if (upkeep > 0) detail.Add($"upkeep {upkeep * growthSpeed:#,0.#} a second");
         if (node.Spec.Kind == NodeKind.Lab)
             detail.Add($"{GardenStats.GeneReach(garden, node) * 100:0}% of its genes reach the core"
                 + $" (+{GardenStats.GenesPerHourFrom(garden, node) / 60 * growthSpeed:#,0.#} a minute)");
