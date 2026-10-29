@@ -82,23 +82,21 @@ public static class Tuning
     // time, so a live session, a catch-up and a test all take the same steps whatever chunks the time arrives in. A
     // step is one power transfer: the original's powerDelay, 20 ticks give or take 10% (18.75 here, exact in binary,
     // so the steps don't drift with the chunks).
-    public const double EconomyStepSeconds = 0.3125;
+    public const double EconomyStepSeconds = 0.375;
 
     // Each kind's power (store, rate, weight, transfer rate) is in its NodeSpec (NodeSpecs.All), as the original's Nodes
     // config. Making and upkeep both follow the part's fill: a source makes its rate times its fill (none past full),
-    // a drain costs its rate times its fill, so nothing ever quite empties. A new part starts empty. Each leaf on a
-    // part multiplies its upkeep by LeafUpkeepFactor.
-    public const float LeafUpkeepFactor = 0.5f;
-
-    // Placeholder: each flower fruit (a generator's burr, a lab's research, a grove's berry) adds this much to its
-    // flower's output, up to the doc's +20% per flower.
-    public const float FruitBonusEach = 0.2f / 3;
-    public const float FruitBonusMax = 0.2f;
+    // a drain costs its rate times its fill, so nothing ever quite empties. A new part starts empty. A fruit's effect on
+    // its part (FlowerPowerFactor, FlowerBonus) is in the fruit's NodeSpec.
 
     // Power transfer (the original's attemptTransferPower and POWER_THRESHOLD): each step, a part fuller than SendFill
     // sends its clump of power to its emptiest neighbour that's less full than itself, emptiest by fill over weight
     // (stems, then the core, count as emptier than they are, so power heads out along the stems).
     public const float SendFill = 0.25f;
+
+    // Fruit holds power too (the original's powerFruits, FRUIT_THRESHOLD): a part at least FeedFruitFill full feeds its
+    // emptiest fruit (at its PowerToFruitPerSecond), so new fruit fill and brighten as they grow in.
+    public const float FeedFruitFill = 0.6f;
 
     // Capacity at the start (DESIGN.md, Linear unlock track: "Start"). The unlock track raises Garden.Capacity.
     public const int StartStemCap = 4;
@@ -107,7 +105,7 @@ public static class Tuning
 
     // ==== BLOBS ==== \\
     // Flowers make blobs at their kind's rate (NodeSpec.BlobsPerHour: a grove one every 3 s, a lab one every 5 s) when
-    // full of power, in proportion to their fill when lower (their own fruit add up to FruitBonusMax).
+    // full of power, in proportion to their fill when lower (each of their fruit adding its FlowerBonus).
     // Both kinds wander the stems at random, never turning straight back unless at a dead end, and fade after
     // BlobMaxHops links (the original's 30) if nothing absorbed them.
     public const int BlobMaxHops = 30;
@@ -130,38 +128,21 @@ public static class Tuning
     public const float BlobGenes = 1;
 
     // The linear unlock track (DESIGN.md, Progression, "Linear unlock track (step 2)"): genes reaching the core over
-    // the garden's life raise the caps at each threshold, in order. Placeholder thresholds, tuned with the headless
-    // pacing run (UnlockTests.MonthPacing, retuned by UnlockTests.RetuneThresholds) to land near these times in a
-    // garden a smart player tends (DESIGN.md: simulations assume one; see the tests' SmartPlayer). "Day N" is the
-    // start of day N. Week one is the doc's draft (31 stems, 8 generators, 2 core links). Weeks two to four are
-    // invented, a baseline to pace against until long-term pacing is designed: a step a day in week two, then one
-    // every two days, reaching 72 stems, 17 generators and 3 core links at day 30. The player plants the first grove
-    // and lab at once, so the first step comes from the first few hours' genes, not the first lab's first blob.
+    // the garden's life raise the caps at each threshold, in order. Jeremy's week one, reaching 30 stems, 10 generators
+    // and 2 core links in about seven days in a garden a smart player tends (DESIGN.md: simulations assume one; see the
+    // tests' SmartPlayer, and UnlockTests.MonthPacing for when each step lands). Past week one is long-term pacing, not
+    // designed yet: the track ends here. The player plants the first grove and lab at once, so the first step comes
+    // from the first lab's first few minutes.
     public static readonly UnlockStep[] UnlockTrack =
     [
-        new(5_110, Stems: 3),                              // ~4 h
-        new(8_930, Generators: 1),                         // ~6 h
-        new(16_600, Stems: 3),                             // day 1 evening (~10 h)
-        new(43_600, Stems: 4, Generators: 1),              // day 2
-        new(90_500, Stems: 5, Generators: 1, CoreLinks: 1), // day 3
-        new(124_000, Stems: 6),                            // day 4
-        new(154_000, Generators: 2),                       // day 5
-        new(189_000, Stems: 6),                            // day 6
-        new(221_000, Generators: 2),                       // day 7: 31 stems, 8 generators, 2 core links
-        new(255_000, Stems: 4),                            // day 8
-        new(292_000, Generators: 1),                       // day 9
-        new(334_000, Stems: 4),                            // day 10
-        new(375_000, Generators: 1),                       // day 11
-        new(419_000, Stems: 4),                            // day 12
-        new(459_000, Generators: 1),                       // day 13
-        new(504_000, Stems: 4, CoreLinks: 1),              // day 14: 47 stems, 11 generators, 3 core links
-        new(578_000, Stems: 5, Generators: 1),             // day 16
-        new(650_000, Stems: 5),                            // day 18
-        new(724_000, Generators: 2),                       // day 20
-        new(808_000, Stems: 5),                            // day 22
-        new(889_000, Generators: 1),                       // day 24
-        new(965_000, Stems: 5),                            // day 26
-        new(1_040_000, Generators: 2),                     // day 28
-        new(1_110_000, Stems: 5),                          // day 30: 72 stems, 17 generators, 3 core links
+        new(200, Stems: 3),
+        new(1_500, Generators: 1),
+        new(7_200, Stems: 4, Generators: 1),
+        new(15_000, Stems: 1, Generators: 1, CoreLinks: 1),
+        new(70_000, Stems: 4, Generators: 1),
+        new(200_000, Stems: 3, Generators: 1),
+        new(470_000, Stems: 3, Generators: 1),
+        new(1_000_000, Stems: 3, Generators: 1),
+        new(2_500_000, Stems: 5, Generators: 2), // 30 stems, 10 generators, 2 core links
     ];
 }

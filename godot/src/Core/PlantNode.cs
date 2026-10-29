@@ -32,7 +32,7 @@ public sealed class PlantNode
     public uint GlowRgb;
 
     // The economy (see Garden.EconomyStep). Power held, about up to Store (a transfer can top it a little past).
-    // Fruit holds no power.
+    // Fruit holds power its part feeds it, and costs nothing.
     public float Power;
     // A lab's gene blob, or a grove's growth blob, in the making: it leaves at 1, whether or not anything will absorb
     // it.

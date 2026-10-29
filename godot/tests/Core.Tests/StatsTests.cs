@@ -102,7 +102,7 @@ public class StatsTests
         Assert.Equal(1, stats.CoreLinksUsed);
         Assert.Equal(garden.Capacity, stats.Capacity);
         Assert.Equal(2, stats.Fruit);
-        Assert.Equal(4 * 2 + 3 * 3, stats.FruitRoom); // 4 stems with room for 2 leaves, 3 flowers for 3 fruit each
+        Assert.Equal(4 * 2 + 2 * 3 + 2, stats.FruitRoom); // 4 stems with room for 2 leaves, a lab and grove for 3, a generator for 2
         Assert.Equal(1, stats.BudsForming[NodeKind.Lab]);
         Assert.Equal(0.5f, stats.PowerFill, 4);
         Assert.Equal(garden.PowerBalance(), (stats.Production, stats.Upkeep));

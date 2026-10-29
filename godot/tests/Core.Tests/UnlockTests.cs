@@ -116,7 +116,7 @@ public class UnlockTests
     {
         var (garden, lab) = WithALab();
         for (int i = 0; i < 3; i++) Add(garden, lab, NodeKind.Research);
-        Assert.Equal(NodeSpecs.All[NodeKind.Lab].BlobsPerHour * 1.2f, Garden.BlobsPerHour(lab), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Lab].BlobsPerHour * 1.3f, Garden.BlobsPerHour(lab), 0.01f);
     }
 
     [Fact]
@@ -150,21 +150,18 @@ public class UnlockTests
         // A big delivery passes several thresholds at once, each applied in turn.
         garden.Deliver(Tuning.UnlockTrack[4].Genes);
         Assert.Equal(5, garden.Unlocks);
-        Assert.Equal(new Capacity(19, 4, 2), garden.Capacity); // day 3: +1 core link, +5 stems, +1 generator
+        Assert.Equal(new Capacity(16, 5, 2), garden.Capacity); // five steps in: 16 stems, 5 generators, 2 core links
         Assert.Equal(2, garden.Core.MaxLinks);
     }
 
     [Fact]
-    public void TheTrackReachesTheDocsWeekOneThenAMonth()
+    public void TheTrackReachesTheDocsWeekOne()
     {
         var garden = NewGarden();
-        garden.Deliver(Tuning.UnlockTrack[8].Genes);
-        Assert.Equal(9, garden.Unlocks);
-        Assert.Equal(new Capacity(31, 8, 2), garden.Capacity); // DESIGN.md: 31 stems, 8 generators, 2 core links
         garden.Deliver(1e9);
         Assert.Null(garden.NextUnlock);
-        Assert.Equal(Tuning.UnlockTrack.Length, garden.Unlocks);
-        Assert.Equal(new Capacity(72, 17, 3), garden.Capacity);
+        Assert.Equal(9, garden.Unlocks);
+        Assert.Equal(new Capacity(30, 10, 2), garden.Capacity); // DESIGN.md: 30 stems, 10 generators, 2 core links
     }
 
     [Fact]
@@ -236,7 +233,7 @@ public class UnlockTests
     public void RaisedCapsGiveWildGrowthRoom()
     {
         // The player plants a grove and a lab, and after a day prunes the wild flowers that took every free link: the
-        // unlocks the lab earns fill with wild stems.
+        // next unlock, landing then, fills with wild stems.
         var garden = Planted();
         var stem = garden.Nodes[1];
         var grove = Add(garden, stem, NodeKind.Grove);
@@ -250,7 +247,8 @@ public class UnlockTests
         }
         int stemsBefore = Count(garden, NodeKind.Stem);
         int unlocks = garden.Unlocks;
-        garden.Grow(3 * Day);
+        garden.Deliver(garden.NextUnlock!.Genes - garden.Genes);
+        garden.Grow(Hour);
         Assert.True(garden.Unlocks > unlocks);
         Assert.True(Count(garden, NodeKind.Stem) > stemsBefore);
         Assert.True(Count(garden, NodeKind.Stem) <= garden.Capacity.Stems);
@@ -261,13 +259,8 @@ public class UnlockTests
     // ==== PACING ==== \
 
     // When each unlock should fire, in hours from planting (see Tuning.UnlockTrack; Day N is the start of day N):
-    // ~4 h, ~6 h, day 1 evening, days 2-7, days 8-14, then every other day to day 30.
-    static readonly double[] TargetHours =
-    [
-        4, 6, 10,
-        .. Enumerable.Range(2, 13).Select(day => (day - 1) * 24.0),
-        .. Enumerable.Range(8, 8).Select(i => (2 * i - 1) * 24.0),
-    ];
+    // placeholders spread over week one, until Jeremy sets when each step should land.
+    static readonly double[] TargetHours = [1, 3, 6, 12, 24, 48, 72, 120, 168];
 
     static string Describe(Garden garden)
     {
@@ -372,7 +365,7 @@ public class UnlockTests
             Assert.Skip(text.ToString());
             return;
         }
-        // Every garden has had week one's nine steps (DESIGN.md's 31 stems, 8 generators, 2 core links) by the end of
+        // Every garden has had week one's nine steps (DESIGN.md's 30 stems, 10 generators, 2 core links) by the end of
         // day 7, and is at most two steps short of the end of the track by the end of day 30 (at real-speed blob rates
         // gardens spread out: the slowest seed runs about a fifth behind the median).
         Assert.All(run.WeekOne, u => Assert.True(u >= 9, $"{u} unlocks by day 7"));

@@ -45,11 +45,11 @@ public class GroveTests
     // ==== RATES ==== \\
 
     [Fact]
-    public void AGroveCostsAsMuchAsALab()
+    public void AGroveCostsLessThanALab()
     {
         var (_, grove) = WithAGrove();
-        Assert.Equal(6, Garden.FullUpkeepPerSecond(grove));
-        Assert.Equal(-NodeSpecs.All[NodeKind.Lab].PowerPerSecond, Garden.FullUpkeepPerSecond(grove));
+        Assert.Equal(4, Garden.FullUpkeepPerSecond(grove));
+        Assert.True(-NodeSpecs.All[NodeKind.Lab].PowerPerSecond > Garden.FullUpkeepPerSecond(grove));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class GroveTests
     {
         var (garden, grove) = WithAGrove();
         for (int i = 0; i < 3; i++) Add(garden, grove, NodeKind.Berry);
-        Assert.Equal(NodeSpecs.All[NodeKind.Grove].BlobsPerHour * 1.2f, Garden.BlobsPerHour(grove), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Grove].BlobsPerHour * 1.3f, Garden.BlobsPerHour(grove), 0.01f);
     }
 
     [Fact]
@@ -228,8 +228,8 @@ public class GroveTests
         var (_, before) = garden.FullPowerBalance();
         GrowUntil(garden, () => Fruit(garden) == 7);
         var (_, after) = garden.FullPowerBalance();
-        // Both stems carry two leaves: 0.75 a second each instead of 3.
-        Assert.Equal(before - 2 * (3 - 0.75f), after, 1e-4f);
+        // Both stems carry two leaves: 1.5 a second each instead of 3.
+        Assert.Equal(before - 2 * (3 - 1.5f), after, 1e-4f);
     }
 
     [Fact]

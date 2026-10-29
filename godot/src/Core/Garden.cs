@@ -76,7 +76,7 @@ public sealed class Garden
     readonly List<((int X, int Y) Key, Cell Cell)> occupied = new();
     readonly List<PlantNode> farReaching = new();
     readonly List<PlantNode> sending = new(); // flowers with a blob ready, this economy step
-    readonly List<(PlantNode From, PlantNode To)> transfers = new(); // clumps of power moving, this economy step
+    readonly List<(PlantNode From, PlantNode To, float Power)> transfers = new(); // clumps of power moving, this economy step
     readonly Random looks = new(); // for what's only shown (when a flash shows), so the garden's own dice match a catch-up
     long ticks;
     int nextId;
@@ -461,13 +461,22 @@ public sealed class Garden
         }
 
         // Every part picks where to send from the fills as they stand, then the clumps move together, so the order
-        // of the parts doesn't matter and a clump goes one link a step (the original's travelled).
+        // of the parts doesn't matter and a clump goes one link a step (the original's travelled). A part feeds its
+        // fruit first, then sends on what's left.
         transfers.Clear();
         foreach (var node in Nodes)
-            if (SendTo(node) is { } to) transfers.Add((node, to));
-        foreach (var (from, to) in transfers)
         {
-            float clump = Clump(from);
+            if (node.Spec.IsFruit) continue;
+            float fed = 0;
+            if (FruitToFeed(node) is { } fruit)
+            {
+                fed = Math.Min(node.Power, FruitClump(node));
+                transfers.Add((node, fruit, fed));
+            }
+            if (SendTo(node, node.Power - fed) is { } to) transfers.Add((node, to, Clump(node)));
+        }
+        foreach (var (from, to, clump) in transfers)
+        {
             from.Power -= clump;
             to.Power += clump;
             if (!ShowBlobs) continue;
@@ -479,11 +488,11 @@ public sealed class Garden
     }
 
     // Where a part sends a clump of power this step, if anywhere (the original's attemptTransferPower): once it's
-    // fuller than SendFill and holds a whole clump, to the neighbour (not fruit) with the lowest fill for its weight
-    // among those less full than itself (fills past full count as full).
-    PlantNode? SendTo(PlantNode node)
+    // fuller than SendFill and has a whole clump to spare, to the neighbour (not fruit) with the lowest fill for its
+    // weight among those less full than itself (fills past full count as full).
+    PlantNode? SendTo(PlantNode node, float spare)
     {
-        if (node.Spec.IsFruit || node.Fill <= Tuning.SendFill || node.Power < Clump(node)) return null;
+        if (node.Fill <= Tuning.SendFill || spare < Clump(node)) return null;
         float fill = Math.Min(1, node.Fill);
         PlantNode? best = null;
         float bestWeighed = float.MaxValue;
@@ -505,6 +514,23 @@ public sealed class Garden
     public static float Clump(PlantNode node) =>
         node.Spec.PowerTransferPerSecond * (float)Tuning.EconomyStepSeconds;
 
+    // Which fruit a part feeds this step, if any (the original's powerFruits): once it's at least FeedFruitFill full,
+    // its emptiest fruit, while that's less full than the part and not yet full. Fruit costs nothing to keep, so it
+    // fills up and stays full: it only draws power while it grows in, or after its part ran low.
+    static PlantNode? FruitToFeed(PlantNode node)
+    {
+        if (node.Fruits.Count == 0 || node.Fill < Tuning.FeedFruitFill || node.Power <= 0) return null;
+        PlantNode? emptiest = null;
+        foreach (var fruit in node.Fruits)
+            if (emptiest == null || fruit.Fill < emptiest.Fill) emptiest = fruit;
+        float fill = Math.Min(1, emptiest!.Fill);
+        return fill < 1 && fill < Math.Min(1, node.Fill) ? emptiest : null;
+    }
+
+    // The power a part feeds a fruit in one step: its fruit rate times the step's length.
+    public static float FruitClump(PlantNode node) =>
+        node.Spec.PowerToFruitPerSecond * (float)Tuning.EconomyStepSeconds;
+
     // How hard a part works (DESIGN.md: "Everything follows its fill"): in proportion to its fill, up to full.
     public static float Output(PlantNode node) => Math.Clamp(node.Fill, 0, 1);
 
@@ -512,24 +538,29 @@ public sealed class Garden
     public static float ProductionPerSecond(PlantNode node) =>
         node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * Output(node);
 
-    // What a part makes per second when full (its fruit adding a little, up to FruitBonusMax).
+    // What a part makes per second when full (its fruit adding a little each: see FruitBonus).
     public static float FullProductionPerSecond(PlantNode node) =>
         Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node);
 
-    // A part's own fruit raise its output a little each, up to FruitBonusMax.
-    static float FruitBonus(PlantNode node) =>
-        1 + Math.Min(Tuning.FruitBonusMax, node.Fruits.Count * Tuning.FruitBonusEach);
+    // A part's own fruit raise its output, each by its FlowerBonus.
+    static float FruitBonus(PlantNode node)
+    {
+        float bonus = 1;
+        foreach (var fruit in node.Fruits) bonus += fruit.Spec.FlowerBonus;
+        return bonus;
+    }
 
     // Power a part costs per second now: its full upkeep times its fill (past full, more).
     public static float UpkeepPerSecond(PlantNode node) => FullUpkeepPerSecond(node) * Math.Max(0, node.Fill);
 
-    // What a part costs per second when full: each leaf on it halves it (LeafUpkeepFactor).
+    // What a part costs per second when full: times 1 plus its fruits' FlowerPowerFactor (each leaf takes off a quarter).
     public static float FullUpkeepPerSecond(PlantNode node)
     {
         float upkeep = Math.Max(0, -node.Spec.PowerPerSecond);
+        float factor = 1;
         foreach (var fruit in node.Fruits)
-            if (fruit.Spec.Kind == NodeKind.Leaf) upkeep *= Tuning.LeafUpkeepFactor;
-        return upkeep;
+            factor += fruit.Spec.FlowerPowerFactor;
+        return upkeep * factor;
     }
 
     // Blobs a flower makes per real hour now: gene blobs from a lab, growth blobs from a grove, in proportion to its
@@ -706,15 +737,12 @@ public sealed class Garden
 
     public float TotalPower() => Nodes.Sum(n => n.Power);
 
-    // A part's fill as shown: fruit shows its parent's.
-    static float LookFill(PlantNode node) => node.Spec.IsFruit ? node.Parent!.Fill : node.Fill;
-
     // Shows every part as it is now, with no easing (after a load or a catch-up, or a dev change to the power).
     public void SettleLooks()
     {
         foreach (var node in Nodes)
         {
-            node.FillLook = LookFill(node);
+            node.FillLook = node.Fill;
             node.FormingLook = node.Growth;
         }
     }
@@ -1033,8 +1061,8 @@ public sealed class Garden
             node.Glow = Math.Max(0, node.Glow - Tuning.GlowFadePerSecond * dt);
 
             // As the original's PlantNodeView.adjustIntensity: a share of the way to the fill each tick, quicker
-            // filling than emptying. Fruit shows its parent's.
-            float fill = LookFill(node);
+            // filling than emptying.
+            float fill = node.Fill;
             node.FillLook += (fill - node.FillLook) * (fill > node.FillLook ? Tuning.FillLookRise : Tuning.FillLookFall);
         }
         foreach (var link in Links)
