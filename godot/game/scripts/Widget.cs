@@ -322,8 +322,8 @@ public partial class Widget : Node
     }
 
     // Each frame a tool is held: once the pointer has moved, its body follows, or its knob or end. Let go, a tap
-    // opens its toolbar, a new one tapped off the bar is set down just under it, and one dragged onto the bar is put
-    // away.
+    // opens its toolbar, a new one tapped off the bar is set down just under it, one dragged onto the bar is put
+    // away, and an empty pot dropped on a part plants it.
     void MoveTool()
     {
         var tool = movingTool!;
@@ -352,6 +352,7 @@ public partial class Widget : Node
             else toolbar.ShowFor(tool);
         }
         else if (shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(movePointer / Dpi)) Garden.Remove(tool);
+        else if (movingHandle == ShapingHandle.Body) Garden.PlantUnder(tool, HoverSlop); // an empty pot dropped on a part plants it
         fromBar = false;
     }
 

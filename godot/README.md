@@ -37,7 +37,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Build mode** (the core's menu, or Ctrl+B with the garden focused) arranges the garden: an opaque disc round the
   plant and a bar of shaping tools (Gravity Pot, Trellis, Gravity Well, as the gene track unlocks them). Drag a tool
   off the bar to place it, drag its body, knob or posts to move and turn it, and drop a part on a pot or trellis to
-  tie it. Each part shows its links used against its most (white 1/N, yellow, red when full), to see where
+  tie it (or an empty pot on a part to plant it). Each part shows its links used against its most (white 1/N, yellow, red when full), to see where
   there's room to bud. Done or Escape ends it. See Shaping the garden in DESIGN.md.
 - The plant floats free, as in the TS game (the radial layout; the core isn't planted).
 - **Drag any part, the core included**: it's pulled to the pointer and the rest follows only through the links, at
