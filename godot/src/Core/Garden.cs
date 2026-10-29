@@ -52,6 +52,9 @@ public sealed class Garden
     public int Unlocks;
     public UnlockStep? NextUnlock => Unlocks < Tuning.UnlockTrack.Length ? Tuning.UnlockTrack[Unlocks] : null;
 
+    // Its lifetime totals, history and journal (see Tracking).
+    public Tracking Tracking { get; private set; } = new();
+
     // Off, blobs still do their work but aren't shown travelling (a catch-up, which draws nothing).
     public bool ShowBlobs = true;
 
@@ -83,6 +86,7 @@ public sealed class Garden
     readonly Random looks = new(); // for what's only shown (when a flash shows), so the garden's own dice match a catch-up
     long ticks;
     int nextId;
+    bool loading; // parts added by FromSave didn't grow just now
 
     public Garden(Layout layout, int? seed = null)
     {
@@ -98,6 +102,7 @@ public sealed class Garden
         core.Age = 10;
         core.Power = core.Store;
         core.FillLook = 1;
+        garden.Tracking.Log(JournalKind.Planted, "A new garden was planted");
         return garden;
     }
 
@@ -224,6 +229,8 @@ public sealed class Garden
         foreach (var n in removed) linkToParent.Remove(n);
         if (Held != null && gone.Contains(Held)) LetGo();
         lastPrune = (removed, removed.Select(n => n.Position - node.Parent.Position).ToList());
+        Tracking.Pruned += removed.Count;
+        Tracking.First("pruned", "First branch pruned");
         UndoSecondsLeft = Tuning.UndoPruneSeconds;
         return removed;
     }
@@ -259,6 +266,7 @@ public sealed class Garden
         if (!CanUndoPrune) return null;
         var (nodes, fromParent) = lastPrune!.Value;
         ForgetPrune();
+        Tracking.Pruned -= nodes.Count; // never cut after all
         var root = nodes[0];
         Cut.RemoveAll(c => c.Nodes[0] == root); // if it's still drifting
         (root.Spec.IsFruit ? root.Parent!.Fruits : root.Parent!.Branches).Add(root);
@@ -329,6 +337,7 @@ public sealed class Garden
         if (!CanPlace(kind)) return null;
         var tool = new ShapingTool(kind, at, kind == ShapingKind.Trellis ? 0 : angle);
         Shaping.Add(tool);
+        Tracking.First($"placed:{kind}", $"First {ToolName(kind)} placed");
         return tool;
     }
 
@@ -550,6 +559,7 @@ public sealed class Garden
         };
         if (parent == null) node.MaxLinks = Capacity.CoreLinks;
         Nodes.Add(node);
+        if (parent != null && !loading) Tracking.Grew(spec, Nodes.Count);
         if (parent != null)
         {
             (spec.IsFruit ? parent.Fruits : parent.Branches).Add(node);
@@ -582,10 +592,15 @@ public sealed class Garden
     int EconomyStep(double seconds)
     {
         float dt = (float)seconds, hours = (float)(seconds / 3600);
+        float stored = 0, production = 0, upkeep = 0; // for the history, as the step starts
         foreach (var node in Nodes)
         {
             if (node.Spec.IsFruit) continue;
-            node.Power = Math.Max(0, node.Power + (ProductionPerSecond(node) - UpkeepPerSecond(node)) * dt);
+            float made = ProductionPerSecond(node), cost = UpkeepPerSecond(node);
+            stored += node.Power;
+            production += made;
+            upkeep += cost;
+            node.Power = Math.Max(0, node.Power + (made - cost) * dt);
             node.Blob += BlobsPerHour(node) * hours;
         }
 
@@ -633,6 +648,8 @@ public sealed class Garden
             link.FlowsToTarget = link.Target == to;
             link.FlashIn = (float)(looks.NextDouble() * seconds);
         }
+        Tracking.Age += seconds;
+        Tracking.History.Record(Tracking.Age, seconds, stored, production, upkeep);
         return grew;
     }
 
@@ -838,7 +855,11 @@ public sealed class Garden
         {
             bool bud = CanBud(node, counts) && (!CanStartFruit(node) || rng.NextDouble() < Tuning.BudChance);
             node.Forming = bud ? Roll(BranchKinds(node, counts)) : node.Spec.Fruit;
-            if (bud) counts = counts.With(node.Forming!.Value);
+            if (bud)
+            {
+                counts = counts.With(node.Forming!.Value);
+                Tracking.WildBuds++;
+            }
             node.Growth = 0;
             node.FormingLook = 0;
         }
@@ -882,12 +903,48 @@ public sealed class Garden
     public void Deliver(double genes)
     {
         Genes += genes;
+        Tracking.History.AddGenes(genes);
         while (NextUnlock is { } next && Genes >= next.Genes)
         {
             Capacity = Capacity.Raise(next);
             Unlocks++;
+            Tracking.Log(JournalKind.Unlock, UnlockText(next, Capacity));
         }
     }
+
+    // An unlock in the Almanac, after DESIGN.md's "Second core link unlocked": what it opens, the biggest first (a core
+    // link, then shaping tools, each named by how many there may be now), then the room it adds for stems and
+    // generators.
+    public static string UnlockText(UnlockStep step, Capacity after)
+    {
+        var opened = new List<string>();
+        void Opened(int raised, int cap, string name)
+        {
+            if (raised > 0) opened.Add(cap > 1 && cap < Ordinals.Length ? $"{Ordinals[cap]} {name}" : name);
+        }
+        Opened(step.CoreLinks, after.CoreLinks, "core link");
+        Opened(step.Wells, after.Wells, ToolName(ShapingKind.Well));
+        Opened(step.Trellises, after.Trellises, ToolName(ShapingKind.Trellis));
+        Opened(step.Pots, after.Pots, ToolName(ShapingKind.Pot));
+        var room = new List<string>();
+        if (step.Stems > 0) room.Add(step.Stems == 1 ? "1 more stem" : $"{step.Stems} more stems");
+        if (step.Generators > 0) room.Add(step.Generators == 1 ? "1 more generator" : $"{step.Generators} more generators");
+        string rooms = room.Count == 0 ? "" : $"room for {string.Join(" and ", room)}";
+        if (opened.Count == 0) return rooms.Length == 0 ? "Unlock reached" : $"Unlocked {rooms}";
+        var text = Capitalised(string.Join(" and ", opened) + " unlocked");
+        return rooms.Length == 0 ? text : $"{text}, with {rooms}";
+    }
+
+    static readonly string[] Ordinals = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"];
+
+    static string Capitalised(string text) => char.ToUpperInvariant(text[0]) + text[1..];
+
+    public static string ToolName(ShapingKind kind) => kind switch
+    {
+        ShapingKind.Pot => "Gravity Pot",
+        ShapingKind.Trellis => "Trellis",
+        _ => "Gravity Well",
+    };
 
     // The whole garden's power per second now: what it makes, and what its parts cost.
     public (float Production, float Upkeep) PowerBalance()
@@ -1330,7 +1387,8 @@ public sealed class Garden
             n.Power, n.Blob, n.Forming, n.Growth)).ToList(),
         Genes, Unlocks,
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
-            Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList());
+            Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
+        Tracking.ToSave());
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -1341,6 +1399,8 @@ public sealed class Garden
             Capacity = save.Capacity,
             Genes = save.Genes,
             Unlocks = save.Unlocks,
+            Tracking = Tracking.FromSave(save.Tracking),
+            loading = true,
         };
         var byId = new Dictionary<int, PlantNode>();
         foreach (var n in save.Nodes)
@@ -1362,6 +1422,7 @@ public sealed class Garden
             foreach (var id in s.Tied)
                 if (byId.TryGetValue(id, out var node)) node.TiedTo = tool;
         }
+        garden.loading = false;
         garden.SettleLooks();
         return garden;
     }
@@ -1408,4 +1469,4 @@ public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, floa
     float Blob = 0, NodeKind? Forming = null, float Growth = 0);
 
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
-    double Genes = 0, int Unlocks = 0, List<ShapingSave>? Shaping = null);
+    double Genes = 0, int Unlocks = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null);

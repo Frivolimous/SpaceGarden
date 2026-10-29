@@ -14,9 +14,10 @@ namespace SpaceGarden;
 // empty (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob
 // sets it off), --build to open in build mode, --shaping to place one of each shaping tool (or --shaping=N at physics
 // tick N, with --screenshot), --pausetest=AT,FOR to act as if hidden for FOR seconds
-// from AT seconds after start (to test the pause), plus Screenshot's options and the widget's (--inspect[=core|garden],
-// --coremenu[=SLOT], --ambient, --corehover: see Widget.DevFlags). --screenshot runs never touch the
-// real save.
+// from AT seconds after start (to test the pause), --awaynote[=HOURS] to catch up that long (8 h) at once and show its
+// note, --export=PATH (debug builds) to write the tracking as CSV and quit (see ExportTracking), plus Screenshot's
+// options and the widget's (--inspect[=core|garden], --coremenu[=SLOT], --almanac, --ambient, --corehover: see
+// Widget.DevFlags). --screenshot runs never touch the real save.
 //
 // While nobody can see the garden (screen locked, display off, a full-screen app on its monitor: see Visibility) it
 // stops: no drawing, no physics, and the widget wakes only a few times a second. Growth isn't lost: on coming back,
@@ -70,14 +71,14 @@ public partial class Main : Node2D
         }
 
         var save = args.ContainsKey("fresh") ? null : SaveFile.Load();
-        int caughtUp = 0;
+        AwayNote? awayNote = null;
         if (save != null)
         {
             Garden = Garden.FromSave(save.Garden with { Layout = layout }, seed);
             unlocksShown = Garden.Unlocks;
             double away = Time.GetUnixTimeFromSystem() - save.LastSeenUnix;
             if (args.TryGetValue("away", out var hours)) away = double.Parse(hours) * 3600;
-            caughtUp = Garden.CatchUp(away * GrowthSpeed);
+            awayNote = CatchUp(away * GrowthSpeed);
         }
         else Garden = Garden.New(layout, seed);
 
@@ -114,12 +115,47 @@ public partial class Main : Node2D
             Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.BlobGenes / 2);
         if (args.TryGetValue("shaping", out var shaping) && shaping == "") PlaceShaping(); // else Screenshot does
         if (args.ContainsKey("build")) widget.SetBuilding(true);
+        // Dev aid: time away now (HOURS, 8 by default), on whatever garden was loaded or planted, to see its note.
+        if (args.TryGetValue("awaynote", out var awayFor))
+            awayNote = CatchUp((awayFor == "" ? 8 : double.Parse(awayFor)) * 3600) ?? awayNote;
 
         ShowGarden();
-        if (caughtUp > 0) Toast(caughtUp == 1 ? "While you were away, a new part grew." : $"While you were away, {caughtUp} new parts grew.");
+        if (awayNote != null) ShowAwayNote(awayNote);
         ShowUnlocks();
 
+        if (args.TryGetValue("export", out var export) && OS.IsDebugBuild())
+        {
+            ExportTracking(export == "" ? null : export);
+            if (!args.ContainsKey("screenshot")) GetTree().Quit();
+        }
         Screenshot.CaptureIfRequested(this);
+    }
+
+    // Catches up time away (growth seconds) and works out what changed, or null if nothing worth a note did.
+    AwayNote? CatchUp(double seconds)
+    {
+        var mark = AwayNote.MarkNow(Garden);
+        Garden.CatchUp(seconds);
+        var note = AwayNote.Since(Garden, mark);
+        return note.Any ? note : null;
+    }
+
+    // Debug aid (the Developer menu, or --export=PATH): the history, totals and journal as three CSV files, PATH and
+    // beside it PATH-totals.csv and PATH-journal.csv (by default stamped with the time in the user folder's exports).
+    public void ExportTracking(string? path)
+    {
+        path ??= $"user://exports/tracking-{DateTime.Now:yyyyMMdd-HHmmss}.csv";
+        string full = path.StartsWith("user://") || path.StartsWith("res://")
+            ? ProjectSettings.GlobalizePath(path) : System.IO.Path.GetFullPath(path);
+        if (!full.EndsWith(".csv")) full += ".csv";
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
+        string Beside(string suffix) => full[..^4] + suffix + ".csv";
+        var tracking = Garden.Tracking;
+        System.IO.File.WriteAllText(full, tracking.HistoryCsv());
+        System.IO.File.WriteAllText(Beside("-totals"), tracking.TotalsCsv(Garden));
+        System.IO.File.WriteAllText(Beside("-journal"), tracking.JournalCsv());
+        GD.Print($"Tracking exported: {full}");
+        Toast($"Exported the history to {full}");
     }
 
     // Sets a new garden's core down at the widget's home spot, with a first stem so it isn't just a seed.
@@ -229,8 +265,9 @@ public partial class Main : Node2D
         }
         else if (reason == null && HiddenReason != null)
         {
-            int grew = Garden.CatchUp((now - hiddenSinceUnix) * GrowthSpeed);
-            if (args.ContainsKey("fpslog")) GD.Print($"SHOWN after {now - hiddenSinceUnix:0.0} s hidden ({HiddenReason}); {grew} parts grew meanwhile");
+            var note = CatchUp((now - hiddenSinceUnix) * GrowthSpeed);
+            if (note != null && note.Seconds >= AwayNoteSeconds) ShowAwayNote(note);
+            if (args.ContainsKey("fpslog")) GD.Print($"SHOWN after {now - hiddenSinceUnix:0.0} s hidden ({HiddenReason}): {string.Join(" ", note?.Lines ?? [])}");
         }
         if (reason != HiddenReason && args.ContainsKey("fpslog") && reason != null) GD.Print($"HIDDEN ({reason})");
         HiddenReason = reason;
@@ -272,6 +309,59 @@ public partial class Main : Node2D
         string list = room.Count == 1 ? room[0] : string.Join(", ", room[..^1]) + " and " + room[^1];
         Toast($"Genes reached the core: room for {list}.", GeneTint);
     }
+
+    // What changed in a catch-up (DESIGN.md, Step 4: While you were away), in a small panel above the plant where the
+    // notes show, for longer than a note (there's more to read). It says what grew, the genes and unlocks (so the
+    // unlock note isn't shown as well) and any dip in power, from the tracking and the journal.
+    void ShowAwayNote(AwayNote note)
+    {
+        unlocksShown = Garden.Unlocks;
+        var layer = new CanvasLayer { Scale = new Vector2(widget.Dpi, widget.Dpi) };
+        var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        var style = Toolbar.PillStyle();
+        style.SetCornerRadiusAll(10);
+        style.ContentMarginLeft = style.ContentMarginRight = 12;
+        style.ContentMarginTop = 6;
+        style.ContentMarginBottom = 8;
+        panel.AddThemeStyleboxOverride("panel", style);
+        var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        column.AddThemeConstantOverride("separation", 1);
+        panel.AddChild(column);
+        column.AddChild(new Label
+        {
+            Text = $"While you were away ({Card.Eta(note.Seconds / GrowthSpeed)})",
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            LabelSettings = new LabelSettings { FontSize = 15, FontColor = GardenView.Rgb(NodeSpecs.All[NodeKind.Core].Rgb).Lightened(0.35f) },
+        });
+        foreach (var line in note.Lines)
+            column.AddChild(new Label
+            {
+                Text = line,
+                AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                CustomMinimumSize = new Vector2(AwayNoteWidth, 0),
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                LabelSettings = new LabelSettings { FontSize = 13, FontColor = new Color(1, 1, 1, 0.9f) },
+            });
+        layer.AddChild(panel);
+        AddChild(layer);
+
+        // Centred above the plant, kept on the screen.
+        var size = panel.GetCombinedMinimumSize();
+        var (min, _) = Garden.Bounds();
+        var above = GetViewport().GetCanvasTransform() * new Vector2(Garden.Core.Position.X, min.Y) / widget.Dpi;
+        var screen = GetViewport().GetVisibleRect().Size / widget.Dpi;
+        panel.Position = new Vector2(above.X - size.X / 2, above.Y - size.Y - 16)
+            .Clamp(new Vector2(8, 8), (screen - size - new Vector2(8, 8)).Max(new Vector2(8, 8)));
+        panel.Size = size;
+        var tween = CreateTween();
+        tween.TweenProperty(panel, "modulate:a", 0.0, 1.5).SetDelay(AwayNoteShowSeconds);
+        tween.TweenCallback(Callable.From(layer.QueueFree));
+    }
+
+    // A hidden spell shorter than this (growth seconds) gets no note: a glance away from the screen isn't time away.
+    const double AwayNoteSeconds = 5 * 60;
+    const double AwayNoteShowSeconds = 15;
+    const float AwayNoteWidth = 400; // its lines wrap at this
 
     // The genes' purple, lightened to read over any desktop.
     static readonly Color GeneTint = new(0.82f, 0.74f, 1f);

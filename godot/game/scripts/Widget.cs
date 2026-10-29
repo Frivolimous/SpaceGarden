@@ -15,7 +15,8 @@ namespace SpaceGarden;
 // toolbar and shows its card. The selection stays (ringed, its card open) after the toolbar closes, until the part is
 // tapped again, another is tapped, it's pruned, a click lands off the plant, or Escape. Tapping the core also opens
 // its menu (CoreMenu) under it, with its toolbar (its buds) above it: Info and Build switch the garden's card (shown
-// above the part's while tending) and build mode on and off, and the rest pick Ambient, Minimised or the settings.
+// above the part's while tending) and build mode on and off, the Almanac opens in the cards' place (Almanac), and the
+// rest pick Ambient, Minimised or the settings.
 // Dragging a part pulls it to the pointer by its weight and the links drag the rest after it; letting go keeps the
 // momentum. Right-click opens the settings. It drops to a low frame rate when nothing's happening.
 //
@@ -54,7 +55,7 @@ public partial class Widget : Node
 
     // The settings (right-click, the core menu's Settings, the tray icon's right-click), and in debug builds their
     // Developer submenu.
-    enum MenuId { AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows, Size0 = 100, Idle0 = 200 }
+    enum MenuId { AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows, Export, Size0 = 100, Idle0 = 200 }
 
     public int IdleFps
     {
@@ -84,6 +85,7 @@ public partial class Widget : Node
     readonly Card partCard = new(), gardenCard = new();
     readonly VBoxContainer cards = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
+    readonly Almanac almanac = new(); // in the cards' spot, in their place while it's open (see SetAlmanac)
     readonly UndoPill undo = new();
     readonly CoreMenu coreMenu = new();
     readonly StatusIndicator tray = new();
@@ -158,6 +160,7 @@ public partial class Widget : Node
         toolbarLayer.AddChild(undo);
         undo.Pressed += UndoPrune;
         cards.AddThemeConstantOverride("separation", 6);
+        cards.AddChild(almanac);
         cards.AddChild(gardenCard);
         cards.AddChild(partCard);
         toolbarLayer.AddChild(cards);
@@ -194,6 +197,8 @@ public partial class Widget : Node
             devMenu.AddRadioCheckItem("Very fast (3600x)", (int)MenuId.Speed3600);
             devMenu.AddSeparator("Physics");
             devMenu.AddCheckItem("Fruit borrows its parent's push (cheaper)", (int)MenuId.FruitBorrows);
+            devMenu.AddSeparator("Tracking");
+            devMenu.AddItem("Export history and totals (CSV)", (int)MenuId.Export);
             devMenu.IdPressed += OnMenu;
             menu.AddSubmenuNodeItem("Developer", devMenu);
         }
@@ -490,7 +495,8 @@ public partial class Widget : Node
         bool overUndo = undo.Catches(pointer / Dpi);
         bool overMenu = coreMenu.Over(pointer / Dpi);
         bool overBar = shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(pointer / Dpi);
-        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu;
+        bool overAlmanac = almanac.Catches(pointer / Dpi);
+        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac;
         var handle = free ? HandleAt(world) : null;
         var under = free && handle == null ? Garden.NodeAt(world, HoverSlop) : null;
         var underTool = handle ?? (Building && free && under == null ? Garden.ShapingAt(world, HoverSlop) : null);
@@ -507,7 +513,9 @@ public partial class Widget : Node
         PlaceUndo(delta);
         partCard.Update(Garden, main.GrowthSpeed, delta);
         gardenCard.Update(Garden, main.GrowthSpeed, delta);
+        almanac.Update(Garden, delta);
         coreMenu.SetActive(Tool.Info, gardenInfo);
+        coreMenu.SetActive(Tool.Almanac, almanac.IsOpen);
         coreMenu.SetActive(Tool.Build, Building);
         PlaceCard();
         if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * plantScale, viewport);
@@ -543,7 +551,7 @@ public partial class Widget : Node
             : underTool?.Handle ?? ShapingHandle.Body;
 
         bool catchMouse = pressed || overToolbar || overUndo || overMenu || under != null || overBar || onBackdrop
-            || underTool != null || movingTool != null;
+            || underTool != null || movingTool != null || overAlmanac;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || Garden.Held != null
@@ -586,7 +594,7 @@ public partial class Widget : Node
     // stay put while open, their top corner on that side fixed (only pushed back onto the screen past an edge).
     void PlaceCard()
     {
-        if (!partCard.Visible && !gardenCard.Visible)
+        if (!partCard.Visible && !gardenCard.Visible && !almanac.Visible)
         {
             cardAnchor = null;
             return;
@@ -654,7 +662,7 @@ public partial class Widget : Node
 
     // Dev aids for --screenshot runs, once the garden is set up: --inspect (a lab's card, or the core's if it has
     // none), --inspect=core or --inspect=garden; --coremenu opens the core's menu (--coremenu=settings with that
-    // slot's name showing); --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
+    // slot's name showing); --almanac opens the Almanac; --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
     void DevFlags()
     {
         devFlagsDone = true;
@@ -675,6 +683,7 @@ public partial class Widget : Node
             case "core": Select(Garden.Core); break;
             case "" or "lab": Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core); break;
         }
+        if (Value("almanac") != null) SetAlmanac(true);
         if (Value("ambient") != null)
         {
             SetMode(DisplayMode.Ambient);
@@ -705,7 +714,7 @@ public partial class Widget : Node
         {
             if (coreMenu.IsOpen) CloseCoreMenu();
             else if (Building) SetBuilding(false);
-            else if (partCard.IsOpen || gardenCard.IsOpen) Select(null);
+            else if (partCard.IsOpen || gardenCard.IsOpen || almanac.IsOpen) Select(null);
             else return;
             GetViewport().SetInputAsHandled();
             return;
@@ -841,6 +850,9 @@ public partial class Widget : Node
                 SetBuilding(!Building);
                 coreMenu.SetActive(Tool.Build, Building);
                 return;
+            case Tool.Almanac:
+                SetAlmanac(!almanac.IsOpen);
+                return;
         }
         CloseCoreMenu();
         switch (tool)
@@ -852,19 +864,40 @@ public partial class Widget : Node
     }
 
     // The part's card, or with none, no part card (and the garden's goes with it).
+    // A new selection closes the Almanac, as it closes a card.
     void Select(PlantNode? node)
     {
+        almanac.Close();
+        coreMenu.SetActive(Tool.Almanac, false);
         if (node != null) partCard.ShowPart(node);
         else partCard.Close();
         selected = node;
         ShowGardenCard();
     }
 
+    // The Almanac takes the cards' spot while it's open, and they come back as it closes (the selection is kept).
+    void SetAlmanac(bool on)
+    {
+        coreMenu.SetActive(Tool.Almanac, on);
+        if (!on)
+        {
+            almanac.Close();
+            if (selected != null) partCard.ShowPart(selected);
+            ShowGardenCard();
+            return;
+        }
+        partCard.Close();
+        gardenCard.Close();
+        almanac.Open();
+    }
+
     // With Info on, the garden's card shows above the part's while the player is tending: a part selected, or the
-    // core's menu open. A click off the plant puts it away; the next tap on it brings it back, until Info is off.
+    // core's menu open. A click off the plant puts it away; the next tap on it brings it back, until Info is off. Not
+    // while the Almanac is open in their spot.
     void ShowGardenCard()
     {
-        if (gardenInfo && (selected != null || coreMenu.IsOpen)) gardenCard.ShowGarden();
+        if (almanac.IsOpen) gardenCard.Close();
+        else if (gardenInfo && (selected != null || coreMenu.IsOpen)) gardenCard.ShowGarden();
         else gardenCard.Close();
     }
 
@@ -915,6 +948,7 @@ public partial class Widget : Node
                 break;
             case MenuId.Quit: main.SaveAndQuit(); break;
             case MenuId.FruitBorrows: fruitBorrowsPush = !fruitBorrowsPush; break;
+            case MenuId.Export: main.ExportTracking(null); break;
             case >= MenuId.Idle0: IdleFps = IdleRates[(int)id - (int)MenuId.Idle0]; break;
             case >= MenuId.Size0: PlantScale = Sizes[(int)id - (int)MenuId.Size0]; break;
         }

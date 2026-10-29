@@ -26,6 +26,9 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Tap the core** for its menu, a half ring of buttons under it (names show under the pointer). **Info** and
   **Build** are switches, lit while on: Info shows the garden's card (power, what it makes and drains, genes against
   the next unlock and its ETA, the caps) above the part's whenever you tap the plant, and Build is build mode.
+  **Almanac** (lit while open) shows the garden's journal of moments in the cards' spot, newest first with the
+  garden's age: its planting, each kind's first part, every unlock, part counts reached, the first prune and tools.
+  It closes as the cards do (a click off the plant, Escape, a tap on a part, or the slot again); the wheel scrolls it.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
@@ -49,13 +52,14 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   the idle CPU cost scales with it), New garden (asks first) and Quit. Debug builds (run from the project) add a
   **Developer** submenu: always on top, growth speed (1x / 60x / 3600x), and (an experiment, on by default) "Fruit
   borrows its parent's push", the cheaper fruit physics described under Performance, switchable live to compare the
-  feel.
+  feel, and **Export history and totals (CSV)** (see Tracking).
 - In Active mode, clicks anywhere off the plant, its toolbar, the core's menu and the Undo pill go straight through
   to the desktop. On Windows this is done by toggling the window's click-through style each frame
   (`ClickThrough.cs`), not Godot's passthrough region: on Windows that region also clips drawing, which made the
   window flash and would cut off the toolbar.
 - It saves every minute and on quit (`%APPDATA%\Space Garden Prototype\garden.json`). Reopening catches up the
-  time away (capped at 72 h) and says what grew.
+  time away (capped at 72 h) and a note above the plant says what changed: the parts grown, the genes that reached
+  the core, unlocks and other moments, and any dip in power (also after 5 minutes or more hidden or minimised).
 - While nobody can see it (screen locked, display off, or a full-screen app such as a game or video on its
   monitor) it pauses: no drawing or physics, waking 4 times a second to check (about 1.5% of a core). When it's
   visible again the hidden time's growth is caught up at once, like time away. Windows only (`Visibility.cs`).
@@ -78,9 +82,26 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   part sends a clump of power to its emptiest neighbour, so far tips run low first and the fills never settle. Nothing
   wilts and nothing is destroyed; an overloaded garden just runs lower. Wild growth stays within the caps (4 stems,
   1 generator, 1 core link at the start), raised as genes reach the core along the unlock track. Catch-up runs the
-  same fixed economy steps. Saves carry a version (now 7); an older one is set aside (`garden.v6.json` and so on)
+  same fixed economy steps. Saves carry a version (now 8); an older one is set aside (`garden.v7.json` and so on)
   and a new garden starts.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
+
+## Tracking
+`src/Core/Tracking.cs` (DESIGN.md, Step 4). Saved with the garden (version 8).
+- **Lifetime totals:** the garden's age, parts grown by kind, parts pruned, wild buds, the most parts at once.
+  Genes earned and unlocks reached are the garden's own `Genes` and `Unlocks`.
+- **History:** four series, sampled as the economy runs: stored power, Gen and Drain (averaged, per growth second)
+  and the genes that reached the core. There is a sample a minute for the last day, an hour for the last month and
+  a day beyond. Old samples roll up a whole hour or day at a time.
+- **Times are the garden's age:** growth seconds lived, so a catch-up (capped at 72 h) and the dev speeds count as
+  they grow.
+- **The journal** feeds the Almanac and the away note.
+- **Export** (debug builds; Settings > Developer, or `--export=PATH`): three CSV files for a spreadsheet.
+  - `PATH` holds the history: tier, start in hours, seconds, power, gen_per_s, drain_per_s, genes.
+  - `PATH-totals.csv` and `PATH-journal.csv` sit beside it.
+  - From the menu they go to `%APPDATA%\Space Garden Prototype\exports\tracking-<time>.csv`.
+  - To export the real garden without opening it for long, run `--export=C:\somewhere\garden.csv`. This catches up
+    and saves, as a launch does.
 
 ## Dev options
 `--path game -- [options]`: `--grow=N`, `--upright` (the shelved planted layout: core fixed at the bottom, a pull
@@ -91,7 +112,10 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 `--prune=N` and `--undo=N` prune the biggest branch and undo it at tick N), `--shaping[=N]` (places one of each
 shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card
 open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
-menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--ambient` (starts in Ambient) and
+menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--almanac` (the Almanac open),
+`--awaynote[=HOURS]` (catch up that long at once, 8 h by default, on the garden loaded or planted, and show the away
+note; with `--grove` a new garden has something to grow), `--export=PATH` (debug builds: write the tracking CSVs, see
+Tracking, then quit unless screenshotting), `--ambient` (starts in Ambient) and
 `--corehover` (as if the pointer were on the core there),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of
@@ -131,5 +155,5 @@ Tried on the way: fruit only meeting its own family (no borrowed push) was as ch
 overlaps); adding a push from nearby stems to that was tidy but slower than the grid (0.24 ms).
 
 ## Not in the prototype
-No crawlers, skills, seedlings, rares, stat tracking or Almanac, or sound; no launch-on-startup; it still shows in
+No crawlers, skills, seedlings, rares, player-facing graphs, or sound; no launch-on-startup; it still shows in
 the taskbar.

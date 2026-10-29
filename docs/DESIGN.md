@@ -382,7 +382,7 @@ Gen and Drain are what the garden makes and costs now; Gen's value is coloured b
 - **Genes**: purple shading to white as the total nears the next unlock.
 - **Stems, Generators, Core links**: green with all the room left, shading to white as it fills (white when full).
 
-**The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient** (its label names the hotkey, Ctrl+Alt+G), **Minimise** and **Settings**, which close it. The Almanac (step 4) and Research (step 5) join later: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
+**The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card), **Almanac** (step 4: the journal, in the cards' spot) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient** (its label names the hotkey, Ctrl+Alt+G), **Minimise** and **Settings**, which close it. Research (step 5) joins later: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
 
 **Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little and shows the selection ring while the pointer is on it, and one tap switches to Active and opens its menu.
 
@@ -432,22 +432,38 @@ Open: where events and seasons, and identity features fall in the plan.
 - **Lifetime totals:** garden age, genes earned, parts grown, parts pruned, wild buds, unlocks reached.
 - **Time series, four metrics only:** stored power, Gen, Drain, and genes reaching the core.
 - **History is tiered:** per minute for the last day, per hour for the last month, per day beyond that. The totals and history go in the save, which bumps it to **version 8**.
+- **Settled in the build (Oct 29):**
+  - All times are the garden's **age**: growth time it has lived, so a catch-up's 72 h cap and the dev growth speeds apply to it as to everything else.
+  - Each sample holds stored power (the parts' own, fruit aside, as the garden card shows it), Gen and Drain averaged over its stretch, and the genes that reached the core in it.
+  - Old samples roll up a whole hour (or day) at a time, so the minute tier holds the last day plus up to an hour.
+  - The history is fed from sums the economy step already works out, so a catch-up fills it at almost no cost.
+  - Wild buds count as growth blobs start them. An undone prune doesn't count as pruned.
 
 **Tuning first.**
 - A debug-only export writes the time series and totals to a file, CSV or JSON.
+  - Built as three CSV files: the history (one row per sample, its tier, its start in hours), the totals, and the journal. It runs from Settings > Developer or `--export=PATH`.
 - Player-facing graphs wait until play shows which numbers matter.
 
 **The Almanac is a journal of moments.**
 - Milestones are logged automatically, such as "First grove emerged" or "Second core link unlocked".
+  - Built: the planting, each kind's first part ("First grove emerged", "First leaf grew"), every unlock, and the first prune and first of each shaping tool placed.
+  - Also the first time the garden reaches 25, 50, 100, 200, 300, 400 and 500 parts.
+  - An unlock is named by what it opens, biggest first, then the room it adds: "Second core link and second Gravity Pot unlocked, with room for 1 more stem and 1 more generator", or "Unlocked room for 3 more stems".
 - A catalogue of node kinds waits for step 5's rare nodes.
 - There is no big stats page.
 - It opens as a larger panel from the Almanac slot in the core's menu. The panel sits in the cards' fixed spot and closes the way they do.
+  - Built: the slot sits between Info and Build and is lit while the Almanac is open. The cards give way to it and come back when it closes.
+  - The newest moments are at the top, each with the garden's age. Unlocks are in the genes' purple. It scrolls under the wheel.
 
 **No advanced stats on the cards.** They stay as trimmed in 3d.
 
 **While you were away.**
 - On return from a catch-up, a short note says what changed: new growth, unlocks reached, power dips.
 - It draws on the tracking and journal data.
+- **Built:** it replaces the old "says what grew" message, as a small panel above the plant for 15 s.
+  - It lists the parts grown by kind, the genes that reached the core, and up to 3 of the journal's moments (unlocks first), then how many more are in the Almanac.
+  - A dip is stored power falling below half of what the garden held when the player left. (Its store grows as it does, so a share of the store would flag every growing garden.)
+  - It shows on launch, and on un-hiding after at least 5 minutes away. It covers that catch-up's unlocks, so their own note doesn't show as well.
 
 **Power visuals at the top of the range** are a separate task in this step: parts should still visibly grow and shrink now that stores are larger.
 
