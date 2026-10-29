@@ -338,7 +338,7 @@ Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid an
 
 **Cards, in a fixed spot.** Tapping a part selects it (ringed), opens its toolbar and shows its card. **Info** in the core's menu is a switch (lit while on): while it's on, the garden's card shows above the part's whenever the player is tending (a part selected, or the core's menu open). A click off the plant puts both away; the next tap on the plant brings the garden's back, until Info is switched off. The cards are set down as they open beside the plant, level with the core (to its right, or its left if there's more room there), and stay there while open, their top corner fixed, so the layout never jumps (switching Info on pushes the part's card down below the garden's). Tapping the selected part again closes its card and toolbar together (the core: its menu too). The cards also close when a click lands off the plant, on Escape, or when the part is pruned.
 
-**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **at full power**: steady numbers (the live ones rock with the fills) and the ones the overload is judged by.
+**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (a full core or generator makes nothing, an empty part costs nothing). The overload (and the red dot) is still judged at full.
 
 | Kind | Lines |
 | --- | --- |
@@ -368,7 +368,7 @@ Core links: 2 / 2
 Groves: 4, Labs: 9
 ```
 
-Gen and Drain are what the garden makes and costs at full; Gen's value is coloured by how it compares with Drain (see below). Genes is the total so far against the next unlock's threshold. The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
+Gen and Drain are what the garden makes and costs now; Gen's value is coloured by how it compares with Drain (see below). Genes is the total so far against the next unlock's threshold. The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
 
 **Colour coding** (Jeremy, Oct 29): only the value, or a fraction's numerator, is tinted; labels and denominators stay white.
 - **Power** (a part's, and the garden's total): white when full, shading to yellow above full (all yellow at 125%) and to red below it (all red at 50% and under).

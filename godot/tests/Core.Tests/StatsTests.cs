@@ -167,9 +167,11 @@ public class StatsTests
         garden.Core.Power = 300;
         var core = NodeStats.Of(garden.Core);
         Assert.Equal((300f, 800f), (core.Power, core.Store));
-        Assert.Equal(24, core.Makes, 4); // at full, steady whatever its fill
+        Assert.Equal(24 * 300f / 800, core.Makes, 4); // in proportion to its fill
         Assert.Equal(28.8f, core.Sends, 4);
         Assert.Equal(0, core.Upkeep);
+        garden.Core.Power = 800;
+        Assert.Equal(0, NodeStats.Of(garden.Core).Makes); // none once full
         Assert.Equal((1, 2), (core.Links, core.MaxLinks)); // against the garden's core links
         Assert.Null(core.Forming);
     }
@@ -180,7 +182,11 @@ public class StatsTests
         var garden = NewGarden(new Capacity(4, 1, 1));
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         Add(garden, stem, NodeKind.Stem);
+        stem.Power = stem.Store; // full: upkeep follows the fill
         Assert.Equal(3, NodeStats.Of(stem).Upkeep, 4);
+        stem.Power = stem.Store / 2;
+        Assert.Equal(1.5f, NodeStats.Of(stem).Upkeep, 4);
+        stem.Power = stem.Store;
         Add(garden, stem, NodeKind.Leaf);
         var card = NodeStats.Of(stem);
         Assert.Equal(2.25f, card.Upkeep, 4);
@@ -195,13 +201,15 @@ public class StatsTests
         var stem = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
         var lab = Add(garden, stem, NodeKind.Lab);
         var grove = Add(garden, stem, NodeKind.Grove);
-        foreach (var n in garden.Nodes) n.Power = 0; // empty: the card still says what they make when full
+        foreach (var n in garden.Nodes) n.Power = n.Store; // full
 
         var labCard = NodeStats.Of(lab);
         Assert.Equal(720, labCard.GenesPerHour, 3); // a gene a blob, every 5 s, before any is lost on the way
         Assert.Equal(0, labCard.GrowthBlobsPerHour);
         Assert.Equal(6, labCard.Upkeep, 4);
         Assert.True(GardenStats.GenesPerHourFrom(garden, lab) < labCard.GenesPerHour); // what reaches the core
+        lab.Power = lab.Store / 2;
+        Assert.Equal(360, NodeStats.Of(lab).GenesPerHour, 3); // half full, half as many
 
         Assert.Equal(1200, NodeStats.Of(grove).GrowthBlobsPerHour, 3);
         Add(garden, grove, NodeKind.Berry);

@@ -111,9 +111,9 @@ public partial class Card : PanelContainer
         heading.LabelSettings.FontColor = GardenTint.Lightened(0.35f);
         Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0}", PowerInk(stats.PowerHeld, stats.PowerStore)),
             ($" / {stats.PowerStore:0}", Ink));
-        // At full, as the overload is judged: steady, where the live rates rock with the fills.
-        Line(ref used, ("Gen: ", Ink), ($"{stats.FullProduction * speed:0}/s", GenInk(stats.FullProduction, stats.FullUpkeep)),
-            ($", Drain: {stats.FullUpkeep * speed:0}/s", Ink));
+        // Now (they follow the fills). Gen's colour weighs what the garden makes against what it costs.
+        Line(ref used, ("Gen: ", Ink), ($"{stats.Production * speed:0}/s", GenInk(stats.Production, stats.Upkeep)),
+            ($", Drain: {stats.Upkeep * speed:0}/s", Ink));
         if (stats.NextUnlock is { } next)
         {
             Line(ref used, ("Genes: ", Ink),

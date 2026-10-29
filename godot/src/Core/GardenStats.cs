@@ -108,8 +108,8 @@ public sealed record GardenStats(
 // display): an overloaded garden for now; waiting evolutions and research join later.
 public enum Attention { Overloaded }
 
-// What a part's card shows (DESIGN.md, Information display): its power against its store, and its rates when full
-// (steady numbers, where the rates now rock with the fills), per growth second or hour. Makes, Sends and Upkeep are
+// What a part's card shows (DESIGN.md, Information display): its power against its store, and its rates now (they
+// follow its fill), per growth second or hour; Sends is how fast it can send power on. Makes, Sends and Upkeep are
 // power a second; GrowthBlobsPerHour is a grove's growth blobs, GenesPerHour the genes a lab's blobs carry as they
 // leave (production, not what reaches the core: see GardenStats.GeneReach). Links counts the parent's, against
 // MaxLinks (the core's is Capacity.CoreLinks). Forming is the fruit or bud forming in it, if any, and how far along
@@ -121,13 +121,13 @@ public sealed record NodeStats(
     public static NodeStats Of(PlantNode node)
     {
         var spec = node.Spec;
-        float blobs = Garden.FullBlobsPerHour(node);
+        float blobs = Garden.BlobsPerHour(node);
         float progress = node.Forming is { } kind
             ? Math.Clamp(node.Growth / (NodeSpecs.All[kind].IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth), 0, 1)
             : 0;
         return new NodeStats(node.Power, node.Store,
-            Garden.FullProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
-            Garden.FullUpkeepPerSecond(node),
+            Garden.ProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
+            Garden.UpkeepPerSecond(node),
             spec.Kind == NodeKind.Grove ? blobs : 0, spec.Kind == NodeKind.Lab ? blobs * Tuning.BlobGenes : 0,
             node.Links, node.MaxLinks, node.Forming, progress);
     }
