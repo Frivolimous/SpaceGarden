@@ -463,6 +463,7 @@ public partial class GardenView : Node2D
                 // A glint: a slim four-pointed sparkle that flares and goes, turning a little.
                 float flare = Mathf.Sin(Mathf.Pi * t);
                 float reach = node.Spec.Radius * 1.8f * flare;
+                if (reach < 0.5f) continue; // too small to see, and a polygon that small can't be drawn
                 colour = colour.Lightened(0.5f);
                 colour.A = flare;
                 float turn = -Mathf.Pi / 2 + t * 0.5f;
