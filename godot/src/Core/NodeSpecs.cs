@@ -24,11 +24,12 @@ public sealed record NodeSpec(NodeKind Kind)
 
     // Power (DESIGN.md, Economy), as the original's powerMax, powerGen, powerWeight and powerClump: how much it holds;
     // what it makes (above 0) or costs (below 0) a second when full; how much emptier than it is it counts as when
-    // its neighbours choose where to send power; and how much it sends in one transfer. Fruit holds none.
+    // its neighbours choose where to send power; and how fast it can send power on (a second: each economy step it
+    // sends that times the step's length, see Garden.Clump). Fruit holds none.
     public float PowerStore { get; init; }
     public float PowerPerSecond { get; init; }
     public float PowerWeight { get; init; } = 1;
-    public float PowerClump { get; init; }
+    public float PowerTransferPerSecond { get; init; }
 
     // Blobs it makes an hour when full: growth blobs from a grove, gene blobs from a lab.
     public float BlobsPerHour { get; init; }
@@ -45,8 +46,8 @@ public static class NodeBase
     public const float StemDrain = -0.05f * 60;
     public const float CoreGen = 0.4f * 60;
     public const float SmallGen = 0.2f * 60;
-    public const float PowerClump = 10;
-    public const float PowerClumpSub = 5;
+    public const float PowerTransfer = 10 * 60 / 20f;   // powerClump 10 every powerDelay 20 ticks: 30 a second
+    public const float PowerTransferSub = 5 * 60 / 20f; // powerClumpSub: 15 a second
 }
 
 // Ported from the TS game's data/NodeData.ts and data/Colors.ts (radius, mass, force, links, shape, colour) and its
@@ -62,7 +63,7 @@ public static class NodeSpecs
             Name = "Core", Description = "The heart: makes the most power, and takes in genes.",
             Radius = 30, Mass = 30, Force = 30, MaxLinks = Tuning.StartCoreLinks, Shape = Shape.Circle, Rgb = 0xE5E570,
             PowerStore = NodeBase.PowerStore * 3, PowerPerSecond = NodeBase.CoreGen, PowerWeight = 1.5f,
-            PowerClump = NodeBase.PowerClump * 1.5f,
+            PowerTransferPerSecond = NodeBase.PowerTransfer * 1.5f,
         },
         [NodeKind.Stem] = new(NodeKind.Stem)
         {
@@ -70,14 +71,15 @@ public static class NodeSpecs
             Radius = 10, Mass = 1, Force = 1, MaxLinks = 3, Shape = Shape.Circle, Rgb = 0x07E000,
             Fruit = NodeKind.Leaf, MaxFruits = 2,
             PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.StemDrain, PowerWeight = 1.1f,
-            PowerClump = NodeBase.PowerClump,
+            PowerTransferPerSecond = NodeBase.PowerTransfer,
         },
         [NodeKind.Generator] = new(NodeKind.Generator)
         {
             Name = "Generator", Description = "Makes power for its branch, at half the core's rate.",
             Radius = 15, Mass = 3, Force = 3, MaxLinks = 1, Shape = Shape.Pentagon, Rgb = 0xE5E570,
             Fruit = NodeKind.Burr, MaxFruits = 3,
-            PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.SmallGen, PowerClump = NodeBase.PowerClump,
+            PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.SmallGen,
+            PowerTransferPerSecond = NodeBase.PowerTransfer,
         },
         [NodeKind.Lab] = new(NodeKind.Lab)
         {
@@ -85,7 +87,7 @@ public static class NodeSpecs
             Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Hexagon, Rgb = 0x9370E0,
             Fruit = NodeKind.Research, MaxFruits = 3,
             PowerStore = NodeBase.PowerStore * 2, PowerPerSecond = NodeBase.PowerDrain,
-            PowerClump = NodeBase.PowerClumpSub,
+            PowerTransferPerSecond = NodeBase.PowerTransferSub,
             BlobsPerHour = 720, // one every 5 s
         },
         [NodeKind.Grove] = new(NodeKind.Grove)
@@ -93,7 +95,8 @@ public static class NodeSpecs
             Name = "Grove", Description = "Sends growth blobs that grow fruit and new wild parts.",
             Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Square, Rgb = 0xE07000,
             Fruit = NodeKind.Berry, MaxFruits = 3,
-            PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain, PowerClump = NodeBase.PowerClumpSub,
+            PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain,
+            PowerTransferPerSecond = NodeBase.PowerTransferSub,
             BlobsPerHour = 1200, // one every 3 s
         },
         [NodeKind.Leaf] = new(NodeKind.Leaf)

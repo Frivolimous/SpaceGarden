@@ -52,6 +52,9 @@ public class EconomyTests
         Assert.Equal(6, Garden.FullUpkeepPerSecond(lab), Tolerance);
         Assert.Equal(6, Garden.FullUpkeepPerSecond(grove), Tolerance);
         Assert.Equal((300f, 100f, 200f), (garden.Core.Store, stem.Store, lab.Store));
+        // What each can send on a second (in a clump each economy step).
+        Assert.Equal((45f, 30f, 30f, 15f, 15f), (garden.Core.Spec.PowerTransferPerSecond, stem.Spec.PowerTransferPerSecond,
+            generator.Spec.PowerTransferPerSecond, lab.Spec.PowerTransferPerSecond, grove.Spec.PowerTransferPerSecond));
         var (production, upkeep) = garden.FullPowerBalance();
         Assert.Equal(36, production, Tolerance);
         Assert.Equal(18, upkeep, Tolerance);
@@ -135,8 +138,9 @@ public class EconomyTests
     [Fact]
     public void PowerGoesOutInClumpsToTheEmptiestNeighbour()
     {
-        // core - trunk, the trunk forking into an empty-ish stem and a lab: the core sends the trunk a clump of 15,
-        // and the trunk sends 10 to the stem, which counts as emptier for its weight, not to the lab.
+        // core - trunk, the trunk forking into an empty-ish stem and a lab: the core sends the trunk its clump (45 a
+        // second's worth), and the trunk sends its own (30 a second's) to the stem, which counts as emptier for its
+        // weight, not to the lab.
         var garden = NewGarden(new Capacity(2, 0, 1));
         garden.WildGrowth = false;
         var trunk = Add(garden, garden.Core, NodeKind.Stem);
@@ -151,9 +155,10 @@ public class EconomyTests
         garden.Grow(Tuning.EconomyStepSeconds);
         float Moved(PlantNode n) =>
             n.Power - before[n] - (production[n] - upkeep[n]) * (float)Tuning.EconomyStepSeconds;
-        Assert.Equal(-15, Moved(garden.Core), 1e-3f);
-        Assert.Equal(15 - 10, Moved(trunk), 1e-3f);
-        Assert.Equal(10, Moved(stem), 1e-3f);
+        float dt = (float)Tuning.EconomyStepSeconds;
+        Assert.Equal(-45 * dt, Moved(garden.Core), 1e-3f);
+        Assert.Equal((45 - 30) * dt, Moved(trunk), 1e-3f);
+        Assert.Equal(30 * dt, Moved(stem), 1e-3f);
         Assert.Equal(0, Moved(lab), 1e-3f);
     }
 
@@ -276,7 +281,7 @@ public class EconomyTests
         Assert.All(parts, n => Assert.Contains(n, garden.Nodes));
         Assert.All(garden.Nodes, n => Assert.True(n.Power >= 0));
         // The core only sends while fuller than SendFill, so it never runs dry.
-        Assert.True(garden.Core.Fill > Tuning.SendFill - garden.Core.Spec.PowerClump / garden.Core.Store);
+        Assert.True(garden.Core.Fill > Tuning.SendFill - Garden.Clump(garden.Core) / garden.Core.Store);
         var fills = AverageFills(garden);
         Assert.True(fills.Values.Average() < 0.75f, $"{fills.Values.Average()}");
     }

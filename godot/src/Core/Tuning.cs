@@ -84,7 +84,7 @@ public static class Tuning
     // so the steps don't drift with the chunks).
     public const double EconomyStepSeconds = 0.3125;
 
-    // Each kind's power (store, rate, weight, clump) is in its NodeSpec (NodeSpecs.All), as the original's Nodes
+    // Each kind's power (store, rate, weight, transfer rate) is in its NodeSpec (NodeSpecs.All), as the original's Nodes
     // config. Making and upkeep both follow the part's fill: a source makes its rate times its fill (none past full),
     // a drain costs its rate times its fill, so nothing ever quite empties. A new part starts empty. Each leaf on a
     // part multiplies its upkeep by LeafUpkeepFactor.

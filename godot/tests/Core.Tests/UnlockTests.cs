@@ -239,10 +239,11 @@ public class UnlockTests
         // unlocks the lab earns fill with wild stems.
         var garden = Planted();
         var stem = garden.Nodes[1];
-        Add(garden, stem, NodeKind.Grove);
-        Add(garden, Add(garden, stem, NodeKind.Stem), NodeKind.Lab); // leaving the second stem a free link
+        var grove = Add(garden, stem, NodeKind.Grove);
+        var lab = Add(garden, Add(garden, stem, NodeKind.Stem), NodeKind.Lab); // leaving the second stem a free link
         garden.Grow(Day);
-        while (garden.Nodes.FirstOrDefault(n => n.Depth > 3 && n.Spec.Kind is NodeKind.Grove or NodeKind.Generator) is { } wild)
+        while (garden.Nodes.FirstOrDefault(n => n != grove && n != lab
+            && n.Spec.Kind is NodeKind.Grove or NodeKind.Lab or NodeKind.Generator) is { } wild)
         {
             garden.Prune(wild);
             garden.ForgetPrune();

@@ -87,7 +87,7 @@ There is no core trickle of growth: groves are the only source, and a new garden
 
 Draft rates, to tune in play, at real speed: a fully powered grove sends a growth blob about every 3 s and a lab a gene blob about every 5 s. A gene blob carries one whole gene, so the player can see and count them; the 0.1 per blob is growth blobs only. At these rates wild growth fills the caps within minutes of an unlock, so the unlock track (genes) sets the garden's pace.
 
-**Local power flow.** Each node stores its own power, which moves along links in clumps, as in the original (`PlantNodePower.attemptTransferPower`); there is no global pool. About three times a second, each node fuller than a quarter sends a clump (the core 15, stems and generators 10, groves and labs 5) to its emptiest neighbour that's less full than itself. Emptiest is judged by fill over weight: stems weigh 1.1 and the core 1.5, so power heads out along the stems. Clumps, not a smooth flow, are what keep the fills moving. Each clump flashes its link (brighter when the receiving node is fuller), at its own moment so the links don't flash in step, and each node's brightness and size follow its fill. A branch far from power runs lower on its own while the rest thrives, so generator placement matters.
+**Local power flow.** Each node stores its own power, which moves along links in clumps, as in the original (`PlantNodePower.attemptTransferPower`); there is no global pool. About three times a second (each economy step), each node fuller than a quarter sends a clump to its emptiest neighbour that's less full than itself. Each kind has a transfer rate (the core 45 a second, stems and generators 30, groves and labs 15, the original's clumps of 15, 10 and 5 every 20 ticks), and a clump is that rate times the step's length, so the step only sets how chunky the transfers are. Emptiest is judged by fill over weight: stems weigh 1.1 and the core 1.5, so power heads out along the stems. Clumps, not a smooth flow, are what keep the fills moving. Each clump flashes its link (brighter when the receiving node is fuller), at its own moment so the links don't flash in step, and each node's brightness and size follow its fill. A branch far from power runs lower on its own while the rest thrives, so generator placement matters.
 
 **Size follows fill** as in the original (`PlantNodeView.intensityInterpolation`): a node's scale is its shown fill, never below 0.2; past full it grows only a tenth as fast, up to twice its size. The shown fill eases after the real one, faster rising than falling. There's no artificial bounce: the clumps arriving are the motion.
 
@@ -103,15 +103,15 @@ Fruit, once grown, stays. Groves are needed while the garden grows; if growth st
 
 **Grove tuning target.** Tune the grove's growth blob rate so one or two groves can just keep up with leaf demand from new stems as well as their share of wild buds. Each new stem has room for two leaves, so week one's 27 new stems (4 to 31) mean about 54 leaves.
 
-Values copied from the original game (its per-tick numbers times 60), to be tuned through play. Each kind's numbers live in one entry of `NodeSpecs` (`godot/src/Core/NodeSpecs.cs`), as the original's `Nodes` config, with the shared base values in `NodeBase` (`PowerClump` is the power sent in one transfer); garden-wide knobs are in `Tuning`. Rates are per real second when full, and scale with fill:
+Values copied from the original game (its per-tick numbers times 60), to be tuned through play. Each kind's numbers live in one entry of `NodeSpecs` (`godot/src/Core/NodeSpecs.cs`), as the original's `Nodes` config, with the shared base values in `NodeBase` (`PowerTransferPerSecond` is how fast a node can send power on); garden-wide knobs are in `Tuning`. Rates are per real second when full, and scale with fill:
 
-| Node | Holds | Produces | Upkeep |
-| --- | --- | --- | --- |
-| Core | 300 | 24 | — |
-| Generator | 100 | 12 | — |
-| Stem | 100 | — | 3 (1.5 with one leaf, 0.75 with two) |
-| Grove | 100 | — | 6 |
-| Lab | 200 | — | 6 |
+| Node | Holds | Produces | Upkeep | Sends on |
+| --- | --- | --- | --- | --- |
+| Core | 300 | 24 | — | 45 |
+| Generator | 100 | 12 | — | 30 |
+| Stem | 100 | — | 3 (1.5 with one leaf, 0.75 with two) | 30 |
+| Grove | 100 | — | 6 | 15 |
+| Lab | 200 | — | 6 | 15 |
 
 Sanity check: the core alone keeps 8 bare stems full; the end-of-week-one garden (31 stems, 8 generators) makes 120 against 93 of bare stem upkeep, or 23 with every stem in two leaves, leaving room for groves and labs.
 
