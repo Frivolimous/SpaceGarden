@@ -56,6 +56,14 @@ public sealed class PlantNode
     // Presentation, as the original's node intensity: the fill as shown, eased towards the real one.
     public float FillLook;
 
+    // Its power level as drawn (DESIGN.md, Visual language): its brightness, and its size as a share of its radius.
+    public float Level => LevelOf(FillLook);
+
+    // See Tuning.FillLookCurve: FillLookFloor empty, 1 full, steepest near full; past full slower, up to FillLookMax.
+    public static float LevelOf(float fill) => fill > 1
+        ? Math.Min(Tuning.FillLookMax, 1 + (fill - 1) * Tuning.OverFillLook)
+        : Tuning.FillLookFloor + (1 - Tuning.FillLookFloor) * MathF.Pow(Math.Max(0, fill), Tuning.FillLookCurve);
+
     // Links allowed, counting the parent's. The spec's, except the core's, which is the garden's Capacity.CoreLinks.
     public int MaxLinks;
 

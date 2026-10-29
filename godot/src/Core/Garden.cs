@@ -355,6 +355,14 @@ public sealed class Garden
 
     public void Untie(PlantNode node) => node.TiedTo = null;
 
+    // An empty pot let go over a part plants it: the part nearest the pot's centre within its radius and slop (not
+    // fruit) is tied to it. Returns the part, or null (not an empty pot, or nothing under it).
+    public PlantNode? PlantUnder(ShapingTool pot, float slop)
+    {
+        if (pot.Kind != ShapingKind.Pot || Potted(pot) != null || NodeAt(pot.Position, slop) is not { } node) return null;
+        return Tie(node, pot) ? node : null;
+    }
+
     // What a pot holds, if anything.
     public PlantNode? Potted(ShapingTool pot) => Nodes.FirstOrDefault(n => n.TiedTo == pot);
 
@@ -686,6 +694,11 @@ public sealed class Garden
     // Power a part makes per second now: in proportion to its fill, nothing once full.
     public static float ProductionPerSecond(PlantNode node) =>
         node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * Output(node);
+
+    // What the cards show it making: its full rate once full (when it makes nothing, idling, not starved), else
+    // what it makes now.
+    public static float ShownProductionPerSecond(PlantNode node) =>
+        node.Power >= node.Store ? FullProductionPerSecond(node) : ProductionPerSecond(node);
 
     // What a part makes per second when full (its fruit adding a little each: see FruitBonus).
     public static float FullProductionPerSecond(PlantNode node) =>

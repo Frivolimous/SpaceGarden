@@ -18,7 +18,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   when it's shown again. Its taskbar button, Ctrl+Alt+G or the tray icon bring it back in Active. Only one running
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
-  (grow a stem, generator, lab or grove from it, on parts with room for branches; prune it and everything beyond
+  (grow a stem, generator, lab or grove from it, on parts with room for branches; the kind growing there now has a
+  pulsing outline, and a part with every link taken shows "3/3 Connections Used" in their place; prune it and everything beyond
   it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
   ("Drain: 6/s", "Genes: 12/min", what's
   forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for
@@ -36,7 +37,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Build mode** (the core's menu, or Ctrl+B with the garden focused) arranges the garden: an opaque disc round the
   plant and a bar of shaping tools (Gravity Pot, Trellis, Gravity Well, as the gene track unlocks them). Drag a tool
   off the bar to place it, drag its body, knob or posts to move and turn it, and drop a part on a pot or trellis to
-  tie it. Each part shows its links used against its most (white 1/N, yellow, red when full), to see where
+  tie it (or an empty pot on a part to plant it). Each part shows its links used against its most (white 1/N, yellow, red when full), to see where
   there's room to bud. Done or Escape ends it. See Shaping the garden in DESIGN.md.
 - The plant floats free, as in the TS game (the radial layout; the core isn't planted).
 - **Drag any part, the core included**: it's pulled to the pointer and the rest follows only through the links, at
@@ -65,7 +66,9 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   spring, repulsion and damping with the same constants (`FDGContainer.ts`, `Config.PHYSICS`); power shown as
   link flashes, as the original's power transfers were (`FDGLink.flash`): a link flashes as often as power flows
   along it, so a busy trunk pulses and a full branch rests. Each part's brightness and size follow its fill, eased as the
-  original's node intensity was (`PlantNodeView`); the arriving clumps are the motion, with no added bounce.
+  original's node intensity was (`PlantNodeView`), but along the square of the fill so they still move near full,
+  where the bigger stores keep a tended garden; past full a part swells at half its overfill, up to 1.5 times its
+  size (`FillLookCurve`, `OverFillLook`, `FillLookMax`). The arriving clumps are the motion, with no added bounce.
   Travelling blobs carry growth from groves and genes from labs.
 - **Also ported:** holding a part (the TS game's pull: `PULL_FRICTION`, `TARGET_RATIO`) and the borders
   (`EDGE_BOUNCE`, now the screen edges). Links are the TS game's soft springs, with no length limit, so a pull
@@ -91,7 +94,8 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 `--prune=N` and `--undo=N` prune the biggest branch and undo it at tick N), `--shaping[=N]` (places one of each
 shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card
 open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
-menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--ambient` (starts in Ambient) and
+menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--tap=full` or `--tap=forming` (as if a stem
+with every link taken, or a part forming a bud, were tapped: its toolbar and card, the toolbar staying open), `--ambient` (starts in Ambient) and
 `--corehover` (as if the pointer were on the core there),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of

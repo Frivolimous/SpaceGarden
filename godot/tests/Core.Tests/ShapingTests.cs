@@ -45,6 +45,21 @@ public class ShapingTests
         Assert.Same(trunk, garden.Potted(pot));
     }
 
+    [Fact]
+    public void AnEmptyPotDroppedOnAPartPlantsIt()
+    {
+        var (garden, trunk, tip) = Line();
+        var pot = garden.Place(ShapingKind.Pot, trunk.Position + new Vector2(3, 0))!;
+        Assert.Same(trunk, garden.PlantUnder(pot, 5));
+        Assert.Same(pot, trunk.TiedTo);
+        // A full pot keeps its part; off the plant nothing is planted.
+        pot.Position = tip.Position;
+        Assert.Null(garden.PlantUnder(pot, 5));
+        Assert.Same(trunk, garden.Potted(pot));
+        var empty = garden.Place(ShapingKind.Pot, garden.Core.Position + new Vector2(500, 500))!;
+        Assert.Null(garden.PlantUnder(empty, 5));
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(-1)]

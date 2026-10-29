@@ -22,7 +22,9 @@ public sealed record GardenStats(
 
     public static GardenStats Of(Garden garden)
     {
-        var (production, upkeep) = garden.PowerBalance(); // per second
+        // Per second. A full core or generator makes nothing just then, but counts at its full rate, as on its card.
+        var (_, upkeep) = garden.PowerBalance();
+        float production = garden.Nodes.Sum(Garden.ShownProductionPerSecond);
         var (fullProduction, fullUpkeep) = garden.FullPowerBalance();
         float held = 0, store = 0;
         int stems = 0, generators = 0, groves = 0, labs = 0, fruit = 0, fruitRoom = 0;
@@ -112,7 +114,7 @@ public sealed record NodeStats(
             ? Math.Clamp(node.Growth / (NodeSpecs.All[kind].IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth), 0, 1)
             : 0;
         return new NodeStats(node.Power, node.Store,
-            node.Power >= node.Store ? Garden.FullProductionPerSecond(node) : Garden.ProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
+            Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
             Garden.UpkeepPerSecond(node),
             spec.Kind == NodeKind.Grove ? blobs : 0, spec.Kind == NodeKind.Lab ? blobs * Tuning.BlobGenes : 0,
             node.Links, node.MaxLinks, node.Forming, progress);

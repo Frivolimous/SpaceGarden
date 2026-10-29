@@ -167,13 +167,10 @@ public partial class GardenView : Node2D
     // flat side, but mostly outside it, so it buds out of the part.
     static float FruitSet(float partSize, float fruitSize) => partSize * 0.85f + fruitSize * 0.75f;
 
-    // A part's brightness and size are its power level (DESIGN.md, Visual language), as in the original
-    // (PlantNodeView.intensityInterpolation): its shown fill, never below FillLookFloor, and past full growing only
-    // a tenth as fast, up to FillLookMax. Its size is its radius times its level, as the original's sprite scale: an
-    // empty part shrinks to a fifth, an overfull one swells a little past full.
-    static float Level(PlantNode node) => node.FillLook > 1
-        ? Mathf.Min(Tuning.FillLookMax, 1 + (node.FillLook - 1) * Tuning.OverFillLook)
-        : Mathf.Max(Tuning.FillLookFloor, node.FillLook);
+    // A part's brightness and size are its power level (DESIGN.md, Visual language; PlantNode.Level), as the
+    // original's intensityInterpolation but steeper near full. Its size is its radius times its level, as the
+    // original's sprite scale: an empty part shrinks to a fifth, an overfull one swells past full.
+    static float Level(PlantNode node) => node.Level;
 
     float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * Level(node);
 

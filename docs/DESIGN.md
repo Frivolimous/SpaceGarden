@@ -91,7 +91,7 @@ Draft rates, to tune in play, at real speed: a fully powered grove sends a growt
 
 **Fruit holds power** as in the original (`PlantNodePower.powerFruits`): each fruit holds 100 and costs nothing. A part at least 60% full feeds its emptiest fruit (15 a second) while that fruit is less full than the part, so new fruit start empty and brighten as they fill, and a garden's fruit only glow where their parts have power to spare. Fruit sends nothing on, and its effect (a leaf cutting its stem's upkeep, and so on) doesn't depend on its fill.
 
-**Size follows fill** as in the original (`PlantNodeView.intensityInterpolation`): a node's scale is its shown fill, never below 0.2; past full it grows only a tenth as fast, up to twice its size. The shown fill eases after the real one, faster rising than falling. There's no artificial bounce: the clumps arriving are the motion.
+**Size follows fill**, as in the original (`PlantNodeView.intensityInterpolation`) but reworked for the larger stores (step 4). A node's scale and brightness run from 0.2 empty to 1 full along the square of its shown fill (`FillLookCurve`): flat near empty, so low nodes don't jump about, and steep near full, where a tended garden spends its time (about 70-105% full). Past full a node swells at half its overfill (`OverFillLook`), up to 1.5 times its size. The original's straight line, with a tenth past full, left a node at 75% and one at 95% looking alike, and an overfull stem barely moving. The shown fill eases after the real one, faster rising than falling. There's no artificial bounce: the clumps arriving are the motion.
 
 **Power rules**
 
@@ -177,7 +177,7 @@ Implemented in step 1.
 Once it has a grove, the garden grows wild until it fills its capacity; attentive players prune wild growth to make room and place buds where they want.
 
 - **Wild growth** is random: it's wherever growth blobs land (see Economy, Blobs), with no check on power. Wild growth that drains the garden is the player's to prune. Once a garden has a grove, wild buds can be groves too; a garden with none grows nothing wild.
-- **Manual buds** cost nothing. The cost is attention. The player picks the type (stem, generator, lab or grove) and the spot, and a bud starts there at once: the same silhouette inside its parent as a wild bud, holding its link and cap slot from the start. A part forms one bud at a time; a fruit forming there gives way to the player's bud.
+- **Manual buds** cost nothing. The cost is attention. The player picks the type (stem, generator, lab or grove) and the spot, and a bud starts there at once: the same silhouette inside its parent as a wild bud, holding its link and cap slot from the start. A part forms one bud at a time; a fruit forming there gives way to the player's bud. While a bud forms on a part, its kind's button in the part's toolbar keeps its colour and is ringed by a pulsing outline. When every link of a part is taken, a note over its bud buttons says so ("3/3 Connections Used"); prune stays beside it.
 - **Buds grow on their own.** Every node bud, wild or manual, grows slowly by itself, at a fixed rate scaled by its parent's fill, so buds on dim branches grow slower: about 2 minutes from speck to emergence at full fill (`Tuning.BudSelfGrowSeconds`, a draft), and none at all on an empty part. Growth blobs still speed a bud up and are absorbed at 100% as before (at full fill one blob is worth about 4 s of growing alone). Wild and manual buds differ only in how they start: a wild bud from a growth blob, a manual one from the player. Fruit never grows on its own, only from growth blobs, so groves keep their purpose.
 - **Tuning the self-growth rate:** fast enough that a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is noticeably faster. At the draft rate a new garden's first grove, planted at once, emerges in about 2 minutes (its stem fills from the core almost at once), and a bud beside that grove then takes under a minute.
 - **Pruning** frees capacity. A full garden can only grow where the player has cut.
@@ -231,7 +231,7 @@ Fruit is never tied or pushed by a pot: it follows its node (a well pulls it alo
 - A dark, opaque disc fades in round the plant and its tools, catching every click on it, so arranging never clicks through to the desktop.
 - A bar above the disc holds the three tools (each with how many more the caps allow, greyed with what unlocks it until then) and Done. Pressing a tool takes a new one off the bar and carries it until let go; a tap sets it down just under the bar.
 - Drag a tool's body to move it, a pot's knob (just beyond its node) to turn it, a trellis's end posts to swing and stretch it. A potted node is locked, so dragging it moves its pot, in build mode or out (a tap still opens the node's toolbar). Handles come before nodes under the pointer, since a pot's knob sits where its branch grows. Tapping a tool opens a small toolbar with Remove; dragging a tool back onto the bar also puts it away.
-- Dragging a node and letting go over a pot or trellis ties it there. A tied node's toolbar gains Unhook.
+- Dragging a node and letting go over a pot or trellis ties it there, and an empty pot let go over a node plants it. A tied node's toolbar gains Unhook.
 - Each node that can have 2 or more links shows its links used against its most, "used/most" (a forming bud counts, as it holds one): white at 1/N (only its parent), yellow in between, red when full (N/N). So the player sees at a glance where there's room to bud (Jeremy, Oct 29).
 
 **How they show.** A pale moonlight blue, no role's hue, in the parts' outline look (dark edge, crisp outline, dark fill): trellises and wells under the plant, pots over it. Each moves gently: chevrons rise past a holding pot's node, rings draw slowly in to a well. Faint while tending in Active mode (the pointer passes through them), where the well and a pot's chevrons are hidden altogether (the well keeps pulling), full in build mode, hidden in Ambient and Minimised. Saved with the garden, with what they hold (save version 7).
@@ -344,7 +344,7 @@ Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid an
 
 **Cards, in a fixed spot.** Tapping a part selects it (ringed), opens its toolbar and shows its card. **Info** in the core's menu is a switch (lit while on): while it's on, the garden's card shows above the part's whenever the player is tending (a part selected, or the core's menu open). A click off the plant puts both away; the next tap on the plant brings the garden's back, until Info is switched off. The cards are set down as they open beside the plant, level with the core (to its right, or its left if there's more room there), and stay there while open, their top corner fixed, so the layout never jumps (switching Info on pushes the part's card down below the garden's). Tapping the selected part again closes its card and toolbar together (the core: its menu too). The cards also close when a click lands off the plant, on Escape, or when the part is pruned.
 
-**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (an empty part costs nothing; a full core or generator makes nothing, so its Gen shows its full rate instead). (The overload is judged at full: what the garden would make and cost with every part full.) Part cards use the garden card's words, Gen and Drain, for what a part makes and costs.
+**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (an empty part costs nothing; a full or overfull core or generator makes nothing, so its Gen shows its full rate instead, and the garden card's Gen counts it at that rate too). (The overload is judged at full: what the garden would make and cost with every part full.) Part cards use the garden card's words, Gen and Drain, for what a part makes and costs.
 
 | Kind | Lines |
 | --- | --- |
@@ -449,7 +449,7 @@ Open: where events and seasons, and identity features fall in the plan.
 - On return from a catch-up, a short note says what changed: new growth, unlocks reached, power dips.
 - It draws on the tracking and journal data.
 
-**Power visuals at the top of the range** are a separate task in this step: parts should still visibly grow and shrink now that stores are larger.
+**Power visuals at the top of the range** (done): parts still visibly grow and shrink now that stores are larger. Size and brightness follow the square of the fill, and past full a part swells at half its overfill (see Size follows fill).
 
 **A real-week tuning pass** ends the step, once tracking and the export work:
 - Run a real garden for a week, then retune the week-one unlock track from the data.
@@ -484,7 +484,7 @@ Design layers still to work through:
 - [x] Information display: the readout and the selected part panel (step 3b)
 - [x] UI revision (step 3d): hovering shows nothing but the ring; one card in a fixed spot; the core's half-ring menu; the core tappable in Ambient mode to wake the garden. Build mode itself is unchanged, now opened from the core's menu
 - [x] Manual planting (step 3e): free, a bud that starts at once and grows on its own like every node bud, hurried by growth blobs (see Growth and pruning)
-- [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework; scheduled in step 4)
+- [x] Power visuals at the top of the range (step 4): size and brightness follow the square of the fill, steep near full, and swell at half the overfill past it (see Size follows fill)
 - [x] Stat tracking and Almanac (step 4): small lifetime totals and four time series, a debug export, the Almanac as a journal of moments (see Step 4)
 - [ ] Specialist effects: Resistor, Amplifier, Buffer (step 5)
 - [ ] Long-term pacing beyond week one

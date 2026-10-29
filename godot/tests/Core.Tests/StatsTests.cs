@@ -106,7 +106,8 @@ public class StatsTests
         Assert.Equal(4 * 2 + 2 * 3 + 2, stats.FruitRoom); // 4 stems with room for 2 leaves, a lab and grove for 3, a generator for 2
         Assert.Equal(1, stats.BudsForming[NodeKind.Lab]);
         Assert.Equal(0.5f, stats.PowerFill, 4);
-        Assert.Equal(garden.PowerBalance(), (stats.Production, stats.Upkeep));
+        Assert.Equal(garden.Nodes.Sum(Garden.ShownProductionPerSecond), stats.Production, 4);
+        Assert.Equal(garden.PowerBalance().Upkeep, stats.Upkeep, 4);
         Assert.Equal(GardenStats.GenesPerHourFrom(garden, lab), stats.GenesPerHour, 9);
         Assert.True(stats.GenesPerHour > 0);
     }
@@ -155,6 +156,10 @@ public class StatsTests
         Assert.Equal(0, core.Upkeep);
         garden.Core.Power = 800;
         Assert.Equal(24, NodeStats.Of(garden.Core).Makes, 4); // full, it makes nothing: the card shows its full rate
+        garden.Core.Power = 900; // past full too, and the garden's Gen counts it the same
+        Assert.Equal(24, NodeStats.Of(garden.Core).Makes, 4);
+        Assert.Equal(24, GardenStats.Of(garden).Production, 4);
+        Assert.Equal(0, garden.PowerBalance().Production, 4); // (though it really makes nothing)
         Assert.Equal((1, 2), (core.Links, core.MaxLinks)); // against the garden's core links
         Assert.Null(core.Forming);
     }

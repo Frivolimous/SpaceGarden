@@ -48,14 +48,19 @@ public static class Tuning
     public const float FlashPeak = 0.6f;
 
     // A part's brightness and size follow its fill, as in the original (PlantNodeView): the shown fill moves a share
-    // of the way to the real one each tick (INTENSITY_V_INC / _DEC). Its level (intensityInterpolation) is the shown
-    // fill, never below FillLookFloor; past full it rises a tenth as fast (OverFillLook), up to FillLookMax. Its size
-    // is its radius times its level.
+    // of the way to the real one each tick (INTENSITY_V_INC / _DEC). Its level (PlantNode.Level) runs from
+    // FillLookFloor empty to 1 full along the shown fill to the power FillLookCurve: flat near empty, so a low part
+    // doesn't jump about, and steep near full, where a tended garden spends its time (about 70-105% full: the
+    // stores are big against the clumps, so a clump moves a fill only a few points). The original's was the fill
+    // itself (a curve of 1), which left a part at 75% and one at 95% looking much alike. Past full it rises at
+    // OverFillLook a fill (the original's a tenth), up to FillLookMax, so an overfull stem still swells as clumps
+    // arrive. Its size is its radius times its level.
     public const float FillLookRise = 0.1f;
     public const float FillLookFall = 0.05f;
     public const float FillLookFloor = 0.2f;
-    public const float OverFillLook = 0.1f;
-    public const float FillLookMax = 2;
+    public const float FillLookCurve = 2;
+    public const float OverFillLook = 0.5f;
+    public const float FillLookMax = 1.5f;
 
     // Growth is in real seconds at speed 1 (the prototype's default; its menu has faster speeds for testing). A free
     // Sprout() (the first stem, stress tests) grows fruit FruitChance of the time.
