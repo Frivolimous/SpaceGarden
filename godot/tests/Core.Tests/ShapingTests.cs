@@ -48,17 +48,21 @@ public class ShapingTests
     [Theory]
     [InlineData(1)]
     [InlineData(-1)]
-    public void APotPushesTheBranchBeyondItTheWayItFaces(int way)
+    public void APotPushesThePartsGrowingOutOfItTheWayItFaces(int way)
     {
-        // The pot sits off to the core's right, facing down (or up): the stems beyond it lean that way.
+        // The pot sits off to the core's right, facing down (or up): the stem growing out of the potted one leans that
+        // way. Only that one is pushed: the stems further out just follow it, and nothing back along the branch moves.
         var (garden, trunk, tip) = Line();
+        var next = trunk.Branches[0];
         var pot = garden.Place(ShapingKind.Pot, garden.Core.Position + new Vector2(120, 0), way * MathF.PI / 2)!;
         garden.Tie(trunk, pot);
         Run(garden, 1800);
-        var lean = Vector2.Normalize(tip.Position - pot.Position);
-        Assert.True(Vector2.Dot(lean, pot.Facing) > 0.5f, $"the tip leans {lean}, the pot faces {pot.Facing}");
-        Assert.Equal(pot.Facing, tip.Lean);
-        Assert.Equal(Vector2.Zero, garden.Core.Lean); // nothing back along the branch
+        var lean = Vector2.Normalize(next.Position - pot.Position);
+        Assert.True(Vector2.Dot(lean, pot.Facing) > 0.5f, $"the next stem leans {lean}, the pot faces {pot.Facing}");
+        Assert.Equal(pot.Facing, next.Lean);
+        Assert.Equal(Vector2.Zero, next.Branches[0].Lean);
+        Assert.Equal(Vector2.Zero, tip.Lean);
+        Assert.Equal(Vector2.Zero, garden.Core.Lean);
     }
 
     [Fact]

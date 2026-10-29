@@ -106,7 +106,7 @@ public static class Tuning
 
     // ==== SHAPING ==== \\
     // Placeholders, per 60 Hz tick (DESIGN.md, Shaping the garden). A potted part moves PotFollow of the way to its pot
-    // each tick, and every main part beyond it on its branch is pushed PotPush the way the pot faces (gently: about
+    // each tick, and each main part growing straight out of it is pushed PotPush the way the pot faces (gently: about
     // the wind's strength). A Gravity Well pulls every main part WellPull towards it, easing off within WellEase of
     // its centre: faint, as it pulls the whole plant and the core takes all of it back (stronger stretches the core's
     // links). Fruit follows its part. A part on a trellis slides along it, its sliding damped by TrellisSlide each

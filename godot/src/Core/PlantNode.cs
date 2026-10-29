@@ -18,8 +18,8 @@ public sealed class PlantNode
     public float Rotation;
     public float Spin;
     public bool Fixed;
-    // The pot or trellis holding it, if any (see Garden.Tie), and the way the nearest pot back along its branch
-    // pushes it (zero if none: see Garden.Shape).
+    // The pot or trellis holding it, if any (see Garden.Tie), and the way its parent's pot pushes it (zero if its
+    // parent isn't potted: see Garden.Shape).
     public ShapingTool? TiedTo;
     public Vector2 Lean;
     // The push from distant parts, kept between the ticks it's worked out on (see Garden.Repel).

@@ -392,8 +392,8 @@ public sealed class Garden
     }
 
     // The tools' pushes and pulls, before the parts move (DESIGN.md, Shaping the garden):
-    //   - every part beyond a potted one on its branch is pushed the way the nearest pot back along it faces (its Lean,
-    //     worked out from the parent's: parts are listed in the order they grew, a parent before its children);
+    //   - each main part growing straight out of a potted one is pushed the way the pot faces (its Lean); parts
+    //     further out only follow it through their links;
     //   - a well pulls every part towards it, the core taking the opposite push for all of them, so the plant leans
     //     towards the well rather than drifting into it.
     // (Pots and trellises hold their parts after they move: see Hold.)
@@ -407,9 +407,7 @@ public sealed class Garden
         foreach (var node in Nodes)
         {
             var parent = node.Parent;
-            node.Lean = parent == null ? Vector2.Zero
-                : parent.TiedTo is { Kind: ShapingKind.Pot } pot ? pot.Facing
-                : parent.Lean;
+            node.Lean = parent?.TiedTo is { Kind: ShapingKind.Pot } pot ? pot.Facing : Vector2.Zero;
             if (node.TiedTo == null && !node.Spec.IsFruit) node.Velocity += node.Lean * Tuning.PotPush;
         }
 
@@ -525,7 +523,7 @@ public sealed class Garden
         Vector2 away = parent.Parent == null
             ? (Layout == Layout.Upright ? -Vector2.UnitY : RandomDirection())
             : Vector2.Normalize(parent.Position - parent.Parent.Position + new Vector2(0.001f, 0));
-        var lean = parent.TiedTo is { Kind: ShapingKind.Pot } pot ? pot.Facing : parent.Lean;
+        var lean = parent.TiedTo is { Kind: ShapingKind.Pot } pot ? pot.Facing : Vector2.Zero;
         if (lean != Vector2.Zero) away = Vector2.Normalize(away + lean + new Vector2(0.001f, 0));
         if (Layout == Layout.Upright) away = Vector2.Normalize(away - 0.6f * Vector2.UnitY);
         float angle = (float)(rng.NextDouble() - 0.5) * 1.6f;
