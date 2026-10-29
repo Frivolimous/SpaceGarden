@@ -35,7 +35,7 @@ public partial class GardenView : Node2D
     readonly Batch links = new(), linkEdges = new(), straight = new(), halos = new(), moteDots = new();
     const float MoteRadius = 2; // a blob's dot, in garden units (the original's)
     // A power flash's light flooding along its stem, then draining: done before the next (at most 3 a second).
-    const float FillSeconds = 0.1f, DrainSeconds = 0.2f;
+    const float FillSeconds = 0.05f, DrainSeconds = 0.15f;
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
     float highlightRing;
     float blend = 1;
@@ -178,7 +178,8 @@ public partial class GardenView : Node2D
         float middle = (head + tail) / 2; // how far along from the end the power left
         float fromParent = link.FlowsToTarget ? middle : 1 - middle;
         float width = LinkWidth(link.Target) * Mathf.Lerp(1, Textures.TaperEnd, fromParent) * 0.9f;
-        var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.9f * link.FlashStrength), link.Target.WiltLook);
+        // 45% at rest up to 78% for a flash into a full part (FlashPeak 0.6), as the stems flashed before.
+        var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.FlashStrength), link.Target.WiltLook);
         colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
         var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore * width;
         straight.AddAxes(a + along * middle, along * (head - tail), normal, colour);
