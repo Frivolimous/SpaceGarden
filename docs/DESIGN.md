@@ -228,12 +228,13 @@ Fruit is never tied or pushed by a pot: it follows its node (a well pulls it alo
 
 **How they show.** A pale moonlight blue, no role's hue, in the parts' outline look (dark edge, crisp outline, dark fill): trellises and wells under the plant, pots over it. Each moves gently: chevrons rise past a holding pot's node, rings draw slowly in to a well. Faint while tending in Active mode (the pointer passes through them), where the well and a pot's chevrons are hidden altogether (the well keeps pulling), full in build mode, hidden in Ambient and Minimised. Saved with the garden, with what they hold (save version 7).
 
-Open, for the gardening mode in Jeremy's todo:
-- Whether build mode grows into the planned gardening mode (opaque radius, arranging the plant and the guides) or stays separate. The pieces are meant to move: the backdrop and the bar are presentation only, and placement goes through `Garden.Place`, `Tie` and `Remove`.
-- Whether the garden should pause or hold wild growth while arranging. It doesn't now.
-- How the disc should behave round a very large plant (it grows with the plant and its tools, and can cover most of the screen).
-- Whether tools should be tappable outside build mode at all (now they're inert there), and whether to show tool counts somewhere outside build mode.
-- How many of each tool later steps allow (proposed: rising with core levels).
+Settled Oct 29 (Jeremy):
+- **Build mode is the gardening mode** from Jeremy's todo (the opaque radius for arranging the plant and its guides).
+- **Wild growth carries on** while arranging; nothing pauses.
+- **The backdrop may grow to fill the screen** round a very large plant and its tools.
+- Outside build mode the tools stay inert, except that dragging a potted node moves its pot.
+
+Open, for later steps: how many of each tool later steps allow (proposed: rising with core levels).
 
 ## Node roster
 
