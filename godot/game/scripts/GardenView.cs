@@ -210,7 +210,8 @@ public partial class GardenView : Node2D
     // The size a pot is drawn round: its part as drawn now (a drained part is smaller), or an empty pot's.
     float PotRadius(ShapingTool pot) => garden.Potted(pot) is { } part ? Size(part) : ShapingTool.EmptyPot;
 
-    // Pots, over the parts: each a half ring cupping its part's back, chevrons rising past the part the way it faces.
+    // Pots, over the parts: each a flower pot its part sits in up to its middle, chevrons rising past the part the
+    // way it faces.
     void DrawPots()
     {
         if (toolsAlpha <= 0.01f || garden.Shaping.Count == 0) return;

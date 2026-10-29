@@ -17,10 +17,11 @@ public enum ShapingHandle { Body, Turn, EndA, EndB }
 
 public sealed class ShapingTool
 {
-    // Sizes in garden units. A pot is a half ring cupping its part's back (away from the way it faces), from PotGap
-    // outside the part's edge to PotGap + PotWall (see Garden.PotRadius), its turning knob PotKnob beyond the part.
-    // An empty pot is sized for EmptyPot.
-    public const float PotGap = 1.5f, PotWall = 3.5f, PotKnob = 16, EmptyPot = 10;
+    // Sizes in garden units. A pot is a flower pot holding its part up to its middle: a rim PotRim deep straight across
+    // the part's middle, overhanging the bowl by PotLip each side, and under it a round bowl PotGap wider than the part
+    // (see Garden.PotRadius), on the side away from the way it faces. Its turning knob is PotKnob beyond the part. An
+    // empty pot is sized for EmptyPot.
+    public const float PotGap = 3, PotRim = 5, PotLip = 2.5f, PotKnob = 16, EmptyPot = 10;
     public const float WellRadius = 16;
     public const float TrellisLength = 160, TrellisMinLength = 50;
     // How far from a handle (a pot's knob, a trellis's end) the pointer still takes it, besides the pointer's slop.

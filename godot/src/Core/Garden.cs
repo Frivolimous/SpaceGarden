@@ -375,7 +375,8 @@ public sealed class Garden
                 case ShapingKind.Pot:
                     float r = PotRadius(tool);
                     Consider(tool, ShapingHandle.Turn, tool.Position + tool.Facing * (r + ShapingTool.PotKnob), ShapingTool.HandleReach);
-                    Consider(tool, ShapingHandle.Body, tool.Position, r + ShapingTool.PotGap + ShapingTool.PotWall);
+                    Consider(tool, ShapingHandle.Body, tool.Position - tool.Facing * (r / 2 + ShapingTool.PotRim),
+                        r + ShapingTool.PotGap + ShapingTool.PotLip);
                     break;
                 case ShapingKind.Trellis:
                     var (a, b) = tool.Ends;
