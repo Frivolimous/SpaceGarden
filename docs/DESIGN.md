@@ -192,7 +192,7 @@ The player has eight basic commands.
 1. **New sprout:** choose a basic node type and grow it at a chosen spot.
 2. **Prune:** remove any node and all of its children. No preview; undo restores the last prune only, within about 30 seconds (to be tuned).
 3. **Place a shaping tool** (Gravity Pot, Trellis, Gravity Well) in build mode: a subtle overlay, placed, moved and turned anywhere (see Shaping the garden).
-4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and the nodes growing straight out of it are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
+4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and the nodes linked to it (its parent and what grows straight out of it) are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
 5. **Select evolution:** for the core, seedlings and other skill-based nodes.
 6. **Zoom** in or out.
 7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (transparent and click-through), or Minimised (to the taskbar and tray). A hotkey toggles Active and Ambient, and brings a minimised garden back.
@@ -205,7 +205,7 @@ Undo covers only the most recent prune. Wild growth leaves the freed capacity al
 Players keep a mature garden compact and give it form through zoom and shaping tools.
 
 - **Zoom:** the player can zoom the garden in or out.
-- **Gravity Pots:** a node connected to a pot moves to it and locks in place; the nodes growing straight out of it are pushed subtly in the pot's facing direction, and the rest of the branch follows them.
+- **Gravity Pots:** a node connected to a pot moves to it and locks in place; the nodes linked to it (its parent and what grows straight out of it) are pushed subtly in the pot's facing direction, and the rest of the plant follows them.
 - Long branches can still spill back over, so a large garden may need several pots.
 - Wild growth respects pots, so a direction set once keeps shaping the garden.
 - Shaping tools are purely about shape, with no economy effect.
@@ -214,7 +214,7 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 
 | Tool | What it does | Holds | Unlocks |
 | --- | --- | --- | --- |
-| Gravity Pot | The node dropped on it moves to the pot's mouth and is locked there. Only the main nodes growing straight out of it (one link away) are pushed gently the way the pot faces; nodes further out just follow them through their links. New buds on the potted node head that way too | One node (dropping another swaps it) | 1 from the start, +1 at 15,000 genes |
+| Gravity Pot | The node dropped on it moves to the pot's mouth and is locked there. Only the main nodes linked to it (its parent, and those growing straight out of it) are pushed gently the way the pot faces; nodes further out just follow them through their links. New buds on the potted node head that way too | One node (dropping another swaps it) | 1 from the start, +1 at 15,000 genes |
 | Trellis | A straight line between two posts. The nodes dropped on it are held on the line but slide along it, so the plant's own push spaces them out, like an espalier wire | Any number | 1 at 7,200 genes |
 | Gravity Well | Pulls every main node faintly towards it. The core takes the whole pull back, so the plant leans towards the well rather than drifting into it | Nothing | 1 at 70,000 genes |
 

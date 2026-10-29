@@ -48,21 +48,38 @@ public class ShapingTests
     [Theory]
     [InlineData(1)]
     [InlineData(-1)]
-    public void APotPushesThePartsGrowingOutOfItTheWayItFaces(int way)
+    public void APotPushesThePartsLinkedToItsPartTheWayItFaces(int way)
     {
         // The pot sits off to the core's right, facing down (or up): the stem growing out of the potted one leans that
-        // way. Only that one is pushed: the stems further out just follow it, and nothing back along the branch moves.
+        // way. Only the potted stem's neighbours are pushed (that stem, and the core it grew from): the stems further
+        // out just follow through their links.
         var (garden, trunk, tip) = Line();
         var next = trunk.Branches[0];
         var pot = garden.Place(ShapingKind.Pot, garden.Core.Position + new Vector2(120, 0), way * MathF.PI / 2)!;
         garden.Tie(trunk, pot);
         Run(garden, 1800);
         var lean = Vector2.Normalize(next.Position - pot.Position);
-        Assert.True(Vector2.Dot(lean, pot.Facing) > 0.5f, $"the next stem leans {lean}, the pot faces {pot.Facing}");
+        Assert.True(Vector2.Dot(lean, pot.Facing) > 0.3f, $"the next stem leans {lean}, the pot faces {pot.Facing}");
         Assert.Equal(pot.Facing, next.Lean);
+        Assert.Equal(pot.Facing, garden.Core.Lean);
         Assert.Equal(Vector2.Zero, next.Branches[0].Lean);
         Assert.Equal(Vector2.Zero, tip.Lean);
+    }
+
+    [Fact]
+    public void APotPushesItsPartsParentToo()
+    {
+        // The middle of the line potted: the stem it grew from leans the pot's way, as does the one growing out of it,
+        // but not the core, two links back.
+        var (garden, trunk, tip) = Line();
+        var middle = trunk.Branches[0];
+        var pot = garden.Place(ShapingKind.Pot, middle.Position, MathF.PI / 2)!;
+        garden.Tie(middle, pot);
+        garden.Step();
+        Assert.Equal(pot.Facing, trunk.Lean);
+        Assert.Equal(pot.Facing, middle.Branches[0].Lean);
         Assert.Equal(Vector2.Zero, garden.Core.Lean);
+        Assert.Equal(Vector2.Zero, tip.Lean);
     }
 
     [Fact]

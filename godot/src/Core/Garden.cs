@@ -392,8 +392,9 @@ public sealed class Garden
     }
 
     // The tools' pushes and pulls, before the parts move (DESIGN.md, Shaping the garden):
-    //   - each main part growing straight out of a potted one is pushed the way the pot faces (its Lean); parts
-    //     further out only follow it through their links;
+    //   - each main part linked to a potted one (growing straight out of it, or its parent) is pushed the way the pot
+    //     faces (its Lean, summed if it's next to more than one pot), as a force: a stem feels all of it, the heavy core
+    //     a thirtieth. Parts further away only follow through their links;
     //   - a well pulls every part towards it, the core taking the opposite push for all of them, so the plant leans
     //     towards the well rather than drifting into it.
     // (Pots and trellises hold their parts after they move: see Hold.)
@@ -404,12 +405,15 @@ public sealed class Garden
             foreach (var node in Nodes) node.Lean = Vector2.Zero;
             return;
         }
+        foreach (var node in Nodes) node.Lean = Vector2.Zero;
         foreach (var node in Nodes)
         {
-            var parent = node.Parent;
-            node.Lean = parent?.TiedTo is { Kind: ShapingKind.Pot } pot ? pot.Facing : Vector2.Zero;
-            if (node.TiedTo == null && !node.Spec.IsFruit) node.Velocity += node.Lean * Tuning.PotPush;
+            if (node.TiedTo is not { Kind: ShapingKind.Pot } pot) continue;
+            if (node.Parent != null) node.Parent.Lean += pot.Facing;
+            foreach (var branch in node.Branches) branch.Lean += pot.Facing;
         }
+        foreach (var node in Nodes)
+            if (node.TiedTo == null && !node.Spec.IsFruit) node.Velocity += node.Lean * Tuning.PotPush * node.Spec.InverseMass;
 
         var recoil = Vector2.Zero;
         foreach (var well in Shaping)
