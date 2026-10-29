@@ -337,15 +337,15 @@ Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid an
 
 **Cards, in a fixed spot.** Tapping a part selects it (ringed), opens its toolbar and shows its card. **Info** in the core's menu is a switch (lit while on): while it's on, the garden's card shows above the part's whenever the player is tending (a part selected, or the core's menu open). A click off the plant puts both away; the next tap on the plant brings the garden's back, until Info is switched off. The cards are set down as they open beside the plant, level with the core (to its right, or its left if there's more room there), and stay there while open, their top corner fixed, so the layout never jumps (switching Info on pushes the part's card down below the garden's). Tapping the selected part again closes its card and toolbar together (the core: its menu too). The cards also close when a click lands off the plant, on Escape, or when the part is pruned.
 
-**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (an empty part costs nothing; a full core or generator makes nothing, so its Makes shows its full rate instead). (The overload is judged at full: what the garden would make and cost with every part full.)
+**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (an empty part costs nothing; a full core or generator makes nothing, so its Gen shows its full rate instead). (The overload is judged at full: what the garden would make and cost with every part full.) Part cards use the garden card's words, Gen and Drain, for what a part makes and costs.
 
 | Kind | Lines |
 | --- | --- |
-| Core | Power, Makes X/s (sends Y/s), Connections |
-| Stem | Power, Upkeep X/s, Connections |
-| Generator | Power, Makes X/s (sends Y/s) |
-| Grove | Power, Upkeep X/s, Growth X/min |
-| Lab | Power, Upkeep X/s, Genes X/min |
+| Core | Power, Gen X/s (sends Y/s), Connections |
+| Stem | Power, Drain X/s, Connections |
+| Generator | Power, Gen X/s (sends Y/s) |
+| Grove | Power, Drain X/s, Growth X/min |
+| Lab | Power, Drain X/s, Genes X/min |
 
 - **Power** is held against its store. **Sends** is how fast it can send power on (its transfer rate).
 - **Growth** (growth blobs a minute) and **Genes** (genes a minute) are what the flower makes, not what arrives: many of a far lab's genes never find the core.

@@ -95,8 +95,8 @@ public partial class Card : PanelContainer
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
         Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
         if (spec.PowerPerSecond > 0) // by kind, so the lines stay put when a rate falls to 0
-            Line(ref used, $"Makes: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
-        if (spec.PowerPerSecond < 0) Line(ref used, $"Upkeep: {stats.Upkeep * speed:0}/s");
+            Line(ref used, $"Gen: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
+        if (spec.PowerPerSecond < 0) Line(ref used, $"Drain: {stats.Upkeep * speed:0}/s");
         if (spec.Kind == NodeKind.Grove) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
         if (spec.Kind == NodeKind.Lab) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
         if (stats.Links >= 2) Line(ref used, $"Connections: {stats.Links} / {stats.MaxLinks}");
