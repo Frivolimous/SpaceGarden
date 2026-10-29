@@ -16,14 +16,21 @@ public static class SmartPlayer
     const int GroveEvery = 15;
     const float Reserve = 1; // power a second
 
-    // Check-ins every two hours while awake: planted at 9:00, asleep from 1:00 to 9:00.
+    // Check-ins every minute for the first hour (a new player watches the garden start), then every two hours while
+    // awake: planted at 9:00, asleep from 1:00 to 9:00.
     public const double CheckHours = 2;
     public static bool Awake(double hours) => hours % 24 < 16;
+    public static bool CheckIn(double seconds) => (long)Math.Round(seconds) is var s
+        && (s < 3600 ? s % 60 == 0 : s % (long)(CheckHours * 3600) == 0 && Awake(s / 3600.0));
 
     public static void Tend(Garden garden)
     {
         PruneDrains(garden);
         MakeRoom(garden);
+        // The opening: the first grove at once, and the first lab as soon as a part has a link to spare beside it.
+        if (Count(garden, NodeKind.Grove) == 0 && !Forming(garden, NodeKind.Grove)) Bud(garden, NodeKind.Grove, nearFirst: true);
+        if (Count(garden, NodeKind.Lab) == 0 && !Forming(garden, NodeKind.Lab) && FreeLinks(garden) > 1)
+            Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth);
         while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
         while (Spare(garden) >= -NodeSpecs.All[NodeKind.Lab].PowerPerSecond + Reserve && FreeLinks(garden) > 1
             && Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth)) { }
@@ -59,6 +66,7 @@ public static class SmartPlayer
         && !garden.Nodes.Any(n => !n.Spec.IsFruit && n.Parent != null && garden.CanSproutFrom(n, kind));
 
     static int Count(Garden garden, NodeKind kind) => garden.Nodes.Count(n => n.Spec.Kind == kind);
+    static bool Forming(Garden garden, NodeKind kind) => garden.Nodes.Any(n => n.Forming == kind);
 
     // What the garden would make at full power, less what all its parts would cost: below 0 it's overloaded, and
     // settles lower, its far labs lowest and slowest.

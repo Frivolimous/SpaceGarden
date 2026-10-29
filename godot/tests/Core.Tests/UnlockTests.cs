@@ -258,9 +258,10 @@ public class UnlockTests
 
     // ==== PACING ==== \
 
-    // When each unlock should fire, in hours from planting (see Tuning.UnlockTrack; Day N is the start of day N):
-    // placeholders spread over week one, until Jeremy sets when each step should land.
-    static readonly double[] TargetHours = [1, 3, 6, 12, 24, 48, 72, 120, 168];
+    // When each unlock should fire, in hours from planting (see Tuning.UnlockTrack; Day N is the start of day N): the
+    // first four where Jeremy's draft thresholds land (kept as they are: early and easy), the rest spread over week one
+    // (the balance pass, Oct 29, retuned 5-9 to these at the real gene delivery, about 40-60%).
+    static readonly double[] TargetHours = [1.0 / 3, 1.5, 5, 10, 24, 48, 72, 120, 168];
 
     static string Describe(Garden garden)
     {
@@ -299,20 +300,22 @@ public class UnlockTests
             lines[s].Add($"seed {seeds[s]}:");
             for (int day = 1; day <= days; day++)
             {
-                for (; t < day * Day; t += step)
+                // A minute at a time through the opening, when the player checks in every minute.
+                for (double dt; t < day * Day; t += dt)
                 {
+                    dt = t < Hour ? 60 : step;
                     double hours = t / Hour;
-                    if (Math.Abs(hours % SmartPlayer.CheckHours) < 1e-6 && SmartPlayer.Awake(hours))
+                    if (SmartPlayer.CheckIn(t))
                     {
-                        // A short run shows every check-in, as the player found the garden.
-                        if (days <= 2 && t > 0) lines[s].Add($"  {hours,4:0} h: {Describe(garden)}");
+                        // A short run shows every two-hourly check-in, as the player found the garden.
+                        if (days <= 2 && t >= Hour) lines[s].Add($"  {hours,4:0} h: {Describe(garden)}");
                         SmartPlayer.Tend(garden);
                     }
                     int before = garden.Unlocks;
-                    garden.Grow(step);
-                    for (int u = before; u < garden.Unlocks; u++) run.Fired[s, u] = (t + step) / Hour;
+                    garden.Grow(dt);
+                    for (int u = before; u < garden.Unlocks; u++) run.Fired[s, u] = (t + dt) / Hour;
                     for (int h = 0; h < TargetHours.Length; h++)
-                        if (Math.Abs(TargetHours[h] * Hour - (t + step)) < 1) run.GenesAt[s, h] = garden.Genes;
+                        if (Math.Abs(TargetHours[h] * Hour - (t + dt)) < 1) run.GenesAt[s, h] = garden.Genes;
                 }
                 if (shownDays.Contains(day)) lines[s].Add($"  day {day,2}: {Describe(garden)}");
                 if (day == 7) run.WeekOne[s] = garden.Unlocks;

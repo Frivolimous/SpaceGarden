@@ -71,7 +71,7 @@ Three flowing resources move visibly through the stems; capacity is a set of lim
 | Growth blobs | Orange | Grove flowers | Wander the stems and grow fruit and new wild nodes where they're absorbed |
 | Gene blobs | Purple | Lab flowers | Wander the stems; only the core absorbs them (later also seedlings and hubs) |
 
-There is no core trickle of growth: groves are the only source of growth blobs, and a new garden has none. The player plants the first grove by hand (step 6's onboarding points there first); its bud grows on its own, like every node bud (see Growth and pruning), so a garden with no grove needs no special case.
+There is no core trickle of growth: groves are the only source of growth blobs, and a new garden has none. The player plants the first grove by hand (step 6's onboarding points there first); its bud grows on its own, like every node bud, and four times as fast while the garden has no grove (see Growth and pruning).
 
 **Power is a light show, not the pace.** Power fills and drains in seconds, as in the original, and keeps moving: the fills rock around a balance that shifts as the plant changes, never settling. It doesn't set the garden's pace (the unlock track does, through genes); it shows the garden's health, and a low garden works slower.
 
@@ -129,7 +129,7 @@ Capacity is a set of slot limits that cap growth until research raises them. Whe
 | Per-type caps | Structure and power only: stems and generators. Groves, labs and other accessory flowers are uncapped; they are limited by free link slots on stems and by power upkeep, so the player chooses the mix |
 | Wild total + per-type caps | Rare wild nodes, e.g. 5 wilds total, up to 2 Lumber Groves and 1 Volatile |
 | Seedling slots | Active seedlings |
-| Local caps | Links per node and fruit per node. Stems are fixed at 3 links including the parent, so each stem supports a branching stem, a flower plus a continuation, or two flowers at a dead end. Large stems with 4 links unlock in limited numbers in step 5. The core starts with 1 link and gains more as major unlocks (first +1 at 15,000 genes, about 8 hours in); its maximum is open |
+| Local caps | Links per node and fruit per node. Stems are fixed at 3 links including the parent, so each stem supports a branching stem, a flower plus a continuation, or two flowers at a dead end. Large stems with 4 links unlock in limited numbers in step 5. The core starts with 1 link and gains more as major unlocks (first +1 at 15,000 genes, about 10 hours in); its maximum is open |
 
 Bloomed seedlings become special versions of basic nodes and take normal slots within normal caps, so evolutions never need a separate limit.
 
@@ -179,7 +179,7 @@ Once it has a grove, the garden grows wild until it fills its capacity; attentiv
 - **Wild growth** is random: it's wherever growth blobs land (see Economy, Blobs), with no check on power. Wild growth that drains the garden is the player's to prune. Once a garden has a grove, wild buds can be groves too; a garden with none grows nothing wild.
 - **Manual buds** cost nothing. The cost is attention. The player picks the type (stem, generator, lab or grove) and the spot, and a bud starts there at once: the same silhouette inside its parent as a wild bud, holding its link and cap slot from the start. A part forms one bud at a time; a fruit forming there gives way to the player's bud. While a bud forms on a part, its kind's button in the part's toolbar keeps its colour and is ringed by a pulsing outline. When every link of a part is taken, a note over its bud buttons says so ("3/3 Connections Used"); prune stays beside it.
 - **Buds grow on their own.** Every node bud, wild or manual, grows slowly by itself, at a fixed rate scaled by its parent's fill, so buds on dim branches grow slower: about 2 minutes from speck to emergence at full fill (`Tuning.BudSelfGrowSeconds`, a draft), and none at all on an empty part. Growth blobs still speed a bud up and are absorbed at 100% as before (at full fill one blob is worth about 4 s of growing alone). Wild and manual buds differ only in how they start: a wild bud from a growth blob, a manual one from the player. Fruit never grows on its own, only from growth blobs, so groves keep their purpose.
-- **Tuning the self-growth rate:** fast enough that a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is noticeably faster. At the draft rate a new garden's first grove, planted at once, emerges in about 2 minutes (its stem fills from the core almost at once), and a bud beside that grove then takes under a minute.
+- **Tuning the self-growth rate:** fast enough that a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is noticeably faster. At the draft rate an ordinary bud takes about 2 minutes, and a bud beside a grove under one. **The first grove is faster:** while the garden has no grove (a new garden, or one that pruned its last), a grove bud grows four times as fast (`Tuning.FirstGroveSpeed`), so a new garden's first grove, planted at once, is out in about half a minute rather than two minutes of nothing happening (Jeremy, balance pass, Oct 29).
 - **Pruning** frees capacity. A full garden can only grow where the player has cut.
 - **Rare wild nodes** can't be planted. Pruning one frees its slot, and a new rare later appears by random chance, possibly a different type in a different place. Regrowth takes time.
 
@@ -287,18 +287,18 @@ Note the order change from the first draft: the evolution path is chosen when th
 | --- | --- | --- |
 | Start | Core (1 link), 4 stems, 1 generator, 1 Gravity Pot | — |
 | 200 | +3 stems | 20 min |
-| 1,500 | +1 generator | 1.2 hr |
-| 7,200 | +4 stems, +1 generator, +1 Trellis | 4.5 hr |
-| 15,000 | +1 core link, +1 stem, +1 generator, +1 Gravity Pot | 8 hr |
-| 70,000 | +4 stems, +1 generator, +1 Gravity Well | Day 2 (31 hr) |
-| 200,000 | +3 stems, +1 generator | Day 4 (93 hr) |
-| 470,000 | +3 stems, +1 generator | Day 7–8 for some gardens |
-| 1,000,000 | +3 stems, +1 generator | Not by day 8 |
-| 2,500,000 | +5 stems, +2 generators (30 stems, 10 generators, 2 core links; 2 pots, a trellis and a well) | Not by day 8 |
+| 1,500 | +1 generator | 1.5 hr |
+| 7,200 | +4 stems, +1 generator, +1 Trellis | 5.5 hr |
+| 15,000 | +1 core link, +1 stem, +1 generator, +1 Gravity Pot | 10 hr |
+| 45,000 | +4 stems, +1 generator, +1 Gravity Well | Day 2 (25 hr) |
+| 100,000 | +3 stems, +1 generator | Day 3 (52 hr) |
+| 160,000 | +3 stems, +1 generator | Day 4 (82 hr) |
+| 270,000 | +3 stems, +1 generator | Day 6 (137 hr) |
+| 330,000 | +5 stems, +2 generators (30 stems, 10 generators, 2 core links; 2 pots, a trellis and a well) | End of day 7 (168 hr; one garden in eight not by day 8) |
 
-Jeremy's draft, meant to reach the end in about seven days. At the current economy it doesn't: gene income stays near 50,000 a day, so a garden ends week one with 19 stems, 6 generators and 2 core links (41 main nodes, 6–10 labs, 5–9 groves, about 95 fruit). The track ends here; long-term pacing comes later.
+Jeremy's draft, reaching the end in about seven days. The first four steps are his draft thresholds, kept early and easy. Steps 5–9 were retuned in the balance pass (Oct 29): the draft assumed every gene blob reaches the core, but only about 95% do in a young garden and 40–60% by day 3, as the plant grows more branches for blobs to wander into before they fade (30 links), and a wild lab deep in the plant delivers 5–15%. Gene income is then about 55–70k a day from day 2, so a garden ends week one with 25–30 stems, 8–10 generators and 2 core links (53–63 main nodes, 7–17 labs, 5–12 groves, 120–150 fruit). Smarter gene blobs, which head for the core, are planned as a seedling upgrade (step 5). The track ends here; long-term pacing comes later.
 
-The timings assume a smart player actively tending (see Vision and pillars): the pacing simulation scripts one. It checks in every two hours while awake (16 hours a day), plants the first grove and lab at once, keeps labs within four links of the core (further out, most of their gene blobs wander off), fills the stem cap nearest the core and the generator cap where the plant is hungriest, keeps a grove per 15 stems, and prunes wild groves past that and labs that run dry or drain the garden. Wild growth fills every free link within minutes of an unlock or a prune, so between check-ins the plant fills itself with wild labs and groves. A garden with no labs makes no genes and unlocks nothing, and one with no grove doesn't grow. Proposed: the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
+The timings assume a smart player actively tending (see Vision and pillars): the pacing simulation scripts one. It watches the first hour (a check-in every minute), then checks in every two hours while awake (16 hours a day); it plants the first grove and lab at once, keeps labs within four links of the core (further out, most of their gene blobs wander off), fills the stem cap nearest the core and the generator cap where the plant is hungriest, keeps a grove per 15 stems, and prunes wild groves past that and labs that run dry or drain the garden. Wild growth fills every free link within minutes of an unlock or a prune, so between check-ins the plant fills itself with wild labs and groves. A garden with no labs makes no genes and unlocks nothing, and one with no grove doesn't grow. Proposed: the free track running to roughly 100 stems, and up to 5–6 core links through step 5.
 
 **Long-term pacing: TBD.** Week one has to feel right first; pacing beyond it (bloom timing, how long a garden takes to mature) gets planned once it does.
 

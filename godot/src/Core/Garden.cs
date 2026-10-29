@@ -885,15 +885,17 @@ public sealed class Garden
     }
 
     // Every bud forming, wild or the player's, grows on its own (DESIGN.md, Growth and pruning): a whole bud in
-    // BudSelfGrowSeconds while its part is full, slower as the part runs lower. Fruit doesn't: only growth blobs grow
-    // it. Returns how many buds completed.
+    // BudSelfGrowSeconds while its part is full, slower as the part runs lower; a grove bud FirstGroveSpeed times as
+    // fast while the garden has no grove. Fruit doesn't: only growth blobs grow it. Returns how many buds completed.
     int GrowBuds(float dt)
     {
         budding.Clear();
+        bool groveless = !Nodes.Any(n => n.Spec.Kind == NodeKind.Grove);
         foreach (var node in Nodes)
         {
             if (!node.FormingBud) continue;
             float growth = Tuning.BudGrowth / Tuning.BudSelfGrowSeconds * Output(node) * dt;
+            if (groveless && node.Forming == NodeKind.Grove) growth *= Tuning.FirstGroveSpeed;
             node.Growth += growth;
             node.FormingLook = Math.Min(node.Growth, node.FormingLook + growth);
             if (node.Growth >= Tuning.BudGrowth - 1e-4f) budding.Add(node);

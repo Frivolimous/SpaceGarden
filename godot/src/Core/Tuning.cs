@@ -142,6 +142,9 @@ public static class Tuning
     // a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is plainly
     // faster (at full fill a blob's BlobGrowth is 4 s of growing alone, and a grove makes one every 3 s).
     public const float BudSelfGrowSeconds = 120;
+    // While the garden has no grove (a new garden, or one that pruned its last), a grove bud grows this many times as
+    // fast, so a new player's first grove is out in about half a minute instead of two (Jeremy, balance pass).
+    public const float FirstGroveSpeed = 4;
     // Placeholders. A completed bud starts this far out (a share of its link's length) and pops out at this speed.
     public const float EmergeStart = 0.3f;
     public const float EmergeSpeed = 1.2f;
@@ -153,8 +156,9 @@ public static class Tuning
     // The linear unlock track (DESIGN.md, Progression, "Linear unlock track (step 2)"): genes reaching the core over
     // the garden's life raise the caps at each threshold, in order. Jeremy's week one, reaching 30 stems, 10 generators
     // and 2 core links in about seven days in a garden a smart player tends (DESIGN.md: simulations assume one; see the
-    // tests' SmartPlayer, and UnlockTests.MonthPacing for when each step lands). Past week one is long-term pacing, not
-    // designed yet: the track ends here. The player plants the first grove and lab at once, so the first step comes
+    // tests' SmartPlayer, and UnlockTests.MonthPacing for when each step lands). Steps 5-9 were retuned (balance pass,
+    // Oct 29) to the genes that really reach the core: under half of a grown garden's gene blobs find it before they
+    // fade. Past week one is long-term pacing, not designed yet: the track ends here. The player plants the first grove and lab at once, so the first step comes
     // from the first lab's first few minutes.
     public static readonly UnlockStep[] UnlockTrack =
     [
@@ -162,10 +166,10 @@ public static class Tuning
         new(1_500, Generators: 1),
         new(7_200, Stems: 4, Generators: 1, Trellises: 1),
         new(15_000, Stems: 1, Generators: 1, CoreLinks: 1, Pots: 1),
-        new(70_000, Stems: 4, Generators: 1, Wells: 1),
-        new(200_000, Stems: 3, Generators: 1),
-        new(470_000, Stems: 3, Generators: 1),
-        new(1_000_000, Stems: 3, Generators: 1),
-        new(2_500_000, Stems: 5, Generators: 2), // 30 stems, 10 generators, 2 core links
+        new(45_000, Stems: 4, Generators: 1, Wells: 1),
+        new(100_000, Stems: 3, Generators: 1),
+        new(160_000, Stems: 3, Generators: 1),
+        new(270_000, Stems: 3, Generators: 1),
+        new(330_000, Stems: 5, Generators: 2), // 30 stems, 10 generators, 2 core links
     ];
 }
