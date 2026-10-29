@@ -415,8 +415,8 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3c | Visual polish → MVP (done) | A short round of visual polish, including the prune effect; then the power economy reworked to the original's clumps. End of step = MVP, reached Oct 29 |
 | 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
 | 3e | Manual planting (done) | A manual bud starts at once and forms like a wild one; every node bud grows on its own at its parent's fill (about 2 minutes at full), growth blobs hurry it, and fruit still grows only from blobs. Planting stays free, and a garden with no grove needs no special case. See Growth and pruning |
-| 4 | Information and tracking (built; the real-week tuning pass is next) | Lifetime totals and four time series with tiered history (save v8), a debug-only export, the Almanac as a journal of moments, a "while you were away" note, power visuals at the top of the range; then a real-week tuning pass of the unlock track and gene income. See Step 4 below |
-| 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
+| 4 | Information and tracking (done) | Lifetime totals and four time series with tiered history (save v8), a debug-only export, the Almanac as a journal of moments, a "while you were away" note, power visuals at the top of the range, a light balance pass. See Step 4 below |
+| 5 | Evolutions and rares | First, the real-week tuning check (moved from step 4): a week of real play, then retune the unlock track and check the gene income ceiling from the export. Then choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
 | 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows wild without one). Revisit idle CPU against the benchmarks before release. Achievements: Steam achievements only, with no in-game toast or list; test whether Steam's overlay toast shows over the transparent window, and keep a clean path without Steam. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
 
@@ -472,9 +472,9 @@ Open: where events and seasons, and identity features fall in the plan.
 
 **Power visuals at the top of the range** (done): parts still visibly grow and shrink now that stores are larger. Size and brightness follow the square of the fill, and past full a part swells at half its overfill (see Size follows fill).
 
-**A real-week tuning pass** ends the step, once tracking and the export work:
+**A light balance pass** (Oct 29) closed the step from simulated play: a faster first grove and unlock steps 5–9 retuned (see Unlock track). **The real-week tuning check moved to step 5**, where it runs alongside the design work:
 - Run a real garden for a week, then retune the week-one unlock track from the data.
-- With the same data, check the gene income ceiling: whether flat gene income (labs need to sit near the core) is a real problem, before step 5 adds progression on top.
+- With the same data, check the gene income ceiling: whether flat gene income (labs need to sit near the core) is a real problem, before step 5's progression is built on top.
 
 **Achievements are deferred to step 6** (see the plan).
 ## Parked ideas
