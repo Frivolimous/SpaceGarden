@@ -476,14 +476,14 @@ public partial class Widget : Node
         var world = ToSim(ToWorld(pointer));
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);
 
-        // Ambient: every click falls through but on the core, which brightens under the pointer (a tap wakes the
-        // garden: see _UnhandledInput).
+        // Ambient: every click falls through but on the core, which brightens and is ringed under the pointer (a tap
+        // wakes the garden: see _UnhandledInput).
         if (Mode != DisplayMode.Active)
         {
             undo.Visible = false;
-            main.View.Highlight = null;
             bool overCore = devCoreHover || (inWindow && Garden.NodeAt(world, HoverSlop) == Garden.Core);
             main.View.CoreHover = overCore;
+            main.View.Highlight = overCore ? Garden.Core : null; // ringed, as a part is in Active
             if (ClickThrough.Supported) ClickThrough.Set(!overCore);
             else UpdateRegion(delta, coreOnly: true);
             activeTime = fading || overCore || Garden.Speed > SettledSpeed ? SettleSeconds : activeTime - delta;

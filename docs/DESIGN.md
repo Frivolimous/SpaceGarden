@@ -195,7 +195,7 @@ The player has eight basic commands.
 4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and the nodes linked to it (its parent and what grows straight out of it) are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
 5. **Select evolution:** for the core, seedlings and other skill-based nodes.
 6. **Zoom** in or out.
-7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (faded and click-through, except the core: it brightens under the pointer, and a tap wakes the garden to Active with the core's menu open), or Minimised (to the taskbar and tray). Ambient and Minimise are slots in the core's menu; a hotkey toggles Active and Ambient, and brings a minimised garden back.
+7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (faded and click-through, except the core: it brightens and is ringed under the pointer, and a tap wakes the garden to Active with the core's menu open), or Minimised (to the taskbar and tray). Ambient and Minimise are slots in the core's menu; a hotkey toggles Active and Ambient, and brings a minimised garden back.
 8. **Drag:** click and drag any node to tug the plant around on a spring. Purely tactile, no economy effect.
 
 Undo covers only the most recent prune. Wild growth leaves the freed capacity alone until the undo window passes (see Growth and pruning).
@@ -316,7 +316,7 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 | Always on top | Must | Done (prototype; a toggle in the Developer settings) |
 | Click-through (Ambient mode) | Must | Done (prototype; step 3d leaves the core clickable, to wake the garden) |
 | Low idle CPU / memory, pause while hidden | Must | Done (prototype) |
-| Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2, revised in 3d). Active (default) is full opacity with the toolbar, the card and the core's menu; Ambient fades the window to 55% and lets every click through but on the core, which brightens under the pointer and wakes the garden on a tap; Minimised minimises the window and pauses the garden like a locked screen (caught up on return). Ambient and Minimise are in the core's menu; Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) and restores a minimised garden, as do its taskbar button and the tray icon |
+| Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2, revised in 3d). Active (default) is full opacity with the toolbar, the card and the core's menu; Ambient fades the window to 55% and lets every click through but on the core, which brightens and is ringed under the pointer and wakes the garden on a tap; Minimised minimises the window and pauses the garden like a locked screen (caught up on return). Ambient and Minimise are in the core's menu; Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) and restores a minimised garden, as do its taskbar button and the tray icon |
 | Remembers size and position | Must | Plant scale saved; the overlay covers the work area and Minimised is a plain minimise, so there is no window position to keep. The display mode isn't saved: every launch starts in Active |
 | Tray icon: show/hide, settings | Should | Done (step 2). Click to show or hide (Minimised); right-click for the settings |
 | Core menu | Must | Done (step 3d). A half ring of icon buttons under the core: Info, Build, Ambient, Minimise, Settings. See Information display |
@@ -371,7 +371,7 @@ Gen and Drain are what the garden makes and costs at full; Drain turns red when 
 
 **The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient**, **Minimise** and **Settings**, which close it. The Almanac (step 4) and Research (step 5) join later: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
 
-**Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little while the pointer is on it, and one tap switches to Active and opens its menu.
+**Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little and shows the selection ring while the pointer is on it, and one tap switches to Active and opens its menu.
 
 **Needs attention.** A red dot on the core while something wants the player's look: for now an overloaded garden (`GardenStats.NeedsOf`, a list of `Attention` reasons); waiting evolutions and research will use it too. It shows in Ambient as well, as the garden's way of asking for a look.
 
