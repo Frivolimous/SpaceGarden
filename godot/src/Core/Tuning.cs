@@ -142,6 +142,9 @@ public static class Tuning
     // a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is plainly
     // faster (at full fill a blob's BlobGrowth is 4 s of growing alone, and a grove makes one every 3 s).
     public const float BudSelfGrowSeconds = 120;
+    // While the garden has no grove (a new garden, or one that pruned its last), a grove bud grows this many times as
+    // fast, so a new player's first grove is out in about half a minute instead of two (Jeremy, balance pass).
+    public const float FirstGroveSpeed = 4;
     // Placeholders. A completed bud starts this far out (a share of its link's length) and pops out at this speed.
     public const float EmergeStart = 0.3f;
     public const float EmergeSpeed = 1.2f;

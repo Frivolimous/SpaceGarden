@@ -146,6 +146,26 @@ public class BudTests
             garden.Grow(1);
             seconds++;
         }
-        Assert.InRange(seconds, Tuning.BudSelfGrowSeconds, 5 * 60);
+        // A garden with no grove grows one FirstGroveSpeed times as fast: about half a minute, the stem filling meanwhile.
+        Assert.InRange(seconds, Tuning.BudSelfGrowSeconds / Tuning.FirstGroveSpeed, 60);
+    }
+
+    [Fact]
+    public void OnlyAGrovelessGardenGrowsItsGroveFaster()
+    {
+        var (garden, stem) = WithAStem();
+        Assert.True(garden.SproutFrom(stem, NodeKind.Grove));
+        double first = GrowAt(garden, 1, () => stem.Branches.Count == 1, 600);
+        Assert.InRange(first, Tuning.BudSelfGrowSeconds / Tuning.FirstGroveSpeed, Tuning.BudSelfGrowSeconds / Tuning.FirstGroveSpeed * 1.05);
+        // With a grove out, the next grove bud grows at the usual rate (the first grove held empty, so it sends no blobs).
+        Assert.True(garden.SproutFrom(stem, NodeKind.Grove));
+        double second = 0;
+        while (stem.Branches.Count < 2 && second < 600)
+        {
+            foreach (var n in garden.Nodes) if (!n.Spec.IsFruit) n.Power = n.Spec.Kind == NodeKind.Grove ? 0 : n.Store;
+            garden.Grow(Tuning.EconomyStepSeconds);
+            second += Tuning.EconomyStepSeconds;
+        }
+        Assert.InRange(second, Tuning.BudSelfGrowSeconds, Tuning.BudSelfGrowSeconds * 1.03);
     }
 }
