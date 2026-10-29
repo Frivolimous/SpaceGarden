@@ -499,6 +499,9 @@ public partial class Widget : Node
         }
         main.View.Highlight = dragging || pressed ? pressNode : under ?? toolbar.Target ?? selected;
         main.View.HotTool = dragging ? DropTarget(world) : movingTool ?? underTool?.Tool ?? toolbar.TargetTool;
+        main.View.HotHandle = dragging ? ShapingHandle.Body
+            : movingTool != null ? movingHandle
+            : underTool?.Handle ?? ShapingHandle.Body;
 
         bool catchMouse = pressed || overToolbar || overReadout || under != null || overBar || onBackdrop
             || underTool != null || movingTool != null;

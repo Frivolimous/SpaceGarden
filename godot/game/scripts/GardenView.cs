@@ -30,11 +30,12 @@ public partial class GardenView : Node2D
 
     // The shaping tools (DESIGN.md, Shaping the garden) under the plant: as clear as ToolsWanted (the widget sets it
     // by display mode: faint while tending, full in build mode, hidden in Ambient), the HotTool (under the pointer, or
-    // where a dragged part would drop) brighter. In build mode (Building) a dark backdrop fades in round the plant and
-    // its tools, and the tools' handles show.
+    // where a dragged part would drop) brighter, or only its HotHandle if that's what the pointer is on. In build mode
+    // (Building) a dark backdrop fades in round the plant and its tools, and the tools' handles show.
     public float ToolsWanted;
     public bool Building;
     public ShapingTool? HotTool;
+    public ShapingHandle HotHandle;
     float toolsAlpha, backdropAlpha, backdropRadius;
     Vector2 backdropCentre;
     static readonly Color Backdrop = Color.FromHtml("171a1f"); // a dark grey, barely cool
@@ -203,8 +204,9 @@ public partial class GardenView : Node2D
     // A tool's tint as shown: as clear as the display mode allows, brighter under the pointer (or as a drop target).
     Color TintOf(ShapingTool tool)
     {
-        var tint = ShapingLook.Tint with { A = toolsAlpha * (tool == HotTool ? 1 : 0.75f) };
-        return tool == HotTool ? tint.Lightened(0.25f) : tint;
+        bool hot = tool == HotTool && HotHandle == ShapingHandle.Body;
+        var tint = ShapingLook.Tint with { A = toolsAlpha * (hot ? 1 : 0.75f) };
+        return hot ? tint.Lightened(0.25f) : tint;
     }
 
     // The size a pot is drawn round: its part as drawn now (a drained part is smaller), or an empty pot's.
@@ -259,9 +261,13 @@ public partial class GardenView : Node2D
         if (!Building || toolsAlpha <= 0.01f) return;
         foreach (var tool in garden.Shaping)
         {
-            var tint = ShapingLook.Tint with { A = toolsAlpha * (tool == HotTool ? 1 : 0.6f) };
+            // A handle lights when it's the one under the pointer (or held); the rest of its tool stays as it is.
+            Color KnobTint(ShapingHandle handle) => tool == HotTool && HotHandle == handle
+                ? ShapingLook.Tint.Lightened(0.35f) with { A = toolsAlpha }
+                : ShapingLook.Tint with { A = toolsAlpha * 0.6f };
             if (tool.Kind == ShapingKind.Pot)
             {
+                var tint = KnobTint(ShapingHandle.Turn);
                 var u = V(tool.Facing);
                 var knob = V(tool.Position) + u * (garden.PotRadius(tool) + ShapingTool.PotKnob);
                 markLayer.DrawDashedLine(V(tool.Position) + u * (PotRadius(tool) + 3), knob - u * 4, tint with { A = tint.A * 0.4f }, 1, 3, true, true);
@@ -270,8 +276,8 @@ public partial class GardenView : Node2D
             else if (tool.Kind == ShapingKind.Trellis)
             {
                 var (a, b) = tool.Ends;
-                ShapingLook.Knob(markLayer, V(a), 4, tint);
-                ShapingLook.Knob(markLayer, V(b), 4, tint);
+                ShapingLook.Knob(markLayer, V(a), 4, KnobTint(ShapingHandle.EndA));
+                ShapingLook.Knob(markLayer, V(b), 4, KnobTint(ShapingHandle.EndB));
             }
         }
     }
