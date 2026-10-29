@@ -13,6 +13,7 @@ public partial class Card : PanelContainer
 
     static readonly Color Ink = new(1, 1, 1, 0.9f);
     static readonly Color HighInk = new(1, 0.88f, 0.35f), LowInk = new(1, 0.38f, 0.33f), GeneInk = new(0.62f, 0.45f, 1f);
+    static readonly Color RoomGreen = new(0.4f, 0.95f, 0.45f);
     static readonly Color GardenTint = GardenView.Rgb(NodeSpecs.All[NodeKind.Core].Rgb);
 
     readonly Label heading;
@@ -93,8 +94,9 @@ public partial class Card : PanelContainer
         heading.Text = spec.Name;
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
         Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
-        if (stats.Makes > 0) Line(ref used, $"Makes: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
-        if (stats.Upkeep > 0) Line(ref used, $"Upkeep: {stats.Upkeep * speed:0}/s");
+        if (spec.PowerPerSecond > 0) // by kind, so the lines stay put when a rate falls to 0
+            Line(ref used, $"Makes: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
+        if (spec.PowerPerSecond < 0) Line(ref used, $"Upkeep: {stats.Upkeep * speed:0}/s");
         if (spec.Kind == NodeKind.Grove) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
         if (spec.Kind == NodeKind.Lab) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
         if (stats.Links >= 2) Line(ref used, $"Connections: {stats.Links} / {stats.MaxLinks}");
@@ -183,9 +185,9 @@ public partial class Card : PanelContainer
         return Ink.Lerp(LowInk, Math.Clamp((1 - ratio) / (1 - allLow), 0, 1));
     }
 
-    // Room under a cap: red with none left, else yellow with little left towards white with all of it.
+    // Room under a cap: green with all of it left, towards white as it fills (white when full).
     static Color RoomInk(int used, int cap) =>
-        cap == int.MaxValue || cap <= 0 ? Ink : used >= cap ? LowInk : HighInk.Lerp(Ink, (cap - used) / (float)cap);
+        cap == int.MaxValue || cap <= 0 ? Ink : RoomGreen.Lerp(Ink, Math.Clamp(used / (float)cap, 0, 1));
 
     // A short time to wait, in real seconds: "under 1m", "25m", "4h 47m", "2d 3h".
     public static string Eta(double seconds)
