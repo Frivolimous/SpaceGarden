@@ -156,7 +156,7 @@ public partial class Readout : VBoxContainer
     {
         nodePanel.Visible = nodeGap.Visible = node != null;
         if (node == null) return;
-        var (name, description) = NodeSpecs.Info[node.Spec.Kind];
+        var (name, description) = (node.Spec.Name, node.Spec.Description);
         nodeTitle.Text = $"{name} · {node.Power:0.##} / {node.Store:0.##} power";
         nodeTitle.LabelSettings.FontColor = GardenView.Rgb(node.Spec.Rgb).Lightened(0.35f);
         nodeText.Text = description;
@@ -182,7 +182,7 @@ public partial class Readout : VBoxContainer
     // Shows at once: the readout appearing, the Undo pill after a prune, a new selection.
     public void RefreshNow() => refreshTimer = 0;
 
-    static string Name(NodeKind kind) => NodeSpecs.Info[kind].Name;
+    static string Name(NodeKind kind) => NodeSpecs.All[kind].Name;
 
     static string Count(int n, string thing) => n == 1 ? $"1 {thing}" : $"{n} {thing}s";
 

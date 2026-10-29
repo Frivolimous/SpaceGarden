@@ -276,7 +276,7 @@ public class EconomyTests
         Assert.All(parts, n => Assert.Contains(n, garden.Nodes));
         Assert.All(garden.Nodes, n => Assert.True(n.Power >= 0));
         // The core only sends while fuller than SendFill, so it never runs dry.
-        Assert.True(garden.Core.Fill > Tuning.SendFill - Tuning.CoreClump / Tuning.CorePowerStore);
+        Assert.True(garden.Core.Fill > Tuning.SendFill - garden.Core.Spec.Clump / garden.Core.Store);
         var fills = AverageFills(garden);
         Assert.True(fills.Values.Average() < 0.75f, $"{fills.Values.Average()}");
     }

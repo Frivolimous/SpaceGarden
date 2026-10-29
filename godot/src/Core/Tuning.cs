@@ -1,6 +1,6 @@
 namespace SpaceGarden.Core;
 
-// Every number that shapes the feel, in one place. Physics values are per 60 Hz tick, as in the TS game's
+// The numbers that shape the feel, across the garden (each kind's own are in NodeSpecs). Physics values are per 60 Hz tick, as in the TS game's
 // Config.PHYSICS (same values, so the motion matches); growth values are in real seconds.
 public static class Tuning
 {
@@ -84,31 +84,21 @@ public static class Tuning
     // so the steps don't drift with the chunks).
     public const double EconomyStepSeconds = 0.3125;
 
-    // How much power a part holds (powerMax). A new part starts empty.
-    public const float NodePowerStore = 100;
-    public const float CorePowerStore = 3 * NodePowerStore;
-    public const float LabPowerStore = 2 * NodePowerStore;
-
-    // Power made, and upkeep, per second when full. Both follow the part's fill: a source makes its rate times its
-    // fill (none past full), a drain costs its rate times its fill, so nothing ever quite empties or wilts.
-    public const float CorePowerPerSecond = 0.4f * 60;
-    public const float GeneratorPowerPerSecond = 0.2f * 60;  // half the core's
-    public const float StemUpkeepPerSecond = 0.05f * 60;     // halved by each leaf
+    // Each kind's power (store, rate, weight, clump) is in its NodeSpec (NodeSpecs.All), as the original's Nodes
+    // config. Making and upkeep both follow the part's fill: a source makes its rate times its fill (none past full),
+    // a drain costs its rate times its fill, so nothing ever quite empties. A new part starts empty. Each leaf on a
+    // part multiplies its upkeep by LeafUpkeepFactor.
     public const float LeafUpkeepFactor = 0.5f;
-    public const float GroveUpkeepPerSecond = 0.1f * 60;
-    public const float LabUpkeepPerSecond = 0.1f * 60;
 
     // Placeholder: each flower fruit (a generator's burr, a lab's research, a grove's berry) adds this much to its
     // flower's output, up to the doc's +20% per flower.
     public const float FruitBonusEach = 0.2f / 3;
     public const float FruitBonusMax = 0.2f;
 
-    // Power transfer (the original's attemptTransferPower): each step, a part fuller than SendFill sends a clump of
-    // power (powerClump) to its emptiest neighbour that's less full than itself, emptiest by fill over weight
-    // (powerWeight: stems, then the core, count as emptier than they are, so power heads out along the stems).
+    // Power transfer (the original's attemptTransferPower and POWER_THRESHOLD): each step, a part fuller than SendFill
+    // sends its clump of power to its emptiest neighbour that's less full than itself, emptiest by fill over weight
+    // (stems, then the core, count as emptier than they are, so power heads out along the stems).
     public const float SendFill = 0.25f;
-    public const float CoreClump = 15, NodeClump = 10, FlowerClump = 5; // flowers: labs and groves
-    public const float CoreWeight = 1.5f, StemWeight = 1.1f;
 
     // Capacity at the start (DESIGN.md, Linear unlock track: "Start"). The unlock track raises Garden.Capacity.
     public const int StartStemCap = 4;
@@ -116,17 +106,16 @@ public static class Tuning
     public const int StartCoreLinks = 1;
 
     // ==== BLOBS ==== \\
-    // Draft rates (DESIGN.md, Economy, Blobs), to tune in play. Flowers make blobs at these rates when full of power,
-    // in proportion to their fill when lower (their own fruit add up to FruitBonusMax).
+    // Flowers make blobs at their kind's rate (NodeSpec.BlobsPerHour: a grove one every 3 s, a lab one every 5 s) when
+    // full of power, in proportion to their fill when lower (their own fruit add up to FruitBonusMax).
     // Both kinds wander the stems at random, never turning straight back unless at a dead end, and fade after
     // BlobMaxHops links (the original's 30) if nothing absorbed them.
     public const int BlobMaxHops = 30;
     public const int MaxMotes = 60; // blobs in flight at once; past it a blob still does its work, unseen
 
-    // Growth blobs, from groves: one every 3 s, each carrying BlobGrowth. A part with nothing forming absorbs one
-    // AbsorbChance of the time (the original's 30%), a part with something forming always does. A fresh one starts a bud BudChance of the time where a branch could grow, else a fruit; the fruit
-    // completes at FruitGrowth, the bud at BudGrowth.
-    public const float GroveBlobsPerHour = 1200;
+    // Growth blobs, from groves, each carry BlobGrowth. A part with nothing forming absorbs one AbsorbChance of the
+    // time (the original's 30%), a part with something forming always does. A fresh one starts a bud BudChance of the
+    // time where a branch could grow, else a fruit; the fruit completes at FruitGrowth, the bud at BudGrowth.
     public const float BlobGrowth = 0.1f;
     public const float AbsorbChance = 0.3f;
     public const float BudChance = 0.5f;
@@ -136,9 +125,8 @@ public static class Tuning
     public const float EmergeStart = 0.3f;
     public const float EmergeSpeed = 1.2f;
 
-    // Gene blobs, from labs: one every 5 s, each carrying BlobGenes (a whole gene, so they can be counted); only the
-    // core absorbs them. Labs are the only source: the first unlock waits for the first lab's genes to find the core.
-    public const float LabBlobsPerHour = 720;
+    // Gene blobs, from labs, each carry BlobGenes (a whole gene, so they can be counted); only the core absorbs them.
+    // Labs are the only source: the first unlock waits for the first lab's genes to find the core.
     public const float BlobGenes = 1;
 
     // The linear unlock track (DESIGN.md, Progression, "Linear unlock track (step 2)"): genes reaching the core over

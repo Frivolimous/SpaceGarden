@@ -426,7 +426,7 @@ public sealed class Garden
     //   - flowers make blobs in proportion to their fill: labs gene blobs, groves growth blobs, each sent off on its
     //     walk as it's made (see SendGenes, SendGrowth);
     //   - each part fuller than SendFill sends a clump of power to its emptiest neighbour that's less full than it
-    //     (see Send). Clumps, not a smooth flow, so the fills never settle: they rock around a moving balance, and
+    //     (see SendTo). Clumps, not a smooth flow, so the fills never settle: they rock around a moving balance, and
     //     a branch far from the sources runs lower (there is no global pool).
     // Nothing checks whether the garden can afford what grows: that's the player's to judge (prune what drains it).
     // Returns how many parts grew.
@@ -467,7 +467,7 @@ public sealed class Garden
             if (SendTo(node) is { } to) transfers.Add((node, to));
         foreach (var (from, to) in transfers)
         {
-            float clump = Clump(from);
+            float clump = from.Spec.Clump;
             from.Power -= clump;
             to.Power += clump;
             if (!ShowBlobs) continue;
@@ -483,7 +483,7 @@ public sealed class Garden
     // among those less full than itself (fills past full count as full).
     PlantNode? SendTo(PlantNode node)
     {
-        if (node.Spec.IsFruit || node.Fill <= Tuning.SendFill || node.Power < Clump(node)) return null;
+        if (node.Spec.IsFruit || node.Fill <= Tuning.SendFill || node.Power < node.Spec.Clump) return null;
         float fill = Math.Min(1, node.Fill);
         PlantNode? best = null;
         float bestWeighed = float.MaxValue;
@@ -493,72 +493,43 @@ public sealed class Garden
 
         void Consider(PlantNode other)
         {
-            float otherFill = other.Fill, weighed = otherFill / Weight(other);
+            float otherFill = other.Fill, weighed = otherFill / other.Spec.Weight;
             if (Math.Min(1, otherFill) >= fill || weighed >= bestWeighed) return;
             best = other;
             bestWeighed = weighed;
         }
     }
 
-    static float Clump(PlantNode node) => node.Spec.Kind switch
-    {
-        NodeKind.Core => Tuning.CoreClump,
-        NodeKind.Lab or NodeKind.Grove => Tuning.FlowerClump,
-        _ => Tuning.NodeClump,
-    };
-
-    static float Weight(PlantNode node) => node.Spec.Kind switch
-    {
-        NodeKind.Core => Tuning.CoreWeight,
-        NodeKind.Stem => Tuning.StemWeight,
-        _ => 1,
-    };
-
     // How hard a part works (DESIGN.md: "Everything follows its fill"): in proportion to its fill, up to full.
     public static float Output(PlantNode node) => Math.Clamp(node.Fill, 0, 1);
 
-    // Power a part makes per second now: in proportion to its fill, nothing once full (a generator's fruit adding a
-    // little, up to FruitBonusMax).
+    // Power a part makes per second now: in proportion to its fill, nothing once full.
     public static float ProductionPerSecond(PlantNode node) =>
         node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * Output(node);
 
-    // What a part makes per second at its rate (as when nearly full).
-    public static float FullProductionPerSecond(PlantNode node) => node.Spec.Kind switch
-    {
-        NodeKind.Core => Tuning.CorePowerPerSecond,
-        NodeKind.Generator => Tuning.GeneratorPowerPerSecond * FruitBonus(node),
-        _ => 0,
-    };
+    // What a part makes per second when full (its fruit adding a little, up to FruitBonusMax).
+    public static float FullProductionPerSecond(PlantNode node) =>
+        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node);
 
-    // A flower's own fruit raise its output a little each, up to FruitBonusMax.
+    // A part's own fruit raise its output a little each, up to FruitBonusMax.
     static float FruitBonus(PlantNode node) =>
         1 + Math.Min(Tuning.FruitBonusMax, node.Fruits.Count * Tuning.FruitBonusEach);
 
-    // Power a part costs per second now: its full upkeep times its fill (past full, more). Each leaf halves a stem's.
+    // Power a part costs per second now: its full upkeep times its fill (past full, more).
     public static float UpkeepPerSecond(PlantNode node) => FullUpkeepPerSecond(node) * Math.Max(0, node.Fill);
 
-    // What a part costs per second when full.
-    public static float FullUpkeepPerSecond(PlantNode node) => node.Spec.Kind == NodeKind.Stem
-        ? Tuning.StemUpkeepPerSecond * MathF.Pow(Tuning.LeafUpkeepFactor, node.Fruits.Count) // (a stem's fruit are leaves)
-        : KindUpkeepPerSecond(node.Spec.Kind);
-
-    // What a new part of this kind costs per second when full (no fruit yet).
-    public static float KindUpkeepPerSecond(NodeKind kind) => kind switch
+    // What a part costs per second when full: each leaf on it halves it (LeafUpkeepFactor).
+    public static float FullUpkeepPerSecond(PlantNode node)
     {
-        NodeKind.Stem => Tuning.StemUpkeepPerSecond,
-        NodeKind.Lab => Tuning.LabUpkeepPerSecond,
-        NodeKind.Grove => Tuning.GroveUpkeepPerSecond,
-        _ => 0,
-    };
+        float upkeep = Math.Max(0, -node.Spec.PowerPerSecond);
+        foreach (var fruit in node.Fruits)
+            if (fruit.Spec.Kind == NodeKind.Leaf) upkeep *= Tuning.LeafUpkeepFactor;
+        return upkeep;
+    }
 
     // Blobs a flower makes per real hour now: gene blobs from a lab, growth blobs from a grove, in proportion to its
     // fill (their fruit adding a little).
-    public static float BlobsPerHour(PlantNode node) => node.Spec.Kind switch
-    {
-        NodeKind.Lab => Tuning.LabBlobsPerHour * FruitBonus(node) * Output(node),
-        NodeKind.Grove => Tuning.GroveBlobsPerHour * FruitBonus(node) * Output(node),
-        _ => 0,
-    };
+    public static float BlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node) * Output(node);
 
     // ==== BLOBS ==== \\
 

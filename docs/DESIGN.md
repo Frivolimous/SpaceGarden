@@ -103,7 +103,7 @@ Fruit, once grown, stays. Groves are needed while the garden grows; if growth st
 
 **Grove tuning target.** Tune the grove's growth blob rate so one or two groves can just keep up with leaf demand from new stems as well as their share of wild buds. Each new stem has room for two leaves, so week one's 27 new stems (4 to 31) mean about 54 leaves.
 
-Values copied from the original game (its per-tick numbers times 60), to be tuned through play. Rates are per real second when full, and scale with fill:
+Values copied from the original game (its per-tick numbers times 60), to be tuned through play. Each kind's numbers live in one entry of `NodeSpecs` (`godot/src/Core/NodeSpecs.cs`), as the original's `Nodes` config, with the shared base values in `NodeBase`; garden-wide knobs are in `Tuning`. Rates are per real second when full, and scale with fill:
 
 | Node | Holds | Produces | Upkeep |
 | --- | --- | --- | --- |
@@ -303,7 +303,7 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 
 ### Information display
 
-Step 3b. The plant is stupid and the player is the brain, so the player needs the numbers a decision turns on, at a glance and without a menu. Both panels follow the readout's rules: Active mode only, shown while the pointer rests on the plant (or the panels themselves), fading in and out over 1 s. They are compact centred lines, each tinted by its role's hue, so they read on a desktop widget. The numbers come from the rules (`GardenStats`, `NodeSpecs.Info` in `godot/src/Core`), never worked out in the view.
+Step 3b. The plant is stupid and the player is the brain, so the player needs the numbers a decision turns on, at a glance and without a menu. Both panels follow the readout's rules: Active mode only, shown while the pointer rests on the plant (or the panels themselves), fading in and out over 1 s. They are compact centred lines, each tinted by its role's hue, so they read on a desktop widget. The numbers come from the rules (`GardenStats`, and each kind's spec in `NodeSpecs` in `godot/src/Core`), never worked out in the view.
 
 **The readout** (the whole garden), one line each:
 
@@ -317,7 +317,7 @@ Step 3b. The plant is stupid and the player is the brain, so the player needs th
 
 Gene income is expected, not measured: each lab's blob rate now times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). It's steady from the first moment, and the same odds tell the player what a lab's placement is worth.
 
-**The selected part panel.** Tapping a part selects it (as well as opening its toolbar, as before); the selection stays, ringed, after the toolbar closes, until another part is tapped, it's pruned, or a click lands off the plant. A dim card above the readout's lines shows its name (in its hue) and its power held against its store, a one-line description of what it does (one per node kind, in `NodeSpecs.Info`), and its own numbers: power made or upkeep per second, fruit against its room, what's forming in it and how far along, and for a lab the share of its genes that reach the core and its genes per minute.
+**The selected part panel.** Tapping a part selects it (as well as opening its toolbar, as before); the selection stays, ringed, after the toolbar closes, until another part is tapped, it's pruned, or a click lands off the plant. A dim card above the readout's lines shows its name (in its hue) and its power held against its store, a one-line description of what it does (one per node kind, in its `NodeSpec`), and its own numbers: power made or upkeep per second, fruit against its room, what's forming in it and how far along, and for a lab the share of its genes that reach the core and its genes per minute.
 
 ## Platform: Godot 4 (.NET)
 

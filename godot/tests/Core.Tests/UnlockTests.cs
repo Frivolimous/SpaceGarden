@@ -3,7 +3,7 @@ namespace SpaceGarden.Core.Tests;
 public class UnlockTests
 {
     const double Hour = 3600, Day = 24 * Hour;
-    static readonly double BlobHours = 1 / Tuning.LabBlobsPerHour;
+    static readonly double BlobHours = 1 / NodeSpecs.All[NodeKind.Lab].BlobsPerHour;
 
     static Garden NewGarden(Capacity? capacity = null, int seed = 7, bool fixedCaps = false)
     {
@@ -45,7 +45,7 @@ public class UnlockTests
         var (garden, lab) = WithALab();
         garden.Grow(Hour);
         // Its blobs can only reach the core (lab - stem - core), at nearly full power: about six genes an hour.
-        Assert.InRange(garden.Genes, 0.75 * Tuning.LabBlobsPerHour * Tuning.BlobGenes, Tuning.LabBlobsPerHour * Tuning.BlobGenes);
+        Assert.InRange(garden.Genes, 0.75 * NodeSpecs.All[NodeKind.Lab].BlobsPerHour * Tuning.BlobGenes, NodeSpecs.All[NodeKind.Lab].BlobsPerHour * Tuning.BlobGenes);
         Assert.InRange(lab.Blob, 0, 1);
     }
 
@@ -106,9 +106,9 @@ public class UnlockTests
     public void ALowLabMakesFewerGenes()
     {
         var (_, lab) = WithALab();
-        Assert.Equal(Tuning.LabBlobsPerHour, Garden.BlobsPerHour(lab), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Lab].BlobsPerHour, Garden.BlobsPerHour(lab), 1e-4f);
         lab.Power = lab.Store / 4;
-        Assert.Equal(Tuning.LabBlobsPerHour / 4, Garden.BlobsPerHour(lab), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Lab].BlobsPerHour / 4, Garden.BlobsPerHour(lab), 1e-4f);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class UnlockTests
     {
         var (garden, lab) = WithALab();
         for (int i = 0; i < 3; i++) Add(garden, lab, NodeKind.Research);
-        Assert.Equal(Tuning.LabBlobsPerHour * 1.2f, Garden.BlobsPerHour(lab), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Lab].BlobsPerHour * 1.2f, Garden.BlobsPerHour(lab), 1e-4f);
     }
 
     [Fact]

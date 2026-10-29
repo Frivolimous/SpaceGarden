@@ -1,6 +1,6 @@
 namespace SpaceGarden.Core.Tests;
 
-// The hover readout's numbers (GardenStats) and the selected part's panel text (NodeSpecs.Info).
+// The hover readout's numbers (GardenStats) and the selected part's panel text (each NodeSpec's Name and Description).
 public class StatsTests
 {
     static Garden NewGarden(Capacity capacity)
@@ -21,7 +21,7 @@ public class StatsTests
     {
         foreach (var kind in Enum.GetValues<NodeKind>())
         {
-            Assert.True(NodeSpecs.Info.TryGetValue(kind, out var info), $"{kind} has no info");
+            Assert.True(NodeSpecs.All.TryGetValue(kind, out var info), $"{kind} has no spec");
             Assert.False(string.IsNullOrWhiteSpace(info.Name), $"{kind} has no name");
             Assert.False(string.IsNullOrWhiteSpace(info.Description), $"{kind} has no description");
             Assert.DoesNotContain('\n', info.Description);

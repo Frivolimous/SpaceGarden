@@ -3,7 +3,7 @@ namespace SpaceGarden.Core.Tests;
 public class GroveTests
 {
     const double Hour = 3600, Day = 24 * Hour;
-    static readonly double BlobHours = 1 / Tuning.GroveBlobsPerHour;
+    static readonly double BlobHours = 1 / NodeSpecs.All[NodeKind.Grove].BlobsPerHour;
 
     static Garden NewGarden(Capacity? capacity = null, int seed = 7)
     {
@@ -49,16 +49,16 @@ public class GroveTests
     {
         var (_, grove) = WithAGrove();
         Assert.Equal(6, Garden.FullUpkeepPerSecond(grove));
-        Assert.Equal(Tuning.LabUpkeepPerSecond, Garden.FullUpkeepPerSecond(grove));
+        Assert.Equal(-NodeSpecs.All[NodeKind.Lab].PowerPerSecond, Garden.FullUpkeepPerSecond(grove));
     }
 
     [Fact]
     public void AGrovesOutputFollowsItsPower()
     {
         var (_, grove) = WithAGrove();
-        Assert.Equal(Tuning.GroveBlobsPerHour, Garden.BlobsPerHour(grove), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Grove].BlobsPerHour, Garden.BlobsPerHour(grove), 1e-4f);
         grove.Power = grove.Store / 4;
-        Assert.Equal(Tuning.GroveBlobsPerHour / 4, Garden.BlobsPerHour(grove), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Grove].BlobsPerHour / 4, Garden.BlobsPerHour(grove), 1e-4f);
         grove.Power = 0;
         Assert.Equal(0, Garden.BlobsPerHour(grove));
     }
@@ -68,7 +68,7 @@ public class GroveTests
     {
         var (garden, grove) = WithAGrove();
         for (int i = 0; i < 3; i++) Add(garden, grove, NodeKind.Berry);
-        Assert.Equal(Tuning.GroveBlobsPerHour * 1.2f, Garden.BlobsPerHour(grove), 1e-4f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Grove].BlobsPerHour * 1.2f, Garden.BlobsPerHour(grove), 1e-4f);
     }
 
     [Fact]

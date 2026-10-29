@@ -25,7 +25,7 @@ public static class SmartPlayer
         PruneDrains(garden);
         MakeRoom(garden);
         while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
-        while (Spare(garden) >= Tuning.LabUpkeepPerSecond + Reserve && FreeLinks(garden) > 1
+        while (Spare(garden) >= -NodeSpecs.All[NodeKind.Lab].PowerPerSecond + Reserve && FreeLinks(garden) > 1
             && Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth)) { }
         while (Bud(garden, NodeKind.Generator, nearFirst: false, hungriest: true)) { }
         while (Count(garden, NodeKind.Grove) < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
