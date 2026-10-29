@@ -21,6 +21,8 @@ public sealed class ShapingTool
     public const float PotMouth = 15, PotBase = 10, PotDepth = 22, PotKnob = 34;
     public const float WellRadius = 16;
     public const float TrellisLength = 160, TrellisMinLength = 50;
+    // How far from a handle (a pot's knob, a trellis's end) the pointer still takes it, besides the pointer's slop.
+    public const float HandleReach = 14;
 
     public readonly ShapingKind Kind;
     // A pot's mouth (where its part sits), a trellis's middle, a well's centre.

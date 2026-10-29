@@ -142,6 +142,20 @@ public class ShapingTests
         Assert.Equal(ShapingTool.TrellisMinLength, trellis.Length, 2);
     }
 
+    [Fact]
+    public void ATrellisEndIsEasyToTakeEvenOnItsLine()
+    {
+        var garden = Garden.New(Layout.Radial, seed: 7);
+        garden.Capacity = garden.Capacity with { Trellises = 1 };
+        var trellis = garden.Place(ShapingKind.Trellis, new Vector2(500, 500))!; // level, 160 long
+        var (a, b) = trellis.Ends;
+        // On the line, just inside an end: the end, not the body, though the line is nearer.
+        Assert.Equal((trellis, ShapingHandle.EndB), garden.ShapingAt(b - new Vector2(12, 0), 5));
+        Assert.Equal((trellis, ShapingHandle.EndA), garden.ShapingAt(a + new Vector2(-8, 10), 5));
+        // Its middle is still the body.
+        Assert.Equal((trellis, ShapingHandle.Body), garden.ShapingAt(trellis.Position + new Vector2(0, 4), 5));
+    }
+
     // ==== GRAVITY WELL ==== \\
 
     [Fact]

@@ -354,17 +354,19 @@ public sealed class Garden
     // A pot is drawn (and caught) bigger round a big part: in proportion to its part's size, from a flower's up.
     public float PotScale(ShapingTool pot) => Math.Max(1.4f, Potted(pot) is { } node ? node.Spec.Radius / 10 : 0);
 
-    // The tool under the pointer, and which bit of it: its handles first (a pot's knob, a trellis's ends), then the
-    // tool nearest the pointer.
+    // The tool under the pointer, and which bit of it: a handle (a pot's knob, a trellis's end) wherever one is within
+    // its reach, as they're small and sit on or by their tool's body; else the body nearest the pointer.
     public (ShapingTool Tool, ShapingHandle Handle)? ShapingAt(Vector2 point, float slop)
     {
-        (ShapingTool, ShapingHandle)? best = null;
-        float bestDist = float.MaxValue;
-        void Consider(ShapingTool tool, ShapingHandle handle, float dist, float reach)
+        (ShapingTool, ShapingHandle)? handle = null, body = null;
+        float handleDist = float.MaxValue, bodyDist = float.MaxValue;
+        void Consider(ShapingTool tool, ShapingHandle part, Vector2 at, float reach)
         {
-            if (dist > reach + slop || dist >= bestDist) return;
-            best = (tool, handle);
-            bestDist = dist;
+            float dist = Vector2.Distance(point, at);
+            bool isBody = part == ShapingHandle.Body;
+            if (dist > reach + slop || dist >= (isBody ? bodyDist : handleDist)) return;
+            if (isBody) (body, bodyDist) = ((tool, part), dist);
+            else (handle, handleDist) = ((tool, part), dist);
         }
         foreach (var tool in Shaping)
         {
@@ -373,22 +375,21 @@ public sealed class Garden
                 case ShapingKind.Pot:
                     float s = PotScale(tool);
                     var u = tool.Facing;
-                    Consider(tool, ShapingHandle.Turn, Vector2.Distance(point, tool.Position + u * ShapingTool.PotKnob * s), 5);
-                    Consider(tool, ShapingHandle.Body, Vector2.Distance(point, tool.Position - u * ShapingTool.PotDepth * s / 2),
-                        ShapingTool.PotMouth * s);
+                    Consider(tool, ShapingHandle.Turn, tool.Position + u * ShapingTool.PotKnob * s, ShapingTool.HandleReach);
+                    Consider(tool, ShapingHandle.Body, tool.Position - u * ShapingTool.PotDepth * s / 2, ShapingTool.PotMouth * s);
                     break;
                 case ShapingKind.Trellis:
                     var (a, b) = tool.Ends;
-                    Consider(tool, ShapingHandle.EndA, Vector2.Distance(point, a), 6);
-                    Consider(tool, ShapingHandle.EndB, Vector2.Distance(point, b), 6);
-                    Consider(tool, ShapingHandle.Body, Vector2.Distance(point, tool.OnLine(point)), 6);
+                    Consider(tool, ShapingHandle.EndA, a, ShapingTool.HandleReach);
+                    Consider(tool, ShapingHandle.EndB, b, ShapingTool.HandleReach);
+                    Consider(tool, ShapingHandle.Body, tool.OnLine(point), 6);
                     break;
                 case ShapingKind.Well:
-                    Consider(tool, ShapingHandle.Body, Vector2.Distance(point, tool.Position), ShapingTool.WellRadius);
+                    Consider(tool, ShapingHandle.Body, tool.Position, ShapingTool.WellRadius);
                     break;
             }
         }
-        return best;
+        return handle ?? body;
     }
 
     // The tools' pushes and pulls, before the parts move (DESIGN.md, Shaping the garden):
