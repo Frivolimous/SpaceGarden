@@ -106,13 +106,13 @@ public static class Tuning
 
     // ==== SHAPING ==== \\
     // Placeholders, per 60 Hz tick (DESIGN.md, Shaping the garden). A potted part moves PotFollow of the way to its pot
-    // each tick, and each main part linked to it (its parent, and what grows straight out of it) is pushed PotPush (over its mass) the way the pot faces (gently: about
-    // the wind's strength). A Gravity Well pulls every main part WellPull towards it, easing off within WellEase of
-    // its centre: faint, as it pulls the whole plant and the core takes all of it back (stronger stretches the core's
-    // links). Fruit follows its part. A part on a trellis slides along it, its sliding damped by TrellisSlide each
-    // tick.
+    // each tick, and each main part linked to it (its parent, and what grows straight out of it) is pushed PotPush,
+    // over its mass, the way the pot faces (about five times the wind's strength on a stem). A Gravity Well pulls
+    // every main part WellPull towards it, easing off within WellEase of its centre: faint, as it pulls the whole plant
+    // and the core takes all of it back (stronger stretches the core's links). Fruit follows its part. A part on a
+    // trellis slides along it, its sliding damped by TrellisSlide each tick.
     public const float PotFollow = 0.12f;
-    public const float PotPush = 0.004f;
+    public const float PotPush = 0.012f;
     public const float WellPull = 0.0007f;
     public const float WellEase = 40;
     public const float TrellisSlide = 0.9f;
