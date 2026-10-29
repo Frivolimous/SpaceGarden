@@ -22,10 +22,11 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   or trellis) and its **card**: its name, power, and its own numbers ("Upkeep: 6/s", "Genes: 12/min", what's
   forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for
   a moment closes just the toolbar; the card stays until a click lands off the plant, Escape, or another tap.
-- **Tap the core** for its menu, a half ring of buttons under it (names show under the pointer): **Info** (the
-  garden's card: power, what it makes and drains, genes against the next unlock and its ETA, the caps), **Build**,
-  **Ambient**, **Minimise** and **Settings**. The core's toolbar (its buds) opens above it at the same time. Tap the
-  core again, anywhere else, or Escape to close it. The card sits in one spot beside the plant while it's open.
+- **Tap the core** for its menu, a half ring of buttons under it (names show under the pointer). **Info** and
+  **Build** are switches, lit while on: Info shows the garden's card (power, what it makes and drains, genes against
+  the next unlock and its ETA, the caps) above the part's whenever you tap the plant, and Build is build mode.
+  **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
+  time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
 - A **red dot** on the core means the garden wants a look: for now, that it's overloaded (it costs more at full
   than it makes; the garden card's Drain shows red).
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
@@ -89,7 +90,7 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits; with it,
 `--prune=N` and `--undo=N` prune the biggest branch and undo it at tick N), `--shaping[=N]` (places one of each
 shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card
-open, or the core's with no lab; `--inspect=core` or `--inspect=garden` for those), `--coremenu[=SLOT]` (the core's
+open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
 menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--ambient` (starts in Ambient) and
 `--corehover` (as if the pointer were on the core there), `--attention` (the core's red dot, whatever the garden),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),

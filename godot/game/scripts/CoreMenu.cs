@@ -75,6 +75,13 @@ public partial class CoreMenu : Control
         fade.TweenCallback(Callable.From(() => Visible = false));
     }
 
+    // A slot that switches something on (Info, Build) is lit while it's on.
+    public void SetActive(Tool tool, bool on)
+    {
+        foreach (var button in buttons)
+            if (button.Tool == tool) button.Active = on;
+    }
+
     // Whether the pointer is on one of its slots (in the menu's layer's units).
     public bool Over(Vector2 point) => IsOpen && buttons.Any(b => b.GetGlobalRect().Grow(2).HasPoint(point));
 

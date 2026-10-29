@@ -12,12 +12,12 @@ namespace SpaceGarden;
 // screen's edges are the garden's borders.
 //
 // Resting the pointer on a part rings it, and nothing more. Tapping it (a click without a drag) selects it, opens its
-// toolbar and shows its card. The selection stays (ringed, its card open) after the toolbar closes, until another
-// part is tapped, the part is pruned, a click lands off the plant, or Escape. Tapping the core also opens its menu
-// (CoreMenu) under it, with its toolbar (its buds) above it: Info swaps its card for the garden's, and the rest pick
-// build mode, Ambient, Minimised or the settings. Dragging a part pulls it to the pointer by its weight and the links
-// drag the rest after it; letting go keeps the momentum. Right-click opens the settings. It drops to a low frame rate
-// when nothing's happening.
+// toolbar and shows its card. The selection stays (ringed, its card open) after the toolbar closes, until the part is
+// tapped again, another is tapped, it's pruned, a click lands off the plant, or Escape. Tapping the core also opens
+// its menu (CoreMenu) under it, with its toolbar (its buds) above it: Info and Build switch the garden's card (shown
+// above the part's while tending) and build mode on and off, and the rest pick Ambient, Minimised or the settings.
+// Dragging a part pulls it to the pointer by its weight and the links drag the rest after it; letting go keeps the
+// momentum. Right-click opens the settings. It drops to a low frame rate when nothing's happening.
 //
 // Display modes (DESIGN.md, Tending commands): Active, the default, shows it at full opacity with its controls (the
 // toolbar, the card, the core's menu); Ambient fades the whole window and lets every click fall through but on the
@@ -81,7 +81,9 @@ public partial class Widget : Node
     };
     readonly Toolbar toolbar = new();
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
-    readonly Card card = new();
+    readonly Card partCard = new(), gardenCard = new();
+    readonly VBoxContainer cards = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
+    bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
     readonly UndoPill undo = new();
     readonly CoreMenu coreMenu = new();
     readonly StatusIndicator tray = new();
@@ -156,7 +158,10 @@ public partial class Widget : Node
         toolbar.Used += Use;
         toolbarLayer.AddChild(undo);
         undo.Pressed += UndoPrune;
-        toolbarLayer.AddChild(card);
+        cards.AddThemeConstantOverride("separation", 6);
+        cards.AddChild(gardenCard);
+        cards.AddChild(partCard);
+        toolbarLayer.AddChild(cards);
         toolbarLayer.AddChild(coreMenu);
         coreMenu.Picked += PickFromCoreMenu;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
@@ -277,7 +282,7 @@ public partial class Widget : Node
         Building = on;
         barAt = null;
         shapingBar.Appear(on);
-        toolbar.HideAway();
+        if (toolbar.TargetTool != null) toolbar.HideAway(); // a part's (the core's, under its menu) stays
         movingTool = null;
         fromBar = false;
         activeTime = SettleSeconds;
@@ -366,7 +371,8 @@ public partial class Widget : Node
         main.View.Restored(back); // growing back in, but not new: no pops or glints
         toolbar.HideAway();
         undo.RefreshNow();
-        card.RefreshNow();
+        partCard.RefreshNow();
+        gardenCard.RefreshNow();
         activeTime = SettleSeconds;
     }
 
@@ -506,7 +512,10 @@ public partial class Widget : Node
         }
         if (movingTool != null) MoveTool();
         PlaceUndo(delta);
-        card.Update(Garden, main.GrowthSpeed, delta);
+        partCard.Update(Garden, main.GrowthSpeed, delta);
+        gardenCard.Update(Garden, main.GrowthSpeed, delta);
+        coreMenu.SetActive(Tool.Info, gardenInfo);
+        coreMenu.SetActive(Tool.Build, Building);
         PlaceCard();
         if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * plantScale, viewport);
 
@@ -579,18 +588,18 @@ public partial class Widget : Node
         undoPlaced = true;
     }
 
-    // The card is set down as it opens beside the plant, level with the core: to its right, or its left if there's
-    // more room there (the plant usually lives at the screen's bottom right). Then it stays put while it's open,
-    // whatever it shows, its top corner on that side fixed (only pushed back onto the screen if it grows past an edge).
+    // The cards (the garden's above the part's) are set down as they open beside the plant, level with the core: to its
+    // right, or its left if there's more room there (the plant usually lives at the screen's bottom right). Then they
+    // stay put while open, their top corner on that side fixed (only pushed back onto the screen past an edge).
     void PlaceCard()
     {
-        if (!card.Visible)
+        if (!partCard.Visible && !gardenCard.Visible)
         {
             cardAnchor = null;
             return;
         }
         var screen = GetViewport().GetVisibleRect().Size / Dpi;
-        var size = card.GetCombinedMinimumSize();
+        var size = cards.GetCombinedMinimumSize();
         if (cardAnchor == null)
         {
             const float gap = 16, top = 60; // the card's top this far above the core
@@ -602,8 +611,8 @@ public partial class Widget : Node
             cardAnchor = new Vector2(cardOnLeft ? left - gap : right + gap, core.Y - top);
         }
         var at = cardAnchor.Value - new Vector2(cardOnLeft ? size.X : 0, 0);
-        card.Position = at.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
-        card.Size = size;
+        cards.Position = at.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
+        cards.Size = size;
     }
 
     // A tapped part's toolbar goes once the pointer has been off both the part and the toolbar for a while (see
@@ -668,7 +677,10 @@ public partial class Widget : Node
         }
         switch (Value("inspect"))
         {
-            case "garden": ShowGardenCard(); break;
+            case "garden":
+                gardenInfo = true;
+                Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core);
+                break;
             case "core": Select(Garden.Core); break;
             case "" or "lab": Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core); break;
         }
@@ -702,7 +714,7 @@ public partial class Widget : Node
         {
             if (coreMenu.IsOpen) CloseCoreMenu();
             else if (Building) SetBuilding(false);
-            else if (card.IsOpen) Select(null);
+            else if (partCard.IsOpen || gardenCard.IsOpen) Select(null);
             else return;
             GetViewport().SetInputAsHandled();
             return;
@@ -791,7 +803,7 @@ public partial class Widget : Node
     // (the core: its menu too).
     void Tap(PlantNode node)
     {
-        bool again = node == Garden.Core ? coreMenu.IsOpen : selected == node && card.Part == node;
+        bool again = node == Garden.Core ? coreMenu.IsOpen : selected == node && partCard.Part == node;
         if (again)
         {
             CloseCoreMenu();
@@ -820,38 +832,49 @@ public partial class Widget : Node
         if (!coreMenu.IsOpen) return;
         coreMenu.Close();
         if (toolbar.Target == Garden.Core) toolbar.HideAway();
+        ShowGardenCard();
     }
 
-    // The core menu's slots: each closes it and does its job.
+    // The core menu's slots: Info (the garden card) and Build (build mode) switch on or off, lit while on, and leave
+    // the menu and the core's toolbar open; the rest close it and do their job.
     void PickFromCoreMenu(Tool tool)
     {
-        CloseCoreMenu();
         switch (tool)
         {
             case Tool.Info:
-                if (card.ShowsGarden) Select(null);
-                else ShowGardenCard();
-                break;
-            case Tool.Build: SetBuilding(!Building); break;
+                gardenInfo = !gardenInfo;
+                coreMenu.SetActive(Tool.Info, gardenInfo);
+                ShowGardenCard();
+                return;
+            case Tool.Build:
+                SetBuilding(!Building);
+                coreMenu.SetActive(Tool.Build, Building);
+                return;
+        }
+        CloseCoreMenu();
+        switch (tool)
+        {
             case Tool.Ambient: SetMode(DisplayMode.Ambient); break;
             case Tool.Minimise: SetMode(DisplayMode.Minimised); break;
             case Tool.Settings: OpenSettings(DisplayServer.MouseGetPosition()); break;
         }
     }
 
-    // The part's card, or with none, no card (the garden's card closes too).
+    // The part's card, or with none, no part card (and the garden's goes with it).
     void Select(PlantNode? node)
     {
-        if (node != null) card.ShowPart(node);
-        else card.Close();
+        if (node != null) partCard.ShowPart(node);
+        else partCard.Close();
         selected = node;
+        ShowGardenCard();
     }
 
-    // The garden's card in place of a part's (no part selected).
+    // With Info on, the garden's card shows above the part's while the player is tending: a part selected, or the
+    // core's menu open. A click off the plant puts it away; the next tap on it brings it back, until Info is off.
     void ShowGardenCard()
     {
-        selected = null;
-        card.ShowGarden();
+        if (gardenInfo && (selected != null || coreMenu.IsOpen)) gardenCard.ShowGarden();
+        else gardenCard.Close();
     }
 
     void OpenSettings(Vector2I at)
@@ -879,7 +902,8 @@ public partial class Widget : Node
                 undo.RefreshNow(); // the Undo pill, at once
                 break;
         }
-        card.RefreshNow();
+        partCard.RefreshNow();
+        gardenCard.RefreshNow();
         toolbar.HideAway();
         CloseCoreMenu();
     }
