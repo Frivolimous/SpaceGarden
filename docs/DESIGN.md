@@ -103,7 +103,7 @@ Fruit, once grown, stays. Groves are needed while the garden grows; if growth st
 
 **Grove tuning target.** Tune the grove's growth blob rate so one or two groves can just keep up with leaf demand from new stems as well as their share of wild buds. Each new stem has room for two leaves, so week one's 27 new stems (4 to 31) mean about 54 leaves.
 
-Values copied from the original game (its per-tick numbers times 60), to be tuned through play. Each kind's numbers live in one entry of `NodeSpecs` (`godot/src/Core/NodeSpecs.cs`), as the original's `Nodes` config, with the shared base values in `NodeBase`; garden-wide knobs are in `Tuning`. Rates are per real second when full, and scale with fill:
+Values copied from the original game (its per-tick numbers times 60), to be tuned through play. Each kind's numbers live in one entry of `NodeSpecs` (`godot/src/Core/NodeSpecs.cs`), as the original's `Nodes` config, with the shared base values in `NodeBase` (`PowerClump` is the power sent in one transfer); garden-wide knobs are in `Tuning`. Rates are per real second when full, and scale with fill:
 
 | Node | Holds | Produces | Upkeep |
 | --- | --- | --- | --- |

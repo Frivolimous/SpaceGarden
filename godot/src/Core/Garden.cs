@@ -467,7 +467,7 @@ public sealed class Garden
             if (SendTo(node) is { } to) transfers.Add((node, to));
         foreach (var (from, to) in transfers)
         {
-            float clump = from.Spec.Clump;
+            float clump = from.Spec.PowerClump;
             from.Power -= clump;
             to.Power += clump;
             if (!ShowBlobs) continue;
@@ -483,7 +483,7 @@ public sealed class Garden
     // among those less full than itself (fills past full count as full).
     PlantNode? SendTo(PlantNode node)
     {
-        if (node.Spec.IsFruit || node.Fill <= Tuning.SendFill || node.Power < node.Spec.Clump) return null;
+        if (node.Spec.IsFruit || node.Fill <= Tuning.SendFill || node.Power < node.Spec.PowerClump) return null;
         float fill = Math.Min(1, node.Fill);
         PlantNode? best = null;
         float bestWeighed = float.MaxValue;
@@ -493,7 +493,7 @@ public sealed class Garden
 
         void Consider(PlantNode other)
         {
-            float otherFill = other.Fill, weighed = otherFill / other.Spec.Weight;
+            float otherFill = other.Fill, weighed = otherFill / other.Spec.PowerWeight;
             if (Math.Min(1, otherFill) >= fill || weighed >= bestWeighed) return;
             best = other;
             bestWeighed = weighed;

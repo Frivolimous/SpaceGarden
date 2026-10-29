@@ -65,7 +65,7 @@ public sealed class PlantNode
     }
 
     // How much power it holds (none for fruit), and how full it is.
-    public float Store => Spec.Store;
+    public float Store => Spec.PowerStore;
     public float Fill => Store == 0 ? 0 : Power / Store;
 
     public int Links => Branches.Count + (Parent == null ? 0 : 1);
