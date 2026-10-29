@@ -28,8 +28,6 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   the next unlock and its ETA, the caps) above the part's whenever you tap the plant, and Build is build mode.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
-- A **red dot** on the core means the garden wants a look: for now, that it's overloaded (it costs more at full
-  than it makes; the garden card's Drain shows red).
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
   the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; wild growth waits out the window
   so the room is still there, and a bud placed in that room, or time away, ends it.
@@ -94,7 +92,7 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card
 open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
 menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--ambient` (starts in Ambient) and
-`--corehover` (as if the pointer were on the core there), `--attention` (the core's red dot, whatever the garden),
+`--corehover` (as if the pointer were on the core there),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of
 the next unlock on the gene track, to watch one fire), `--fpslog` (prints

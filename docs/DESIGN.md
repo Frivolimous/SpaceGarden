@@ -322,7 +322,6 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 | Tray icon: show/hide, settings | Should | Done (step 2). Click to show or hide (Minimised); right-click for the settings |
 | Core menu | Must | Done (step 3d). A half ring of icon buttons under the core: Info, Build, Ambient, Minimise, Settings. See Information display |
 | Cards: a part's, and the garden's | Must | Done (step 3b, revised in 3d). A tapped part's card, and above it the garden's while the core menu's Info is on, in a spot of their own beside the plant. See Information display |
-| Needs-attention dot | Must | Done (step 3d). A red dot on the core while the garden is overloaded; later also waiting evolutions and research |
 | Undo pill | Must | Done (step 2). Under the plant while the last prune can be undone, counting down |
 | Settings | Must | Done (step 3d). Right-click, or the core menu's Settings: Size, Idle frame rate, New garden (asks first), Quit, and in debug builds a Developer submenu (Always on top, Growth speed, Physics) |
 | Build mode | Must | Done (step 3a). Within Active: an opaque disc round the plant, the shaping bar, tools to move, turn and remove. See Shaping the garden |
@@ -338,7 +337,7 @@ Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid an
 
 **Cards, in a fixed spot.** Tapping a part selects it (ringed), opens its toolbar and shows its card. **Info** in the core's menu is a switch (lit while on): while it's on, the garden's card shows above the part's whenever the player is tending (a part selected, or the core's menu open). A click off the plant puts both away; the next tap on the plant brings the garden's back, until Info is switched off. The cards are set down as they open beside the plant, level with the core (to its right, or its left if there's more room there), and stay there while open, their top corner fixed, so the layout never jumps (switching Info on pushes the part's card down below the garden's). Tapping the selected part again closes its card and toolbar together (the core: its menu too). The cards also close when a click lands off the plant, on Escape, or when the part is pruned.
 
-**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (a full core or generator makes nothing, an empty part costs nothing). The overload (and the red dot) is still judged at full.
+**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (a full core or generator makes nothing, an empty part costs nothing). (The overload is judged at full: what the garden would make and cost with every part full.)
 
 | Kind | Lines |
 | --- | --- |
@@ -380,7 +379,7 @@ Gen and Drain are what the garden makes and costs now; Gen's value is coloured b
 
 **Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little and shows the selection ring while the pointer is on it, and one tap switches to Active and opens its menu.
 
-**Needs attention.** A red dot on the core while something wants the player's look: for now an overloaded garden (`GardenStats.NeedsOf`, a list of `Attention` reasons); waiting evolutions and research will use it too. It shows in Ambient as well, as the garden's way of asking for a look.
+**No needs-attention dot.** A red dot on the core (for an overloaded garden, later waiting evolutions and research) was tried and dropped (Jeremy, Oct 29): more confusing than helpful. The garden card's Gen colour shows an overload.
 
 **Settings.** Right-click (and the tray icon's right-click) opens them as a shortcut; so does Settings in the core's menu. For the player: Size, Idle frame rate, New garden (which asks first) and Quit. A Developer submenu, only in debug builds (`OS.IsDebugBuild()`), holds Always on top, Growth speed and Physics. Display mode moved to the core's menu.
 
@@ -407,7 +406,7 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3a | Shaping (done) | Gravity Pot, Trellis, Gravity Well, placed and connected in build mode. See Shaping the garden |
 | 3b | Information display (done) | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget; revised in 3d |
 | 3c | Visual polish → MVP (done) | A short round of visual polish, including the prune effect; then the power economy reworked to the original's clumps. End of step = MVP, reached Oct 29 |
-| 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; a red needs-attention dot on the core; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
+| 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
 | 3e | Manual planting (to do) | Explore whether planting by hand should cost something (growth motes, a store of them, or a bud that motes then finish) and what a garden with no grove does. Exploration and design first. See Next topics |
 | 4 | Information and tracking | Stat tracking over time, Almanac, any information display 3b left out. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
@@ -445,7 +444,7 @@ Settled since the first draft: platform (Godot); "is there any care need?" (no; 
 Design layers still to work through:
 
 - [x] Information display: the readout and the selected part panel (step 3b)
-- [x] UI revision (step 3d): hovering shows nothing but the ring; one card in a fixed spot; the core's half-ring menu; the core tappable in Ambient mode to wake the garden; a needs-attention dot. Build mode itself is unchanged, now opened from the core's menu
+- [x] UI revision (step 3d): hovering shows nothing but the ring; one card in a fixed spot; the core's half-ring menu; the core tappable in Ambient mode to wake the garden. Build mode itself is unchanged, now opened from the core's menu
 - [ ] Manual planting (step 3e): should a manual bud cost growth motes? A mote store to spend from, or a bud that starts and motes finish? Or only wild growth and pruning? With no grove: does one grow slowly on its own, can one always be planted, or does the core make a few motes and grow a grove first?
 - [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework)
 - [ ] Stat tracking and Almanac, including what form the Almanac takes (step 4)

@@ -1,6 +1,6 @@
 namespace SpaceGarden.Core.Tests;
 
-// The garden card's numbers (GardenStats), the part card's (NodeStats), the core's red dot (Attention), and each
+// The garden card's numbers (GardenStats), the part card's (NodeStats), and each
 // NodeSpec's Name and Description.
 public class StatsTests
 {
@@ -138,23 +138,6 @@ public class StatsTests
 
         Assert.Null((stats with { GenesPerHour = 0 }).SecondsToNext); // no labs: never
         Assert.Null((stats with { NextUnlock = null }).SecondsToNext); // the track done
-    }
-
-    // ==== ATTENTION ==== \\
-
-    [Fact]
-    public void AnOverloadedGardenWantsALook()
-    {
-        var garden = NewGarden(new Capacity(4, 1, 1));
-        var trunk = Add(garden, garden.Core, NodeKind.Stem);
-        Assert.Empty(GardenStats.NeedsOf(garden));
-        Assert.Empty(GardenStats.Of(garden).Needs);
-        var branch = Add(garden, Add(garden, trunk, NodeKind.Stem), NodeKind.Stem);
-        Add(garden, trunk, NodeKind.Lab);
-        Add(garden, branch.Parent!, NodeKind.Lab);
-        Add(garden, branch, NodeKind.Lab); // 27 a second against the core's 24 (see above)
-        Assert.Equal([Attention.Overloaded], GardenStats.NeedsOf(garden));
-        Assert.Equal(GardenStats.NeedsOf(garden), GardenStats.Of(garden).Needs);
     }
 
     // ==== PART CARD ==== \\

@@ -111,7 +111,6 @@ public partial class Widget : Node
     // Where the card was set down as it opened (its top corner on the side it's on), kept while it's open.
     Vector2? cardAnchor;
     bool cardOnLeft;
-    double attentionTimer;
 
     public float Dpi { get; private set; } = 1;
     float plantScale = 0.75f;
@@ -120,7 +119,7 @@ public partial class Widget : Node
     PlantNode? pressNode;
     PlantNode? selected;
     // Dev aids for --screenshot runs (see DevFlags): open a card, the core's menu, Ambient with the pointer on the core.
-    bool devFlagsDone, devCoreHover, devAttention;
+    bool devFlagsDone, devCoreHover;
     bool pressed, dragging;
     double leaveTime, regionTimer, activeTime;
 
@@ -464,12 +463,6 @@ public partial class Widget : Node
         if (ClickThrough.Supported) ClickThrough.Opacity(opacity);
         else main.View.Modulate = new Color(1, 1, 1, opacity);
 
-        // The core's red dot, checked every second (in Ambient too: it's how the garden asks for a look).
-        if ((attentionTimer -= delta) <= 0)
-        {
-            attentionTimer = 1;
-            main.View.Attention = devAttention || GardenStats.NeedsOf(Garden).Count > 0;
-        }
         if (!devFlagsDone) DevFlags();
 
         var pointer = PointerInViewport();
@@ -661,15 +654,13 @@ public partial class Widget : Node
 
     // Dev aids for --screenshot runs, once the garden is set up: --inspect (a lab's card, or the core's if it has
     // none), --inspect=core or --inspect=garden; --coremenu opens the core's menu (--coremenu=settings with that
-    // slot's name showing); --ambient starts in Ambient, and --corehover acts as if the pointer were on the core;
-    // --attention shows the core's red dot whatever the garden.
+    // slot's name showing); --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
     void DevFlags()
     {
         devFlagsDone = true;
         var args = OS.GetCmdlineUserArgs();
         string? Value(string name) => args.FirstOrDefault(a => a == $"--{name}" || a.StartsWith($"--{name}="))
             is { } a ? (a.Contains('=') ? a[(a.IndexOf('=') + 1)..] : "") : null;
-        devAttention = Value("attention") != null;
         if (Value("coremenu") is { } slot)
         {
             OpenCoreMenu();

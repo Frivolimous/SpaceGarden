@@ -25,9 +25,8 @@ public partial class GardenView : Node2D
 
     public PlantNode? Highlight;
 
-    // Something wants the player's look (GardenStats.Needs): a red dot on the core. CoreHover: the pointer is on the
-    // core in Ambient mode, where a tap wakes the garden, and the core brightens a little.
-    public bool Attention;
+    // CoreHover: the pointer is on the core in Ambient mode, where a tap wakes the garden, and the core brightens a
+    // little.
     public bool CoreHover;
     float coreHover;
 
@@ -467,20 +466,13 @@ public partial class GardenView : Node2D
         foreach (var (shape, batch) in forming) batch.Draw(formingLayer, Textures.Shape(shape));
     }
 
-    // The core's light while the pointer is on it in Ambient mode, its red dot, and the hover ring.
+    // The core's light while the pointer is on it in Ambient mode, build mode's link counts, and the hover ring.
     void DrawMarks()
     {
         DrawHandles();
         var core = garden.Core;
         if (coreHover > 0)
             markLayer.DrawCircle(At(core), Size(core) * 1.02f, ColourOf(core.Spec).Lightened(0.6f) with { A = 0.22f * coreHover });
-        if (Attention)
-        {
-            // Over the core's upper right, on a soft dark edge.
-            var dot = At(core) + new Vector2(0.62f, -0.62f) * Mathf.Max(Size(core), core.Spec.Radius * 0.6f);
-            markLayer.DrawCircle(dot, 5.5f, new Color(0, 0, 0, 0.55f));
-            markLayer.DrawCircle(dot, 4.2f, new Color(0.93f, 0.22f, 0.2f));
-        }
 
         if (backdropAlpha > 0) DrawLinkCounts();
 

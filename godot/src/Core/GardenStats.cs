@@ -20,16 +20,6 @@ public sealed record GardenStats(
     public double GenesToNext => NextUnlock is { } next ? Math.Max(0, next.Genes - Genes) : 0;
     public double? SecondsToNext => NextUnlock == null || GenesPerHour <= 0 ? null : GenesToNext / GenesPerHour * 3600;
 
-    // What wants the player's look (the core's red dot).
-    public IReadOnlyList<Attention> Needs => Overloaded ? [Attention.Overloaded] : [];
-
-    // The same without the rest of the snapshot (no walk of the genes' odds), cheap enough to check often.
-    public static IReadOnlyList<Attention> NeedsOf(Garden garden)
-    {
-        var (production, upkeep) = garden.FullPowerBalance();
-        return upkeep > production ? [Attention.Overloaded] : [];
-    }
-
     public static GardenStats Of(Garden garden)
     {
         var (production, upkeep) = garden.PowerBalance(); // per second
@@ -103,10 +93,6 @@ public sealed record GardenStats(
         return reached;
     }
 }
-
-// Something in the garden that wants the player's look, shown as a red dot on the core (DESIGN.md, Information
-// display): an overloaded garden for now; waiting evolutions and research join later.
-public enum Attention { Overloaded }
 
 // What a part's card shows (DESIGN.md, Information display): its power against its store, and its rates now (they
 // follow its fill), per growth second or hour; Sends is how fast it can send power on. Makes, Sends and Upkeep are
