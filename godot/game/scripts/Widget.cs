@@ -787,19 +787,23 @@ public partial class Widget : Node
         pressNode = null;
     }
 
-    // A tapped part is selected (its card shows) and its toolbar opens, or closes if it was open. Tapping the core
-    // opens or closes its menu, with its toolbar.
+    // A tapped part is selected (its card shows) and its toolbar opens. Tapping the selected part again closes both
+    // (the core: its menu too).
     void Tap(PlantNode node)
     {
-        if (node == Garden.Core)
+        bool again = node == Garden.Core ? coreMenu.IsOpen : selected == node && card.Part == node;
+        if (again)
         {
-            if (coreMenu.IsOpen) CloseCoreMenu();
-            else OpenCoreMenu();
-            return;
+            CloseCoreMenu();
+            if (toolbar.Target == node) toolbar.HideAway();
+            Select(null);
         }
-        Select(node);
-        if (toolbar.Target == node) toolbar.HideAway();
-        else toolbar.ShowFor(node);
+        else if (node == Garden.Core) OpenCoreMenu();
+        else
+        {
+            Select(node);
+            toolbar.ShowFor(node);
+        }
     }
 
     void OpenCoreMenu()

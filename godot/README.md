@@ -20,8 +20,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
   (grow a stem, generator, lab or grove from it, prune it and everything beyond it, and Unhook if it's tied to a pot
   or trellis) and its **card**: its name, power, and its own numbers ("Upkeep: 6/s", "Genes: 12/min", what's
-  forming). Tap again, pick a tool, click anywhere else, start a drag, or move away for a moment to close the
-  toolbar; the card stays until a click lands off the plant or Escape.
+  forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for
+  a moment closes just the toolbar; the card stays until a click lands off the plant, Escape, or another tap.
 - **Tap the core** for its menu, a half ring of buttons under it (names show under the pointer): **Info** (the
   garden's card: power, what it makes and drains, genes against the next unlock and its ETA, the caps), **Build**,
   **Ambient**, **Minimise** and **Settings**. The core's toolbar (its buds) opens above it at the same time. Tap the
