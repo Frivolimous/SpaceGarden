@@ -94,8 +94,14 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, button) in buttons) button.Visible = (tool == Tool.Remove) == (TargetTool != null);
         if (Target == null) return;
         buttons[Tool.Unhook].Visible = Target.TiedTo != null;
+        // A part with room for only its parent's link (a generator, lab or grove) can't grow anything: no buds.
+        bool buds = Target.MaxLinks > 1;
         foreach (var (tool, button) in buttons)
-            if (KindOf(tool) is { } kind) button.Enabled = CanGrow(Target, kind);
+            if (KindOf(tool) is { } kind)
+            {
+                button.Visible = buds;
+                button.Enabled = CanGrow(Target, kind);
+            }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
     }
 

@@ -189,7 +189,7 @@ Once it has a grove, the garden grows wild until it fills its capacity; attentiv
 
 The player has eight basic commands.
 
-1. **New sprout:** choose a basic node type and grow it at a chosen spot.
+1. **New sprout:** choose a basic node type and grow it at a chosen spot. A part with room only for its parent's link (a generator, grove or lab) offers no buds in its toolbar, only prune.
 2. **Prune:** remove any node and all of its children. No preview; undo restores the last prune only, within about 30 seconds (to be tuned).
 3. **Place a shaping tool** (Gravity Pot, Trellis, Gravity Well) in build mode: a subtle overlay, placed, moved and turned anywhere (see Shaping the garden).
 4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and the nodes linked to it (its parent and what grows straight out of it) are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
