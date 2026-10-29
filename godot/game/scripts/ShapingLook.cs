@@ -28,18 +28,18 @@ public static class ShapingLook
     // A flower pot holding a part of radius r centred at `at`, opening the way u points: a rim straight across the
     // part's middle, a little wider than the bowl, and under it a round bowl just bigger than the part, so the part
     // sits in it up to its middle. The bowl is centred on the part, so the gap round it is even, sides and bottom;
-    // the rim covers its top.
-    public static void Pot(CanvasItem ci, Vector2 at, Vector2 u, float r, Color tint)
+    // the rim covers its top. s scales the pot's own sizes (its gap, rim and lip) for an icon.
+    public static void Pot(CanvasItem ci, Vector2 at, Vector2 u, float r, Color tint, float s = 1)
     {
         const int steps = 16;
         var side = new Vector2(-u.Y, u.X);
-        float bowl = r + ShapingTool.PotGap, rim = ShapingTool.PotRim, lip = bowl + ShapingTool.PotLip;
+        float bowl = r + ShapingTool.PotGap * s, rim = ShapingTool.PotRim * s, lip = bowl + ShapingTool.PotLip * s;
         var under = at - u * rim; // the rim's underside
         var points = new Vector2[steps + 1];
         float start = u.Angle() + Mathf.Pi / 2; // one side of the rim, round the bottom to the other
         for (int i = 0; i <= steps; i++) points[i] = at + Vector2.FromAngle(start + Mathf.Pi * i / steps) * bowl;
-        Outlined(ci, points, tint, 1);
-        Outlined(ci, [at + side * lip, at - side * lip, under - side * lip, under + side * lip], tint, 1);
+        Outlined(ci, points, tint, s);
+        Outlined(ci, [at + side * lip, at - side * lip, under - side * lip, under + side * lip], tint, s);
     }
 
     // The pot's push, shown: small chevrons rising past its part (radius r) the way it faces, fading as they go.
@@ -118,9 +118,9 @@ public static class ShapingLook
     {
         switch (tool)
         {
-            case Tool.Pot: // a part (a dot) in its cup
-                ci.DrawCircle(c + new Vector2(0, -3), 3, tint with { A = tint.A * 0.6f });
-                Pot(ci, c + new Vector2(0, -3), Vector2.Up, 3, tint);
+            case Tool.Pot: // a stem in its pot, at half size
+                ci.DrawCircle(c + new Vector2(0, -2), 5, tint with { A = tint.A * 0.6f });
+                Pot(ci, c + new Vector2(0, -2), Vector2.Up, 5, tint, 0.5f);
                 break;
             case Tool.Trellis: Trellis(ci, c + new Vector2(-8, 5), c + new Vector2(8, -5), tint, 0.6f); break;
             case Tool.Well: Well(ci, c, tint, 0.1f, 0.45f); break;
