@@ -230,7 +230,6 @@ public sealed class Garden
         if (Held != null && gone.Contains(Held)) LetGo();
         lastPrune = (removed, removed.Select(n => n.Position - node.Parent.Position).ToList());
         Tracking.Pruned += removed.Count;
-        Tracking.First("pruned", "First branch pruned");
         UndoSecondsLeft = Tuning.UndoPruneSeconds;
         return removed;
     }
@@ -859,6 +858,7 @@ public sealed class Garden
             {
                 counts = counts.With(node.Forming!.Value);
                 Tracking.WildBuds++;
+                Tracking.First("wild", "The garden budded on its own for the first time");
             }
             node.Growth = 0;
             node.FormingLook = 0;

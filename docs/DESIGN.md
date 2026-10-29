@@ -446,7 +446,7 @@ Open: where events and seasons, and identity features fall in the plan.
 
 **The Almanac is a journal of moments.**
 - Milestones are logged automatically, such as "First grove emerged" or "Second core link unlocked".
-  - Built: the planting, each kind's first part ("First grove emerged", "First leaf grew"), every unlock, and the first prune and first of each shaping tool placed.
+  - Built: the planting, each kind's first part ("First grove emerged", "First leaf grew"), the first time the garden buds on its own, and every unlock. They favour the garden's own moments (Jeremy, Oct 29). Of the player's doings only genuine milestones count: the first of each shaping tool placed (not the first prune).
   - Also the first time the garden reaches 25, 50, 100, 200, 300, 400 and 500 parts.
   - An unlock is named by what it opens, biggest first, then the room it adds: "Second core link and second Gravity Pot unlocked, with room for 1 more stem and 1 more generator", or "Unlocked room for 3 more stems".
 - A catalogue of node kinds waits for step 5's rare nodes.
@@ -456,7 +456,9 @@ Open: where events and seasons, and identity features fall in the plan.
   - Built: the slot sits between Info and Build and is lit while the Almanac is open.
   - The first time, it opens beside the plant on the side with room. After that it opens wherever it was left, until the garden quits.
   - It hides while the garden is in Ambient or Minimised (only the core takes clicks there) and comes back in Active.
-  - The newest moments are at the top, each with the garden's age. Unlocks are in the genes' purple. It scrolls under the wheel.
+  - Tabs across the top, shown even with one: the **Journal** now, the **Codex** in step 5, **Stats** if player-facing graphs come.
+  - The Journal groups moments under day headings ("Day 1", "Day 2": each 24 hours of the garden's age), newest first, each with its time on that day. The header shows the garden's day and time. Unlocks are in the genes' purple. It scrolls under the wheel.
+  - It can be resized by the grip in its bottom-right corner (300 × 240 at least). Size and place are kept until the garden quits.
 
 **No advanced stats on the cards.** They stay as trimmed in 3d.
 

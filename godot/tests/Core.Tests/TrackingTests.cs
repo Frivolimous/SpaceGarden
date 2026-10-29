@@ -68,6 +68,7 @@ public class TrackingTests
         var garden = Growing();
         garden.Grow(12 * Hour);
         Assert.True(garden.Tracking.WildBuds > 0);
+        Assert.Single(garden.Tracking.Journal, e => e.Text == "The garden budded on its own for the first time");
         // Every wild bud started is a branch grown or still forming.
         int forming = garden.Nodes.Count(n => n.FormingBud);
         int branches = garden.Tracking.Grown.Where(g => !NodeSpecs.All[g.Key].IsFruit).Sum(g => g.Value) - 4; // the 4 placed
@@ -213,7 +214,7 @@ public class TrackingTests
         while (garden.Nodes.Count < 60) garden.Sprout();
         var texts = garden.Tracking.Journal.Select(e => e.Text).ToList();
         Assert.Single(texts, t => t == "First Gravity Pot placed");
-        Assert.Single(texts, t => t == "First branch pruned");
+        Assert.DoesNotContain("First branch pruned", texts); // the player's routine doings aren't moments
         Assert.Single(texts, t => t == "The garden reached 25 parts");
         Assert.Single(texts, t => t == "The garden reached 50 parts");
         Assert.DoesNotContain("The garden reached 100 parts", texts);
@@ -279,6 +280,16 @@ public class TrackingTests
         var totals = garden.Tracking.TotalsCsv(garden);
         Assert.Contains("age_hours,25\n", totals);
         Assert.Contains($"parts_grown,{garden.Tracking.PartsGrown}\n", totals);
-        Assert.StartsWith("age_hours,age,kind,text\n0,0m,Planted,\"A new garden was planted\"", garden.Tracking.JournalCsv());
+        Assert.StartsWith("age_hours,day,time,kind,text\n0,1,00:00,Planted,\"A new garden was planted\"", garden.Tracking.JournalCsv());
+    }
+
+    // The Almanac's calendar: Day 1 is the first 24 hours of growth, and the time is the time on that day.
+    [Fact]
+    public void AgesFallOnDaysAndTimes()
+    {
+        Assert.Equal((1, "00:00"), (Tracking.DayOf(0), Tracking.ClockOf(0)));
+        Assert.Equal((1, "23:59"), (Tracking.DayOf(Day - 1), Tracking.ClockOf(Day - 1)));
+        Assert.Equal((2, "00:00"), (Tracking.DayOf(Day), Tracking.ClockOf(Day)));
+        Assert.Equal((3, "06:05"), (Tracking.DayOf(2 * Day + 6 * Hour + 5 * Minute + 30), Tracking.ClockOf(2 * Day + 6 * Hour + 5 * Minute + 30)));
     }
 }

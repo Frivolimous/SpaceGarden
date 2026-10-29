@@ -24,7 +24,8 @@ public sealed class Tracking
 
     public readonly History History = new();
     public readonly List<JournalEntry> Journal = new();
-    // The firsts already logged, so each is logged once ("grew:Grove", "placed:Pot", "pruned").
+    // The firsts already logged, so each is logged once ("grew:Grove", "wild", "placed:Pot"). The journal favours the
+    // garden's own moments; of the player's doings only the first of each shaping tool is one.
     public readonly HashSet<string> Firsts = new();
 
     // Logs a moment now.
@@ -107,13 +108,22 @@ public sealed class Tracking
 
     public string JournalCsv()
     {
-        var csv = new StringBuilder("age_hours,age,kind,text\n");
+        var csv = new StringBuilder("age_hours,day,time,kind,text\n");
         foreach (var e in Journal)
-            csv.Append(Invariant($"{e.Age / 3600:0.####},{AgeText(e.Age)},{e.Kind},\"{e.Text.Replace("\"", "\"\"")}\"\n"));
+            csv.Append(Invariant($"{e.Age / 3600:0.####},{DayOf(e.Age)},{ClockOf(e.Age)},{e.Kind},\"{e.Text.Replace("\"", "\"\"")}\"\n"));
         return csv.ToString();
     }
 
     static string Invariant(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+
+    // The Almanac's calendar: the day of the garden's life an age falls on (from Day 1), and the time on that day.
+    public static int DayOf(double age) => (int)Math.Floor(age / History.Day) + 1;
+
+    public static string ClockOf(double age)
+    {
+        int minutes = (int)Math.Floor(age % History.Day / 60);
+        return $"{minutes / 60:00}:{minutes % 60:00}";
+    }
 
     // A garden age, short: "0m", "12m", "4h 12m", "3d 4h".
     public static string AgeText(double seconds)
