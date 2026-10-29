@@ -382,7 +382,7 @@ Gen and Drain are what the garden makes and costs now; Gen's value is coloured b
 - **Genes**: purple shading to white as the total nears the next unlock.
 - **Stems, Generators, Core links**: green with all the room left, shading to white as it fills (white when full).
 
-**The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card), **Almanac** (step 4: the journal, in the cards' spot) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient** (its label names the hotkey, Ctrl+Alt+G), **Minimise** and **Settings**, which close it. Research (step 5) joins later: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
+**The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card), **Almanac** (step 4: the journal's window) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient** (its label names the hotkey, Ctrl+Alt+G), **Minimise** and **Settings**, which close it. Research (step 5) joins later: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
 
 **Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little and shows the selection ring while the pointer is on it, and one tap switches to Active and opens its menu.
 
@@ -451,8 +451,11 @@ Open: where events and seasons, and identity features fall in the plan.
   - An unlock is named by what it opens, biggest first, then the room it adds: "Second core link and second Gravity Pot unlocked, with room for 1 more stem and 1 more generator", or "Unlocked room for 3 more stems".
 - A catalogue of node kinds waits for step 5's rare nodes.
 - There is no big stats page.
-- It opens as a larger panel from the Almanac slot in the core's menu. The panel sits in the cards' fixed spot and closes the way they do.
-  - Built: the slot sits between Info and Build and is lit while the Almanac is open. The cards give way to it and come back when it closes.
+- It opens from the Almanac slot in the core's menu. ~~As a larger panel in the cards' fixed spot, closing the way they do.~~ Changed by Jeremy, Oct 29: it's a large window of its own with a draggable header and a ✕.
+  - It stays on screen whatever else happens (clicks elsewhere, the focus going, Escape, tapping parts). Only its slot or its ✕ closes it.
+  - Built: the slot sits between Info and Build and is lit while the Almanac is open.
+  - The first time, it opens beside the plant on the side with room. After that it opens wherever it was left, until the garden quits.
+  - It hides while the garden is in Ambient or Minimised (only the core takes clicks there) and comes back in Active.
   - The newest moments are at the top, each with the garden's age. Unlocks are in the genes' purple. It scrolls under the wheel.
 
 **No advanced stats on the cards.** They stay as trimmed in 3d.

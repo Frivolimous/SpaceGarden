@@ -15,7 +15,7 @@ namespace SpaceGarden;
 // toolbar and shows its card. The selection stays (ringed, its card open) after the toolbar closes, until the part is
 // tapped again, another is tapped, it's pruned, a click lands off the plant, or Escape. Tapping the core also opens
 // its menu (CoreMenu) under it, with its toolbar (its buds) above it: Info and Build switch the garden's card (shown
-// above the part's while tending) and build mode on and off, the Almanac opens in the cards' place (Almanac), and the
+// above the part's while tending) and build mode on and off, Almanac opens or closes the journal's window, and the
 // rest pick Ambient, Minimised or the settings.
 // Dragging a part pulls it to the pointer by its weight and the links drag the rest after it; letting go keeps the
 // momentum. Right-click opens the settings. It drops to a low frame rate when nothing's happening.
@@ -85,7 +85,7 @@ public partial class Widget : Node
     readonly Card partCard = new(), gardenCard = new();
     readonly VBoxContainer cards = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
-    readonly Almanac almanac = new(); // in the cards' spot, in their place while it's open (see SetAlmanac)
+    readonly Almanac almanac = new(); // its own window, open until its slot or ✕ closes it (see SetAlmanac)
     readonly UndoPill undo = new();
     readonly CoreMenu coreMenu = new();
     readonly StatusIndicator tray = new();
@@ -160,11 +160,12 @@ public partial class Widget : Node
         toolbarLayer.AddChild(undo);
         undo.Pressed += UndoPrune;
         cards.AddThemeConstantOverride("separation", 6);
-        cards.AddChild(almanac);
         cards.AddChild(gardenCard);
         cards.AddChild(partCard);
         toolbarLayer.AddChild(cards);
-        toolbarLayer.AddChild(coreMenu);
+        toolbarLayer.AddChild(almanac);
+        toolbarLayer.AddChild(coreMenu); // over the Almanac, so its names show over the window
+        almanac.CloseRequested += () => SetAlmanac(false);
         coreMenu.Picked += PickFromCoreMenu;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
         toolbarLayer.AddChild(shapingBar);
@@ -252,6 +253,7 @@ public partial class Widget : Node
     {
         if (mode == Mode) return;
         Mode = mode;
+        almanac.SetAway(mode != DisplayMode.Active); // only the core takes clicks outside Active
         if (mode != DisplayMode.Active)
         {
             SetBuilding(false);
@@ -513,7 +515,7 @@ public partial class Widget : Node
         PlaceUndo(delta);
         partCard.Update(Garden, main.GrowthSpeed, delta);
         gardenCard.Update(Garden, main.GrowthSpeed, delta);
-        almanac.Update(Garden, delta);
+        almanac.Update(Garden, pointer / Dpi, viewport, delta);
         coreMenu.SetActive(Tool.Info, gardenInfo);
         coreMenu.SetActive(Tool.Almanac, almanac.IsOpen);
         coreMenu.SetActive(Tool.Build, Building);
@@ -551,7 +553,7 @@ public partial class Widget : Node
             : underTool?.Handle ?? ShapingHandle.Body;
 
         bool catchMouse = pressed || overToolbar || overUndo || overMenu || under != null || overBar || onBackdrop
-            || underTool != null || movingTool != null || overAlmanac;
+            || underTool != null || movingTool != null || overAlmanac || almanac.Dragging;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || Garden.Held != null
@@ -592,36 +594,40 @@ public partial class Widget : Node
     // The cards (the garden's above the part's) are set down as they open beside the plant and the core's menu, level
     // with the core: to the right if they fit there, else the left if they fit there, else whichever side has more room
     // (the plant usually lives at the screen's bottom right). Then they stay put while open, their top corner on that
-    // side fixed (only pushed back onto the screen past an edge). The Almanac, wider and taller, is set down afresh as it
-    // opens and closes.
+    // side fixed (only pushed back onto the screen past an edge).
     void PlaceCard()
     {
-        if (!partCard.Visible && !gardenCard.Visible && !almanac.Visible)
+        if (!partCard.Visible && !gardenCard.Visible)
         {
             cardAnchor = null;
             return;
         }
         var screen = GetViewport().GetVisibleRect().Size / Dpi;
         var size = cards.GetCombinedMinimumSize();
-        if (cardAnchor == null)
-        {
-            const float gap = 16, top = 60; // the card's top this far above the core
-            var (min, max) = Garden.Bounds();
-            float left = ToViewport(min).X / Dpi, right = ToViewport(max).X / Dpi;
-            if (coreMenu.Extent() is { } menu) // a young plant is narrower than the menu's ring
-            {
-                left = Mathf.Min(left, menu.Position.X);
-                right = Mathf.Max(right, menu.End.X);
-            }
-            var core = ToViewport(Garden.Core.Position) / Dpi;
-            float roomRight = screen.X - right - gap, roomLeft = left - gap;
-            float wanted = Mathf.Max(size.X, 200);
-            cardOnLeft = roomRight < wanted && (roomLeft >= wanted || roomLeft > roomRight);
-            cardAnchor = new Vector2(cardOnLeft ? left - gap : right + gap, core.Y - top);
-        }
+        if (cardAnchor == null) (cardAnchor, cardOnLeft) = Beside(size, top: 60);
         var at = cardAnchor.Value - new Vector2(cardOnLeft ? size.X : 0, 0);
         cards.Position = at.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
         cards.Size = size;
+    }
+
+    // Where something this size goes beside the plant and the core's menu (see PlaceCard), its top this far above the
+    // core: the top corner on the side it's on, and which side.
+    (Vector2 Anchor, bool OnLeft) Beside(Vector2 size, float top)
+    {
+        const float gap = 16;
+        var screen = GetViewport().GetVisibleRect().Size / Dpi;
+        var (min, max) = Garden.Bounds();
+        float left = ToViewport(min).X / Dpi, right = ToViewport(max).X / Dpi;
+        if (coreMenu.Extent() is { } menu) // a young plant is narrower than the menu's ring
+        {
+            left = Mathf.Min(left, menu.Position.X);
+            right = Mathf.Max(right, menu.End.X);
+        }
+        var core = ToViewport(Garden.Core.Position) / Dpi;
+        float roomRight = screen.X - right - gap, roomLeft = left - gap;
+        float wanted = Mathf.Max(size.X, 200);
+        bool onLeft = roomRight < wanted && (roomLeft >= wanted || roomLeft > roomRight);
+        return (new Vector2(onLeft ? left - gap : right + gap, core.Y - top), onLeft);
     }
 
     // A tapped part's toolbar goes once the pointer has been off both the part and the toolbar for a while (see
@@ -722,7 +728,7 @@ public partial class Widget : Node
         {
             if (coreMenu.IsOpen) CloseCoreMenu();
             else if (Building) SetBuilding(false);
-            else if (partCard.IsOpen || gardenCard.IsOpen || almanac.IsOpen) Select(null);
+            else if (partCard.IsOpen || gardenCard.IsOpen) Select(null);
             else return;
             GetViewport().SetInputAsHandled();
             return;
@@ -872,41 +878,34 @@ public partial class Widget : Node
     }
 
     // The part's card, or with none, no part card (and the garden's goes with it).
-    // A new selection closes the Almanac, as it closes a card.
     void Select(PlantNode? node)
     {
-        almanac.Close();
-        coreMenu.SetActive(Tool.Almanac, false);
         if (node != null) partCard.ShowPart(node);
         else partCard.Close();
         selected = node;
         ShowGardenCard();
     }
 
-    // The Almanac takes the cards' spot while it's open, and they come back as it closes (the selection is kept).
+    // The Almanac's window opens and closes only from its slot or its ✕. The first time, it's set down beside the plant
+    // (on the side with room, its top level with the core's); then it opens wherever it was left.
     void SetAlmanac(bool on)
     {
         coreMenu.SetActive(Tool.Almanac, on);
-        cardAnchor = null; // set down again for its own size (see PlaceCard)
         if (!on)
         {
             almanac.Close();
-            if (selected != null) partCard.ShowPart(selected);
-            ShowGardenCard();
             return;
         }
-        partCard.Close();
-        gardenCard.Close();
-        almanac.Open();
+        var size = new Vector2(Almanac.Width, Almanac.Height);
+        var (anchor, onLeft) = Beside(size, top: size.Y / 2);
+        almanac.Open(anchor - new Vector2(onLeft ? size.X : 0, 0));
     }
 
     // With Info on, the garden's card shows above the part's while the player is tending: a part selected, or the
-    // core's menu open. A click off the plant puts it away; the next tap on it brings it back, until Info is off. Not
-    // while the Almanac is open in their spot.
+    // core's menu open. A click off the plant puts it away; the next tap on it brings it back, until Info is off.
     void ShowGardenCard()
     {
-        if (almanac.IsOpen) gardenCard.Close();
-        else if (gardenInfo && (selected != null || coreMenu.IsOpen)) gardenCard.ShowGarden();
+        if (gardenInfo && (selected != null || coreMenu.IsOpen)) gardenCard.ShowGarden();
         else gardenCard.Close();
     }
 

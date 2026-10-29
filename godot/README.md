@@ -26,9 +26,10 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Tap the core** for its menu, a half ring of buttons under it (names show under the pointer). **Info** and
   **Build** are switches, lit while on: Info shows the garden's card (power, what it makes and drains, genes against
   the next unlock and its ETA, the caps) above the part's whenever you tap the plant, and Build is build mode.
-  **Almanac** (lit while open) shows the garden's journal of moments in the cards' spot, newest first with the
+  **Almanac** (lit while open) opens a window with the garden's journal of moments, newest first with the
   garden's age: its planting, each kind's first part, every unlock, part counts reached, the first prune and tools.
-  It closes as the cards do (a click off the plant, Escape, a tap on a part, or the slot again); the wheel scrolls it.
+  Drag its header to move it; the wheel scrolls it. It stays open (clicks elsewhere, Escape and losing the focus
+  leave it) until its ✕ or the slot again; it hides in Ambient and Minimised and comes back in Active.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
