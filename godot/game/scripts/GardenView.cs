@@ -55,6 +55,9 @@ public partial class GardenView : Node2D
     // A bud of a new part starts this far towards grey and this dark (a share of its hue's brightness), and brightens
     // into its full hue as it grows (see DrawForming). Placeholders.
     const float BudStartGrey = 0.6f, BudStartShade = 0.4f;
+    // And has a thin, almost white rim this wide (garden units, as OutlineWidth), to stand out inside its parent.
+    const float BudRimWidth = 1f;
+    static readonly Color BudRim = new(0.92f, 0.95f, 0.92f, 0.85f);
 
     // Small moments (marks): a ring widening off a part as it pops out, a glint on a fruit as it appears, and a
     // ripple out from the core as genes unlock a step of the track (seconds since each began).
@@ -462,7 +465,11 @@ public partial class GardenView : Node2D
                 float l = colour.Luminance;
                 var dark = Shade(colour.Lerp(new Color(l, l, l), BudStartGrey), BudStartShade);
                 colour = dark.Lerp(colour, Mathf.Clamp(grown, 0, 1));
-                colour.A = 0.75f;
+                // A thin, almost white rim round it, so it reads against the parent's fill however dark it starts
+                // (opaque on top, so the rim doesn't show through).
+                var rim = BudRim with { A = BudRim.A * level };
+                forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size + BudRimWidth), cos, sin, rim);
+                colour.A = 1;
             }
             forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size), cos, sin, colour);
         }
