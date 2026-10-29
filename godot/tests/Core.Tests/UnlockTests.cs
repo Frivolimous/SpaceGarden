@@ -382,20 +382,23 @@ public class UnlockTests
 
     // For retuning the thresholds after a change to the economy: sets each one to the median genes at its target
     // time, runs again, and repeats until they settle, then reports them and the last run's gardens (as the skip
-    // message, so it shows). Run it by hand: dotnet test -- --filter-method "*RetuneThresholds*" with RETUNE=1 set.
+    // message, so it shows). Run it by hand: dotnet test -- --filter-method "*RetuneThresholds*" with RETUNE=1 set;
+    // PACING_DAYS=N retunes only the unlocks due in the first N days, leaving the rest.
     [Fact]
     public void RetuneThresholds()
     {
         Assert.SkipUnless(Environment.GetEnvironmentVariable("RETUNE") == "1", "a tuning aid, run by hand (RETUNE=1)");
+        int days = int.TryParse(Environment.GetEnvironmentVariable("PACING_DAYS"), out int d) ? d : 30;
+        int due = TargetHours.Count(h => h < days * 24);
         var report = new System.Text.StringBuilder();
         var original = Tuning.UnlockTrack.ToArray();
         try
         {
             for (int pass = 0; pass < 6; pass++)
             {
-                var run = Month(pass == 5 ? line => report.AppendLine(line) : null);
+                var run = Month(pass == 5 ? line => report.AppendLine(line) : null, days);
                 double previous = 0;
-                for (int u = 0; u < Tuning.UnlockTrack.Length; u++)
+                for (int u = 0; u < due; u++)
                 {
                     double median = Median(run.GenesAt, u);
                     // Rounded to three figures, so the table reads easily.
