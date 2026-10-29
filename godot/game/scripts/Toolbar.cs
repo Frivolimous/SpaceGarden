@@ -34,6 +34,9 @@ public partial class Toolbar : PanelContainer
     };
 
     readonly Dictionary<Tool, ToolButton> buttons = new();
+    // Over the bud buttons when every link of the part is taken: "3/3 Connections Used", covering them.
+    readonly PanelContainer full;
+    readonly Label fullText;
     Tween? fade;
 
     public Toolbar()
@@ -44,6 +47,36 @@ public partial class Toolbar : PanelContainer
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         row.AddThemeConstantOverride("separation", 0);
         AddChild(row);
+        // The buds sit in a stack of their own, so the full note can lie over them (a MarginContainer overlaps its
+        // children).
+        var budStack = new MarginContainer { MouseFilter = MouseFilterEnum.Pass };
+        var buds = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+        buds.AddThemeConstantOverride("separation", 0);
+        buds.Alignment = BoxContainer.AlignmentMode.Center;
+        budStack.AddChild(buds);
+        row.AddChild(budStack);
+        fullText = new Label
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            LabelSettings = new LabelSettings { FontSize = 10 },
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        var fullStyle = PillStyle();
+        fullStyle.BorderColor = new Color(1, 1, 1, 0.3f);
+        fullStyle.ShadowSize = 0;
+        fullStyle.ContentMarginLeft = fullStyle.ContentMarginRight = 6;
+        fullStyle.ContentMarginTop = fullStyle.ContentMarginBottom = 1;
+        full = new PanelContainer
+        {
+            MouseFilter = MouseFilterEnum.Stop, // the dimmed buds beneath take no clicks or tips
+            SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
+            SizeFlagsVertical = SizeFlags.ShrinkCenter,
+            Visible = false,
+        };
+        full.AddThemeStyleboxOverride("panel", fullStyle);
+        full.AddChild(fullText);
+        budStack.AddChild(full);
         foreach (var (tool, tip) in new[]
         {
             (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
@@ -54,7 +87,7 @@ public partial class Toolbar : PanelContainer
             var button = new ToolButton(tool) { TooltipText = tip };
             button.Pressed += () => Used?.Invoke(tool);
             buttons[tool] = button;
-            row.AddChild(button);
+            (KindOf(tool) != null ? buds : row).AddChild(button);
         }
     }
 
@@ -104,6 +137,9 @@ public partial class Toolbar : PanelContainer
                 button.Forming = Target.Forming == kind; // its bud is growing here now
             }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
+        // Every link taken (a bud forming holds one, but then its button shows it growing instead).
+        full.Visible = buds && Target.Links >= Target.MaxLinks && !Target.FormingBud;
+        if (full.Visible) fullText.Text = $"{Target.Links}/{Target.MaxLinks} Connections Used";
     }
 
     public void HideAway()

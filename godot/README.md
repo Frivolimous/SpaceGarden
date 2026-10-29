@@ -19,7 +19,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
   (grow a stem, generator, lab or grove from it, on parts with room for branches; the kind growing there now has a
-  pulsing outline; prune it and everything beyond
+  pulsing outline, and a part with every link taken shows "3/3 Connections Used" in their place; prune it and everything beyond
   it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
   ("Drain: 6/s", "Genes: 12/min", what's
   forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for
@@ -94,7 +94,8 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 `--prune=N` and `--undo=N` prune the biggest branch and undo it at tick N), `--shaping[=N]` (places one of each
 shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card
 open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
-menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--ambient` (starts in Ambient) and
+menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--tap=full` or `--tap=forming` (as if a stem
+with every link taken, or a part forming a bud, were tapped: its toolbar and card, the toolbar staying open), `--ambient` (starts in Ambient) and
 `--corehover` (as if the pointer were on the core there),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of

@@ -119,7 +119,7 @@ public partial class Widget : Node
     PlantNode? pressNode;
     PlantNode? selected;
     // Dev aids for --screenshot runs (see DevFlags): open a card, the core's menu, Ambient with the pointer on the core.
-    bool devFlagsDone, devCoreHover;
+    bool devFlagsDone, devCoreHover, devTapped;
     bool pressed, dragging;
     double leaveTime, regionTimer, activeTime;
 
@@ -612,7 +612,7 @@ public partial class Widget : Node
     // Release and _Ready for the other ways it closes).
     void UpdateToolbar(double delta, bool overTarget, bool overToolbar)
     {
-        if ((toolbar.Target != null || toolbar.TargetTool != null) && !overTarget && !overToolbar)
+        if ((toolbar.Target != null || toolbar.TargetTool != null) && !overTarget && !overToolbar && !devTapped)
         {
             leaveTime += delta;
             if (leaveTime >= LeaveDelay) toolbar.HideAway();
@@ -654,7 +654,9 @@ public partial class Widget : Node
 
     // Dev aids for --screenshot runs, once the garden is set up: --inspect (a lab's card, or the core's if it has
     // none), --inspect=core or --inspect=garden; --coremenu opens the core's menu (--coremenu=settings with that
-    // slot's name showing); --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
+    // slot's name showing); --tap=full or --tap=forming taps a stem with every link taken, or a part forming a bud
+    // (starting a lab bud on a stem if none is), its toolbar staying open;
+    // --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
     void DevFlags()
     {
         devFlagsDone = true;
@@ -674,6 +676,19 @@ public partial class Widget : Node
                 break;
             case "core": Select(Garden.Core); break;
             case "" or "lab": Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core); break;
+        }
+        // As if a part were tapped: its toolbar and card. A stem with every link taken, or a part forming a bud.
+        PlantNode? tapped = Value("tap") switch
+        {
+            "full" => Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Stem && n.Links >= n.MaxLinks && !n.FormingBud),
+            "forming" => Garden.Nodes.FirstOrDefault(n => n != Garden.Core && n.FormingBud)
+                ?? Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Stem && Garden.SproutFrom(n, NodeKind.Lab)),
+            _ => null,
+        };
+        if (tapped != null)
+        {
+            Tap(tapped);
+            devTapped = true; // its toolbar stays, with no pointer to keep it
         }
         if (Value("ambient") != null)
         {
