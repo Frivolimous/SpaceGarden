@@ -28,9 +28,21 @@ public partial class GardenView : Node2D
     // While the garden can't be seen nothing is redrawn (Godot then renders nothing at all).
     public bool Frozen;
 
+    // The shaping tools (DESIGN.md, Shaping the garden) under the plant: as clear as ToolsWanted (the widget sets it
+    // by display mode: faint while tending, full in build mode, hidden in Ambient), the HotTool (under the pointer, or
+    // where a dragged part would drop) brighter, or only its HotHandle if that's what the pointer is on. In build mode
+    // (Building) a dark backdrop fades in round the plant and its tools, and the tools' handles show.
+    public float ToolsWanted;
+    public bool Building;
+    public ShapingTool? HotTool;
+    public ShapingHandle HotHandle;
+    float toolsAlpha, backdropAlpha, backdropRadius;
+    Vector2 backdropCentre;
+    static readonly Color Backdrop = Color.FromHtml("171a1f"); // a dark grey, barely cool
+
     readonly Garden garden;
-    readonly Node2D linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
-        markLayer = new(), moteLayer = new();
+    readonly Node2D backdropLayer = new(), shapingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(),
+        formingLayer = new(), potLayer = new(), markLayer = new(), moteLayer = new();
     // Stems are tapered (links, linkEdges); fruit stalks and the lit stretch of a power flash are straight.
     readonly Batch links = new(), linkEdges = new(), straight = new(), halos = new(), moteDots = new();
     const float MoteRadius = 2; // a blob's dot, in garden units (the original's)
@@ -70,8 +82,22 @@ public partial class GardenView : Node2D
         formingLayer.Draw += DrawForming;
         markLayer.Draw += DrawMarks;
         moteLayer.Draw += DrawMotes;
-        foreach (var layer in new[] { linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, markLayer }) AddChild(layer);
+        backdropLayer.Draw += DrawBackdrop;
+        shapingLayer.Draw += DrawShaping;
+        potLayer.Draw += DrawPots;
+        foreach (var layer in new[] { backdropLayer, shapingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, potLayer, markLayer })
+            AddChild(layer);
     }
+
+    // Whether a point (in garden units) is on build mode's backdrop, which catches every click on it.
+    public bool OnBackdrop(Num.Vector2 point) =>
+        backdropAlpha > 0.5f && V(point).DistanceTo(backdropCentre) < backdropRadius;
+
+    // Whether the backdrop has been laid out round the plant (from its first frame in build mode).
+    public bool BackdropShown => backdropAlpha > 0 && backdropRadius > 0;
+
+    // The top of the backdrop, in garden units (the shaping bar sits there).
+    public Num.Vector2 BackdropTop => new(backdropCentre.X, backdropCentre.Y - backdropRadius * 0.92f);
 
     public override void _Process(double delta)
     {
@@ -93,6 +119,12 @@ public partial class GardenView : Node2D
         for (int i = ripples.Count - 1; i >= 0; i--)
             if ((ripples[i] += dt) >= RippleSeconds + RippleGap) ripples.RemoveAt(i);
         blend = (float)Engine.GetPhysicsInterpolationFraction();
+        toolsAlpha = Mathf.MoveToward(toolsAlpha, ToolsWanted, dt * 3);
+        backdropAlpha = Mathf.MoveToward(backdropAlpha, Building ? 1 : 0, dt * 3);
+        if (backdropAlpha > 0) FollowBackdrop(dt);
+        backdropLayer.QueueRedraw();
+        shapingLayer.QueueRedraw();
+        potLayer.QueueRedraw();
         linkLayer.QueueRedraw();
         haloLayer.QueueRedraw();
         shapeLayer.QueueRedraw();
@@ -133,6 +165,126 @@ public partial class GardenView : Node2D
     float Size(PlantNode node) => node.Spec.Radius * GrowIn(node) * Level(node);
 
     // ==== LAYERS ==== \\
+
+    // Build mode's backdrop: a dark disc round the plant and its tools, soft at the rim, gliding after them as they
+    // move and grow (it sets down at once when it first appears).
+    void FollowBackdrop(float dt)
+    {
+        var (min, max) = garden.Bounds();
+        var (lo, hi) = (V(min), V(max));
+        foreach (var tool in garden.Shaping)
+        {
+            var reach = new Vector2(1, 1) * (tool.Kind == ShapingKind.Trellis ? 12 : garden.PotRadius(tool) + ShapingTool.PotKnob + 8);
+            var (a, b) = tool.Kind == ShapingKind.Trellis ? tool.Ends : (tool.Position, tool.Position);
+            lo = lo.Min(V(a) - reach).Min(V(b) - reach);
+            hi = hi.Max(V(a) + reach).Max(V(b) + reach);
+        }
+        var centre = (lo + hi) / 2;
+        float radius = (hi - lo).Length() / 2 + 60;
+        if (backdropRadius <= 0 || backdropAlpha < 0.05f)
+        {
+            backdropCentre = centre;
+            backdropRadius = radius;
+            return;
+        }
+        float k = 1 - Mathf.Exp(-3 * dt);
+        backdropCentre = backdropCentre.Lerp(centre, k);
+        backdropRadius = Mathf.Lerp(backdropRadius, radius, k);
+    }
+
+    void DrawBackdrop()
+    {
+        if (backdropAlpha <= 0) return;
+        float a = backdropAlpha * backdropAlpha * (3 - 2 * backdropAlpha); // eased
+        var size = new Vector2(backdropRadius, backdropRadius) * 2;
+        backdropLayer.DrawTextureRect(Textures.Disc, new Rect2(backdropCentre - size / 2, size), false, Backdrop with { A = Backdrop.A * a });
+        backdropLayer.DrawArc(backdropCentre, backdropRadius * 0.9f, 0, Mathf.Tau, 96, ShapingLook.Tint with { A = 0.08f * a }, 1, true);
+    }
+
+    // A tool's tint as shown: as clear as the display mode allows, brighter under the pointer (or as a drop target).
+    Color TintOf(ShapingTool tool)
+    {
+        bool hot = tool == HotTool && HotHandle == ShapingHandle.Body;
+        var tint = ShapingLook.Tint with { A = toolsAlpha * (hot ? 1 : 0.75f) };
+        return hot ? tint.Lightened(0.25f) : tint;
+    }
+
+    // The size a pot is drawn round: its part as drawn now (a drained part is smaller), or an empty pot's.
+    float PotRadius(ShapingTool pot) => garden.Potted(pot) is { } part ? Size(part) : ShapingTool.EmptyPot;
+
+    // Where a pot is drawn: round its part as drawn now (which glides after a moved pot), or where it is, empty. Its
+    // knob is drawn from here too, so it stays with the pot.
+    Vector2 PotAt(ShapingTool pot) => garden.Potted(pot) is { } part ? At(part) : V(pot.Position);
+
+    // Pots, over the parts: each a flower pot its part sits in up to its middle, chevrons rising past the part the
+    // way it faces.
+    void DrawPots()
+    {
+        if (toolsAlpha <= 0.01f || garden.Shaping.Count == 0) return;
+        float time = (float)garden.Time;
+        foreach (var pot in garden.Shaping)
+        {
+            if (pot.Kind != ShapingKind.Pot) continue;
+            var part = garden.Potted(pot);
+            var at = PotAt(pot);
+            var u = V(pot.Facing);
+            float r = PotRadius(pot);
+            ShapingLook.Pot(potLayer, at, u, r, TintOf(pot));
+            // The push shown only in build mode (fading with the backdrop): tending, the pot is quiet.
+            if (part != null && backdropAlpha > 0)
+                ShapingLook.Rising(potLayer, at, u, r, TintOf(pot) with { A = TintOf(pot).A * backdropAlpha }, time);
+        }
+    }
+
+    // Trellises and wells, under the plant, so parts on a trellis lie along it.
+    void DrawShaping()
+    {
+        if (toolsAlpha <= 0.01f || garden.Shaping.Count == 0) return;
+        float time = (float)garden.Time;
+        foreach (var tool in garden.Shaping)
+        {
+            var tint = TintOf(tool);
+            var at = V(tool.Position);
+            switch (tool.Kind)
+            {
+                case ShapingKind.Trellis:
+                    var (a, b) = tool.Ends;
+                    ShapingLook.Trellis(shapingLayer, V(a), V(b), tint);
+                    break;
+                case ShapingKind.Well:
+                    // Only in build mode (fading with the backdrop): tending, a well isn't seen at all.
+                    if (backdropAlpha > 0) ShapingLook.Well(shapingLayer, at, tint with { A = tint.A * backdropAlpha }, time);
+                    break;
+            }
+        }
+    }
+
+    // In build mode, each tool's handles: a pot's turning knob on a faint stalk, a trellis's ends.
+    void DrawHandles()
+    {
+        if (!Building || toolsAlpha <= 0.01f) return;
+        foreach (var tool in garden.Shaping)
+        {
+            // A handle lights when it's the one under the pointer (or held); the rest of its tool stays as it is.
+            Color KnobTint(ShapingHandle handle) => tool == HotTool && HotHandle == handle
+                ? ShapingLook.Tint.Lightened(0.35f) with { A = toolsAlpha }
+                : ShapingLook.Tint with { A = toolsAlpha * 0.6f };
+            if (tool.Kind == ShapingKind.Pot)
+            {
+                var tint = KnobTint(ShapingHandle.Turn);
+                var u = V(tool.Facing);
+                var knob = PotAt(tool) + u * (garden.PotRadius(tool) + ShapingTool.PotKnob);
+                markLayer.DrawDashedLine(PotAt(tool) + u * (PotRadius(tool) + 3), knob - u * 4, tint with { A = tint.A * 0.4f }, 1, 3, true, true);
+                ShapingLook.Knob(markLayer, knob, 3.5f, tint);
+            }
+            else if (tool.Kind == ShapingKind.Trellis)
+            {
+                var (a, b) = tool.Ends;
+                ShapingLook.Knob(markLayer, V(a), 4, KnobTint(ShapingHandle.EndA));
+                ShapingLook.Knob(markLayer, V(b), 4, KnobTint(ShapingHandle.EndB));
+            }
+        }
+    }
 
     // Each stem is a soft-edged quad stretched from end to end, tapering from its parent's end to its own (the taper
     // is in the texture: see Textures.Taper), over a wider dark one so it shows over a light window. The stems thin
@@ -311,6 +463,7 @@ public partial class GardenView : Node2D
     // Pins and the hover ring: a handful at most.
     void DrawMarks()
     {
+        DrawHandles();
         foreach (var node in garden.Nodes)
         {
             if (!node.Fixed || node.Parent == null) continue;
@@ -345,6 +498,7 @@ public partial class GardenView : Node2D
                 // A glint: a slim four-pointed sparkle that flares and goes, turning a little.
                 float flare = Mathf.Sin(Mathf.Pi * t);
                 float reach = node.Spec.Radius * 1.8f * flare;
+                if (reach < 0.5f) continue; // too small to see, and a polygon that small can't be drawn
                 colour = colour.Lightened(0.5f);
                 colour.A = flare;
                 float turn = -Mathf.Pi / 2 + t * 0.5f;
@@ -518,6 +672,26 @@ public static class Textures
     const float ShapeFill = 0.94f; // the shape's radius in the texture, leaving room for its soft edge
 
     public static readonly Texture2D Halo = MakeHalo();
+
+    // Build mode's backdrop: solid most of the way out, then fading softly to nothing at the rim.
+    public static readonly Texture2D Disc = MakeDisc();
+
+    static Texture2D MakeDisc()
+    {
+        var gradient = new Gradient();
+        gradient.SetColor(0, new Color(1, 1, 1, 1));
+        gradient.SetColor(1, new Color(1, 1, 1, 0));
+        gradient.AddPoint(0.8f, new Color(1, 1, 1, 1));
+        return new GradientTexture2D
+        {
+            Gradient = gradient,
+            Fill = GradientTexture2D.FillEnum.Radial,
+            FillFrom = new Vector2(0.5f, 0.5f),
+            FillTo = new Vector2(1, 0.5f),
+            Width = 256,
+            Height = 256,
+        };
+    }
     static readonly Dictionary<Shape, Texture2D> shapes = new();
 
     // A stem: solid across the middle LineCore of its height, fading out to the edges for a soft, antialiased look.

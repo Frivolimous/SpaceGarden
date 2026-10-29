@@ -51,7 +51,7 @@ public partial class Widget : Node
 
     enum MenuId
     {
-        AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows,
+        AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows, Build,
         Active = 10, Ambient, Minimised, Size0 = 100, Idle0 = 200,
     }
 
@@ -75,8 +75,25 @@ public partial class Widget : Node
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
     readonly Readout readout = new();
     readonly StatusIndicator tray = new();
+    readonly ShapingBar shapingBar = new();
 
     public DisplayMode Mode { get; private set; } = DisplayMode.Active;
+
+    // Build mode (DESIGN.md, Shaping the garden), within Active: a dark backdrop round the plant, the shaping bar to
+    // place tools, and the tools themselves to take hold of. Dragging a tool's body moves it, its knob or ends turn
+    // and stretch it, a tap opens its toolbar (Remove), and dragging one onto the bar puts it away. A part dragged
+    // and let go over a pot or trellis is tied to it. Outside build mode the tools show faintly and the pointer
+    // passes through them.
+    public bool Building { get; private set; }
+    const float ShapingFaint = 0.45f; // the tools' opacity while tending, outside build mode
+    ShapingTool? movingTool;
+    ShapingHandle movingHandle;
+    Num.Vector2 moveOffset;
+    bool toolTap, fromBar; // the press on it hasn't moved yet (a tap); it was just taken off the bar
+    Vector2? barAt; // where the shaping bar was set down (centred above it), this time in build mode
+    Vector2 movePointer, moveStart; // where the pointer is, and was when it took the tool (viewport pixels)
+    bool moveReleased;
+    PlantNode? movingPart; // the potted part pressed to take its pot, if that's how it was taken
     float opacity = 1;
     bool readoutPlaced;
 
@@ -130,6 +147,9 @@ public partial class Widget : Node
         toolbarLayer.AddChild(readout);
         readout.UndoPressed += UndoPrune;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
+        toolbarLayer.AddChild(shapingBar);
+        shapingBar.Started += TakeFromBar;
+        shapingBar.Done += () => SetBuilding(false);
         // A click anywhere off the plant lands in another window, which takes the focus: close the toolbar then.
         window.FocusExited += () =>
         {
@@ -141,6 +161,7 @@ public partial class Widget : Node
         menu.AddRadioCheckItem($"Active ({Hotkey.Name})", (int)MenuId.Active);
         menu.AddRadioCheckItem("Ambient", (int)MenuId.Ambient);
         menu.AddRadioCheckItem("Minimised (to the tray)", (int)MenuId.Minimised);
+        menu.AddCheckItem("Build mode: arrange the garden (Ctrl+B)", (int)MenuId.Build);
         menu.AddSeparator();
         menu.AddCheckItem("Always on top", (int)MenuId.AlwaysOnTop);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.AlwaysOnTop), true);
@@ -200,6 +221,7 @@ public partial class Widget : Node
         Mode = mode;
         if (mode != DisplayMode.Active)
         {
+            SetBuilding(false);
             toolbar.HideAway();
             menu.Hide();
             if (Garden.Held != null) Garden.LetGo();
@@ -221,6 +243,102 @@ public partial class Widget : Node
         main.CheckVisibilityNow();
         CheckMenu();
     }
+
+    // Into or out of build mode (only from Active). Leaving puts down any tool being carried.
+    public void SetBuilding(bool on)
+    {
+        if (on && Mode != DisplayMode.Active) return;
+        if (on == Building) return;
+        Building = on;
+        barAt = null;
+        shapingBar.Appear(on);
+        toolbar.HideAway();
+        movingTool = null;
+        fromBar = false;
+        activeTime = SettleSeconds;
+        CheckMenu();
+    }
+
+    // A tool pressed on the bar: a new one at the pointer, carried until let go (see MoveTool).
+    void TakeFromBar(ShapingKind kind)
+    {
+        var at = ToSim(ToWorld(PointerInViewport()));
+        if (Garden.Place(kind, at) is not { } tool) return;
+        StartMoving(tool, ShapingHandle.Body, at);
+        fromBar = true;
+    }
+
+    void StartMoving(ShapingTool tool, ShapingHandle handle, Num.Vector2 at)
+    {
+        movingTool = tool;
+        movingHandle = handle;
+        moveOffset = tool.Position - at;
+        toolTap = true;
+        movePointer = moveStart = PointerInViewport();
+        moveReleased = false;
+        movingPart = null;
+    }
+
+    // A held tool follows the pointer as the window's own mouse events give it, so the button's release and where it
+    // happened arrive in order (polling the pointer could see it move on before the release).
+    public override void _Input(InputEvent e)
+    {
+        if (movingTool == null) return;
+        if (e is InputEventMouseMotion motion) movePointer = motion.Position;
+        else if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } up)
+        {
+            movePointer = up.Position;
+            moveReleased = true;
+        }
+    }
+
+    // Each frame a tool is held: once the pointer has moved, its body follows, or its knob or end. Let go, a tap
+    // opens its toolbar, a new one tapped off the bar is set down just under it, and one dragged onto the bar is put
+    // away.
+    void MoveTool()
+    {
+        var tool = movingTool!;
+        var at = ToSim(ToWorld(movePointer));
+        if (toolTap && movePointer.DistanceTo(moveStart) > DragThreshold * Dpi)
+        {
+            toolTap = false;
+            toolbar.HideAway();
+        }
+        if (!toolTap)
+            switch (movingHandle)
+            {
+                case ShapingHandle.Body: tool.Position = at + moveOffset; break;
+                case ShapingHandle.Turn: tool.TurnTo(at); break;
+                default: tool.MoveEnd(movingHandle, at); break;
+            }
+        if (!moveReleased && Input.IsMouseButtonPressed(MouseButton.Left)) return;
+
+        movingTool = null;
+        if (toolTap && fromBar)
+            tool.Position = ToSim(ToWorld((shapingBar.Position + new Vector2(shapingBar.Size.X / 2, shapingBar.Size.Y + 40)) * Dpi));
+        else if (toolTap && movingPart is { } part)
+        {
+            Select(part);
+            if (toolbar.Target == part) toolbar.HideAway();
+            else toolbar.ShowFor(part);
+        }
+        else if (toolTap)
+        {
+            if (toolbar.TargetTool == tool) toolbar.HideAway();
+            else toolbar.ShowFor(tool);
+        }
+        else if (shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(movePointer / Dpi)) Garden.Remove(tool);
+        fromBar = false;
+    }
+
+    // In build mode, a tool's handle under the pointer (a pot's knob, a trellis's end): these come before the parts,
+    // as a pot's knob sits where its branch grows.
+    (ShapingTool Tool, ShapingHandle Handle)? HandleAt(Num.Vector2 at) =>
+        Building && Garden.ShapingAt(at, HoverSlop) is { } hit && hit.Handle != ShapingHandle.Body ? hit : null;
+
+    // The pot or trellis a part dragged in build mode would be tied to if let go here (a well holds nothing).
+    ShapingTool? DropTarget(Num.Vector2 at) =>
+        Building && Garden.ShapingAt(at, HoverSlop) is { } hit && hit.Tool.Kind != ShapingKind.Well ? hit.Tool : null;
 
     void UndoPrune()
     {
@@ -284,6 +402,8 @@ public partial class Widget : Node
         FollowWindow();
         if (Hotkey.TakePress()) SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
         main.View.Visible = Mode != DisplayMode.Minimised; // every frame: a new garden gets a new view
+        main.View.Building = Building;
+        main.View.ToolsWanted = Mode != DisplayMode.Active ? 0 : Building ? 1 : ShapingFaint;
 
         // While nobody can see the garden (Main.HiddenReason, also while Minimised): wake only a few times a second,
         // to notice it's back.
@@ -332,10 +452,24 @@ public partial class Widget : Node
         if (selected != null && !Garden.Nodes.Contains(selected)) Select(null); // pruned, or a new garden
         if (inspect && selected == null) Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core);
         var pointer = PointerInViewport();
+        var world = ToSim(ToWorld(pointer));
         bool overToolbar = toolbar.Visible && toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool overReadout = readout.Catches(pointer / Dpi);
+        bool overBar = shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);
-        var under = inWindow && !overToolbar && !overReadout ? Garden.NodeAt(ToSim(ToWorld(pointer)), HoverSlop) : null;
+        bool free = inWindow && !overToolbar && !overReadout && !overBar;
+        var handle = free ? HandleAt(world) : null;
+        var under = free && handle == null ? Garden.NodeAt(world, HoverSlop) : null;
+        var underTool = handle ?? (Building && free && under == null ? Garden.ShapingAt(world, HoverSlop) : null);
+        bool onBackdrop = Building && inWindow && main.View.OnBackdrop(world);
+        if (Building)
+        {
+            shapingBar.Refresh(Garden);
+            // Set down over the backdrop as build mode opens, then still (a bar that glides is hard to hit).
+            if (main.View.BackdropShown) barAt ??= ToViewport(main.View.BackdropTop) / Dpi;
+            if (barAt is { } bar) shapingBar.Follow(bar, GetViewport().GetVisibleRect().Size / Dpi);
+        }
+        if (movingTool != null) MoveTool();
         bool resting = inspect || under != null || pressed || overToolbar || readout.Over(pointer / Dpi);
         float textWanted = resting ? 1 : 0;
         bool textFading = readout.TextAlpha != textWanted;
@@ -345,21 +479,32 @@ public partial class Widget : Node
 
         if (pressed && !Input.IsMouseButtonPressed(MouseButton.Left)) Release();
 
-        if (dragging) Garden.HoldTarget = ToSim(ToWorld(pointer));
-        else UpdateToolbar(delta, under, overToolbar);
+        if (dragging) Garden.HoldTarget = world;
+        else UpdateToolbar(delta, toolbar.Target != null ? under == toolbar.Target : underTool?.Tool == toolbar.TargetTool, overToolbar);
 
+        var viewport = GetViewport().GetVisibleRect().Size / Dpi;
         if (toolbar.Target is { } target)
         {
             if (!Garden.Nodes.Contains(target)) toolbar.HideAway();
             else
             {
-                toolbar.Follow(ToViewport(target.Position) / Dpi, target.Spec.Radius * plantScale, GetViewport().GetVisibleRect().Size / Dpi);
+                toolbar.Follow(ToViewport(target.Position) / Dpi, target.Spec.Radius * plantScale, viewport);
                 toolbar.Refresh();
             }
         }
+        else if (toolbar.TargetTool is { } tool)
+        {
+            if (!Garden.Shaping.Contains(tool) || !Building) toolbar.HideAway();
+            else toolbar.Follow(ToViewport(tool.Position) / Dpi, 20 * plantScale, viewport);
+        }
         main.View.Highlight = dragging || pressed ? pressNode : under ?? toolbar.Target ?? selected;
+        main.View.HotTool = dragging ? DropTarget(world) : movingTool ?? underTool?.Tool ?? toolbar.TargetTool;
+        main.View.HotHandle = dragging ? ShapingHandle.Body
+            : movingTool != null ? movingHandle
+            : underTool?.Handle ?? ShapingHandle.Body;
 
-        bool catchMouse = pressed || overToolbar || overReadout || under != null;
+        bool catchMouse = pressed || overToolbar || overReadout || under != null || overBar || onBackdrop
+            || underTool != null || movingTool != null;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || Garden.Held != null || Garden.Speed > SettledSpeed;
@@ -394,9 +539,9 @@ public partial class Widget : Node
 
     // A tapped part's toolbar goes once the pointer has been off both the part and the toolbar for a while (see
     // Release and _Ready for the other ways it closes).
-    void UpdateToolbar(double delta, PlantNode? under, bool overToolbar)
+    void UpdateToolbar(double delta, bool overTarget, bool overToolbar)
     {
-        if (toolbar.Target != null && under != toolbar.Target && !overToolbar)
+        if ((toolbar.Target != null || toolbar.TargetTool != null) && !overTarget && !overToolbar)
         {
             leaveTime += delta;
             if (leaveTime >= LeaveDelay) toolbar.HideAway();
@@ -417,6 +562,11 @@ public partial class Widget : Node
             return;
         }
         var (min, max) = Garden.Bounds();
+        foreach (var tool in Building ? Garden.Shaping : [])
+        {
+            min = Num.Vector2.Min(min, tool.Position - new Num.Vector2(60));
+            max = Num.Vector2.Max(max, tool.Position + new Num.Vector2(60));
+        }
         var toWindow = GetViewport().GetCanvasTransform();
         var a = toWindow * (GardenView.V(min) - new Vector2(RegionMargin, RegionMargin));
         var b = toWindow * (GardenView.V(max) + new Vector2(RegionMargin, RegionMargin));
@@ -441,9 +591,16 @@ public partial class Widget : Node
         if (e is InputEventKey { Pressed: true, Echo: false, CtrlPressed: true } key)
         {
             if (key.Keycode == Key.Z) UndoPrune();
+            else if (key.Keycode == Key.B) SetBuilding(!Building);
             else if (key.Keycode == Key.G && key.AltPressed && !Hotkey.Registered)
                 SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
             else return;
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (e is InputEventKey { Pressed: true, Keycode: Key.Escape } && Building)
+        {
+            SetBuilding(false);
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -452,10 +609,33 @@ public partial class Widget : Node
         {
             if (button.Pressed)
             {
-                pressNode = Garden.NodeAt(ToSim(ToWorld(button.Position)), HoverSlop);
+                var at = ToSim(ToWorld(button.Position));
+                var handle = HandleAt(at);
+                pressNode = handle == null ? Garden.NodeAt(at, HoverSlop) : null;
+                // A potted part is locked: taking it takes its pot, in build mode or not (a tap still opens the part's
+                // toolbar).
+                if (pressNode?.TiedTo is { Kind: ShapingKind.Pot } held)
+                {
+                    StartMoving(held, ShapingHandle.Body, at);
+                    movingPart = pressNode;
+                    pressNode = null;
+                    GetViewport().SetInputAsHandled();
+                    return;
+                }
                 if (pressNode == null)
                 {
+                    if ((handle ?? (Building ? Garden.ShapingAt(at, HoverSlop) : null)) is { } hit)
+                    {
+                        StartMoving(hit.Tool, hit.Handle, at);
+                        GetViewport().SetInputAsHandled();
+                        return;
+                    }
                     Select(null); // a click off the plant (where clicks fall through, losing the focus does this)
+                    if (Building)
+                    {
+                        toolbar.HideAway();
+                        GetViewport().SetInputAsHandled();
+                    }
                     return;
                 }
                 pressed = true;
@@ -489,6 +669,9 @@ public partial class Widget : Node
             if (toolbar.Target == pressNode) toolbar.HideAway();
             else toolbar.ShowFor(pressNode);
         }
+        // In build mode, a part let go over a pot or trellis is tied to it.
+        if (dragging && pressNode != null && DropTarget(ToSim(ToWorld(PointerInViewport()))) is { } tool)
+            Garden.Tie(pressNode, tool);
         if (Garden.Held != null) Garden.LetGo();
         pressed = dragging = false;
         pressNode = null;
@@ -504,11 +687,18 @@ public partial class Widget : Node
     // Picking a tool does its job and closes the toolbar.
     void Use(Tool tool)
     {
+        if (toolbar.TargetTool is { } shaping)
+        {
+            if (tool == Tool.Remove) Garden.Remove(shaping);
+            toolbar.HideAway();
+            return;
+        }
         if (toolbar.Target is not { } node) return;
         if (Toolbar.KindOf(tool) is { } kind) Garden.SproutFrom(node, kind);
         switch (tool)
         {
             case Tool.Pin: Garden.TogglePin(node); break;
+            case Tool.Unhook: Garden.Untie(node); break;
             case Tool.Prune:
                 Garden.Prune(node); // it drifts off and fades (see Garden.Cut)
                 readout.RefreshNow(); // the Undo pill, at once
@@ -524,6 +714,10 @@ public partial class Widget : Node
             case MenuId.Active: SetMode(DisplayMode.Active); break;
             case MenuId.Ambient: SetMode(DisplayMode.Ambient); break;
             case MenuId.Minimised: SetMode(DisplayMode.Minimised); break;
+            case MenuId.Build:
+                SetMode(DisplayMode.Active);
+                SetBuilding(!Building);
+                break;
             case MenuId.AlwaysOnTop:
                 var window = GetWindow();
                 window.AlwaysOnTop = !window.AlwaysOnTop;
@@ -549,6 +743,7 @@ public partial class Widget : Node
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Active), Mode == DisplayMode.Active);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Ambient), Mode == DisplayMode.Ambient);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Minimised), Mode == DisplayMode.Minimised);
+        menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Build), Building);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed1), main.GrowthSpeed == 1);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed60), main.GrowthSpeed == 60);
         menu.SetItemChecked(menu.GetItemIndex((int)MenuId.Speed3600), main.GrowthSpeed == 3600);

@@ -206,6 +206,9 @@ public partial class Readout : VBoxContainer
         if (step.Stems > 0) parts.Add($"+{step.Stems} stem{(step.Stems == 1 ? "" : "s")}");
         if (step.Generators > 0) parts.Add($"+{step.Generators} generator{(step.Generators == 1 ? "" : "s")}");
         if (step.CoreLinks > 0) parts.Add($"+{step.CoreLinks} core branch{(step.CoreLinks == 1 ? "" : "es")}");
+        if (step.Pots > 0) parts.Add($"+{step.Pots} Gravity Pot{(step.Pots == 1 ? "" : "s")}");
+        if (step.Trellises > 0) parts.Add($"+{step.Trellises} Trellis{(step.Trellises == 1 ? "" : "es")}");
+        if (step.Wells > 0) parts.Add($"+{step.Wells} Gravity Well{(step.Wells == 1 ? "" : "s")}");
         return string.Join(", ", parts);
     }
 }
