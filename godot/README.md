@@ -10,42 +10,50 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 (`tests/Core.Tests`, xUnit).
 
 ## Using it
-- **Display modes.** It starts in **Active**: full opacity, the toolbar and menu below, and a readout under the
-  plant (power held and its store, made against used; genes and their rate; the next unlock and its ETA; room against
-  the caps; flowers and the wild buds forming) that fades in over 1 s while the pointer rests on a part and out again
-  after it leaves. Above it, a card for the selected part (the last one tapped): its name, power, what it does and
-  its own numbers. **Ctrl+Alt+G** (from anywhere; Windows)
-  switches to **Ambient**: faded, and every click falls through to the desktop; again to come back. **Minimised**
-  (from the menu, a click on the yellow tray icon, or minimising the window any other way) minimises the window and
-  pauses the garden like a locked screen, catching up when it's shown again. Its taskbar button, Ctrl+Alt+G or the
-  tray icon bring it back in Active. Only one running copy gets the hotkey (a second logs a warning).
-- **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill above the readout puts
+- **Display modes.** It starts in **Active**: full opacity, with its toolbar, card and the core's menu. **Ambient**
+  (the core's menu, or **Ctrl+Alt+G** from anywhere; Windows) fades it, and every click falls through to the
+  desktop except on the core: it brightens and is ringed under the pointer, and a tap brings the garden back to Active with the
+  core's menu open (so does Ctrl+Alt+G again). **Minimised** (the core's menu, a click on the yellow tray icon, or
+  minimising the window any other way) minimises the window and pauses the garden like a locked screen, catching up
+  when it's shown again. Its taskbar button, Ctrl+Alt+G or the tray icon bring it back in Active. Only one running
+  copy gets the hotkey (a second logs a warning).
+- **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
+  (grow a stem, generator, lab or grove from it, on parts with room for branches; prune it and everything beyond
+  it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
+  ("Drain: 6/s", "Genes: 12/min", what's
+  forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for
+  a moment closes just the toolbar; the card stays until a click lands off the plant, Escape, or another tap.
+- **Tap the core** for its menu, a half ring of buttons under it (names show under the pointer). **Info** and
+  **Build** are switches, lit while on: Info shows the garden's card (power, what it makes and drains, genes against
+  the next unlock and its ETA, the caps) above the part's whenever you tap the plant, and Build is build mode.
+  **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
+  time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
+- **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
   the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; wild growth waits out the window
   so the room is still there, and a bud placed in that room, or time away, ends it.
-- **Rest the pointer** on a part to ring it. **Tap** it (click without dragging) for its toolbar: grow a stem,
-  generator, lab or grove from it, pin in place (a yellow dot; drag a pinned part to move its pin), prune (cuts the
-  part and everything beyond it), and Unhook if it's tied to a pot or trellis. Tapping also selects it. Tap
-  again, pick a tool, click anywhere else, start a drag, or move away for a moment to close it.
 - **Fruit** (leaves, burrs, research pods) ignores the pointer: it can't be hovered, tapped or dragged, and clicks
   on it fall through to the desktop.
-- **Build mode** (the menu, or Ctrl+B with the garden focused) arranges the garden: an opaque disc round the plant
-  and a bar of shaping tools (Gravity Pot, Trellis, Gravity Well, as the gene track unlocks them). Drag a tool off
-  the bar to place it, drag its body, knob or posts to move and turn it, and drop a part on a pot or trellis to tie
-  it. Done or Escape ends it. See Shaping the garden in DESIGN.md.
+- **Build mode** (the core's menu, or Ctrl+B with the garden focused) arranges the garden: an opaque disc round the
+  plant and a bar of shaping tools (Gravity Pot, Trellis, Gravity Well, as the gene track unlocks them). Drag a tool
+  off the bar to place it, drag its body, knob or posts to move and turn it, and drop a part on a pot or trellis to
+  tie it. Each part shows its links used against its most (white 1/N, yellow, red when full), to see where
+  there's room to bud. Done or Escape ends it. See Shaping the garden in DESIGN.md.
 - The plant floats free, as in the TS game (the radial layout; the core isn't planted).
 - **Drag any part, the core included**: it's pulled to the pointer and the rest follows only through the links, at
   its real weight. Letting go keeps the momentum: fling it and the plant glides on and slows to rest. The screen
   edges are the garden's walls.
-- The plant is never rescaled automatically, and the window never moves or resizes. **Size** in the menu sets the
-  plant's scale (50-125%, scaled around the core).
-- **Right-click** (Active mode) for the menu: display mode, build mode, always on top, size, growth speed (1x / 60x / 3600x), idle frame rate (15 / 20 /
-  30 / 60 fps, default 30, saved; the rate while nothing is being touched or moving, and the idle CPU cost scales
-  with it), new garden, quit, and (an
-  experiment, on by default) "Fruit borrows its parent's push": the cheaper fruit physics described under
-  Performance, switchable live to compare the feel.
-- In Active mode, clicks anywhere off the plant, its toolbar and the Undo pill go straight through to the desktop. On Windows this is done by
-  toggling the window's click-through style each frame (`ClickThrough.cs`), not Godot's passthrough region: on
-  Windows that region also clips drawing, which made the window flash and would cut off the toolbar.
+- The plant is never rescaled automatically, and the window never moves or resizes. **Size** in the settings sets
+  the plant's scale (50-125%, scaled around the core).
+- **Settings**: right-click the plant (Active mode), the core menu's Settings, or right-click the tray icon. Size,
+  idle frame rate (15 / 20 / 30 / 60 fps, default 30, saved; the rate while nothing is being touched or moving, and
+  the idle CPU cost scales with it), New garden (asks first) and Quit. Debug builds (run from the project) add a
+  **Developer** submenu: always on top, growth speed (1x / 60x / 3600x), and (an experiment, on by default) "Fruit
+  borrows its parent's push", the cheaper fruit physics described under Performance, switchable live to compare the
+  feel.
+- In Active mode, clicks anywhere off the plant, its toolbar, the core's menu and the Undo pill go straight through
+  to the desktop. On Windows this is done by toggling the window's click-through style each frame
+  (`ClickThrough.cs`), not Godot's passthrough region: on Windows that region also clips drawing, which made the
+  window flash and would cut off the toolbar.
 - It saves every minute and on quit (`%APPDATA%\Space Garden Prototype\garden.json`). Reopening catches up the
   time away (capped at 72 h) and says what grew.
 - While nobody can see it (screen locked, display off, or a full-screen app such as a game or video on its
@@ -81,8 +89,10 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 (act as if hidden for FOR seconds from AT seconds after start, to test the pause),
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits; with it,
 `--prune=N` and `--undo=N` prune the biggest branch and undo it at tick N), `--shaping[=N]` (places one of each
-shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (the readout shows as if hovered,
-with a part selected),
+shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card
+open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
+menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--ambient` (starts in Ambient) and
+`--corehover` (as if the pointer were on the core there),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of
 the next unlock on the gene track, to watch one fire), `--fpslog` (prints

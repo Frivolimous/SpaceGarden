@@ -2,13 +2,18 @@ using Godot;
 
 namespace SpaceGarden;
 
-// A bud of each plantable kind (DESIGN.md, Tending commands: "New sprout"), then pin and prune; Unhook takes a part
-// off the pot or trellis holding it, and Remove takes a shaping tool away. The shaping bar (build mode) places a pot,
-// a trellis or a well, and Done leaves build mode.
-public enum Tool { Stem, Generator, Lab, Grove, Pin, Prune, Unhook, Remove, Pot, Trellis, Well, Done }
+// A bud of each plantable kind (DESIGN.md, Tending commands: "New sprout"), then prune; Unhook takes a part off the
+// pot or trellis holding it, and Remove takes a shaping tool away. The shaping bar (build mode) places a pot, a
+// trellis or a well, and Done leaves build mode. The core's menu (CoreMenu) opens the garden card (Info), build mode,
+// Ambient, Minimised and the settings.
+public enum Tool
+{
+    Stem, Generator, Lab, Grove, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
+    Info, Build, Ambient, Minimise, Settings,
+}
 
-// The little pill of tools that floats above a part while the pointer rests on it (or above a shaping tool tapped in
-// build mode, with just Remove). Icons are drawn, not images, so they stay crisp at any scale. It fades in and out and
+// The little pill of tools that floats above a tapped part (or above a shaping tool tapped in build mode, with just
+// Remove; or below the core, if its menu had no room under it). Icons are drawn, not images, so they stay crisp at any scale. It fades in and out and
 // follows its part as the plant sways.
 public partial class Toolbar : PanelContainer
 {
@@ -42,7 +47,7 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, tip) in new[]
         {
             (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
-            (Tool.Grove, "Grow a grove"), (Tool.Pin, "Pin in place"), (Tool.Unhook, "Take it off its pot or trellis"),
+            (Tool.Grove, "Grow a grove"), (Tool.Unhook, "Take it off its pot or trellis"),
             (Tool.Prune, "Prune"), (Tool.Remove, "Take this away"),
         })
         {
@@ -89,12 +94,15 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, button) in buttons) button.Visible = (tool == Tool.Remove) == (TargetTool != null);
         if (Target == null) return;
         buttons[Tool.Unhook].Visible = Target.TiedTo != null;
-        bool isCore = Target.Parent == null;
+        // A part with room for only its parent's link (a generator, lab or grove) can't grow anything: no buds.
+        bool buds = Target.MaxLinks > 1;
         foreach (var (tool, button) in buttons)
-            if (KindOf(tool) is { } kind) button.Enabled = CanGrow(Target, kind);
-        buttons[Tool.Pin].Enabled = !isCore;
-        buttons[Tool.Pin].Active = !isCore && Target.Fixed;
-        buttons[Tool.Prune].Enabled = !isCore;
+            if (KindOf(tool) is { } kind)
+            {
+                button.Visible = buds;
+                button.Enabled = CanGrow(Target, kind);
+            }
+        buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
     }
 
     public void HideAway()
@@ -108,12 +116,13 @@ public partial class Toolbar : PanelContainer
         fade.TweenCallback(Callable.From(() => Visible = false));
     }
 
-    // Sits centred just above the part (below it if there's no room), kept inside the window.
-    public void Follow(Vector2 partOnScreen, float partRadiusOnScreen, Vector2 viewport)
+    // Sits centred just above the part (below it if there's no room, or if asked: the core's menu is above), kept
+    // inside the window.
+    public void Follow(Vector2 partOnScreen, float partRadiusOnScreen, Vector2 viewport, bool below = false)
     {
         var size = GetCombinedMinimumSize();
         var above = partOnScreen - new Vector2(size.X / 2, partRadiusOnScreen + 16 + size.Y);
-        if (above.Y < 4) above.Y = partOnScreen.Y + partRadiusOnScreen + 16;
+        if (below || above.Y < 4) above.Y = partOnScreen.Y + partRadiusOnScreen + 16;
         Position = above.Clamp(new Vector2(4, 4), viewport - size - new Vector2(4, 4));
         Size = size;
     }
@@ -125,16 +134,22 @@ public partial class ToolButton : Control
     public bool Enabled = true;
     public bool Active;
     public string? Badge; // a small count in the corner (how many more of a shaping tool can be placed)
-    readonly Tool tool;
-    bool hover;
+    public readonly Tool Tool;
+    // Drawn on a disc of its own, in the pill's look (the core's menu, where the buttons stand apart).
+    public readonly bool Disc;
+    public bool Hover { get; private set; }
 
-    public ToolButton(Tool tool)
+    public const float DiscRadius = 16;
+    static readonly Color DiscFill = new(0.07f, 0.09f, 0.13f, 0.92f);
+
+    public ToolButton(Tool tool, bool disc = false)
     {
-        this.tool = tool;
-        CustomMinimumSize = new Vector2(30, 30);
+        Tool = tool;
+        Disc = disc;
+        CustomMinimumSize = disc ? new Vector2(DiscRadius * 2 + 2, DiscRadius * 2 + 2) : new Vector2(30, 30);
         MouseFilter = MouseFilterEnum.Stop;
-        MouseEntered += () => { hover = true; QueueRedraw(); };
-        MouseExited += () => { hover = false; QueueRedraw(); };
+        MouseEntered += () => { Hover = true; QueueRedraw(); };
+        MouseExited += () => { Hover = false; QueueRedraw(); };
     }
 
     public override void _GuiInput(InputEvent e)
@@ -155,9 +170,16 @@ public partial class ToolButton : Control
     public override void _Draw()
     {
         var c = Size / 2;
-        if (hover && Enabled) DrawCircle(c, 13, new Color(1, 1, 1, 0.13f));
+        if (Disc)
+        {
+            DrawCircle(c, DiscRadius + 1, new Color(0, 0, 0, 0.25f)); // a soft shadow, as the pill's
+            DrawCircle(c, DiscRadius, DiscFill);
+            DrawArc(c, DiscRadius, 0, Mathf.Tau, 32, new Color(1, 1, 1, Hover ? 0.4f : 0.14f), 1, true);
+        }
+        if (Hover && Enabled) DrawCircle(c, 13, new Color(1, 1, 1, 0.13f));
         var ink = !Enabled ? new Color(1, 1, 1, 0.25f) : Active ? new Color(1, 0.9f, 0.45f) : new Color(1, 1, 1, 0.9f);
         const float w = 1.8f;
+        var tool = Tool;
         if (Toolbar.KindOf(tool) is { } kind)
         {
             // A bud: the kind's own shape in its own colour, greyed when there's no room for it.
@@ -171,10 +193,30 @@ public partial class ToolButton : Control
         }
         switch (tool)
         {
-            case Tool.Pin: // a map pin
-                DrawCircle(c + new Vector2(0, -3), 4.5f, ink);
-                DrawCircle(c + new Vector2(0, -3), 1.6f, new Color(0.07f, 0.09f, 0.13f));
-                DrawLine(c + new Vector2(0, 1), c + new Vector2(0, 8), ink, w, true);
+            case Tool.Info: // an i in a ring
+                DrawArc(c, 8, 0, Mathf.Tau, 24, ink, 1.4f, true);
+                DrawCircle(c + new Vector2(0, -3.8f), 1.3f, ink);
+                DrawLine(c + new Vector2(0, -0.8f), c + new Vector2(0, 4.5f), ink, w, true);
+                break;
+            case Tool.Build: // the pot, as on the shaping bar, in the button's ink
+                ShapingLook.DrawIcon(this, Tool.Pot, c + new Vector2(0, 1), ink);
+                break;
+            case Tool.Ambient: // a crescent moon: the garden faded back
+                DrawArc(c + new Vector2(-1, 0), 7, Mathf.Pi * 0.3f, Mathf.Pi * 1.7f, 24, ink, w, true);
+                DrawArc(c + new Vector2(2.2f, -1.2f), 5.2f, Mathf.Pi * 0.55f, Mathf.Pi * 1.45f, 20, ink, 1.4f, true);
+                break;
+            case Tool.Minimise: // down into the taskbar
+                DrawPolyline([c + new Vector2(-4.5f, -4.5f), c + new Vector2(0, 0), c + new Vector2(4.5f, -4.5f)], ink, w, true);
+                DrawLine(c + new Vector2(0, -7), c + new Vector2(0, 0), ink, w, true);
+                DrawLine(c + new Vector2(-6.5f, 5), c + new Vector2(6.5f, 5), ink, w, true);
+                break;
+            case Tool.Settings: // a cog
+                DrawArc(c, 4.6f, 0, Mathf.Tau, 20, ink, 2.2f, true);
+                for (int i = 0; i < 8; i++)
+                {
+                    var u = Vector2.FromAngle(i * Mathf.Tau / 8);
+                    DrawLine(c + u * 5.6f, c + u * 8, ink, 2.4f, true);
+                }
                 break;
             case Tool.Unhook: // a hook, opened
                 DrawArc(c + new Vector2(0, 2), 4.5f, 0, Mathf.Pi * 1.25f, 16, ink, w, true);

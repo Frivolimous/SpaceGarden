@@ -59,7 +59,7 @@ How the rare nodes map onto the roles:
 - **Creatures (blue):** Home.
 - **Structure (green):** the Hub reads as a stem visually, drawn in its own shade of green. This is visual only: it doesn't take a stem slot or count against the stem cap.
 
-The plant must look good **without any UI chrome**. Controls appear only in Active display mode.
+The plant must look good **without any UI chrome**. Controls appear only in Active display mode (in Ambient, only the core takes a tap, to wake the garden).
 
 ## Economy
 
@@ -196,13 +196,13 @@ Settled Oct 29 (Jeremy, step 3e), ruled out for manual planting:
 
 The player has eight basic commands.
 
-1. **New sprout:** choose a basic node type and start a bud of it at a chosen spot; it forms and emerges on its own (see Growth and pruning).
+1. **New sprout:** choose a basic node type and start a bud of it at a chosen spot; it forms and emerges on its own (see Growth and pruning). A part with room only for its parent's link (a generator, grove or lab) offers no buds in its toolbar, only prune.
 2. **Prune:** remove any node and all of its children. No preview; undo restores the last prune only, within about 30 seconds (to be tuned).
 3. **Place a shaping tool** (Gravity Pot, Trellis, Gravity Well) in build mode: a subtle overlay, placed, moved and turned anywhere (see Shaping the garden).
 4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and the nodes linked to it (its parent and what grows straight out of it) are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
 5. **Select evolution:** for the core, seedlings and other skill-based nodes.
 6. **Zoom** in or out.
-7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (transparent and click-through), or Minimised (to the taskbar and tray). A hotkey toggles Active and Ambient, and brings a minimised garden back.
+7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (faded and click-through, except the core: it brightens and is ringed under the pointer, and a tap wakes the garden to Active with the core's menu open), or Minimised (to the taskbar and tray). Ambient and Minimise are slots in the core's menu; a hotkey toggles Active and Ambient, and brings a minimised garden back.
 8. **Drag:** click and drag any node to tug the plant around on a spring. Purely tactile, no economy effect.
 
 Undo covers only the most recent prune. Wild growth leaves the freed capacity alone until the undo window passes (see Growth and pruning).
@@ -227,11 +227,12 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 
 Fruit is never tied or pushed by a pot: it follows its node (a well pulls it along with everything else). A pruned node lets go of its tool; undoing the prune ties it again if the tool is still there (and a pot still free). Pruning or removing never refunds or costs anything.
 
-**Build mode** is where the garden is arranged: the plant menu's "Build mode" (or Ctrl+B with the garden focused) in Active mode; Done, Escape or leaving Active ends it.
+**Build mode** is where the garden is arranged: the core menu's Build switch (or Ctrl+B with the garden focused) in Active mode; Build again, Done, Escape or leaving Active ends it.
 - A dark, opaque disc fades in round the plant and its tools, catching every click on it, so arranging never clicks through to the desktop.
 - A bar above the disc holds the three tools (each with how many more the caps allow, greyed with what unlocks it until then) and Done. Pressing a tool takes a new one off the bar and carries it until let go; a tap sets it down just under the bar.
 - Drag a tool's body to move it, a pot's knob (just beyond its node) to turn it, a trellis's end posts to swing and stretch it. A potted node is locked, so dragging it moves its pot, in build mode or out (a tap still opens the node's toolbar). Handles come before nodes under the pointer, since a pot's knob sits where its branch grows. Tapping a tool opens a small toolbar with Remove; dragging a tool back onto the bar also puts it away.
 - Dragging a node and letting go over a pot or trellis ties it there. A tied node's toolbar gains Unhook.
+- Each node that can have 2 or more links shows its links used against its most, "used/most" (a forming bud counts, as it holds one): white at 1/N (only its parent), yellow in between, red when full (N/N). So the player sees at a glance where there's room to bud (Jeremy, Oct 29).
 
 **How they show.** A pale moonlight blue, no role's hue, in the parts' outline look (dark edge, crisp outline, dark fill): trellises and wells under the plant, pots over it. Each moves gently: chevrons rise past a holding pot's node, rings draw slowly in to a well. Faint while tending in Active mode (the pointer passes through them), where the well and a pot's chevrons are hidden altogether (the well keeps pulling), full in build mode, hidden in Ambient and Minimised. Saved with the garden, with what they hold (save version 7).
 
@@ -320,14 +321,16 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 | Feature | Priority | State |
 | --- | --- | --- |
 | Frameless window, transparent background | Must | Done (prototype) |
-| Always on top | Must | Done (prototype, menu toggle) |
-| Click-through (Ambient mode) | Must | Done (prototype) |
+| Always on top | Must | Done (prototype; a toggle in the Developer settings) |
+| Click-through (Ambient mode) | Must | Done (prototype; step 3d leaves the core clickable, to wake the garden) |
 | Low idle CPU / memory, pause while hidden | Must | Done (prototype) |
-| Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2). Active (default) is full opacity with the toolbar, menu and readout; Ambient fades the window to 55% and lets every click through; Minimised minimises the window and pauses the garden like a locked screen (caught up on return). Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) and restores a minimised garden, as do its taskbar button and the tray icon |
+| Display modes: Active / Ambient / Minimised, hotkey | Must | Done (step 2, revised in 3d). Active (default) is full opacity with the toolbar, the card and the core's menu; Ambient fades the window to 55% and lets every click through but on the core, which brightens and is ringed under the pointer and wakes the garden on a tap; Minimised minimises the window and pauses the garden like a locked screen (caught up on return). Ambient and Minimise are in the core's menu; Ctrl+Alt+G toggles Active and Ambient from anywhere (Windows) and restores a minimised garden, as do its taskbar button and the tray icon |
 | Remembers size and position | Must | Plant scale saved; the overlay covers the work area and Minimised is a plain minimise, so there is no window position to keep. The display mode isn't saved: every launch starts in Active |
-| Tray icon: show/hide, quit | Should | Done (step 2). Click to show or hide (Minimised); right-click for the menu (modes, Quit) |
-| Readout: the garden's stats | Must | Done (step 2, expanded in 3b). Tinted lines under the plant (over it if there's no room below) in Active mode, fading in over 1 s while the pointer rests on a part and out over 1 s after it leaves; an Undo pill shows above them while the last prune can be undone. See Information display |
-| Selected part panel | Must | Done (step 3b). A small card above the readout's lines for the part last tapped. See Information display |
+| Tray icon: show/hide, settings | Should | Done (step 2). Click to show or hide (Minimised); right-click for the settings |
+| Core menu | Must | Done (step 3d). A half ring of icon buttons under the core: Info, Build, Ambient, Minimise, Settings. See Information display |
+| Cards: a part's, and the garden's | Must | Done (step 3b, revised in 3d). A tapped part's card, and above it the garden's while the core menu's Info is on, in a spot of their own beside the plant. See Information display |
+| Undo pill | Must | Done (step 2). Under the plant while the last prune can be undone, counting down |
+| Settings | Must | Done (step 3d). Right-click, or the core menu's Settings: Size, Idle frame rate, New garden (asks first), Quit, and in debug builds a Developer submenu (Always on top, Growth speed, Physics) |
 | Build mode | Must | Done (step 3a). Within Active: an opaque disc round the plant, the shaping bar, tools to move, turn and remove. See Shaping the garden |
 | Launch on startup (opt-in) | Should | — |
 | Pinned to the desktop layer instead of on top (user choice) | Could | — |
@@ -335,21 +338,59 @@ Crawlers aren't developed until after the public beta (step 7+). When they arriv
 
 ### Information display
 
-Step 3b. The plant is stupid and the player is the brain, so the player needs the numbers a decision turns on, at a glance and without a menu. Both panels follow the readout's rules: Active mode only, shown while the pointer rests on the plant (or the panels themselves), fading in and out over 1 s. They are compact centred lines, each tinted by its role's hue, so they read on a desktop widget. The numbers come from the rules (`GardenStats`, and each kind's spec in `NodeSpecs` in `godot/src/Core`), never worked out in the view.
+Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid and the player is the brain, so the player needs the numbers a decision turns on, at a glance. But they show only when asked for: a garden that's only being looked at shows nothing but itself. The numbers come from the rules (`GardenStats` and `NodeStats` in `godot/src/Core`), never worked out in the view.
 
-**The readout** (the whole garden), one line each:
+**Hovering shows nothing** but the ring on the part under the pointer.
 
-| Line | Shows | The decision it serves |
-| --- | --- | --- |
-| Power | Held against the total store (and %), made against used per second; turns red-orange and says "overloaded" when the garden would cost more full than it can make full | Prune or add a generator so the garden can run full |
-| Genes | Genes so far, and genes reaching the core per real minute | Whether the labs are placed well |
-| Next unlock | What it gives, its threshold, genes still to go, and an ETA at the current rate ("plant a lab" with none) | Whether to wait, or add or move labs |
-| Room | Stems and generators against their caps, core links used against allowed, fruit grown against fruit room | Where there's room to bud, and what to prune for it |
-| Flowers | Groves and labs, and the wild buds forming by kind (or that nothing grows wild without a grove) | What's about to take the free slots, to prune early |
+**Cards, in a fixed spot.** Tapping a part selects it (ringed), opens its toolbar and shows its card. **Info** in the core's menu is a switch (lit while on): while it's on, the garden's card shows above the part's whenever the player is tending (a part selected, or the core's menu open). A click off the plant puts both away; the next tap on the plant brings the garden's back, until Info is switched off. The cards are set down as they open beside the plant, level with the core (to its right, or its left if there's more room there), and stay there while open, their top corner fixed, so the layout never jumps (switching Info on pushes the part's card down below the garden's). Tapping the selected part again closes its card and toolbar together (the core: its menu too). The cards also close when a click lands off the plant, on Escape, or when the part is pruned.
 
-Gene income is expected, not measured: each lab's blob rate now times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). It's steady from the first moment, and the same odds tell the player what a lab's placement is worth.
+**Card style**, after the original game: the name as a heading in the node's hue, then short "Label: value" lines in whole numbers, and no description line. Rates are per real second or minute at the current growth speed, and are the rates **now**: like the parts themselves they follow the fill (an empty part costs nothing; a full core or generator makes nothing, so its Gen shows its full rate instead). (The overload is judged at full: what the garden would make and cost with every part full.) Part cards use the garden card's words, Gen and Drain, for what a part makes and costs.
 
-**The selected part panel.** Tapping a part selects it (as well as opening its toolbar, as before); the selection stays, ringed, after the toolbar closes, until another part is tapped, it's pruned, or a click lands off the plant. A dim card above the readout's lines shows its name (in its hue) and its power held against its store, a one-line description of what it does (one per node kind, in its `NodeSpec`), and its own numbers: power made or upkeep per second, fruit against its room, what's forming in it and how far along, and for a lab the share of its genes that reach the core and its genes per minute.
+| Kind | Lines |
+| --- | --- |
+| Core | Power, Gen X/s (sends Y/s), Connections |
+| Stem | Power, Drain X/s, Connections |
+| Generator | Power, Gen X/s (sends Y/s) |
+| Grove | Power, Drain X/s, Growth X/min |
+| Lab | Power, Drain X/s, Genes X/min |
+
+- **Power** is held against its store. **Sends** is how fast it can send power on (its transfer rate).
+- **Growth** (growth blobs a minute) and **Genes** (genes a minute) are what the flower makes, not what arrives: many of a far lab's genes never find the core.
+- **Connections** (links against the most it can have, the core's from Capacity) shows only on a node with 2 or more.
+- **Forming** ("Forming: Lab bud 60%", "Forming: Leaf 40%") shows only while a fruit or bud is forming in the node.
+
+**The garden card**, in the same style:
+
+```
+Garden
+Power: 6178 / 6800
+Gen: 79/s, Drain: 81/s
+Genes: 180401 / 200000
+Next: +3 stems, +1 generator (ETA 4h 47m)
+
+Stems: 16 / 16
+Generators: 5 / 5
+Core links: 2 / 2
+Groves: 4, Labs: 9
+```
+
+Gen and Drain are what the garden makes and costs now; Gen's value is coloured by how it compares with Drain (see below). Genes is the total so far against the next unlock's threshold. The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
+
+**Colour coding** (Jeremy, Oct 29): only the value, or a fraction's numerator, is tinted; labels and denominators stay white.
+- **Power** (a part's, and the garden's total): white when full, shading to yellow above full (all yellow at 125%) and to red below it (all red at 50% and under).
+- **Gen**: white when it matches Drain, shading to yellow as it makes more (all yellow at 125% of Drain) and to red as it makes less (all red at 80%, since an overload matters sooner than a low store).
+- **Genes**: purple shading to white as the total nears the next unlock.
+- **Stems, Generators, Core links**: green with all the room left, shading to white as it fills (white when full).
+
+**The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient** (its label names the hotkey, Ctrl+Alt+G), **Minimise** and **Settings**, which close it. The Almanac (step 4) and Research (step 5) join later: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
+
+**Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little and shows the selection ring while the pointer is on it, and one tap switches to Active and opens its menu.
+
+**No needs-attention dot.** A red dot on the core (for an overloaded garden, later waiting evolutions and research) was tried and dropped (Jeremy, Oct 29): more confusing than helpful. The garden card's Gen colour shows an overload.
+
+**Settings.** Right-click (and the tray icon's right-click) opens them as a shortcut; so does Settings in the core's menu. For the player: Size, Idle frame rate, New garden (which asks first) and Quit. A Developer submenu, only in debug builds (`OS.IsDebugBuild()`), holds Always on top, Growth speed and Physics. Display mode moved to the core's menu.
+
+**No pinning.** The toolbar's "Pin in place" is gone, with pinning in the rules and the save (Gravity Pots hold a part in place now). An older save's pins are ignored, so pinned parts come back free.
 
 ## Platform: Godot 4 (.NET)
 
@@ -370,9 +411,9 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 1 | Foundation (done) | Godot widget, transparency, force-directed physics, node and fruit rendering, stress test, time model (wall-clock sim, catch-up, low-power idle) |
 | 2 | Living garden (done) | Power economy, upkeep; visible power flow (link flashes, node brightness); new sprout, prune with undo, drag, display modes; wild growth, capacity and the node budget; groves, growth blobs, fruit, labs, genes. Light progression: genes reaching the core automatically raise caps along a fixed, linear unlock sequence, with a small notification and no menu or choices |
 | 3a | Shaping (done) | Gravity Pot, Trellis, Gravity Well, placed and connected in build mode. See Shaping the garden |
-| 3b | Information display (done) | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget |
+| 3b | Information display (done) | The hover readout expanded to what an active player decides by (power against its store, gene income, the next unlock's ETA, caps used, flowers, wild buds forming), and a panel for the selected part (name, power, what it does, its own numbers). See Desktop widget; revised in 3d |
 | 3c | Visual polish → MVP (done) | A short round of visual polish, including the prune effect; then the power economy reworked to the original's clumps. End of step = MVP, reached Oct 29 |
-| 3d | UI revision (to do) | Revisit how information and building are shown: the hover readout and the selected part panel (today the readout shows on every hover and gets in the way), how build mode reads, and the core tappable in Ambient mode to wake the garden. Design discussed before building. See Next topics |
+| 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
 | 3e | Manual planting (done) | A manual bud starts at once and forms like a wild one; every node bud grows on its own at its parent's fill (about 2 minutes at full), growth blobs hurry it, and fruit still grows only from blobs. Planting stays free, and a garden with no grove needs no special case. See Growth and pruning |
 | 4 | Information and tracking | Stat tracking over time, Almanac, any information display 3b left out. Supports tuning |
 | 5 | Evolutions and rares | Choice-based core levels, large stems, seedlings, special basic nodes, rare wild pool with caps and rerolls |
@@ -410,7 +451,7 @@ Settled since the first draft: platform (Godot); "is there any care need?" (no; 
 Design layers still to work through:
 
 - [x] Information display: the readout and the selected part panel (step 3b)
-- [ ] UI revision (step 3d): redesign the hover readout and selected part panel so they inform without getting in the way; how build mode and arranging read; the core tappable in Ambient mode to wake the garden
+- [x] UI revision (step 3d): hovering shows nothing but the ring; one card in a fixed spot; the core's half-ring menu; the core tappable in Ambient mode to wake the garden. Build mode itself is unchanged, now opened from the core's menu
 - [x] Manual planting (step 3e): free, a bud that starts at once and grows on its own like every node bud, hurried by growth blobs (see Growth and pruning)
 - [ ] Power visuals at the top of the range: nodes should still visibly grow and shrink now that stores are larger (from the power rework)
 - [ ] Stat tracking and Almanac, including what form the Almanac takes (step 4)

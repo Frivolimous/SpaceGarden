@@ -1,8 +1,8 @@
 namespace SpaceGarden.Core;
 
-// What the hover readout tells a player tending the garden (DESIGN.md, Desktop widget): a snapshot of its power, its
-// caps, its flowers, what's forming, and how fast genes reach the core. Worked out from the garden as it is now; it
-// changes nothing.
+// What the garden card tells a player tending the garden (DESIGN.md, Information display): a snapshot of its power,
+// its caps, its flowers, what's forming, and how fast genes reach the core. Worked out from the garden as it is now;
+// it changes nothing.
 public sealed record GardenStats(
     float PowerHeld, float PowerStore, float Production, float Upkeep, float FullProduction, float FullUpkeep,
     int Stems, int Generators, int Groves, int Labs, int CoreLinksUsed, Capacity Capacity,
@@ -91,5 +91,30 @@ public sealed record GardenStats(
             (now, next) = (next, now);
         }
         return reached;
+    }
+}
+
+// What a part's card shows (DESIGN.md, Information display): its power against its store, and its rates now (they
+// follow its fill), per growth second or hour; Sends is how fast it can send power on. Makes, Sends and Upkeep are
+// power a second; GrowthBlobsPerHour is a grove's growth blobs, GenesPerHour the genes a lab's blobs carry as they
+// leave (production, not what reaches the core: see GardenStats.GeneReach). Links counts the parent's, against
+// MaxLinks (the core's is Capacity.CoreLinks). Forming is the fruit or bud forming in it, if any, and how far along
+// it is, 0-1. A full core or generator makes nothing, so its card shows Makes at its full rate instead.
+public sealed record NodeStats(
+    float Power, float Store, float Makes, float Sends, float Upkeep, float GrowthBlobsPerHour, float GenesPerHour,
+    int Links, int MaxLinks, NodeKind? Forming, float FormingProgress)
+{
+    public static NodeStats Of(PlantNode node)
+    {
+        var spec = node.Spec;
+        float blobs = Garden.BlobsPerHour(node);
+        float progress = node.Forming is { } kind
+            ? Math.Clamp(node.Growth / (NodeSpecs.All[kind].IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth), 0, 1)
+            : 0;
+        return new NodeStats(node.Power, node.Store,
+            node.Power >= node.Store ? Garden.FullProductionPerSecond(node) : Garden.ProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
+            Garden.UpkeepPerSecond(node),
+            spec.Kind == NodeKind.Grove ? blobs : 0, spec.Kind == NodeKind.Lab ? blobs * Tuning.BlobGenes : 0,
+            node.Links, node.MaxLinks, node.Forming, progress);
     }
 }

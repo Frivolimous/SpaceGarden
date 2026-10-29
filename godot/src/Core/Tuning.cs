@@ -26,7 +26,6 @@ public static class Tuning
     public const float PullFriction = 0.9f;
     public const float PullRatio = 0.008f;
     public const float PullMinDistanceSquared = 100;
-    public const float PinnedFollow = 0.25f;
 
     // The grid that speeds up the parts' push on each other (see Garden.Repel): the cell size, and the force from
     // which a part pushes every other part exactly (only the core's, 30).

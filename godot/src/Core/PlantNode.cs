@@ -17,6 +17,7 @@ public sealed class PlantNode
     public Vector2 PreviousPosition;
     public float Rotation;
     public float Spin;
+    // Held still where it is: only an upright (planted) garden's core, while it isn't held.
     public bool Fixed;
     // The pot or trellis holding it, if any (see Garden.Tie), and the way a potted neighbour's pot pushes it (zero if
     // no neighbour is potted: see Garden.Shape).

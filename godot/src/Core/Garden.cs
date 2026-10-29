@@ -288,14 +288,6 @@ public sealed class Garden
         UndoSecondsLeft = 0;
     }
 
-    // A pinned part holds still where it is (the core always is).
-    public void TogglePin(PlantNode node)
-    {
-        if (node.Parent == null) return;
-        node.Fixed = !node.Fixed;
-        node.Velocity = Vector2.Zero;
-    }
-
     // Holding a part pulls it to the pointer and the links drag the rest along at its real weight. Letting go just
     // stops the pull: everything keeps the momentum it has and drifts to rest, as in the TS game. (An upright
     // plant's core is uprooted while held and planted again, stopping dead, where it's let go.)
@@ -390,7 +382,7 @@ public sealed class Garden
                 case ShapingKind.Pot:
                     float r = PotRadius(tool);
                     Consider(tool, ShapingHandle.Turn, tool.Position + tool.Facing * (r + ShapingTool.PotKnob), ShapingTool.HandleReach);
-                    Consider(tool, ShapingHandle.Body, tool.Position - tool.Facing * (r / 2 + ShapingTool.PotRim),
+                    Consider(tool, ShapingHandle.Body, tool.Position - tool.Facing * (r / 2),
                         r + ShapingTool.PotGap + ShapingTool.PotLip);
                     break;
                 case ShapingKind.Trellis:
@@ -722,7 +714,10 @@ public sealed class Garden
 
     // Blobs a flower makes per real hour now: gene blobs from a lab, growth blobs from a grove, in proportion to its
     // fill (their fruit adding a little).
-    public static float BlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node) * Output(node);
+    public static float BlobsPerHour(PlantNode node) => FullBlobsPerHour(node) * Output(node);
+
+    // The same when full.
+    public static float FullBlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node);
 
     // ==== BLOBS ==== \\
 
@@ -945,18 +940,12 @@ public sealed class Garden
         foreach (var link in Links) Pull(link);
 
         // A held part is pulled to the pointer by its weight, as in the TS game: light parts follow briskly, heavy
-        // ones like the core lumber after it (a pinned one is carried, moving its pin). Everything else follows only
-        // through the links.
+        // ones like the core lumber after it. Everything else follows only through the links.
         if (Held is { } held)
         {
-            if (held.Fixed)
-                held.Position = Vector2.Lerp(held.Position, HoldTarget, Tuning.PinnedFollow);
-            else
-            {
-                held.Velocity *= Tuning.PullFriction;
-                var d = held.Position - HoldTarget;
-                if (d.LengthSquared() > Tuning.PullMinDistanceSquared) held.Velocity -= Tuning.PullRatio * d * held.Spec.InverseMass;
-            }
+            held.Velocity *= Tuning.PullFriction;
+            var d = held.Position - HoldTarget;
+            if (d.LengthSquared() > Tuning.PullMinDistanceSquared) held.Velocity -= Tuning.PullRatio * d * held.Spec.InverseMass;
         }
 
         Repel();
@@ -1338,7 +1327,7 @@ public sealed class Garden
     public GardenSave ToSave() => new(
         Layout, EconomyClock, Capacity,
         Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
-            n.Parent != null && n.Fixed, n.Power, n.Blob, n.Forming, n.Growth)).ToList(),
+            n.Power, n.Blob, n.Forming, n.Growth)).ToList(),
         Genes, Unlocks,
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList());
@@ -1359,7 +1348,7 @@ public sealed class Garden
             var parent = n.ParentId < 0 ? null : byId[n.ParentId];
             var node = garden.Add(NodeSpecs.All[n.Kind], parent, new Vector2(n.X, n.Y));
             node.Age = 10;
-            node.Fixed = (parent == null && garden.Planted) || n.Pinned;
+            node.Fixed = parent == null && garden.Planted;
             node.Power = n.Power;
             node.Blob = n.Blob;
             node.Forming = n.Forming;
@@ -1414,7 +1403,8 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots
 public sealed record UnlockStep(double Genes, int Stems = 0, int Generators = 0, int CoreLinks = 0, int Pots = 0,
     int Trellises = 0, int Wells = 0);
 
-public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, bool Pinned, float Power,
+// (Saves from before step 3d also carry Pinned, from when parts could be pinned; it's ignored.)
+public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, float Power,
     float Blob = 0, NodeKind? Forming = null, float Growth = 0);
 
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,

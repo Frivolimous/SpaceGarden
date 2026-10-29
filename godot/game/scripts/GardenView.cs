@@ -4,8 +4,8 @@ using Num = System.Numerics;
 namespace SpaceGarden;
 
 // Draws the garden each frame, back to front: stems, the motes travelling along them, soft halos (and the glow where
-// a mote is absorbed), the parts, then pins and the ring on the part under the pointer. The parts of a branch just
-// pruned drift off loose, fading out. Nothing here changes the garden.
+// a mote is absorbed), the parts, then the core's marks and the ring on the part under the pointer. The parts of a
+// branch just pruned drift off loose, fading out. Nothing here changes the garden.
 //
 // Each layer is a child canvas item drawn in as few draw calls as possible, however big the plant: the stems, the
 // halos, the motes and each kind of shape are one instanced batch apiece (a textured quad per part, or per stem,
@@ -24,6 +24,11 @@ public partial class GardenView : Node2D
     static readonly Color Edge = new(0, 0, 0, 0.55f);
 
     public PlantNode? Highlight;
+
+    // CoreHover: the pointer is on the core in Ambient mode, where a tap wakes the garden, and the core brightens a
+    // little.
+    public bool CoreHover;
+    float coreHover;
 
     // While the garden can't be seen nothing is redrawn (Godot then renders nothing at all).
     public bool Frozen;
@@ -111,6 +116,7 @@ public partial class GardenView : Node2D
         if (Frozen) return;
         float dt = (float)delta;
         highlightRing = Mathf.MoveToward(highlightRing, Highlight == null ? 0 : 1, dt * 6);
+        coreHover = Mathf.MoveToward(coreHover, CoreHover ? 1 : 0, dt * 5);
         // Genes count as their blob leaves the lab, so an unlock waits for the gene blobs on their way to arrive (the
         // core glows as each does), unless none are shown.
         if (garden.Unlocks > unlocksSeen)
@@ -476,17 +482,15 @@ public partial class GardenView : Node2D
         foreach (var (shape, batch) in forming) batch.Draw(formingLayer, Textures.Shape(shape));
     }
 
-    // Pins and the hover ring: a handful at most.
+    // The core's light while the pointer is on it in Ambient mode, build mode's link counts, and the hover ring.
     void DrawMarks()
     {
         DrawHandles();
-        foreach (var node in garden.Nodes)
-        {
-            if (!node.Fixed || node.Parent == null) continue;
-            float r = Mathf.Max(2, Size(node) * 0.32f);
-            markLayer.DrawCircle(At(node), r, new Color(1, 0.9f, 0.45f));
-            markLayer.DrawArc(At(node), r, 0, Mathf.Tau, 16, new Color(0, 0, 0, 0.5f), 1, true);
-        }
+        var core = garden.Core;
+        if (coreHover > 0)
+            markLayer.DrawCircle(At(core), Size(core) * 1.02f, ColourOf(core.Spec).Lightened(0.6f) with { A = 0.22f * coreHover });
+
+        if (backdropAlpha > 0) DrawLinkCounts();
 
         if (Highlight != null && highlightRing > 0)
         {
@@ -499,7 +503,33 @@ public partial class GardenView : Node2D
         DrawMoments();
     }
 
-    // The small moments: a handful at a time, and brief. Each on a soft dark edge, like the parts.
+    // In build mode, on each part that can have 2 or more links: its links used against the most it can have (a
+    // forming bud's counts, as it holds one), white with only its parent's (1/N), red when full (N/N), yellow between.
+    // Drawn at screen size, so the text stays crisp at any plant scale.
+    static readonly Color LinksFew = new(1, 1, 1), LinksSome = new(1, 0.88f, 0.35f), LinksFull = new(1, 0.38f, 0.33f);
+
+    void DrawLinkCounts()
+    {
+        var font = ThemeDB.FallbackFont;
+        float k = GetViewport().GetCanvasTransform().X.Length(); // screen pixels per garden unit
+        int size = Mathf.Max(9, Mathf.RoundToInt(13 * k));
+        float alpha = backdropAlpha;
+        foreach (var node in garden.Nodes)
+        {
+            if (node.Spec.IsFruit || node.MaxLinks < 2) continue;
+            int used = node.Links + (node.FormingBud ? 1 : 0);
+            var colour = used >= node.MaxLinks ? LinksFull : used <= 1 ? LinksFew : LinksSome;
+            string text = $"{used}/{node.MaxLinks}";
+            var extent = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);
+            markLayer.DrawSetTransform(At(node), 0, new Vector2(1 / k, 1 / k));
+            var origin = new Vector2(-extent.X / 2, font.GetAscent(size) - extent.Y / 2);
+            markLayer.DrawStringOutline(font, origin, text, HorizontalAlignment.Left, -1, size, 4, new Color(0, 0, 0, 0.8f * alpha));
+            markLayer.DrawString(font, origin, text, HorizontalAlignment.Left, -1, size, colour with { A = alpha });
+        }
+        markLayer.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+    }
+
+    // The small moments:a handful at a time, and brief. Each on a soft dark edge, like the parts.
     void DrawMoments()
     {
         if (restored.Count > 0) restored.RemoveWhere(n => n.Age >= PopSeconds || !garden.Nodes.Contains(n));
