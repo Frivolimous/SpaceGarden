@@ -212,6 +212,10 @@ public partial class GardenView : Node2D
     // The size a pot is drawn round: its part as drawn now (a drained part is smaller), or an empty pot's.
     float PotRadius(ShapingTool pot) => garden.Potted(pot) is { } part ? Size(part) : ShapingTool.EmptyPot;
 
+    // Where a pot is drawn: round its part as drawn now (which glides after a moved pot), or where it is, empty. Its
+    // knob is drawn from here too, so it stays with the pot.
+    Vector2 PotAt(ShapingTool pot) => garden.Potted(pot) is { } part ? At(part) : V(pot.Position);
+
     // Pots, over the parts: each a flower pot its part sits in up to its middle, chevrons rising past the part the
     // way it faces.
     void DrawPots()
@@ -222,7 +226,7 @@ public partial class GardenView : Node2D
         {
             if (pot.Kind != ShapingKind.Pot) continue;
             var part = garden.Potted(pot);
-            var at = part != null ? At(part) : V(pot.Position);
+            var at = PotAt(pot);
             var u = V(pot.Facing);
             float r = PotRadius(pot);
             ShapingLook.Pot(potLayer, at, u, r, TintOf(pot));
@@ -269,8 +273,8 @@ public partial class GardenView : Node2D
             {
                 var tint = KnobTint(ShapingHandle.Turn);
                 var u = V(tool.Facing);
-                var knob = V(tool.Position) + u * (garden.PotRadius(tool) + ShapingTool.PotKnob);
-                markLayer.DrawDashedLine(V(tool.Position) + u * (PotRadius(tool) + 3), knob - u * 4, tint with { A = tint.A * 0.4f }, 1, 3, true, true);
+                var knob = PotAt(tool) + u * (garden.PotRadius(tool) + ShapingTool.PotKnob);
+                markLayer.DrawDashedLine(PotAt(tool) + u * (PotRadius(tool) + 3), knob - u * 4, tint with { A = tint.A * 0.4f }, 1, 3, true, true);
                 ShapingLook.Knob(markLayer, knob, 3.5f, tint);
             }
             else if (tool.Kind == ShapingKind.Trellis)
