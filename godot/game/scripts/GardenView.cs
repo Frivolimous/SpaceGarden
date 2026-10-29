@@ -31,7 +31,9 @@ public partial class GardenView : Node2D
     readonly Garden garden;
     readonly Node2D linkLayer = new(), haloLayer = new(), shapeLayer = new(), formingLayer = new(),
         markLayer = new(), moteLayer = new();
-    readonly Batch links = new(), linkEdges = new(), lit = new(), halos = new(), moteDots = new();
+    // Stems are tapered (links, linkEdges); fruit stalks and the lit stretch of a power flash are straight.
+    readonly Batch links = new(), linkEdges = new(), straight = new(), halos = new(), moteDots = new();
+    const float MoteMinRadius = 1.6f; // a blob's dot, in garden units (about 2.5 px across at the default size)
     // A power flash's light flooding along its stem, then draining: done before the next (at most 3 a second).
     const float FillSeconds = 0.1f, DrainSeconds = 0.2f;
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
@@ -102,7 +104,23 @@ public partial class GardenView : Node2D
     // Where to draw a part this frame: blended between its last two physics ticks by how far the frame is into the
     // next, so motion is smooth at any frame rate (30 when idle, the monitor's rate when active) and not stepped
     // to the 60 Hz tick.
-    Vector2 At(PlantNode node) => V(Num.Vector2.Lerp(node.PreviousPosition, node.Position, blend));
+    // A fruit growing in starts on its part's edge (where its bud formed: see FruitSet) and moves out to where it
+    // hangs on its stalk as it grows.
+    Vector2 At(PlantNode node)
+    {
+        var p = V(Num.Vector2.Lerp(node.PreviousPosition, node.Position, blend));
+        if (!node.Spec.IsFruit || node.Age >= GrowInSeconds || node.Parent is not { } parent) return p;
+        var centre = At(parent);
+        var hang = p - centre;
+        float length = hang.Length();
+        if (length < 0.01f) return p;
+        var onEdge = centre + hang / length * FruitSet(Size(parent), Size(node));
+        return onEdge.Lerp(p, Mathf.Clamp(node.Age / GrowInSeconds, 0, 1));
+    }
+
+    // How far from its part's centre a fruit bud forms: overlapping the part's edge a little, even off a pentagon's
+    // flat side, but mostly outside it, so it buds out of the part.
+    static float FruitSet(float partSize, float fruitSize) => partSize * 0.85f + fruitSize * 0.75f;
 
     // A part's brightness and size are its power level (DESIGN.md, Visual language), as in the original
     // (PlantNodeView.intensityInterpolation): its shown fill, never below FillLookFloor, plus the bounce from power
@@ -132,7 +150,7 @@ public partial class GardenView : Node2D
     {
         links.Begin();
         linkEdges.Begin();
-        lit.Begin();
+        straight.Begin();
         foreach (var link in garden.Links)
         {
             AddLink(link);
@@ -140,7 +158,7 @@ public partial class GardenView : Node2D
         }
         linkEdges.Draw(linkLayer, Textures.Taper);
         links.Draw(linkLayer, Textures.Taper);
-        lit.Draw(linkLayer, Textures.Line);
+        straight.Draw(linkLayer, Textures.Line);
     }
 
     // A power flash lights its whole stem, as in the original, but in a wipe from the end the power came from: the
@@ -163,7 +181,7 @@ public partial class GardenView : Node2D
         var colour = Wilted(Shade(ColourOf(link.Target.Spec), 0.45f + 0.9f * link.FlashStrength), link.Target.WiltLook);
         colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
         var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore * width;
-        lit.AddAxes(a + along * middle, along * (head - tail), normal, colour);
+        straight.AddAxes(a + along * middle, along * (head - tail), normal, colour);
     }
 
     void AddLink(Link link)
@@ -177,9 +195,16 @@ public partial class GardenView : Node2D
         var along = to - from; // the texture's parent end is at the origin
         float length = along.Length();
         var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore;
-        links.AddAxes(from + along / 2, along, normal * width, colour);
         var edge = Edge;
         edge.A *= colour.A;
+        if (link.Target.Spec.IsFruit)
+        {
+            // A fruit's stalk is short and thin already: straight, so it stays visible.
+            straight.AddAxes(from + along / 2, along, normal * (width + EdgeWidth), edge);
+            straight.AddAxes(from + along / 2, along, normal * width, colour);
+            return;
+        }
+        links.AddAxes(from + along / 2, along, normal * width, colour);
         linkEdges.AddAxes(from + along / 2, along, normal * (width + EdgeWidth), edge);
     }
 
@@ -196,9 +221,9 @@ public partial class GardenView : Node2D
         return (a + dir * rimA, a + along - dir * rimB);
     }
 
-    // A stem's width at its parent's end (it tapers to TaperEnd of that at its own): thinning with depth, a fruit's
-    // stalk thinnest.
-    static float LinkWidth(PlantNode target) => target.Spec.IsFruit ? 1.3f : Mathf.Max(1.4f, 3.4f - target.Depth * 0.16f);
+    // A stem's width at its parent's end (it tapers to TaperEnd of that at its own): thinning with depth. A fruit's
+    // stalk is thinnest, and even.
+    static float LinkWidth(PlantNode target) => target.Spec.IsFruit ? 1.2f : Mathf.Max(1.4f, 3.4f - target.Depth * 0.16f);
 
     // Under each part, a soft halo of its power; and where a mote was just absorbed, a glow of the mote's colour that
     // widens a little as it fades, so it's seen that something happened.
@@ -272,9 +297,10 @@ public partial class GardenView : Node2D
             if (spec.IsFruit)
             {
                 size = Mathf.Lerp(0.8f, spec.Radius, grown) * level;
-                // Turning with its part, at a slot of its own.
+                // Turning with its part, at a slot of its own, on its part's edge (see FruitSet), so it buds out of
+                // it rather than floating beside it.
                 var dir = new Vector2(cos, sin).Rotated(node.Fruits.Count * 2.1f);
-                at += dir * (node.Spec.Radius * Level(node) + size);
+                at += dir * FruitSet(Size(node), size);
                 colour.A = 0.9f;
             }
             else
@@ -381,7 +407,8 @@ public partial class GardenView : Node2D
             bool outward = mote.To.Parent == mote.From;
             var deeper = outward ? mote.To : mote.From;
             float width = LinkWidth(deeper) * Mathf.Lerp(1, Textures.TaperEnd, outward ? mote.T : 1 - mote.T);
-            moteDots.AddRound(p, Textures.ShapeDiameter(width * 0.65f), Rgb(mote.Rgb).Lightened(0.3f));
+            // Never smaller than MoteMinRadius, or it's lost on the thin ends of the stems.
+            moteDots.AddRound(p, Textures.ShapeDiameter(Mathf.Max(MoteMinRadius, width * 0.65f)), Rgb(mote.Rgb).Lightened(0.4f));
         }
         moteDots.Draw(moteLayer, Textures.Shape(Shape.Circle));
     }
@@ -390,10 +417,12 @@ public partial class GardenView : Node2D
 
     // Parts swell in over their first second and a half, overshooting a little like a bud opening. A part whose
     // completing blob is still on its way has an Age below zero, and isn't drawn (nor its stalk) until then.
+    const float GrowInSeconds = 1.5f;
+
     static float GrowIn(PlantNode node)
     {
-        if (node.Age >= 1.5f) return 1; // grown: almost every part, almost always
-        float t = Mathf.Clamp(node.Age / 1.5f, 0, 1);
+        if (node.Age >= GrowInSeconds) return 1; // grown: almost every part, almost always
+        float t = Mathf.Clamp(node.Age / GrowInSeconds, 0, 1);
         const float c1 = 1.70158f, c3 = c1 + 1;
         return 1 + c3 * Mathf.Pow(t - 1, 3) + c1 * Mathf.Pow(t - 1, 2);
     }
