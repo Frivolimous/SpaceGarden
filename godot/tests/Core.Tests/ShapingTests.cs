@@ -13,7 +13,7 @@ public class ShapingTests
         var garden = Garden.New(Layout.Radial, seed);
         garden.Capacity = new Capacity(5, 0, 1, Pots: 2, Trellises: 2, Wells: 2);
         garden.Unlocks = Tuning.UnlockTrack.Length; // fixed caps
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var trunk = Add(garden, garden.Core, NodeKind.Stem);
         var tip = trunk;
         for (int i = 0; i < 3; i++) tip = Add(garden, tip, NodeKind.Stem);
@@ -285,7 +285,7 @@ public class ShapingTests
     }
 
     [Fact]
-    public void WildGrowthBeyondAPotHeadsTheWayItFaces()
+    public void PassiveGrowthBeyondAPotHeadsTheWayItFaces()
     {
         var (garden, trunk, tip) = Line();
         var pot = garden.Place(ShapingKind.Pot, tip.Position, MathF.Atan2(-1, 0))!; // facing up

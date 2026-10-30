@@ -550,7 +550,7 @@ public partial class GardenView : Node2D
             }
             else
             {
-                // Quiet: wild growth pops parts out often.
+                // Quiet: passive growth pops parts out often.
                 float r = node.Spec.Radius * (1.1f + 0.8f * EaseOut(t));
                 Ring(at, r, 0.5f + 1.5f * (1 - t), colour, 0.6f * (1 - t) * (1 - t));
             }

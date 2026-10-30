@@ -13,18 +13,21 @@ public sealed class Tracking
 
     // Growth seconds the garden has lived.
     public double Age;
-    // Parts grown over its life, by kind (the first stem, wild growth, the player's buds and fruit; not the core).
+    // Parts grown over its life, by kind (the first stem, passive growth, the player's buds and fruit; not the core).
     public readonly Dictionary<NodeKind, int> Grown = new();
-    // Parts cut off by pruning (an undone prune doesn't count), and wild buds started by growth blobs.
-    public int Pruned, WildBuds;
+    // Parts cut off by pruning (an undone prune doesn't count), and passive buds started by growth blobs.
+    public int Pruned, PassiveBuds;
     // The most parts the garden has had at once (for the Almanac's milestones).
     public int MostParts;
+    // The garden's size: the most main nodes (parts that aren't fruit, the core among them) it has had at once.
+    // Pruning never lowers it. Step 5b unlocks the shaping tools by it (DESIGN.md, Upgrade tracks).
+    public int MostMainNodes;
 
     public int PartsGrown => Grown.Values.Sum();
 
     public readonly History History = new();
     public readonly List<JournalEntry> Journal = new();
-    // The firsts already logged, so each is logged once ("grew:Grove", "wild", "placed:Pot"). The journal favours the
+    // The firsts already logged, so each is logged once ("grew:Grove", "passive", "placed:Pot"). The journal favours the
     // garden's own moments; of the player's doings only the first of each shaping tool is one.
     public readonly HashSet<string> Firsts = new();
 
@@ -51,10 +54,13 @@ public sealed class Tracking
         MostParts = parts;
     }
 
+    // The garden has this many main nodes now (not loaded): its size rises if that's a new most.
+    internal void Reached(int mainNodes) => MostMainNodes = Math.Max(MostMainNodes, mainNodes);
+
     // ==== SAVES ==== \\
 
-    public TrackingSave ToSave() => new(Age, new(Grown), Pruned, WildBuds, MostParts, History.ToSave(),
-        Journal.ToList(), Firsts.ToList());
+    public TrackingSave ToSave() => new(Age, new(Grown), Pruned, PassiveBuds, MostParts, History.ToSave(),
+        Journal.ToList(), Firsts.ToList(), MostMainNodes);
 
     public static Tracking FromSave(TrackingSave? save)
     {
@@ -63,8 +69,9 @@ public sealed class Tracking
         tracking.Age = save.Age;
         foreach (var (kind, count) in save.Grown) tracking.Grown[kind] = count;
         tracking.Pruned = save.Pruned;
-        tracking.WildBuds = save.WildBuds;
+        tracking.PassiveBuds = save.PassiveBuds;
         tracking.MostParts = save.MostParts;
+        tracking.MostMainNodes = save.MostMainNodes;
         tracking.History.Load(save.History);
         tracking.Journal.AddRange(save.Journal);
         tracking.Firsts.UnionWith(save.Firsts);
@@ -96,11 +103,13 @@ public sealed class Tracking
         void Row(string name, double value) => csv.Append(Invariant($"{name},{value:0.##}\n"));
         Row("age_hours", Age / 3600);
         Row("genes_earned", garden.Genes);
+        Row("gene_balance", garden.GeneBalance);
         Row("parts_grown", PartsGrown);
         Row("parts_pruned", Pruned);
-        Row("wild_buds", WildBuds);
+        Row("passive_buds", PassiveBuds);
         Row("unlocks_reached", garden.Unlocks);
         Row("parts_now", garden.Nodes.Count);
+        Row("most_main_nodes", MostMainNodes);
         foreach (var kind in Enum.GetValues<NodeKind>())
             if (Grown.TryGetValue(kind, out var count)) Row($"grown_{kind.ToString().ToLowerInvariant()}", count);
         return csv.ToString();
@@ -299,5 +308,5 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines)
 
 public sealed record HistorySave(List<Sample> Minutes, List<Sample> Hours, List<Sample> Days, Sample Open);
 
-public sealed record TrackingSave(double Age, Dictionary<NodeKind, int> Grown, int Pruned, int WildBuds, int MostParts,
-    HistorySave History, List<JournalEntry> Journal, List<string> Firsts);
+public sealed record TrackingSave(double Age, Dictionary<NodeKind, int> Grown, int Pruned, int PassiveBuds, int MostParts,
+    HistorySave History, List<JournalEntry> Journal, List<string> Firsts, int MostMainNodes = 0);

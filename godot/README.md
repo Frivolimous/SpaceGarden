@@ -29,14 +29,14 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   the next unlock and its ETA, the caps) above the part's whenever you tap the plant, and Build is build mode.
   **Almanac** (lit while open) opens a window with tabs across the top (just **Journal** for now): the garden's
   moments under day headings ("Day 2"), newest first, each with its time on that day. They're its planting, each
-  kind's first part, its first wild bud, every unlock, part counts reached, and the first of each shaping tool.
+  kind's first part, its first passive bud, every unlock, part counts reached, and the first of each shaping tool.
   Drag its header to move it, its corner grip to resize it; the wheel scrolls it. It stays open (clicks elsewhere,
   Escape and losing the focus leave it) until its ✕ or the slot again; it hides in Ambient and Minimised and comes
   back in Active.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
-  the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; wild growth waits out the window
+  the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; passive growth waits out the window
   so the room is still there, and a bud placed in that room, or time away, ends it.
 - **Fruit** (leaves, burrs, research pods) ignores the pointer: it can't be hovered, tapped or dragged, and clicks
   on it fall through to the desktop.
@@ -81,21 +81,27 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   (`EDGE_BOUNCE`, now the screen edges). Links are the TS game's soft springs, with no length limit, so a pull
   stretches them and they drag the rest along. The held part is pulled by its weight, so the core is slow and
   heavy to drag and a leaf quick.
-- **New:** wind that sways the parts more the further they are from the core, growth on real time (wild buds wherever a grove's growth blobs land), catch-up on return,
+- **New:** wind that sways the parts more the further they are from the core, growth on real time (passive buds wherever a grove's growth blobs land), catch-up on return,
   halos, grow-in animation, a 30 fps idle frame rate.
 - **Economy:** power is the original game's (`PlantNodePower`): the core and generators make power and stems, groves
   and labs cost upkeep (leaves halve a stem's), all in proportion to their fill, and about three times a second each
   part sends a clump of power to its emptiest neighbour, so far tips run low first and the fills never settle. Nothing
-  wilts and nothing is destroyed; an overloaded garden just runs lower. Wild growth stays within the caps (4 stems,
+  wilts and nothing is destroyed; an overloaded garden just runs lower. Passive growth stays within the caps (4 stems,
   1 generator, 1 core link at the start), raised as genes reach the core along the unlock track. Catch-up runs the
-  same fixed economy steps. Saves carry a version (now 8); an older one is set aside (`garden.v7.json` and so on)
+  same fixed economy steps. Saves carry a version (now 9); an older one is set aside (`garden.v8.json` and so on)
   and a new garden starts.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Tracking
-`src/Core/Tracking.cs` (DESIGN.md, Step 4). Saved with the garden (version 8).
-- **Lifetime totals:** the garden's age, parts grown by kind, parts pruned, wild buds, the most parts at once.
-  Genes earned and unlocks reached are the garden's own `Genes` and `Unlocks`.
+`src/Core/Tracking.cs` (DESIGN.md, Step 4). Saved with the garden (version 9).
+- **Lifetime totals:** the garden's age, parts grown by kind, parts pruned, passive buds, the most parts at once,
+  and the garden size (`MostMainNodes`: the most main nodes, fruit aside and the core counted, ever reached; pruning
+  never lowers it, and step 5b unlocks the shaping tools by it).
+  Genes earned and unlocks reached are the garden's own `Genes` and `Unlocks`. The export names them
+  `genes_earned`, `gene_balance`, `passive_buds`, `most_main_nodes` and so on.
+- **Gene balance** (step 5a, groundwork for 5b's upgrade tracks): `Garden.GeneBalance`, the genes left to spend.
+  Genes reaching the core add to it and to `Genes` alike; `CanSpend` and `Spend` take from it alone, so genes earned
+  never drop. Nothing in the game spends yet, and the unlock track still counts genes earned until 5b replaces it.
 - **History:** four series, sampled as the economy runs: stored power, Gen and Drain (averaged, per growth second)
   and the genes that reached the core. There is a sample a minute for the last day, an hour for the last month and
   a day beyond. Old samples roll up a whole hour or day at a time.

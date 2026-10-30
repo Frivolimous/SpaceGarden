@@ -17,7 +17,7 @@ public class PruneTests
         var garden = Garden.New(Layout.Radial, seed: 7);
         garden.Capacity = new Capacity(3, 0, 1);
         garden.Unlocks = Tuning.UnlockTrack.Length; // fixed caps
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var trunk = Add(garden, garden.Core, NodeKind.Stem);
         var fork = Add(garden, trunk, NodeKind.Stem);
         var lab = Add(garden, fork, NodeKind.Lab);
@@ -159,14 +159,14 @@ public class PruneTests
     }
 
     [Fact]
-    public void WildGrowthWaitsOutTheWindow()
+    public void PassiveGrowthWaitsOutTheWindow()
     {
         // A grove beside the fork: once the fork is cut, its blobs start no bud and no fruit on the trunk while the
         // prune can be undone, so the room it freed stays free.
         var (garden, trunk, fork) = Branched();
         garden.Capacity = garden.Capacity with { Stems = 4 };
         var grove = Add(garden, trunk, NodeKind.Grove);
-        garden.WildGrowth = true;
+        garden.PassiveGrowth = true;
         garden.Prune(fork);
         // Hours of growth (as at a fast growth speed) within the window.
         garden.Grow(6 * 3600);

@@ -47,9 +47,13 @@ public sealed class Garden
     Capacity capacity = Capacity.Start;
 
     // Genes that have reached the core over the garden's life, and how many steps of the unlock track they've passed
-    // (each one raised Capacity once). The view compares Unlocks with what it has shown, to say what's new.
+    // (each one raised Capacity once). The view compares Unlocks with what it has shown, to say what's new. The track
+    // counts genes earned until step 5b's upgrade tracks replace it.
     public double Genes;
     public int Unlocks;
+    // The genes left to spend (DESIGN.md, Upgrade tracks): every gene reaching the core adds to it as to Genes, and
+    // only spending takes from it (see Spend). Nothing spends yet; step 5b's Research panel will.
+    public double GeneBalance;
     public UnlockStep? NextUnlock => Unlocks < Tuning.UnlockTrack.Length ? Tuning.UnlockTrack[Unlocks] : null;
 
     // Its lifetime totals, history and journal (see Tracking).
@@ -58,8 +62,8 @@ public sealed class Garden
     // Off, blobs still do their work but aren't shown travelling (a catch-up, which draws nothing).
     public bool ShowBlobs = true;
 
-    // Off, growth blobs still grow fruit but start no wild buds (tests, and later a "hold growth" choice).
-    public bool WildGrowth = true;
+    // Off, growth blobs still grow fruit but start no passive buds (tests, and later a "hold growth" choice).
+    public bool PassiveGrowth = true;
 
     // The part the player is holding (see Grab), and where the pointer is pulling it.
     public PlantNode? Held { get; private set; }
@@ -141,7 +145,7 @@ public sealed class Garden
     }
 
     // A new part somewhere on the plant, for free (the first stem, stress tests), or null if there's no room: a
-    // branch from the core while it has a free link, else fruit FruitChance of the time, or a wild branch.
+    // branch from the core while it has a free link, else fruit FruitChance of the time, or a passive branch.
     public PlantNode? Sprout()
     {
         if (Nodes.Count >= Tuning.MaxNodes) return null;
@@ -162,8 +166,8 @@ public sealed class Garden
     // A bud the player asked for (DESIGN.md: "Manual buds cost nothing"): a bud of the chosen kind starts forming in
     // the part (or the part a fruit hangs from) at once, if it has a free link and the caps have room, holding its
     // link and cap slot from now on. It grows on its own like any bud (see GrowBuds) and growth blobs hurry it. A
-    // fruit forming there gives way to it (the player's pick over the wild one); a bud already forming there doesn't.
-    // Never fruit: only growth blobs grow it. Groves start only this way. Returns whether the bud started.
+    // fruit forming there gives way to it (the player's pick over the passive one); a bud already forming there
+    // doesn't. Never fruit: only growth blobs grow it. Groves start only this way. Returns whether the bud started.
     public bool SproutFrom(PlantNode node, NodeKind kind)
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
@@ -502,7 +506,7 @@ public sealed class Garden
         _ => true,
     };
 
-    // The kinds of wild branch this part could bud now, with their odds: near the core only stems, further out also
+    // The kinds of passive branch this part could bud now, with their odds: near the core only stems, further out also
     // generators, labs and groves. (A garden with no grove sends no growth blobs, so it never grows its first one
     // alone: the player plants it.) A stem next to the core takes flowers too once no stem can grow there, so its free link isn't left empty for good
     // when the stem cap is reached. (The core itself only ever grows stems.)
@@ -539,8 +543,8 @@ public sealed class Garden
     PlantNode AddFruit(PlantNode parent) => AddNear(NodeSpecs.All[parent.Spec.Fruit!.Value], parent);
 
     // Places a new part just off its parent, heading away from the grandparent (and upward when upright), and the way
-    // a pot pushes there, if one does (wild growth respects pots). A bud that formed inside its parent (emerge) starts
-    // deep inside it and pops out, its link extending.
+    // a pot pushes there, if one does (passive growth respects pots). A bud that formed inside its parent (emerge)
+    // starts deep inside it and pops out, its link extending.
     PlantNode AddNear(NodeSpec spec, PlantNode parent, bool emerge = false)
     {
         Vector2 away = parent.Parent == null
@@ -567,6 +571,7 @@ public sealed class Garden
         if (parent == null) node.MaxLinks = Capacity.CoreLinks;
         Nodes.Add(node);
         if (parent != null && !loading) Tracking.Grew(spec, Nodes.Count);
+        if (!spec.IsFruit && !loading) Tracking.Reached(Nodes.Count(n => !n.Spec.IsFruit));
         if (parent != null)
         {
             (spec.IsFruit ? parent.Fruits : parent.Branches).Add(node);
@@ -848,14 +853,14 @@ public sealed class Garden
     }
 
     // While a prune can be undone, nothing new starts on the pruned branch's parent, and no bud anywhere (it would
-    // take a cap slot the undo needs). Wild buds wait for WildGrowth too.
+    // take a cap slot the undo needs). Passive buds wait for PassiveGrowth too.
     bool CanStartFruit(PlantNode node) =>
         node.CanFruit && Nodes.Count < Tuning.MaxNodes && lastPrune?.Nodes[0].Parent != node;
 
     // Whether BranchKinds has anything for this part, without listing them: the core grows only stems, any other part
     // a lab at least (labs are uncapped).
     bool CanBud(PlantNode node, Counts counts) =>
-        WildGrowth && lastPrune == null && Nodes.Count < Tuning.MaxNodes && node.CanBranch
+        PassiveGrowth && lastPrune == null && Nodes.Count < Tuning.MaxNodes && node.CanBranch
         && (node.Depth >= 1 || HasRoomFor(NodeKind.Stem, counts));
 
     // A growth blob absorbed: a part with nothing forming starts something (a bud BudChance of the time where a
@@ -870,8 +875,8 @@ public sealed class Garden
             if (bud)
             {
                 counts = counts.With(node.Forming!.Value);
-                Tracking.WildBuds++;
-                Tracking.First("wild", "The garden budded on its own for the first time");
+                Tracking.PassiveBuds++;
+                Tracking.First("passive", "First passive bud started");
             }
             node.Growth = 0;
             node.FormingLook = 0;
@@ -884,7 +889,7 @@ public sealed class Garden
         return NodeSpecs.All[kind].IsFruit ? AddFruit(node) : AddBranch(node, kind, emerge: true);
     }
 
-    // Every bud forming, wild or the player's, grows on its own (DESIGN.md, Growth and pruning): a whole bud in
+    // Every bud forming, passive or the player's, grows on its own (DESIGN.md, Growth and pruning): a whole bud in
     // BudSelfGrowSeconds while its part is full, slower as the part runs lower; a grove bud FirstGroveSpeed times as
     // fast while the garden has no grove. Fruit doesn't: only growth blobs grow it. Returns how many buds completed.
     int GrowBuds(float dt)
@@ -918,6 +923,7 @@ public sealed class Garden
     public void Deliver(double genes)
     {
         Genes += genes;
+        GeneBalance += genes;
         Tracking.History.AddGenes(genes);
         while (NextUnlock is { } next && Genes >= next.Genes)
         {
@@ -925,6 +931,17 @@ public sealed class Garden
             Unlocks++;
             Tracking.Log(JournalKind.Unlock, UnlockText(next, Capacity));
         }
+    }
+
+    // Whether the balance covers a cost.
+    public bool CanSpend(double genes) => genes >= 0 && GeneBalance >= genes;
+
+    // Spends genes from the balance, if it covers them (genes earned stay as they were). Returns whether it did.
+    public bool Spend(double genes)
+    {
+        if (!CanSpend(genes)) return false;
+        GeneBalance -= genes;
+        return true;
     }
 
     // An unlock in the Almanac, after DESIGN.md's "Second core link unlocked": what it opens, the biggest first (a core
@@ -1403,7 +1420,7 @@ public sealed class Garden
         Genes, Unlocks,
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
-        Tracking.ToSave());
+        Tracking.ToSave(), GeneBalance);
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -1414,6 +1431,7 @@ public sealed class Garden
             Capacity = save.Capacity,
             Genes = save.Genes,
             Unlocks = save.Unlocks,
+            GeneBalance = save.GeneBalance,
             Tracking = Tracking.FromSave(save.Tracking),
             loading = true,
         };
@@ -1484,4 +1502,5 @@ public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, floa
     float Blob = 0, NodeKind? Forming = null, float Growth = 0);
 
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
-    double Genes = 0, int Unlocks = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null);
+    double Genes = 0, int Unlocks = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null,
+    double GeneBalance = 0);

@@ -15,8 +15,9 @@ public static class SaveFile
     // 2: the economy (power, wilting, capacity). 3: genes and the unlock track. 4: groves and fruit blobs.
     // 5: growth blobs, and the fruit and buds they form. 6: power in the original game's units, and no wilting.
     // 7: shaping tools (pots, trellises, wells), what they hold, and their caps. 8: tracking (lifetime totals, the
-    // tiered history, the Almanac's journal).
-    public const int Version = 8;
+    // tiered history, the Almanac's journal). 9: the gene balance (genes earned and spent apart) and the garden size
+    // (the most main nodes reached).
+    public const int Version = 9;
 
     public static string? Path = "user://garden.json";
 

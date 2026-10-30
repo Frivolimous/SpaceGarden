@@ -20,11 +20,11 @@ public class GroveTests
     static int Fruit(Garden garden) => garden.Nodes.Count(n => n.Spec.IsFruit);
     static int Main(Garden garden) => garden.Nodes.Count(n => !n.Spec.IsFruit);
 
-    // core - stem - stem - grove, full of power, no wild buds: room for 7 fruit (2 leaves a stem, 3 berries).
+    // core - stem - stem - grove, full of power, no passive buds: room for 7 fruit (2 leaves a stem, 3 berries).
     static (Garden Garden, PlantNode Grove) WithAGrove(int seed = 7)
     {
         var garden = NewGarden(new Capacity(2, 0, 1), seed);
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var grove = Add(garden, Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem), NodeKind.Grove);
         foreach (var n in garden.Nodes) n.Power = n.Store;
         return (garden, grove);
@@ -138,7 +138,7 @@ public class GroveTests
         var (garden, grove) = WithAGrove();
         var stem = grove.Parent!;
         GrowUntil(garden, () => stem.Forming != null);
-        Assert.Equal(NodeKind.Leaf, stem.Forming); // WildGrowth off: never a bud
+        Assert.Equal(NodeKind.Leaf, stem.Forming); // PassiveGrowth off: never a bud
         Assert.True(stem.FormingFruit);
         Assert.Equal(Tuning.BlobGrowth, stem.Growth, 1e-5f);
 
@@ -160,7 +160,7 @@ public class GroveTests
     [Fact]
     public void FreshAbsorbsRollBudsWhereABranchCanGrow()
     {
-        // With wild buds on and room under the caps, fresh absorbs start buds as well as fruit; a bud reserves its
+        // With passive buds on and room under the caps, fresh absorbs start buds as well as fruit; a bud reserves its
         // link and its cap slot while it forms.
         var garden = NewGarden(new Capacity(3, 0, 1));
         var grove = Add(garden, Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem), NodeKind.Grove);
@@ -307,7 +307,7 @@ public class GroveTests
         }
     }
 
-    // ==== WILD GROWTH ==== \\
+    // ==== PASSIVE GROWTH ==== \\
 
     [Fact]
     public void WithoutAGroveNothingGrows()
@@ -319,7 +319,7 @@ public class GroveTests
     }
 
     [Fact]
-    public void WildGrowthIgnoresPower()
+    public void PassiveGrowthIgnoresPower()
     {
         // The plant is stupid: with one grove planted and left alone it grows whatever it rolls, labs that drain it
         // and more groves included, however low that leaves it.

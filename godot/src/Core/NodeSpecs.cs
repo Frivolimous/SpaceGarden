@@ -103,7 +103,7 @@ public static class NodeSpecs
         },
         [NodeKind.Grove] = new(NodeKind.Grove)
         {
-            Name = "Grove", Description = "Sends growth blobs that grow fruit and new wild parts.",
+            Name = "Grove", Description = "Sends growth blobs that grow fruit and new parts.",
             Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Square, Rgb = 0xE07000,
             Fruit = NodeKind.Berry, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
             PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain,

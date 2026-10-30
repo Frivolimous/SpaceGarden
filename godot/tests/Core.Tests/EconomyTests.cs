@@ -119,7 +119,7 @@ public class EconomyTests
         // Over a step the garden gains exactly what it makes less what it costs, at the fills it started with: the
         // clumps sent move power without losing any.
         var garden = NewGarden(new Capacity(2, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var a = Add(garden, garden.Core, NodeKind.Stem);
         var b = Add(garden, a, NodeKind.Stem);
         garden.Core.Power = 200;
@@ -141,7 +141,7 @@ public class EconomyTests
         // core - trunk, the trunk forking into an empty-ish stem and a lab: the core sends the trunk its clump, and
         // the trunk sends its own to the stem, which counts as emptier for its weight, not to the lab.
         var garden = NewGarden(new Capacity(2, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var trunk = Add(garden, garden.Core, NodeKind.Stem);
         var stem = Add(garden, trunk, NodeKind.Stem);
         var lab = Add(garden, trunk, NodeKind.Lab);
@@ -164,7 +164,7 @@ public class EconomyTests
     public void APartAtAQuarterOrLessSendsNothing()
     {
         var garden = NewGarden(new Capacity(2, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var a = Add(garden, garden.Core, NodeKind.Stem);
         var b = Add(garden, a, NodeKind.Stem);
         garden.Core.Power = 0.24f * garden.Core.Store;
@@ -178,7 +178,7 @@ public class EconomyTests
     public void PowerFlowsOutFromTheSources()
     {
         var garden = NewGarden(new Capacity(3, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var a = Add(garden, garden.Core, NodeKind.Stem);
         var b = Add(garden, a, NodeKind.Stem);
         var c = Add(garden, b, NodeKind.Stem);
@@ -211,7 +211,7 @@ public class EconomyTests
         // core - stem - stem, the far stem empty: power goes out along both links. Each clump sent flashes its link
         // once, within the step, as bright as the part it reached is full.
         var garden = NewGarden(new Capacity(2, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var near = Add(garden, garden.Core, NodeKind.Stem);
         Add(garden, near, NodeKind.Stem);
         near.Power = 50;
@@ -237,7 +237,7 @@ public class EconomyTests
     public void PartsShowTheirFill()
     {
         var garden = NewGarden(new Capacity(1, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         var leaf = Add(garden, stem, NodeKind.Leaf);
         garden.SettleLooks();
@@ -277,11 +277,11 @@ public class EconomyTests
 
     // ==== FRUIT ==== \
 
-    // core - stem carrying a leaf, both empty, no wild buds.
+    // core - stem carrying a leaf, both empty, no passive buds.
     static (Garden Garden, PlantNode Stem, PlantNode Leaf) StemWithALeaf()
     {
         var garden = NewGarden(new Capacity(1, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         return (garden, stem, Add(garden, stem, NodeKind.Leaf));
     }
@@ -316,7 +316,7 @@ public class EconomyTests
     public void APartFeedsItsEmptiestFruit()
     {
         var garden = NewGarden(new Capacity(1, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         var full = Add(garden, stem, NodeKind.Leaf);
         var empty = Add(garden, stem, NodeKind.Leaf);
@@ -440,7 +440,7 @@ public class EconomyTests
     }
 
     [Fact]
-    public void WildGrowthKeepsWithinCapacity()
+    public void PassiveGrowthKeepsWithinCapacity()
     {
         var garden = Grown();
         garden.Grow(Tuning.CatchUpCapSeconds);
@@ -451,7 +451,7 @@ public class EconomyTests
     }
 
     [Fact]
-    public void WildGrowthDoesntWaitForPower()
+    public void PassiveGrowthDoesntWaitForPower()
     {
         // The plant is stupid: a low garden's grove still sends what blobs it can, and they grow buds that only add
         // to the load, past what the garden can keep full. Pruning is the player's job.

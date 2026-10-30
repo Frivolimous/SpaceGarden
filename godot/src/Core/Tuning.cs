@@ -137,7 +137,7 @@ public static class Tuning
     public const float BudChance = 0.5f;
     public const float FruitGrowth = 1;
     public const float BudGrowth = 3;
-    // Every bud, wild or the player's, also grows on its own (fruit never does): a whole bud in BudSelfGrowSeconds
+    // Every bud, passive or the player's, also grows on its own (fruit never does): a whole bud in BudSelfGrowSeconds
     // while its part is full, in proportion to the part's fill when lower. A draft (Jeremy, step 3e): fast enough that
     // a new player's first grove emerges within the opening minutes, slow enough that a grove-fed bud is plainly
     // faster (at full fill a blob's BlobGrowth is 4 s of growing alone, and a grove makes one every 3 s).
@@ -152,6 +152,12 @@ public static class Tuning
     // Gene blobs, from labs, each carry BlobGenes (a whole gene, so they can be counted); only the core absorbs them.
     // Labs are the only source: the first unlock waits for the first lab's genes to find the core.
     public const float BlobGenes = 1;
+
+    // ==== WILD FLOWERS ==== \\
+    // The chance a new bud grows wild, per free wild flower slot, by how it started (DESIGN.md, Wild flowers): a
+    // passive bud's and a planted one's. Placeholders, unused until step 5d.
+    public const float PassiveWildChance = 0.05f;
+    public const float PlantedWildChance = 0.04f;
 
     // The linear unlock track (DESIGN.md, Progression, "Linear unlock track (step 2)"): genes reaching the core over
     // the garden's life raise the caps at each threshold, in order. Jeremy's week one, reaching 30 stems, 10 generators
