@@ -163,6 +163,6 @@ public class GeneTests
         Assert.Contains("gene_balance,25\n", csv);
         Assert.Contains("most_main_nodes,1\n", csv);
         Assert.Contains("passive_buds,0\n", csv);
-        Assert.DoesNotContain("wild", csv);
+        Assert.DoesNotContain("wild_buds", csv); // renamed passive_buds in 5a
     }
 }

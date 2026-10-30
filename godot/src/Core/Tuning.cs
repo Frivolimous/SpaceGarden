@@ -157,9 +157,13 @@ public static class Tuning
 
     // ==== WILD FLOWERS ==== \\
     // The chance a new bud grows wild, per free wild flower slot, by how it started (DESIGN.md, Wild flowers): a
-    // passive bud's and a planted one's. Placeholders, unused until step 5d.
+    // passive bud's and a planted one's. Placeholders, as every wild flower number here.
     public const float PassiveWildChance = 0.05f;
     public const float PlantedWildChance = 0.04f;
+    // An Evolution kind (Big Stem, Pulsar, Twin Star) may grow this many more each time its evolution is taken.
+    public const int WildUnlockCap = 2;
+    // A Moonflower's boost reaches buds on parts up to this many links away.
+    public const int WildBoostReach = 3;
 
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in

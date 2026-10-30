@@ -7,7 +7,7 @@ public sealed record GardenStats(
     float PowerHeld, float PowerStore, float Production, float Upkeep, float FullProduction, float FullUpkeep,
     int Stems, int Generators, int Groves, int Labs, int CoreLinksUsed, Capacity Capacity,
     int Fruit, int FruitRoom, IReadOnlyDictionary<NodeKind, int> BudsForming,
-    double Genes, double GeneBalance, double GenesPerHour, Upgrade? Cheapest)
+    double Genes, double GeneBalance, double GenesPerHour, Upgrade? Cheapest, int WildFlowers = 0)
 {
     public float PowerFill => PowerStore > 0 ? PowerHeld / PowerStore : 0;
 
@@ -47,15 +47,14 @@ public sealed record GardenStats(
                 case NodeKind.Stem: stems++; break;
                 case NodeKind.Generator: generators++; break;
                 case NodeKind.Grove: groves++; break;
-                case NodeKind.Lab:
-                    labs++;
-                    genesPerHour += GenesPerHourFrom(garden, n);
-                    break;
+                case NodeKind.Lab: labs++; break;
             }
+            // Wild labs (a Wild Lab, Lichen) send genes too.
+            if (n.Spec.Sends == BlobKind.Genes) genesPerHour += GenesPerHourFrom(garden, n);
         }
         return new GardenStats(held, store, production, upkeep, fullProduction, fullUpkeep, stems, generators, groves, labs,
             garden.Core.Branches.Count, garden.Capacity, fruit, fruitRoom, buds, garden.Genes, garden.GeneBalance, genesPerHour,
-            garden.Cheapest);
+            garden.Cheapest, garden.WildCount);
     }
 
     // The genes a lab gets to the core per growth hour, on average: the blobs it makes now, times the chance each
@@ -118,7 +117,7 @@ public sealed record NodeStats(
         return new NodeStats(node.Power, node.Store,
             Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
             Garden.UpkeepPerSecond(node),
-            spec.Kind == NodeKind.Grove ? blobs : 0, spec.Kind == NodeKind.Lab ? blobs * Tuning.BlobGenes : 0,
+            spec.Sends == BlobKind.Growth ? blobs : 0, spec.Sends == BlobKind.Genes ? blobs * Tuning.BlobGenes : 0,
             node.Links, node.MaxLinks, node.Forming, progress);
     }
 }

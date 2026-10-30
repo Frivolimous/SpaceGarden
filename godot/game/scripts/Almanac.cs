@@ -6,9 +6,10 @@ namespace SpaceGarden;
 // slot in the core's menu or its ✕, moved by dragging its header and resized by the grip in its corner. It keeps its
 // place and size until the garden quits.
 //
-// Tabs across the top, shown even with one: the Journal now, the Codex in step 5, Stats if player-facing graphs come.
-// The Journal is the garden's moments, newest first, under a heading for each day of its life ("Day 2"), each with
-// the time on that day. The list scrolls under the wheel.
+// Tabs across the top: the Journal and the Codex (step 5d), Stats if player-facing graphs come. The Journal is the
+// garden's moments, newest first, under a heading for each day of its life ("Day 2"), each with the time on that day.
+// The Codex lists the kinds the garden has discovered (only those: a kind is discovered the first time it grows), each
+// with what it does and when it was first found, under Parts, Wild flowers and Fruit. The page scrolls under the wheel.
 public partial class Almanac : FloatingWindow
 {
     const double RefreshSeconds = 1;
@@ -16,11 +17,14 @@ public partial class Almanac : FloatingWindow
     static readonly Vector2 MinSize = new(300, 240);
 
     static readonly Color GeneInk = new(0.82f, 0.74f, 1f); // the genes' purple, lightened
+    // A wild flower discovered: a pale gold, in the Journal and the away note.
+    public static readonly Color DiscoveryInk = new(1f, 0.93f, 0.68f);
 
-    readonly VBoxContainer list;
+    readonly VBoxContainer list, codex;
     readonly ScrollContainer scroll;
+    readonly Button journalTab, codexTab;
     Tracking? shownFor; // whose journal it shows (a new garden has a new one), and how much of it
-    int shownEntries;
+    int shownEntries, shownKinds = -1;
     double refreshTimer;
     (Vector2 Pointer, Vector2 Size)? resize; // while the grip is held: where the pointer and the size started
     Vector2 size = new(Width, Height);
@@ -36,7 +40,10 @@ public partial class Almanac : FloatingWindow
         var tabs = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         tabs.AddThemeConstantOverride("separation", 2);
         Column.AddChild(tabs);
-        tabs.AddChild(Tab("Journal"));
+        var group = new ButtonGroup();
+        tabs.AddChild(journalTab = Tab("Journal", group, () => ShowCodex(false)));
+        tabs.AddChild(codexTab = Tab("Codex", group, () => ShowCodex(true)));
+        journalTab.ButtonPressed = true;
         Column.AddChild(new HSeparator { MouseFilter = MouseFilterEnum.Ignore, Modulate = new Color(1, 1, 1, 0.3f) });
         scroll = new ScrollContainer
         {
@@ -45,9 +52,14 @@ public partial class Almanac : FloatingWindow
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         Column.AddChild(scroll);
+        var pages = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        scroll.AddChild(pages);
         list = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         list.AddThemeConstantOverride("separation", 4);
-        scroll.AddChild(list);
+        pages.AddChild(list);
+        codex = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
+        codex.AddThemeConstantOverride("separation", 4);
+        pages.AddChild(codex);
 
         // The resize grip, in the bottom right corner.
         var grip = new AlmanacGrip { SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
@@ -60,14 +72,24 @@ public partial class Almanac : FloatingWindow
         Column.AddChild(grip);
     }
 
+    // Shows the Codex's page (or the Journal's), its tab chosen.
+    public void ShowCodex(bool shown)
+    {
+        codex.Visible = shown;
+        list.Visible = !shown;
+        (shown ? codexTab : journalTab).SetPressedNoSignal(true);
+        scroll.ScrollVertical = 0;
+        refreshTimer = 0;
+    }
+
     // A tab across the top: its name, underlined in the core's hue while it's the page showing.
-    static Button Tab(string name)
+    static Button Tab(string name, ButtonGroup group, Action picked)
     {
         var tab = new Button
         {
             Text = name,
             ToggleMode = true,
-            ButtonPressed = true,
+            ButtonGroup = group,
             FocusMode = FocusModeEnum.None,
             MouseDefaultCursorShape = CursorShape.PointingHand,
         };
@@ -91,7 +113,10 @@ public partial class Almanac : FloatingWindow
         tab.AddThemeColorOverride("font_hover_color", Ink);
         tab.AddThemeColorOverride("font_pressed_color", Ink);
         tab.AddThemeColorOverride("font_hover_pressed_color", Ink);
-        tab.Toggled += _ => tab.ButtonPressed = true; // the only page, for now: it stays chosen
+        tab.Toggled += on =>
+        {
+            if (on) picked();
+        };
         return tab;
     }
 
@@ -119,6 +144,11 @@ public partial class Almanac : FloatingWindow
         refreshTimer = RefreshSeconds;
         var tracking = garden.Tracking;
         Note.Text = $"Day {Tracking.DayOf(tracking.Age)}, {Tracking.ClockOf(tracking.Age)}";
+        if (codex.Visible)
+        {
+            RefreshCodex(tracking);
+            return;
+        }
         if (tracking == shownFor && tracking.Journal.Count == shownEntries) return;
         shownFor = tracking;
         shownEntries = tracking.Journal.Count;
@@ -163,12 +193,73 @@ public partial class Almanac : FloatingWindow
         }
     }
 
+    // The Codex: the kinds discovered, under Parts, Wild flowers and Fruit, each in the order first found. Each shows
+    // its name in its hue and when it was first found, then what it does (and a wild flower's quirk).
+    void RefreshCodex(Tracking tracking)
+    {
+        if (tracking == codexFor && tracking.Discovered.Count == shownKinds) return;
+        codexFor = tracking;
+        shownKinds = tracking.Discovered.Count;
+        foreach (var child in codex.GetChildren()) child.QueueFree();
+        var found = tracking.Discovered.OrderBy(d => d.Value).ThenBy(d => d.Key).Select(d => (Spec: NodeSpecs.All[d.Key], Age: d.Value)).ToList();
+        void Section(string title, Func<NodeSpec, bool> which)
+        {
+            var kinds = found.Where(f => which(f.Spec)).ToList();
+            if (kinds.Count == 0) return;
+            codex.AddChild(new Label
+            {
+                Text = title,
+                MouseFilter = MouseFilterEnum.Pass,
+                LabelSettings = new LabelSettings { FontSize = 14, FontColor = Tint },
+                CustomMinimumSize = new Vector2(0, codex.GetChildCount() > 0 ? 30 : 0),
+                VerticalAlignment = VerticalAlignment.Bottom,
+            });
+            foreach (var (spec, age) in kinds)
+            {
+                var entry = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+                entry.AddThemeConstantOverride("separation", 0);
+                var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+                top.AddChild(new Label
+                {
+                    Text = spec.Name,
+                    SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                    MouseFilter = MouseFilterEnum.Pass,
+                    LabelSettings = new LabelSettings { FontSize = 14, FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f) },
+                });
+                top.AddChild(new Label
+                {
+                    Text = spec.Kind == NodeKind.Core ? "At the planting" : $"Found day {Tracking.DayOf(age)}, {Tracking.ClockOf(age)}",
+                    MouseFilter = MouseFilterEnum.Pass,
+                    LabelSettings = new LabelSettings { FontSize = 12, FontColor = Dim },
+                });
+                entry.AddChild(top);
+                string text = spec.Wild is { } wild ? $"{spec.Description} {wild.Quirk}" : spec.Description;
+                entry.AddChild(new Label
+                {
+                    Text = text,
+                    AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                    SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                    MouseFilter = MouseFilterEnum.Pass,
+                    LabelSettings = new LabelSettings { FontSize = 13, FontColor = Ink },
+                });
+                codex.AddChild(entry);
+            }
+        }
+        Section("Parts", s => !s.IsFruit && !s.IsWild);
+        Section("Wild flowers", s => s.IsWild);
+        Section("Fruit", s => s.IsFruit);
+    }
+
+    Tracking? codexFor;
+
     // A moment's colour: upgrades bought (and the old track's unlocks) in the genes' purple, shaping tools gained in
-    // the tools' blue.
+    // the tools' blue, wild flowers discovered in a pale gold.
     static Color Colour(JournalKind kind) => kind switch
     {
         JournalKind.Purchase or JournalKind.Unlock => GeneInk,
         JournalKind.Tool => ShapingLook.Tint,
+        JournalKind.Discovery => DiscoveryInk,
+        JournalKind.Ended => Dim,
         _ => Ink,
     };
 }

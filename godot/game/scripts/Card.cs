@@ -14,6 +14,7 @@ public partial class Card : PanelContainer
     static readonly Color Ink = new(1, 1, 1, 0.9f);
     static readonly Color HighInk = new(1, 0.88f, 0.35f), LowInk = new(1, 0.38f, 0.33f), GeneInk = new(0.62f, 0.45f, 1f);
     static readonly Color RoomGreen = new(0.4f, 0.95f, 0.45f);
+    static readonly Color QuirkInk = new(1, 1, 1, 0.6f);
     static readonly Color GardenTint = GardenView.Rgb(NodeSpecs.All[NodeKind.Core].Rgb);
 
     readonly Label heading;
@@ -93,12 +94,14 @@ public partial class Card : PanelContainer
         var stats = NodeStats.Of(node);
         heading.Text = spec.Name;
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
+        // A wild flower's quirk, under its name: what it trades for its effect.
+        if (spec.Wild is { } wild) Line(ref used, (wild.Quirk, QuirkInk));
         Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
         if (spec.PowerPerSecond > 0) // by kind, so the lines stay put when a rate falls to 0
             Line(ref used, $"Gen: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
         if (spec.PowerPerSecond < 0) Line(ref used, $"Drain: {stats.Upkeep * speed:0}/s");
-        if (spec.Kind == NodeKind.Grove) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
-        if (spec.Kind == NodeKind.Lab) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
+        if (spec.Sends == BlobKind.Growth) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
+        if (spec.Sends == BlobKind.Genes) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
         if (stats.Links >= 2) Line(ref used, $"Connections: {stats.Links} / {stats.MaxLinks}");
         if (stats.Forming is { } kind)
         {
@@ -138,6 +141,10 @@ public partial class Card : PanelContainer
             (Of(caps.Generators), Ink));
         Line(ref used, ("Core links: ", Ink), ($"{stats.CoreLinksUsed}", RoomInk(stats.CoreLinksUsed, caps.CoreLinks)),
             ($" / {caps.CoreLinks}", Ink));
+        // The wild flower limit, once there is one (step 5d).
+        if (caps.WildFlowers > 0)
+            Line(ref used, ("Wild flowers: ", Ink), ($"{stats.WildFlowers}", RoomInk(stats.WildFlowers, caps.WildFlowers)),
+                ($" / {caps.WildFlowers}", Ink));
         Line(ref used, $"Groves: {stats.Groves}, Labs: {stats.Labs}");
     }
 
