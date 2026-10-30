@@ -688,7 +688,8 @@ public partial class Widget : Node
     // none), --inspect=core or --inspect=garden; --coremenu opens the core's menu (--coremenu=settings with that
     // slot's name showing); --tap=full or --tap=forming taps a stem with every link taken, or a part forming a bud
     // (starting a lab bud on a stem if none is), its toolbar staying open; --almanac opens the Almanac, --research the
-    // Research panel; --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
+    // Research panel (--research=hint with the Stems card's hint showing); --ambient starts in Ambient, and
+    // --corehover acts as if the pointer were on the core.
     void DevFlags()
     {
         devFlagsDone = true;
@@ -723,7 +724,11 @@ public partial class Widget : Node
             devTapped = true; // its toolbar stays, with no pointer to keep it
         }
         if (Value("almanac") != null) SetAlmanac(true);
-        if (Value("research") != null) SetResearch(true);
+        if (Value("research") is { } shown)
+        {
+            SetResearch(true);
+            if (shown == "hint") research.Hinting = Track.Stems; // as if the pointer were on its (i)
+        }
         if (Value("ambient") != null)
         {
             SetMode(DisplayMode.Ambient);

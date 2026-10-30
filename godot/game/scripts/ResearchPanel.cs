@@ -26,6 +26,13 @@ public partial class ResearchPanel : FloatingWindow
     }
 
     readonly Dictionary<Track, TrackCard> cards = new();
+    // The (i)'s hint, shown at once while the pointer is on one (a tooltip waits half a second), under it.
+    readonly PanelContainer hint;
+    readonly Label hintText;
+    InfoMark? hinted;
+
+    // Dev aid (--research=hint): a card whose hint shows as if the pointer were on its (i), for a screenshot.
+    public Track? Hinting;
     double refreshTimer;
     float time;
 
@@ -34,6 +41,25 @@ public partial class ResearchPanel : FloatingWindow
         Note.LabelSettings.FontColor = GeneInk;
         Note.LabelSettings.FontSize = 14;
         Note.HorizontalAlignment = HorizontalAlignment.Right;
+        hint = new PanelContainer { TopLevel = true, Visible = false, MouseFilter = MouseFilterEnum.Ignore };
+        var hintStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.04f, 0.05f, 0.07f),
+            BorderColor = new Color(1, 1, 1, 0.18f),
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 7,
+        };
+        hintStyle.SetBorderWidthAll(1);
+        hintStyle.SetCornerRadiusAll(8);
+        hint.AddThemeStyleboxOverride("panel", hintStyle);
+        hintText = new Label
+        {
+            MouseFilter = MouseFilterEnum.Ignore,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            CustomMinimumSize = new Vector2(200, 0),
+            LabelSettings = new LabelSettings { FontSize = 12, FontColor = Ink },
+        };
+        hint.AddChild(hintText);
+        AddChild(hint);
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         row.AddThemeConstantOverride("separation", 10);
         Column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2), MouseFilter = MouseFilterEnum.Ignore });
@@ -70,6 +96,8 @@ public partial class ResearchPanel : FloatingWindow
         heading.AddThemeConstantOverride("separation", 5);
         heading.AddChild(Text(title.ToUpperInvariant(), 11, hue.Lightened(0.2f) with { A = 0.85f }));
         var info = new InfoMark(hue) { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        info.MouseEntered += () => ShowHint(info);
+        info.MouseExited += () => ShowHint(null);
         heading.AddChild(info);
         page.AddChild(heading);
         var line = new ColorRect { Color = hue with { A = 0.18f }, CustomMinimumSize = new Vector2(0, 1), MouseFilter = MouseFilterEnum.Ignore };
@@ -135,6 +163,25 @@ public partial class ResearchPanel : FloatingWindow
 
     protected override void Opened() => refreshTimer = 0;
 
+    // Shows an (i)'s hint at once, under it (or none).
+    void ShowHint(InfoMark? mark)
+    {
+        hinted = mark;
+        hint.Visible = mark != null;
+        if (mark == null) return;
+        hintText.Text = mark.Hint;
+        hint.Size = Vector2.Zero; // shrinks to the new text
+        PlaceHint(mark, GetViewportRect().Size);
+    }
+
+    // Centred under its (i), kept on the screen.
+    void PlaceHint(InfoMark mark, Vector2 screen)
+    {
+        var size = hint.GetCombinedMinimumSize();
+        var at = mark.GlobalPosition + new Vector2(mark.Size.X / 2 - size.X / 2, mark.Size.Y + 6);
+        hint.GlobalPosition = at.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
+    }
+
     // Shows at once: an upgrade just bought.
     public void RefreshNow() => refreshTimer = 0;
 
@@ -143,8 +190,14 @@ public partial class ResearchPanel : FloatingWindow
     public void Update(Garden garden, Vector2 pointer, Vector2 screen, double delta)
     {
         Place(pointer, screen, GetCombinedMinimumSize());
-        if (!IsOpen) return;
-        time = (time + (float)delta) % GlowSeconds;
+        if (!IsOpen || !Visible)
+        {
+            ShowHint(null);
+            return;
+        }
+        if (Hinting is { } dev && hinted == null && cards[dev].Info.Hint != "") ShowHint(cards[dev].Info);
+        if (hinted != null) PlaceHint(hinted, screen); // the window may be moving
+        time =(time + (float)delta) % GlowSeconds;
         float swell = 0.5f - 0.5f * Mathf.Cos(time / GlowSeconds * Mathf.Tau);
         foreach (var card in cards.Values)
         {
@@ -162,7 +215,8 @@ public partial class ResearchPanel : FloatingWindow
             var next = garden.Next(track);
             card.Glyph.Done = next == null;
             card.Name.Text = next?.Name ?? "All bought";
-            card.Info.TooltipText = next?.Does ?? "Every upgrade on this track is bought.";
+            card.Info.Hint = next?.Does ?? "Every upgrade on this track is bought.";
+            if (hinted == card.Info) ShowHint(hinted); // just bought: the next one's hint
             card.Cost.Visible = card.BuyRow.Visible = next != null;
             card.Affordable = next != null && garden.CanSpend(next.Cost);
             if (next == null) continue;
@@ -313,16 +367,20 @@ public partial class BuyFill : Control
     }
 }
 
-// A small (i) in a ring, in a card's hue: its tooltip (set by the panel) says what the track's next upgrade gives.
+// A small (i) in a ring, in a card's hue: under the pointer, the panel shows its Hint, what the track's next
+// upgrade gives.
 public partial class InfoMark : Control
 {
     readonly Color hue;
+
+    // What its next upgrade gives, shown at once in the panel's hint while the pointer is on it.
+    public string Hint = "";
 
     public InfoMark(Color hue)
     {
         this.hue = hue;
         CustomMinimumSize = new Vector2(13, 13);
-        MouseFilter = MouseFilterEnum.Stop; // for its tooltip
+        MouseFilter = MouseFilterEnum.Stop; // for its hint
         MouseDefaultCursorShape = CursorShape.Help;
         MouseEntered += QueueRedraw;
         MouseExited += QueueRedraw;
