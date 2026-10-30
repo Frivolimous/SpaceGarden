@@ -2,7 +2,7 @@ namespace SpaceGarden.Core;
 
 // The wild flowers (DESIGN.md, Wild flowers): a new bud, planted or passive, may grow into one of these instead of
 // its basic kind. Each is its base kind's spec with its own name, look, fruit and quirk; the passive-only kinds have no
-// base and are white. A stem or generator kind (but the Amplifier and the Resistor) takes its base kind's slot as
+// base and are white (so are the Amplifier and the Resistor). A stem or generator kind (but the Amplifier and the Resistor) takes its base kind's slot as
 // well as a wild flower slot. Description is the table's Effect, the Codex's line; WildSpec.Quirk is the card's. Their
 // numbers are first passes, in Tuning (Wild flowers). Their fruit: every fruit adds a tenth to its flower's main
 // effect (wood, from the Lumber Grove, too: crawlers will use it later), but leaves (a quarter off its upkeep) and
@@ -25,7 +25,7 @@ static class WildFlowers
         yield return new NodeSpec(NodeKind.Glow)
         {
             Name = "Glow", Description = "Sends buff blobs, as a small Buffer.",
-            Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Sun, Rgb = 0xF6F6F0,
+            Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Burst8, Rgb = 0xF6F6F0,
             PowerStore = NodeBase.FruitStore, Sends = BlobKind.Buff, BlobsPerHour = Tuning.GlowBlobs,
         };
 
@@ -51,22 +51,23 @@ static class WildFlowers
             };
         }
 
-        // The stem kinds. The Amplifier and the Resistor take only a wild flower slot.
-        var amplifier = Wild(stem, NodeKind.Amplifier, "Amplifier", Shape.Bullseye, 0x40E858, WildUnlock.Start,
+        // The stem kinds. The Amplifier and the Resistor take only a wild flower slot, and are white, the specialists'
+        // hue (Jeremy, Oct 30).
+        var amplifier = Wild(stem, NodeKind.Amplifier, "Amplifier", Shape.Plus, 0xF2F2F2, WildUnlock.Start,
             "Gene and growth blobs passing through grow 50% larger.", "2 links: it can't fork.");
         yield return amplifier with
         {
             Radius = 11, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, DoublesBlobs = true,
             Wild = amplifier.Wild! with { BaseSlot = false },
         };
-        var resistor = Wild(stem, NodeKind.Resistor, "Resistor", Shape.Gear, 0x30B838, WildUnlock.Start,
+        var resistor = Wild(stem, NodeKind.Resistor, "Resistor", Shape.Minus, 0xF2F2F2, WildUnlock.Start,
             "Blobs bounce off it from both sides.", "Low transfer: slows power beyond it.");
         yield return resistor with
         {
             Radius = 11, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, BlocksBlobs = true,
             PowerTransferPerSecond = Tuning.ResistorTransfer, Wild = resistor.Wild! with { BaseSlot = false },
         };
-        yield return Wild(stem, NodeKind.Tendril, "Tendril", Shape.Swirl, 0x78E010, WildUnlock.Start,
+        yield return Wild(stem, NodeKind.Tendril, "Tendril", Shape.Trefoil, 0x78E010, WildUnlock.Start,
             "A long, springy link and a large power store.", "Takes a stem slot too.") with
         {
             Radius = 11, LinkScale = Tuning.TendrilLink, Spring = Tuning.TendrilSpring, MaxFruits = 3,
@@ -103,7 +104,7 @@ static class WildFlowers
         {
             BlobsPerHour = Tuning.LumberBlobs, PowerPerSecond = -Tuning.LumberUpkeep, Fruit = NodeKind.Wood, MaxFruits = 5,
         };
-        yield return Wild(grove, NodeKind.SeedPod, "Seed Pod", Shape.Pod, 0xEA8A34, WildUnlock.Start,
+        yield return Wild(grove, NodeKind.SeedPod, "Seed Pod", Shape.Oval, 0xEA8A34, WildUnlock.Start,
             "1.5 times a grove's growth blobs, in big bursts.", "Silent in between.") with
         {
             BlobsPerHour = Tuning.SeedPodBlobs, BlobBurst = Tuning.SeedPodBurst,
@@ -118,16 +119,17 @@ static class WildFlowers
         yield return Wild(lab, NodeKind.Lichen, "Lichen", Shape.Lobes6, 0x8C84D4, WildUnlock.Start,
             "Low upkeep; its 4 leaves bring it to 0.", "Fewer genes.") with
         {
-            PowerPerSecond = -Tuning.LichenUpkeep, BlobsPerHour = Tuning.LichenBlobs, Fruit = NodeKind.Leaf, MaxFruits = 4,
+            Radius = stem.Radius, PowerPerSecond = -Tuning.LichenUpkeep, BlobsPerHour = Tuning.LichenBlobs,
+            Fruit = NodeKind.Leaf, MaxFruits = 4,
         };
 
         // The passive-only kinds.
-        yield return Wild(passive, NodeKind.Buffer, "Buffer", Shape.Sun, 0xF2F2F2, WildUnlock.Start,
+        yield return Wild(passive, NodeKind.Buffer, "Buffer", Shape.Burst8, 0xF2F2F2, WildUnlock.Start,
             "Buff blobs give the parts they pass 50% more for a minute.", "Local only: 5 links (8 past an Amplifier).") with
         {
             Sends = BlobKind.Buff, BlobsPerHour = Tuning.BufferBlobs, MaxFruits = 2,
         };
-        yield return Wild(passive, NodeKind.CometBloom, "Comet Bloom", Shape.Sparkle, 0xFFFFFF, WildUnlock.Start,
+        yield return Wild(passive, NodeKind.CometBloom, "Comet Bloom", Shape.Gear, 0xFFFFFF, WildUnlock.Start,
             "Bright: a burst of genes and growth worth 2 hours of a lab and a grove.",
             "Withers after a day.") with
         {
@@ -139,7 +141,7 @@ static class WildFlowers
         {
             WildBoost = Tuning.MoonflowerBoost, MaxFruits = 3,
         };
-        yield return Wild(passive, NodeKind.NebulaBloom, "Nebula Bloom", Shape.Galaxy, 0xF4EEFA, WildUnlock.Start,
+        yield return Wild(passive, NodeKind.NebulaBloom, "Nebula Bloom", Shape.Swirl, 0xF4EEFA, WildUnlock.Start,
             "Power reaching a seedling within 5 links counts double.", "Useless without a seedling.") with
         {
             MaxFruits = 3,

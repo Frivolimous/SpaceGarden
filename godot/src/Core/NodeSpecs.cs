@@ -14,7 +14,7 @@ public enum NodeKind
 public enum Shape
 {
     Circle, Triangle, Square, Pentagon, Hexagon,
-    Bullseye, Gear, Swirl, Quatrefoil, Star5, Star10, Flame, Star8, Pod, Star6, Lobes6, Sun, Sparkle, Rose, Galaxy,
+    Plus, Minus, Trefoil, Quatrefoil, Star5, Star10, Flame, Star8, Oval, Star6, Lobes6, Burst8, Gear, Rose, Swirl,
 }
 
 // What blobs a flower sends: growth blobs (groves), gene blobs (labs), buff blobs (a Buffer, a glow fruit), or gene
@@ -51,7 +51,8 @@ public sealed record NodeSpec(NodeKind Kind)
     public required uint Rgb { get; init; }
     public NodeKind? Fruit { get; init; }
     public int MaxFruits { get; init; }
-    // Its link to its parent is this many times the usual length, and pulls this hard when stretched (1: as usual).
+    // Its links (to its parent and its branches) are this many times the usual length, and pull this hard when
+    // stretched (1: as usual).
     public float LinkScale { get; init; } = 1;
     public float Spring { get; init; } = 1;
 

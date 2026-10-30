@@ -852,7 +852,7 @@ public static class Textures
     public static float ShapeDiameter(float radius) => radius * 2 / ShapeFill;
 
     // ==== THE WILD FLOWERS' ATLAS ==== \\
-    // The wild flowers' shapes (Shape.Bullseye on) share one texture, a grid of cells, so all of them draw in one
+    // The wild flowers' shapes (Shape.Plus on) share one texture, a grid of cells, so all of them draw in one
     // batch per layer (a draw call each for the parts and the buds, however many kinds are out) instead of one per
     // shape: each instance names its cell (the MultiMesh's custom data), and AtlasMaterial's shader moves the quad's
     // UVs onto it. Each shape fills the middle of its cell as a lone shape fills its texture (so ShapeDiameter holds),
@@ -861,14 +861,14 @@ public static class Textures
     const int AtlasColumns = 4, AtlasGutter = 16;
     const int AtlasCell = ShapeSize + 2 * AtlasGutter;
     static readonly int AtlasRows = (AtlasShapes + AtlasColumns - 1) / AtlasColumns;
-    static int AtlasShapes => Enum.GetValues<Shape>().Length - (int)SpaceGarden.Core.Shape.Bullseye;
+    static int AtlasShapes => Enum.GetValues<Shape>().Length - (int)SpaceGarden.Core.Shape.Plus;
 
-    public static bool InAtlas(Shape shape) => shape >= SpaceGarden.Core.Shape.Bullseye;
+    public static bool InAtlas(Shape shape) => shape >= SpaceGarden.Core.Shape.Plus;
 
     // A shape's cell, as the shader takes it (column, row).
     public static Vector2 CellOf(Shape shape)
     {
-        int i = shape - SpaceGarden.Core.Shape.Bullseye;
+        int i = shape - SpaceGarden.Core.Shape.Plus;
         return new Vector2(i % AtlasColumns, i / AtlasColumns);
     }
 
@@ -901,7 +901,7 @@ public static class Textures
     {
         var image = Image.CreateEmpty(AtlasColumns * AtlasCell, AtlasRows * AtlasCell, false, Image.Format.Rgba8);
         image.Fill(new Color(1, 1, 1, 0));
-        for (var shape = SpaceGarden.Core.Shape.Bullseye; (int)shape < Enum.GetValues<Shape>().Length; shape++)
+        for (var shape = SpaceGarden.Core.Shape.Plus; (int)shape < Enum.GetValues<Shape>().Length; shape++)
         {
             var cell = CellOf(shape);
             int left = (int)cell.X * AtlasCell + AtlasGutter, top = (int)cell.Y * AtlasCell + AtlasGutter;
@@ -937,14 +937,15 @@ public static class Textures
         var (pentA, pentB, heart) = (Star(5, 1, 1, 0), Star(5, 1, 1, Mathf.Pi / 5), Star(5, 0.55f, 0.55f, Mathf.Pi / 5));
         var (squareA, squareB) = (Star(4, 1, 1, 0), Star(4, 1, 1, Mathf.Pi / 4));
         var (triangleA, triangleB) = (Star(3, 1, 1, 0), Star(3, 1, 1, Mathf.Pi / 3));
+        var burst = Star(8, 1, 0.7f);
         return shape switch
         {
-            // Amplifier: a stem's disc, ringed again (the blob that comes out twice).
-            SpaceGarden.Core.Shape.Bullseye => p => R(p) <= 0.42f || (R(p) >= 0.64f && R(p) <= 1),
-            // Resistor: a disc with six square teeth, a gear that won't turn.
-            SpaceGarden.Core.Shape.Gear => p => R(p) <= 0.72f || (R(p) <= 1 && Mathf.Cos(6 * A(p)) > -0.1f),
-            // Tendril: three arms curling round, long and springy.
-            SpaceGarden.Core.Shape.Swirl => p => R(p) <= 0.3f + 0.7f * Mathf.Pow(Lobes(A(p) + 2.4f * R(p), 3), 2),
+            // Amplifier: a white plus (Jeremy, Oct 30).
+            SpaceGarden.Core.Shape.Plus => p => (Mathf.Abs(p.X) <= 0.32f && Mathf.Abs(p.Y) <= 0.95f) || (Mathf.Abs(p.Y) <= 0.32f && Mathf.Abs(p.X) <= 0.95f),
+            // Resistor: a white minus.
+            SpaceGarden.Core.Shape.Minus => p => Mathf.Abs(p.Y) <= 0.34f && Mathf.Abs(p.X) <= 0.95f,
+            // Tendril: a Big Stem's lobed disc with three bumps.
+            SpaceGarden.Core.Shape.Trefoil => p => R(p) <= 0.6f + 0.4f * Mathf.Abs(Mathf.Cos(1.5f * A(p))),
             // Big Stem: a stem's disc with four round lobes, for its four links.
             SpaceGarden.Core.Shape.Quatrefoil => p => R(p) <= 0.62f + 0.38f * Mathf.Abs(Mathf.Cos(2 * A(p))),
             // Pulsar: a five-pointed star (the generator's pentagon, sharpened).
@@ -955,21 +956,20 @@ public static class Textures
             SpaceGarden.Core.Shape.Flame => p => R(p) <= 0.42f + 0.58f * Mathf.Pow(Lobes(A(p), 5), 3) || InPolygon(heart, p),
             // Lumber Grove: two squares, one turned on the other, a sawn eight-pointed star.
             SpaceGarden.Core.Shape.Star8 => p => InPolygon(squareA, p) || InPolygon(squareB, p),
-            // Seed Pod: a square husk round a round seed.
-            SpaceGarden.Core.Shape.Pod => p => (Mathf.Abs(p.X) + Mathf.Abs(p.Y) <= 1 && Mathf.Abs(p.X) + Mathf.Abs(p.Y) >= 0.66f) || R(p) <= 0.34f,
+            // Seed Pod: a plain oval pod.
+            SpaceGarden.Core.Shape.Oval => p => p.X * p.X + p.Y * p.Y / (0.62f * 0.62f) <= 1,
             // Wild Lab: a six-pointed star (the lab's hexagon, two triangles).
             SpaceGarden.Core.Shape.Star6 => p => InPolygon(triangleA, p) || InPolygon(triangleB, p),
             // Lichen: a hexagon gone soft, six round scallops.
             SpaceGarden.Core.Shape.Lobes6 => p => R(p) <= 0.78f + 0.22f * Mathf.Abs(Mathf.Cos(3 * A(p))),
-            // Buffer: a sun, a disc with eight rays (its buff spreading out).
-            SpaceGarden.Core.Shape.Sun => p => R(p) <= 0.5f || (R(p) <= 1 && R(p) <= 0.5f + 0.5f * Mathf.Pow(Lobes(A(p), 8), 6) + 0.04f),
-            // Comet Bloom: an eight-pointed sparkle, its four long points between four short.
-            SpaceGarden.Core.Shape.Sparkle => p => R(p) <= 0.28f + 0.72f * Mathf.Pow(Lobes(A(p), 4), 10)
-                || R(p) <= 0.28f + 0.37f * Mathf.Pow(Lobes(A(p) + Mathf.Pi / 4, 4), 10),
+            // Buffer (and its glow fruit): a solid eight-pointed burst.
+            SpaceGarden.Core.Shape.Burst8 => p => InPolygon(burst, p),
+            // Comet Bloom: a disc with six square teeth (once the Resistor's; Jeremy liked it).
+            SpaceGarden.Core.Shape.Gear => p => R(p) <= 0.72f || (R(p) <= 1 && Mathf.Cos(6 * A(p)) > -0.1f),
             // Moonflower: six petals, open round a small heart.
             SpaceGarden.Core.Shape.Rose => p => R(p) <= Mathf.Abs(Mathf.Cos(3 * A(p))) || R(p) <= 0.3f,
-            // Nebula Bloom: a core with two spiral arms.
-            SpaceGarden.Core.Shape.Galaxy => p => R(p) <= 0.36f || (R(p) <= 1 && Lobes(A(p) - 3.2f * R(p), 2) > 0.62f),
+            // Nebula Bloom: three arms curling round a heart (once the Tendril's).
+            SpaceGarden.Core.Shape.Swirl => p => R(p) <= 0.3f + 0.7f * Mathf.Pow(Lobes(A(p) + 2.4f * R(p), 3), 2),
             _ => p => R(p) <= 1,
         };
     }

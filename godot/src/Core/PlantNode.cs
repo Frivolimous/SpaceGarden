@@ -121,8 +121,9 @@ public sealed class Link
         Origin = origin;
         Target = target;
         float r = origin.Spec.Radius + target.Spec.Radius;
-        Length = target.Spec.IsFruit ? r : r * 1.5f * target.Spec.LinkScale;
-        Spring = target.Spec.Spring;
+        // A Tendril's links are long and soft both ways: to its parent, and to what grows from it (not its fruit).
+        Length = target.Spec.IsFruit ? r : r * 1.5f * Math.Max(origin.Spec.LinkScale, target.Spec.LinkScale);
+        Spring = target.Spec.IsFruit ? 1 : Math.Min(origin.Spec.Spring, target.Spec.Spring);
     }
 
     // How hard it pulls when stretched, against the usual (a Tendril's link is soft).
