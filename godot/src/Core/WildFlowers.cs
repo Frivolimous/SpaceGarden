@@ -64,13 +64,13 @@ static class WildFlowers
             "Blobs bounce off it from both sides.", "Low transfer: slows power beyond it.");
         yield return resistor with
         {
-            Radius = 11, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, BlocksBlobs = true,
+            Radius = 7, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, BlocksBlobs = true,
             PowerTransferPerSecond = Tuning.ResistorTransfer, Wild = resistor.Wild! with { BaseSlot = false },
         };
         yield return Wild(stem, NodeKind.Tendril, "Tendril", Shape.Trefoil, 0x78E010, WildUnlock.Start,
             "A long, springy link and a large power store.", "Takes a stem slot too.") with
         {
-            Radius = 11, LinkScale = Tuning.TendrilLink, Spring = Tuning.TendrilSpring, MaxFruits = 3,
+            Radius = 8, LinkScale = Tuning.TendrilLink, Spring = Tuning.TendrilSpring, MaxFruits = 3,
             PowerStore = Tuning.TendrilStore, PowerTransferPerSecond = Tuning.TendrilTransfer,
         };
         yield return Wild(stem, NodeKind.BigStem, "Big Stem", Shape.Quatrefoil, 0x10C838, WildUnlock.Evolution,
