@@ -20,7 +20,7 @@ public sealed class Tracking
     // The most parts the garden has had at once (for the Almanac's milestones).
     public int MostParts;
     // The garden's size: the most main nodes (parts that aren't fruit, the core among them) it has had at once.
-    // Pruning never lowers it. Step 5b unlocks the shaping tools by it (DESIGN.md, Upgrade tracks).
+    // Pruning never lowers it. The shaping tools come by it (DESIGN.md, Upgrade tracks; see Garden.GainTools).
     public int MostMainNodes;
 
     public int PartsGrown => Grown.Values.Sum();
@@ -96,7 +96,7 @@ public sealed class Tracking
         return csv.ToString();
     }
 
-    // The lifetime totals, one per row (genes and unlocks are the garden's own: see Garden.Genes, Garden.Unlocks).
+    // The lifetime totals, one per row (genes and upgrades bought are the garden's own: see Garden.Genes, Garden.Buy).
     public string TotalsCsv(Garden garden)
     {
         var csv = new StringBuilder("total,value\n");
@@ -107,7 +107,10 @@ public sealed class Tracking
         Row("parts_grown", PartsGrown);
         Row("parts_pruned", Pruned);
         Row("passive_buds", PassiveBuds);
-        Row("unlocks_reached", garden.Unlocks);
+        Row("upgrades_bought", garden.Bought);
+        Row("stems_bought", garden.StemsBought);
+        Row("generators_bought", garden.GeneratorsBought);
+        Row("core_bought", garden.CoreBought);
         Row("parts_now", garden.Nodes.Count);
         Row("most_main_nodes", MostMainNodes);
         foreach (var kind in Enum.GetValues<NodeKind>())
@@ -145,7 +148,9 @@ public sealed class Tracking
     }
 }
 
-public enum JournalKind { Planted, First, Unlock, Milestone }
+// Unlock is the old unlock track's (before step 5b), kept so older journals still read; Purchase is a core link or the
+// Hub bought, Tool a shaping tool gained from the garden's size.
+public enum JournalKind { Planted, First, Unlock, Milestone, Purchase, Tool }
 
 // One moment in the Almanac: when (the garden's age), what sort, and what happened.
 public sealed record JournalEntry(double Age, JournalKind Kind, string Text);
@@ -276,9 +281,9 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines)
         if (genes >= 1) lines.Add($"{genes:#,0} genes reached the core.");
 
         var moments = tracking.Journal.Skip(mark.JournalCount).ToList();
-        // Unlocks first (what there's room for now), then firsts and milestones.
-        var shown = moments.Where(m => m.Kind == JournalKind.Unlock).Concat(moments.Where(m => m.Kind != JournalKind.Unlock))
-            .Take(MostMoments).ToList();
+        // Shaping tools gained first (what there's to place now), then firsts and milestones.
+        static bool Gained(JournalEntry m) => m.Kind is JournalKind.Tool or JournalKind.Purchase or JournalKind.Unlock;
+        var shown = moments.Where(Gained).Concat(moments.Where(m => !Gained(m))).Take(MostMoments).ToList();
         foreach (var m in shown) lines.Add($"{m.Text}.");
         if (moments.Count > shown.Count) lines.Add($"{moments.Count - shown.Count} more in the Almanac.");
 

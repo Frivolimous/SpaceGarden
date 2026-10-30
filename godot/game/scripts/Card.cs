@@ -116,18 +116,20 @@ public partial class Card : PanelContainer
         // Now (they follow the fills). Gen's colour weighs what the garden makes against what it costs.
         Line(ref used, ("Gen: ", Ink), ($"{stats.Production * speed:0}/s", GenInk(stats.Production, stats.Upkeep)),
             ($", Drain: {stats.Upkeep * speed:0}/s", Ink));
-        if (stats.NextUnlock is { } next)
+        // The balance to spend, purple shading to white as it nears the cheapest next upgrade's cost; then that upgrade,
+        // its cost and when the balance will cover it (or that it does: it's waiting in Research).
+        if (stats.Cheapest is { } next)
         {
             Line(ref used, ("Genes: ", Ink),
-                ($"{Math.Floor(stats.Genes):0}", GeneInk.Lerp(Ink, (float)Math.Clamp(stats.Genes / next.Genes, 0, 1))),
-                ($" / {next.Genes:0}", Ink));
-            string when = stats.SecondsToNext is { } eta ? $" (ETA {Eta(eta / speed)})" : stats.Labs == 0 ? " (plant a lab)" : "";
-            Line(ref used, $"Next: {Gives(next)}{when}");
+                ($"{Math.Floor(stats.GeneBalance):0}", GeneInk.Lerp(Ink, (float)Math.Clamp(stats.GeneBalance / next.Cost, 0, 1))));
+            string when = stats.SecondsToNext is { } eta ? eta <= 0 ? " (in Research)" : $" (ETA {Eta(eta / speed)})"
+                : stats.Labs == 0 ? " (plant a lab)" : "";
+            Line(ref used, $"Next: {next.Name}, {next.Cost:#,0}{when}");
         }
         else
         {
-            Line(ref used, $"Genes: {Math.Floor(stats.Genes):0}");
-            Line(ref used, "Next: every unlock reached");
+            Line(ref used, $"Genes: {Math.Floor(stats.GeneBalance):0}");
+            Line(ref used, "Next: every upgrade bought");
         }
         Line(ref used, ("", Ink)); // a gap before the caps
         var caps = stats.Capacity;
@@ -198,18 +200,6 @@ public partial class Card : PanelContainer
         double hours = Math.Floor(minutes / 60);
         if (hours < 24) return $"{hours:0}h {minutes % 60:0}m";
         return $"{Math.Floor(hours / 24):0}d {hours % 24:0}h";
-    }
-
-    static string Gives(UnlockStep step)
-    {
-        var parts = new List<string>();
-        if (step.Stems > 0) parts.Add($"+{step.Stems} stem{(step.Stems == 1 ? "" : "s")}");
-        if (step.Generators > 0) parts.Add($"+{step.Generators} generator{(step.Generators == 1 ? "" : "s")}");
-        if (step.CoreLinks > 0) parts.Add($"+{step.CoreLinks} core link{(step.CoreLinks == 1 ? "" : "s")}");
-        if (step.Pots > 0) parts.Add($"+{step.Pots} pot{(step.Pots == 1 ? "" : "s")}");
-        if (step.Trellises > 0) parts.Add($"+{step.Trellises} trellis{(step.Trellises == 1 ? "" : "es")}");
-        if (step.Wells > 0) parts.Add($"+{step.Wells} well{(step.Wells == 1 ? "" : "s")}");
-        return string.Join(", ", parts);
     }
 }
 

@@ -185,18 +185,12 @@ public class TrackingTests
     }
 
     [Fact]
-    public void EachUnlockIsLoggedSayingWhatItOpened()
+    public void GenesReachingTheCoreAreNoMomentOfTheirOwn()
     {
+        // Genes are spent now: only what they buy (a core link, the Hub) is a moment (see ResearchTests).
         var garden = NewGarden();
-        garden.Grow(Minute);
-        garden.Deliver(15_000); // four steps of the track at once
-        var unlocks = garden.Tracking.Journal.Where(e => e.Kind == JournalKind.Unlock).ToList();
-        Assert.Equal(4, unlocks.Count);
-        Assert.All(unlocks, u => Assert.Equal(Minute, u.Age, 6));
-        Assert.Equal("Unlocked room for 3 more stems", unlocks[0].Text);
-        Assert.Equal("Trellis unlocked, with room for 4 more stems and 1 more generator", unlocks[2].Text);
-        Assert.Equal("Second core link and second Gravity Pot unlocked, with room for 1 more stem and 1 more generator",
-            unlocks[3].Text);
+        garden.Deliver(400_000);
+        Assert.Equal(["A new garden was planted"], garden.Tracking.Journal.Select(e => e.Text));
     }
 
     [Fact]
@@ -223,17 +217,17 @@ public class TrackingTests
     // ==== AWAY NOTE ==== \\
 
     [Fact]
-    public void TheAwayNoteSaysWhatGrewWhatReachedTheCoreAndWhatUnlocked()
+    public void TheAwayNoteSaysWhatGrewWhatReachedTheCoreAndWhatToolsCame()
     {
         var garden = Growing();
-        garden.Genes = 190; // just short of the first unlock
+        garden.Capacity = garden.Capacity with { Stems = 20 }; // room to grow past garden size 15
         var mark = AwayNote.MarkNow(garden);
         garden.CatchUp(6 * Hour);
         var note = AwayNote.Since(garden, mark);
         Assert.Equal(6 * Hour, note.Seconds, 6);
         Assert.Contains(note.Lines, l => l.Contains("new parts grew"));
         Assert.Contains(note.Lines, l => l.EndsWith("genes reached the core."));
-        Assert.Contains("Unlocked room for 3 more stems.", note.Lines);
+        Assert.Equal("Trellis gained at garden size 15.", note.Lines[2]); // before the firsts
         Assert.DoesNotContain(note.Lines, l => l.StartsWith("Power ran low"));
     }
 

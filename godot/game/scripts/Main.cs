@@ -11,12 +11,12 @@ namespace SpaceGarden;
 // has passed since the last save, --backdrop=RRGGBB to draw a colour behind the plant, --profile=NAME to use
 // user://NAME.json instead of the real save, --fpslog to print the frame rate, --parts=N to grow a new garden to N
 // parts at once (for stress tests; past the usual limit and caps too), --drain to start with every part but the core
-// empty (to watch power flow back), --nearunlock to start just short of the next unlock (the next gene blob
-// sets it off), --build to open in build mode, --shaping to place one of each shaping tool (or --shaping=N at physics
+// empty (to watch power flow back), --genes=N to bring the gene balance up to N genes (as if they had reached the
+// core), --build to open in build mode, --shaping to place one of each shaping tool (or --shaping=N at physics
 // tick N, with --screenshot), --pausetest=AT,FOR to act as if hidden for FOR seconds
 // from AT seconds after start (to test the pause), --awaynote[=HOURS] to catch up that long (8 h) at once and show its
 // note, --export=PATH (debug builds) to write the tracking as CSV and quit (see ExportTracking), plus Screenshot's
-// options and the widget's (--inspect[=core|garden], --coremenu[=SLOT], --almanac, --ambient, --corehover: see
+// options and the widget's (--inspect[=core|garden], --coremenu[=SLOT], --almanac, --research, --ambient, --corehover: see
 // Widget.DevFlags). --screenshot runs never touch the real save.
 //
 // While nobody can see the garden (screen locked, display off, a full-screen app on its monitor: see Visibility) it
@@ -39,7 +39,7 @@ public partial class Main : Node2D
     readonly Dictionary<string, string> args = new();
     Widget widget = null!;
     double saveTimer = SaveEverySeconds;
-    int unlocksShown; // how far along the unlock track the toasts have told
+    int journalShown; // how much of the journal the notes have looked through, for shaping tools gained
     Layout layout = Layout.Radial;
     int? seed;
 
@@ -75,7 +75,7 @@ public partial class Main : Node2D
         if (save != null)
         {
             Garden = Garden.FromSave(save.Garden with { Layout = layout }, seed);
-            unlocksShown = Garden.Unlocks;
+            journalShown = Garden.Tracking.Journal.Count;
             double away = Time.GetUnixTimeFromSystem() - save.LastSeenUnix;
             if (args.TryGetValue("away", out var hours)) away = double.Parse(hours) * 3600;
             awayNote = CatchUp(away * GrowthSpeed);
@@ -111,8 +111,7 @@ public partial class Main : Node2D
                 if (node.Parent != null) node.Power = 0;
             Garden.SettleLooks();
         }
-        if (args.ContainsKey("nearunlock") && Garden.NextUnlock is { } next)
-            Garden.Genes = Math.Max(Garden.Genes, next.Genes - Tuning.BlobGenes / 2);
+        if (args.TryGetValue("genes", out var genes)) Garden.Deliver(Math.Max(0, double.Parse(genes) - Garden.GeneBalance));
         if (args.TryGetValue("shaping", out var shaping) && shaping == "") PlaceShaping(); // else Screenshot does
         if (args.ContainsKey("build")) widget.SetBuilding(true);
         // Dev aid: time away now (HOURS, 8 by default), on whatever garden was loaded or planted, to see its note.
@@ -121,7 +120,7 @@ public partial class Main : Node2D
 
         ShowGarden();
         if (awayNote != null) ShowAwayNote(awayNote);
-        ShowUnlocks();
+        ShowToolsGained();
 
         if (args.TryGetValue("export", out var export) && OS.IsDebugBuild())
         {
@@ -217,7 +216,7 @@ public partial class Main : Node2D
         var borders = Garden.Borders;
         Garden = Garden.New(layout, seed);
         Garden.Borders = borders;
-        unlocksShown = 0;
+        journalShown = Garden.Tracking.Journal.Count;
         PlantAtHome();
         ShowGarden();
         Save();
@@ -279,7 +278,7 @@ public partial class Main : Node2D
         if (HiddenReason != null) return; // nothing moves or grows while hidden; growth is caught up on showing
         Garden.Step();
         Garden.Grow(delta * GrowthSpeed);
-        ShowUnlocks();
+        ShowToolsGained();
 
         saveTimer -= delta;
         if (saveTimer <= 0)
@@ -289,33 +288,24 @@ public partial class Main : Node2D
         }
     }
 
-    // Genes reaching the core passed one or more steps of the unlock track since the last note (live, or during a
-    // catch-up): one small note says what there's room for now. Nothing to choose; the caps have already risen.
-    void ShowUnlocks()
+    // The garden grew to a size that gains a shaping tool since the last note (live, or during a catch-up): one small
+    // note says what there is to place now, from the journal's moments.
+    void ShowToolsGained()
     {
-        if (Garden.Unlocks <= unlocksShown) return;
-        var gained = Tuning.UnlockTrack[unlocksShown..Garden.Unlocks];
-        unlocksShown = Garden.Unlocks;
-        int stems = gained.Sum(u => u.Stems), generators = gained.Sum(u => u.Generators), links = gained.Sum(u => u.CoreLinks);
-        var room = new List<string>();
-        if (stems > 0) room.Add(stems == 1 ? "1 more stem" : $"{stems} more stems");
-        if (generators > 0) room.Add(generators == 1 ? "1 more generator" : $"{generators} more generators");
-        if (links > 0) room.Add(links == 1 ? "a new core branch" : $"{links} new core branches");
-        int pots = gained.Sum(u => u.Pots), trellises = gained.Sum(u => u.Trellises), wells = gained.Sum(u => u.Wells);
-        if (pots > 0) room.Add(pots == 1 ? "another Gravity Pot" : $"{pots} more Gravity Pots");
-        if (trellises > 0) room.Add(trellises == 1 ? "a Trellis" : $"{trellises} Trellises");
-        if (wells > 0) room.Add(wells == 1 ? "a Gravity Well" : $"{wells} Gravity Wells");
-        if (room.Count == 0) return;
-        string list = room.Count == 1 ? room[0] : string.Join(", ", room[..^1]) + " and " + room[^1];
-        Toast($"Genes reached the core: room for {list}.", GeneTint);
+        var journal = Garden.Tracking.Journal;
+        if (journal.Count <= journalShown) return;
+        var gained = journal.Skip(journalShown).Where(e => e.Kind == JournalKind.Tool).Select(e => e.Text).ToList();
+        journalShown = journal.Count;
+        if (gained.Count == 0) return;
+        Toast($"{string.Join(". ", gained)}. Place {(gained.Count == 1 ? "it" : "them")} in build mode.", ShapingLook.Tint);
     }
 
     // What changed in a catch-up (DESIGN.md, Step 4: While you were away), in a small panel above the plant where the
-    // notes show, for longer than a note (there's more to read). It says what grew, the genes and unlocks (so the
-    // unlock note isn't shown as well) and any dip in power, from the tracking and the journal.
+    // notes show, for longer than a note (there's more to read). It says what grew, the genes, the shaping tools gained
+    // (so their note isn't shown as well) and any dip in power, from the tracking and the journal.
     void ShowAwayNote(AwayNote note)
     {
-        unlocksShown = Garden.Unlocks;
+        journalShown = Garden.Tracking.Journal.Count;
         var layer = new CanvasLayer { Scale = new Vector2(widget.Dpi, widget.Dpi) };
         var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         var style = Toolbar.PillStyle();
@@ -363,8 +353,6 @@ public partial class Main : Node2D
     const double AwayNoteShowSeconds = 15;
     const float AwayNoteWidth = 400; // its lines wrap at this
 
-    // The genes' purple, lightened to read over any desktop.
-    static readonly Color GeneTint = new(0.82f, 0.74f, 1f);
     int toastsShowing;
 
     // A short note above the plant that fades after a few seconds. Notes showing at once stack upward, and a note

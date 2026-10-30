@@ -9,7 +9,7 @@ namespace SpaceGarden;
 public enum Tool
 {
     Stem, Generator, Lab, Grove, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
-    Info, Almanac, Build, Ambient, Minimise, Settings,
+    Info, Almanac, Research, Build, Ambient, Minimise, Settings,
 }
 
 // The little pill of tools that floats above a tapped part (or above a shaping tool tapped in build mode, with just
@@ -252,6 +252,12 @@ public partial class ToolButton : Control
                     c + new Vector2(0, 6.5f), c + new Vector2(-7, 5), c + new Vector2(-7, -4)], ink, w, true);
                 DrawLine(c + new Vector2(0, -2.5f), c + new Vector2(0, 6.5f), ink, w, true);
                 break;
+            case Tool.Research: // a flask, a gene bubbling in it
+                DrawPolyline([c + new Vector2(-2.5f, -7), c + new Vector2(-2.5f, -2), c + new Vector2(-7, 6),
+                    c + new Vector2(7, 6), c + new Vector2(2.5f, -2), c + new Vector2(2.5f, -7)], ink, w, true);
+                DrawLine(c + new Vector2(-4, -7), c + new Vector2(4, -7), ink, w, true);
+                DrawCircle(c + new Vector2(0, 2.5f), 1.6f, ink);
+                break;
             case Tool.Build: // the pot, as on the shaping bar, in the button's ink
                 ShapingLook.DrawIcon(this, Tool.Pot, c + new Vector2(0, 1), ink);
                 break;
@@ -301,8 +307,8 @@ public partial class ToolButton : Control
 }
 
 // Build mode's bar (DESIGN.md, Shaping the garden): a pot, a trellis and a well to place, each with how many more the
-// caps allow (greyed until unlocked), and Done. Pressing a tool starts carrying a new one off the bar: it follows the
-// pointer until let go.
+// caps allow (greyed, with the garden size that brings it, until then), and Done. Pressing a tool starts carrying a
+// new one off the bar: it follows the pointer until let go.
 public partial class ShapingBar : PanelContainer
 {
     public event Action<ShapingKind>? Started;
@@ -332,7 +338,7 @@ public partial class ShapingBar : PanelContainer
         row.AddChild(done);
     }
 
-    // What each tool's button says: how many more can be placed, or what unlocks it.
+    // What each tool's button says: how many more can be placed, or the garden size that brings it.
     public void Refresh(Garden garden)
     {
         foreach (var (kind, button) in buttons)
@@ -341,18 +347,14 @@ public partial class ShapingBar : PanelContainer
             button.Enabled = left > 0;
             button.Badge = cap > 0 ? $"{left}" : null;
             string name = ShapingLook.Name(kind);
-            button.TooltipText = cap == 0 ? $"{name}: unlocks at {UnlockAt(kind):N0} genes. {ShapingLook.Does(kind)}"
-                : left > 0 ? $"{name}: drag one into the garden. {ShapingLook.Does(kind)}"
-                : $"{name}: all placed. {ShapingLook.Does(kind)}";
+            int size = garden.Tracking.MostMainNodes;
+            string more = Tuning.NextToolSize(kind, size) is { } at ? $" Another at garden size {at}." : "";
+            button.TooltipText = cap == 0 ? $"{name}: comes at garden size {Tuning.NextToolSize(kind, size)} (now {size}: "
+                    + $"the most stems and flowers it has had, the core too). {ShapingLook.Does(kind)}"
+                : left > 0 ? $"{name}: drag one into the garden.{more} {ShapingLook.Does(kind)}"
+                : $"{name}: all placed.{more} {ShapingLook.Does(kind)}";
         }
     }
-
-    static double UnlockAt(ShapingKind kind) => Tuning.UnlockTrack.FirstOrDefault(u => kind switch
-    {
-        ShapingKind.Pot => u.Pots > 0,
-        ShapingKind.Trellis => u.Trellises > 0,
-        _ => u.Wells > 0,
-    })?.Genes ?? 0;
 
     public void Appear(bool show)
     {

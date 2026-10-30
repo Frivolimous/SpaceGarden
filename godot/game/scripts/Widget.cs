@@ -15,8 +15,8 @@ namespace SpaceGarden;
 // toolbar and shows its card. The selection stays (ringed, its card open) after the toolbar closes, until the part is
 // tapped again, another is tapped, it's pruned, a click lands off the plant, or Escape. Tapping the core also opens
 // its menu (CoreMenu) under it, with its toolbar (its buds) above it: Info and Build switch the garden's card (shown
-// above the part's while tending) and build mode on and off, Almanac opens or closes the journal's window, and the
-// rest pick Ambient, Minimised or the settings.
+// above the part's while tending) and build mode on and off, Almanac and Research open or close the journal's window
+// and the upgrade tracks' panel, and the rest pick Ambient, Minimised or the settings.
 // Dragging a part pulls it to the pointer by its weight and the links drag the rest after it; letting go keeps the
 // momentum. Right-click opens the settings. It drops to a low frame rate when nothing's happening.
 //
@@ -86,6 +86,7 @@ public partial class Widget : Node
     readonly VBoxContainer cards = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
     readonly Almanac almanac = new(); // its own window, open until its slot or ✕ closes it (see SetAlmanac)
+    readonly ResearchPanel research = new(); // its own window too (see SetResearch)
     readonly UndoPill undo = new();
     readonly CoreMenu coreMenu = new();
     readonly StatusIndicator tray = new();
@@ -164,8 +165,11 @@ public partial class Widget : Node
         cards.AddChild(partCard);
         toolbarLayer.AddChild(cards);
         toolbarLayer.AddChild(almanac);
-        toolbarLayer.AddChild(coreMenu); // over the Almanac, so its names show over the window
+        toolbarLayer.AddChild(research);
+        toolbarLayer.AddChild(coreMenu); // over the windows, so its names show over them
         almanac.CloseRequested += () => SetAlmanac(false);
+        research.CloseRequested += () => SetResearch(false);
+        research.BuyPressed += Buy;
         coreMenu.Picked += PickFromCoreMenu;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
         toolbarLayer.AddChild(shapingBar);
@@ -254,6 +258,7 @@ public partial class Widget : Node
         if (mode == Mode) return;
         Mode = mode;
         almanac.SetAway(mode != DisplayMode.Active); // only the core takes clicks outside Active
+        research.SetAway(mode != DisplayMode.Active);
         if (mode != DisplayMode.Active)
         {
             SetBuilding(false);
@@ -499,7 +504,8 @@ public partial class Widget : Node
         bool overMenu = coreMenu.Over(pointer / Dpi);
         bool overBar = shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool overAlmanac = almanac.Catches(pointer / Dpi);
-        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac;
+        bool overResearch = research.Catches(pointer / Dpi);
+        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac && !overResearch;
         var handle = free ? HandleAt(world) : null;
         var under = free && handle == null ? Garden.NodeAt(world, HoverSlop) : null;
         var underTool = handle ?? (Building && free && under == null ? Garden.ShapingAt(world, HoverSlop) : null);
@@ -517,8 +523,10 @@ public partial class Widget : Node
         partCard.Update(Garden, main.GrowthSpeed, delta);
         gardenCard.Update(Garden, main.GrowthSpeed, delta);
         almanac.Update(Garden, pointer / Dpi, viewport, delta);
+        research.Update(Garden, pointer / Dpi, viewport, delta);
         coreMenu.SetActive(Tool.Info, gardenInfo);
         coreMenu.SetActive(Tool.Almanac, almanac.IsOpen);
+        coreMenu.SetActive(Tool.Research, research.IsOpen);
         coreMenu.SetActive(Tool.Build, Building);
         PlaceCard();
         if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * plantScale, viewport);
@@ -554,7 +562,8 @@ public partial class Widget : Node
             : underTool?.Handle ?? ShapingHandle.Body;
 
         bool catchMouse = pressed || overToolbar || overUndo || overMenu || under != null || overBar || onBackdrop
-            || underTool != null || movingTool != null || overAlmanac || almanac.Dragging;
+            || underTool != null || movingTool != null || overAlmanac || almanac.Dragging
+            || overResearch || research.Dragging;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || Garden.Held != null
@@ -678,8 +687,9 @@ public partial class Widget : Node
     // Dev aids for --screenshot runs, once the garden is set up: --inspect (a lab's card, or the core's if it has
     // none), --inspect=core or --inspect=garden; --coremenu opens the core's menu (--coremenu=settings with that
     // slot's name showing); --tap=full or --tap=forming taps a stem with every link taken, or a part forming a bud
-    // (starting a lab bud on a stem if none is), its toolbar staying open; --almanac opens the Almanac;
-    // --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
+    // (starting a lab bud on a stem if none is), its toolbar staying open; --almanac opens the Almanac, --research the
+    // Research panel (--research=hint with the Stems card's hint showing); --ambient starts in Ambient, and
+    // --corehover acts as if the pointer were on the core.
     void DevFlags()
     {
         devFlagsDone = true;
@@ -714,6 +724,11 @@ public partial class Widget : Node
             devTapped = true; // its toolbar stays, with no pointer to keep it
         }
         if (Value("almanac") != null) SetAlmanac(true);
+        if (Value("research") is { } shown)
+        {
+            SetResearch(true);
+            if (shown == "hint") research.Hinting = Track.Stems; // as if the pointer were on its (i)
+        }
         if (Value("ambient") != null)
         {
             SetMode(DisplayMode.Ambient);
@@ -883,6 +898,9 @@ public partial class Widget : Node
             case Tool.Almanac:
                 SetAlmanac(!almanac.IsOpen);
                 return;
+            case Tool.Research:
+                SetResearch(!research.IsOpen);
+                return;
         }
         CloseCoreMenu();
         switch (tool)
@@ -915,6 +933,31 @@ public partial class Widget : Node
         var size = new Vector2(Almanac.Width, Almanac.Height);
         var (anchor, onLeft) = Beside(size, top: size.Y / 2);
         almanac.Open(anchor - new Vector2(onLeft ? size.X : 0, 0));
+    }
+
+    // The Research panel opens and closes only from its slot or its ✕, like the Almanac: the first time beside the
+    // plant, its middle level with the core, then wherever it was left.
+    void SetResearch(bool on)
+    {
+        coreMenu.SetActive(Tool.Research, on);
+        if (!on)
+        {
+            research.Close();
+            return;
+        }
+        var size = research.GetCombinedMinimumSize();
+        var (anchor, onLeft) = Beside(size, top: size.Y / 2);
+        research.Open(anchor - new Vector2(onLeft ? size.X : 0, 0));
+    }
+
+    // The Research panel's Buy: the track's next upgrade, if the balance covers it (the caps rise at once, and the
+    // garden card shows the new ones).
+    void Buy(Track track)
+    {
+        if (!Garden.Buy(track)) return;
+        research.RefreshNow();
+        gardenCard.RefreshNow();
+        partCard.RefreshNow();
     }
 
     // With Info on, the garden's card shows above the part's while the player is tending: a part selected, or the

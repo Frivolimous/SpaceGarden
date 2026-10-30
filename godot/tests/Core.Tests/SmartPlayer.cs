@@ -2,6 +2,7 @@ namespace SpaceGarden.Core.Tests;
 
 // A smart, attentive player, for pacing runs (DESIGN.md: "simulations assume a smart player who is actively tending"):
 // the plant is stupid, so this is the brain. Each check-in it
+//   - spends its genes on the cheapest next upgrade it can afford, again and again (Research);
 //   - prunes passive groves past the ones it wants (the farthest first);
 //   - prunes drains: while the garden would cost more than it makes at full power, the lab furthest from the core
 //     goes (passive ones are usually far out), then any lab too far out for its genes to find the core;
@@ -25,6 +26,7 @@ public static class SmartPlayer
 
     public static void Tend(Garden garden)
     {
+        Research(garden);
         PruneDrains(garden);
         MakeRoom(garden);
         // The opening: the first grove at once, and the first lab as soon as a part has a link to spare beside it.
@@ -42,6 +44,23 @@ public static class SmartPlayer
     }
 
     static int GrovesWanted(Garden garden) => 1 + Count(garden, NodeKind.Stem) / GroveEvery;
+
+    // Spends the gene balance. While the garden is short of power (it couldn't keep another lab full) and every
+    // generator it may have is grown, the next generator comes first: bought if the balance covers it, saved for if
+    // not (more stems would only cost more upkeep). Otherwise the cheapest next upgrade across the three tracks, while
+    // the balance covers it: the cheap early stems first, then generators and the core's track by turns as their costs
+    // climb past the stems'. (The core's wild flower and seedling slots do nothing yet, but stand in the core link's
+    // and the Hub's way, so they're bought as they come.)
+    static void Research(Garden garden)
+    {
+        while (true)
+        {
+            bool shortOfPower = Spare(garden) < -NodeSpecs.All[NodeKind.Lab].PowerPerSecond + Reserve
+                && Count(garden, NodeKind.Generator) >= garden.Capacity.Generators;
+            var next = shortOfPower && garden.Next(Track.Generators) is { } generator ? generator : garden.Cheapest;
+            if (next == null || !garden.Buy(next.Track)) return;
+        }
+    }
 
     // Labs deeper than this lose most of their gene blobs on the way (they wander), so they aren't worth their upkeep.
     const int MaxLabDepth = 4;

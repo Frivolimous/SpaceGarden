@@ -65,12 +65,11 @@ public partial class GardenView : Node2D
     static readonly Color BudRim = new(0.92f, 0.95f, 0.92f, 0.85f);
 
     // Small moments (marks): a ring widening off a part as it pops out, a glint on a fruit as it appears, and a
-    // ripple out from the core as genes unlock a step of the track (seconds since each began).
+    // ripple out from the core as an upgrade is bought (seconds since each began).
     const float PopSeconds = 0.8f, RippleSeconds = 2.4f, RippleGap = 0.4f;
-    static readonly Color RippleTint = new(0.82f, 0.74f, 1f); // the genes' purple, lightened (as the unlock note)
+    static readonly Color RippleTint = new(0.82f, 0.74f, 1f); // the genes' purple, lightened
     readonly List<float> ripples = new();
-    int unlocksSeen;
-    float coreGlow;
+    int boughtSeen;
     readonly HashSet<PlantNode> restored = new(); // put back by an undo: they grow in again, with no moment
 
     public void Restored(IEnumerable<PlantNode> nodes) => restored.UnionWith(nodes);
@@ -78,7 +77,7 @@ public partial class GardenView : Node2D
     public GardenView(Garden garden)
     {
         this.garden = garden;
-        unlocksSeen = garden.Unlocks;
+        boughtSeen = garden.Bought;
         foreach (var shape in Enum.GetValues<Shape>())
         {
             shapes[shape] = new Batch();
@@ -117,18 +116,9 @@ public partial class GardenView : Node2D
         float dt = (float)delta;
         highlightRing = Mathf.MoveToward(highlightRing, Highlight == null ? 0 : 1, dt * 6);
         coreHover = Mathf.MoveToward(coreHover, CoreHover ? 1 : 0, dt * 5);
-        // Genes count as their blob leaves the lab, so an unlock waits for the gene blobs on their way to arrive (the
-        // core glows as each does), unless none are shown.
-        if (garden.Unlocks > unlocksSeen)
-        {
-            bool arrived = garden.Core.Glow > coreGlow;
-            if (arrived || !garden.Motes.Any(m => m.Absorbed && m.Route[^1] == garden.Core))
-            {
-                unlocksSeen = garden.Unlocks;
-                ripples.Add(0);
-            }
-        }
-        coreGlow = garden.Core.Glow;
+        // An upgrade bought ripples the genes' purple out from the core.
+        if (garden.Bought > boughtSeen) ripples.Add(0);
+        boughtSeen = garden.Bought;
         for (int i = ripples.Count - 1; i >= 0; i--)
             if ((ripples[i] += dt) >= RippleSeconds + RippleGap) ripples.RemoveAt(i);
         blend = (float)Engine.GetPhysicsInterpolationFraction();
@@ -556,7 +546,7 @@ public partial class GardenView : Node2D
             }
         }
 
-        // The unlock ripple: two rings, one after the other, widening slowly from the core.
+        // The upgrade ripple: two rings, one after the other, widening slowly from the core.
         var core = garden.Core;
         foreach (var age in ripples)
             for (int i = 0; i < 2; i++)

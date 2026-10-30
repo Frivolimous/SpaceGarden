@@ -71,19 +71,6 @@ public class GeneTests
     }
 
     [Fact]
-    public void TheUnlockTrackStillCountsGenesEarned()
-    {
-        // Until step 5b replaces it: spending the balance takes no unlock away and holds none back.
-        var garden = NewGarden();
-        var first = Tuning.UnlockTrack[0];
-        garden.Deliver(first.Genes - 1);
-        Assert.True(garden.Spend(first.Genes - 1));
-        garden.Deliver(1);
-        Assert.Equal(1, garden.Unlocks);
-        Assert.Equal(1, garden.GeneBalance);
-    }
-
-    [Fact]
     public void LabsFillTheBalanceAsTheyDoGenesEarned()
     {
         var garden = NewGarden(new Capacity(4, 1, 1));

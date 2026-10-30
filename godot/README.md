@@ -25,14 +25,21 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for
   a moment closes just the toolbar; the card stays until a click lands off the plant, Escape, or another tap.
 - **Tap the core** for its menu, a half ring of buttons under it (names show under the pointer). **Info** and
-  **Build** are switches, lit while on: Info shows the garden's card (power, what it makes and drains, genes against
-  the next unlock and its ETA, the caps) above the part's whenever you tap the plant, and Build is build mode.
+  **Build** are switches, lit while on: Info shows the garden's card (power, what it makes and drains, the gene
+  balance, the cheapest next upgrade with its cost and ETA, or "in Research" once affordable, and the caps) above the
+  part's whenever you tap the plant, and Build is build mode.
   **Almanac** (lit while open) opens a window with tabs across the top (just **Journal** for now): the garden's
   moments under day headings ("Day 2"), newest first, each with its time on that day. They're its planting, each
-  kind's first part, its first passive bud, every unlock, part counts reached, and the first of each shaping tool.
+  kind's first part, its first passive bud, core links and the Hub bought (in the genes' purple), shaping tools gained
+  from the garden's size (in the tools' blue), part counts reached, and the first of each shaping tool placed.
   Drag its header to move it, its corner grip to resize it; the wheel scrolls it. It stays open (clicks elsewhere,
   Escape and losing the focus leave it) until its ✕ or the slot again; it hides in Ambient and Minimised and comes
   back in Active.
+  **Research** (the flask, lit while open) opens the upgrade tracks' panel, a window like the Almanac's (drag its
+  header; ✕ or the slot closes it): the gene balance in its header, and three cards in their roles' hues, **Stems**,
+  **Generators** and **Core**, each with a glyph of its part and only its next upgrade, its cost and **Buy** (dim,
+  saying how many more genes it needs over a fill showing how close the balance is, while it falls short; a card you can afford glows; the (i) by each title says at once what its next upgrade does). Buying
+  spends the balance and raises the cap at once (the core ripples purple). See Upgrade tracks in DESIGN.md.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
 - **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
@@ -41,7 +48,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Fruit** (leaves, burrs, research pods) ignores the pointer: it can't be hovered, tapped or dragged, and clicks
   on it fall through to the desktop.
 - **Build mode** (the core's menu, or Ctrl+B with the garden focused) arranges the garden: an opaque disc round the
-  plant and a bar of shaping tools (Gravity Pot, Trellis, Gravity Well, as the gene track unlocks them). Drag a tool
+  plant and a bar of shaping tools (Gravity Pot, Trellis, Gravity Well, as the garden's size brings them: its
+  tooltip says at what size the next comes). Drag a tool
   off the bar to place it, drag its body, knob or posts to move and turn it, and drop a part on a pot or trellis to
   tie it (or an empty pot on a part to plant it). Each part shows its links used against its most (white 1/N, yellow, red when full), to see where
   there's room to bud. Done or Escape ends it. See Shaping the garden in DESIGN.md.
@@ -63,7 +71,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   window flash and would cut off the toolbar.
 - It saves every minute and on quit (`%APPDATA%\Space Garden Prototype\garden.json`). Reopening catches up the
   time away (capped at 72 h) and a note above the plant says what changed: the parts grown, the genes that reached
-  the core, unlocks and other moments, and any dip in power (also after 5 minutes or more hidden or minimised).
+  the core, shaping tools gained and other moments, and any dip in power (also after 5 minutes or more hidden or
+  minimised). A shaping tool gained while you watch gets a short note above the plant instead.
 - While nobody can see it (screen locked, display off, or a full-screen app such as a game or video on its
   monitor) it pauses: no drawing or physics, waking 4 times a second to check (about 1.5% of a core). When it's
   visible again the hidden time's growth is caught up at once, like time away. Windows only (`Visibility.cs`).
@@ -87,21 +96,29 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   and labs cost upkeep (leaves halve a stem's), all in proportion to their fill, and about three times a second each
   part sends a clump of power to its emptiest neighbour, so far tips run low first and the fills never settle. Nothing
   wilts and nothing is destroyed; an overloaded garden just runs lower. Passive growth stays within the caps (4 stems,
-  1 generator, 1 core link at the start), raised as genes reach the core along the unlock track. Catch-up runs the
+  1 generator, 1 core link at the start), raised by the upgrades bought in Research. Catch-up runs the
   same fixed economy steps. Saves carry a version (now 9); an older one is set aside (`garden.v8.json` and so on)
   and a new garden starts.
+- **Upgrade tracks** (step 5b, `Garden.Buy`, `Garden.Next`, costs in `Tuning` under Research): genes reaching the
+  core fill the gene balance, and the Research panel spends it. Stems (+1 cap each, 26 upgrades to 30 stems),
+  Generators (+1 cap each, 9 to 10) and the Core track (the wild flower limit, a second core link, seedling slots
+  and the Hub, in a fixed order). The wild flower limit, seedling slots and the Hub are counters in `Capacity` for
+  now; 5c, 5d and the Hub's step give them mechanics. The levels bought are saved (`GardenSave.Research`); a 5a
+  save without them keeps its caps and reads them as upgrades bought. The shaping tools come from the garden's
+  size instead (`Tuning.ToolsAtSize`): a Gravity Pot at the start, a Trellis at 15, a second pot at 25, a Gravity
+  Well at 40, another pot at 60 and 100, then every 50.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Tracking
 `src/Core/Tracking.cs` (DESIGN.md, Step 4). Saved with the garden (version 9).
 - **Lifetime totals:** the garden's age, parts grown by kind, parts pruned, passive buds, the most parts at once,
   and the garden size (`MostMainNodes`: the most main nodes, fruit aside and the core counted, ever reached; pruning
-  never lowers it, and step 5b unlocks the shaping tools by it).
-  Genes earned and unlocks reached are the garden's own `Genes` and `Unlocks`. The export names them
-  `genes_earned`, `gene_balance`, `passive_buds`, `most_main_nodes` and so on.
-- **Gene balance** (step 5a, groundwork for 5b's upgrade tracks): `Garden.GeneBalance`, the genes left to spend.
-  Genes reaching the core add to it and to `Genes` alike; `CanSpend` and `Spend` take from it alone, so genes earned
-  never drop. Nothing in the game spends yet, and the unlock track still counts genes earned until 5b replaces it.
+  never lowers it, and the shaping tools come by it).
+  Genes earned and upgrades bought are the garden's own (`Genes`, `StemsBought`, `GeneratorsBought`, `CoreBought`).
+  The export names them `genes_earned`, `gene_balance`, `upgrades_bought` (and each track's `stems_bought` and so
+  on), `passive_buds`, `most_main_nodes` and so on.
+- **Gene balance** (step 5a): `Garden.GeneBalance`, the genes left to spend. Genes reaching the core add to it and to
+  `Genes` alike; `CanSpend`, `Spend` and `Buy` take from it alone, so genes earned never drop.
 - **History:** four series, sampled as the economy runs: stored power, Gen and Drain (averaged, per growth second)
   and the genes that reached the core. There is a sample a minute for the last day, an hour for the last month and
   a day beyond. Old samples roll up a whole hour or day at a time.
@@ -126,14 +143,15 @@ shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspec
 open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
 menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--tap=full` or `--tap=forming` (as if a stem
 with every link taken, or a part forming a bud, were tapped: its toolbar and card, the toolbar staying open),
-`--almanac` (the Almanac open),
+`--almanac` (the Almanac open), `--research` (the Research panel open, or `--research=hint` with the Stems card's hint showing; with `--genes=N` for a balance to show,
+e.g. `--fresh --grove --genes=1200 --research`),
 `--awaynote[=HOURS]` (catch up that long at once, 8 h by default, on the garden loaded or planted, and show the away
 note; with `--grove` a new garden has something to grow), `--export=PATH` (debug builds: write the tracking CSVs, see
 Tracking, then quit unless screenshotting), `--ambient` (starts in Ambient) and
 `--corehover` (as if the pointer were on the core there),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
-`--drain` (start with every part but the core empty, to watch power flow back), `--nearunlock` (start just short of
-the next unlock on the gene track, to watch one fire), `--fpslog` (prints
+`--drain` (start with every part but the core empty, to watch power flow back), `--genes=N` (bring the gene balance
+up to N, as if they had reached the core), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 
 ## Performance

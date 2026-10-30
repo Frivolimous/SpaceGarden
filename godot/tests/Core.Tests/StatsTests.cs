@@ -128,17 +128,23 @@ public class StatsTests
     }
 
     [Fact]
-    public void TheNextUnlockIsTimedAtTheCurrentRate()
+    public void TheCheapestNextUpgradeIsTimedAtTheCurrentRate()
     {
         var garden = NewGarden(Capacity.Start);
-        var next = garden.NextUnlock!;
-        garden.Genes = next.Genes - 100;
+        garden.Deliver(400);
+        garden.Buy(Track.Stems); // 300 left; the next stem costs 150, generators and the core 1,500
+        garden.Buy(Track.Stems); // 150 left; the next stem 200
+        garden.Spend(50);
         var stats = GardenStats.Of(garden) with { GenesPerHour = 600 };
+        Assert.Equal(new Upgrade(Track.Stems, UpgradeKind.Stem, 200), stats.Cheapest);
+        Assert.Equal(100, stats.GeneBalance, 9);
+        Assert.Equal(400, stats.Genes, 9);
         Assert.Equal(100, stats.GenesToNext, 9);
         Assert.Equal(600, stats.SecondsToNext!.Value, 9); // 100 genes at 10 a minute
 
         Assert.Null((stats with { GenesPerHour = 0 }).SecondsToNext); // no labs: never
-        Assert.Null((stats with { NextUnlock = null }).SecondsToNext); // the track done
+        Assert.Equal(0, (stats with { GeneBalance = 250 }).SecondsToNext); // it can be bought now
+        Assert.Null((stats with { Cheapest = null }).SecondsToNext); // every upgrade bought
     }
 
     // ==== PART CARD ==== \\

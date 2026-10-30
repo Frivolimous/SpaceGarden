@@ -1,13 +1,13 @@
 namespace SpaceGarden.Core;
 
 // What the garden card tells a player tending the garden (DESIGN.md, Information display): a snapshot of its power,
-// its caps, its flowers, what's forming, and how fast genes reach the core. Worked out from the garden as it is now;
-// it changes nothing.
+// its caps, its flowers, what's forming, its genes to spend and how fast more reach the core. Worked out from the
+// garden as it is now; it changes nothing.
 public sealed record GardenStats(
     float PowerHeld, float PowerStore, float Production, float Upkeep, float FullProduction, float FullUpkeep,
     int Stems, int Generators, int Groves, int Labs, int CoreLinksUsed, Capacity Capacity,
     int Fruit, int FruitRoom, IReadOnlyDictionary<NodeKind, int> BudsForming,
-    double Genes, double GenesPerHour, UnlockStep? NextUnlock)
+    double Genes, double GeneBalance, double GenesPerHour, Upgrade? Cheapest)
 {
     public float PowerFill => PowerStore > 0 ? PowerHeld / PowerStore : 0;
 
@@ -15,10 +15,11 @@ public sealed record GardenStats(
     // flowers lowest and working slowest. (Production and upkeep now both follow the fills, so they always meet.)
     public bool Overloaded => FullUpkeep > FullProduction;
 
-    // Genes still needed for the next unlock, and how long they take at the current rate, in growth seconds (null:
-    // nothing left to unlock, or no genes on their way).
-    public double GenesToNext => NextUnlock is { } next ? Math.Max(0, next.Genes - Genes) : 0;
-    public double? SecondsToNext => NextUnlock == null || GenesPerHour <= 0 ? null : GenesToNext / GenesPerHour * 3600;
+    // Genes the balance still lacks for the cheapest next upgrade, and how long they take at the current rate, in
+    // growth seconds (null: every upgrade bought, or no genes on their way; 0: it can be bought now).
+    public double GenesToNext => Cheapest is { } next ? Math.Max(0, next.Cost - GeneBalance) : 0;
+    public double? SecondsToNext => Cheapest == null ? null : GenesToNext <= 0 ? 0
+        : GenesPerHour <= 0 ? null : GenesToNext / GenesPerHour * 3600;
 
     public static GardenStats Of(Garden garden)
     {
@@ -53,7 +54,8 @@ public sealed record GardenStats(
             }
         }
         return new GardenStats(held, store, production, upkeep, fullProduction, fullUpkeep, stems, generators, groves, labs,
-            garden.Core.Branches.Count, garden.Capacity, fruit, fruitRoom, buds, garden.Genes, genesPerHour, garden.NextUnlock);
+            garden.Core.Branches.Count, garden.Capacity, fruit, fruitRoom, buds, garden.Genes, garden.GeneBalance, genesPerHour,
+            garden.Cheapest);
     }
 
     // The genes a lab gets to the core per growth hour, on average: the blobs it makes now, times the chance each

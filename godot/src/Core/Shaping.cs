@@ -9,7 +9,7 @@ namespace SpaceGarden.Core;
 //   - A Trellis is a straight line: the parts tied to it are held on the line, sliding along it, so the plant's own
 //     push spaces them out.
 //   - A Gravity Well pulls every part towards it, for the plant to lean that way.
-// How many of each the garden may place is in its Capacity (the unlock track raises it).
+// How many of each the garden may place is in its Capacity (the garden's size raises it: see Garden.GainTools).
 public enum ShapingKind { Pot, Trellis, Well }
 
 // Which bit of a tool the pointer is on: its body (to move it), a pot's turning knob, or one of a trellis's ends.
