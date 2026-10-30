@@ -143,6 +143,20 @@ public class WildTests
     }
 
     [Fact]
+    public void APulsarReleasesItsPowerInBursts()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        garden.UnlockWild(NodeKind.Pulsar);
+        var pulsar = Add(garden, stem, NodeKind.Pulsar);
+        pulsar.Power = pulsar.Store / 2;
+        garden.Grow(Tuning.PulsarSeconds * 0.9);
+        Assert.True(pulsar.Charge > 0); // built up, not yet in its store
+        float charge = pulsar.Charge;
+        garden.Grow(Tuning.PulsarSeconds * 0.2);
+        Assert.True(pulsar.Charge < charge / 2); // released
+    }
+
+    [Fact]
     public void DiscoveryIsLoggedOnceAndSaved()
     {
         var (garden, stem) = Make(wildLimit: 2);

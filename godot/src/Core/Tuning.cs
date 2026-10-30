@@ -190,6 +190,14 @@ public static class Tuning
     public const float LichenUpkeep = 3, LichenBlobs = 360;
     public const int LichenLeaves = 4;
 
+    // The Evolution kinds, locked until their evolution (5c) calls Garden.UnlockWild. Big Stem: 4 links, sending power
+    // on at BigStemTransfer a second (a stem 30).
+    public const float BigStemTransfer = 15;
+    // Pulsar: makes PulsarGen a second (a generator 12) while below full, built up unseen and released into its store
+    // every PulsarSeconds, swelling it past full; it holds PulsarStore and sends on at PulsarTransfer (a generator 18).
+    public const float PulsarGen = 18, PulsarSeconds = 20, PulsarStore = 300, PulsarTransfer = 24;
+    // Twin Star: a generator with 2 links, carrying the branch on.
+
     // The passive-only kinds, white. Buffer: BufferBlobs buff blobs an hour; each wanders BufferReach links
     // (BufferAmplifiedReach more once it passes an Amplifier), and every part it passes makes BuffBonus more (power
     // and blobs) for the next BuffSeconds.

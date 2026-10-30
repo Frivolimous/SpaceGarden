@@ -725,9 +725,21 @@ public sealed class Garden
             stored += node.Power;
             production += made;
             upkeep += cost;
+            node.Life += seconds;
+            if (node.Spec.PulseSeconds > 0)
+            {
+                // A Pulsar: what it makes builds up unseen, and goes into its store all at once each PulseSeconds of
+                // its life (swelling it past full, until it has sent it on).
+                node.Charge += made * dt;
+                made = 0;
+                if (Math.Floor(node.Life / node.Spec.PulseSeconds) > Math.Floor((node.Life - seconds) / node.Spec.PulseSeconds))
+                {
+                    made = node.Charge / dt;
+                    node.Charge = 0;
+                }
+            }
             node.Power = Math.Max(0, node.Power + (made - cost) * dt);
             node.Blob += BlobsPerHour(node) * hours;
-            node.Life += seconds;
             node.Buff = Math.Max(0, node.Buff - dt);
             if (node.Spec.LifeSeconds > 0 && node.Life >= node.Spec.LifeSeconds) ending.Add(node);
         }

@@ -46,12 +46,22 @@ static class WildFlowers
             Radius = 11, LinkScale = Tuning.TendrilLink, Spring = Tuning.TendrilSpring,
             PowerStore = Tuning.TendrilStore, PowerWeight = Tuning.TendrilWeight,
         };
-        yield return Wild(stem, NodeKind.BigStem, "Big Stem", Shape.Circle, 0x10C838, WildUnlock.Evolution,
-            "4 links.", "Slower power transfer.");
-        yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Pentagon, 0xF2D84A, WildUnlock.Evolution,
-            "More power, released in bursts.", "Uneven supply.");
-        yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Pentagon, 0xE8EE8C, WildUnlock.Evolution,
-            "A generator that continues the branch.", "Capped.");
+        yield return Wild(stem, NodeKind.BigStem, "Big Stem", Shape.Quatrefoil, 0x10C838, WildUnlock.Evolution,
+            "4 links.", "Slower power transfer.") with
+        {
+            Radius = 13, Mass = 1.5f, MaxLinks = 4, PowerTransferPerSecond = Tuning.BigStemTransfer,
+        };
+        yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Evolution,
+            "More power, released in bursts.", "Uneven supply.") with
+        {
+            PowerPerSecond = Tuning.PulsarGen, PulseSeconds = Tuning.PulsarSeconds, PowerStore = Tuning.PulsarStore,
+            PowerTransferPerSecond = Tuning.PulsarTransfer,
+        };
+        yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Evolution,
+            "A generator that continues the branch.", "Capped.") with
+        {
+            MaxLinks = 2,
+        };
         yield return Wild(generator, NodeKind.Ember, "Ember", Shape.Flame, 0xF0BE50, WildUnlock.Start,
             "No upkeep, steady output.", "Dims over days, and burns out when dim enough.") with
         {

@@ -114,6 +114,11 @@ public partial class Main : Node2D
         if (args.TryGetValue("genes", out var genes)) Garden.Deliver(Math.Max(0, double.Parse(genes) - Garden.GeneBalance));
         if (args.TryGetValue("wildlimit", out var limit))
             Garden.Capacity = Garden.Capacity with { WildFlowers = Math.Max(0, int.Parse(limit)) };
+        // Dev aid: the Evolution kinds unlocked, as their evolutions would (5c), all three or those named.
+        if (args.TryGetValue("unlockwild", out var unlock))
+            foreach (var spec in NodeSpecs.Wild.Where(s => s.Wild!.Unlock == WildUnlock.Evolution))
+                if (unlock == "" || unlock.Split(',').Any(k => k.Equals(spec.Kind.ToString(), StringComparison.OrdinalIgnoreCase)))
+                    Garden.UnlockWild(spec.Kind);
         if (args.TryGetValue("wild", out var wild)) GrowWild(wild);
         if (args.TryGetValue("shaping", out var shaping) && shaping == "") PlaceShaping(); // else Screenshot does
         if (args.ContainsKey("build")) widget.SetBuilding(true);
