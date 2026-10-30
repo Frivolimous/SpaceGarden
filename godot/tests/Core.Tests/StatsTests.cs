@@ -92,7 +92,7 @@ public class StatsTests
         Add(garden, right, NodeKind.Generator);
         Add(garden, trunk, NodeKind.Leaf);
         Add(garden, lab, NodeKind.Research);
-        right.Forming = NodeKind.Lab; // a wild bud on its way
+        right.Forming = NodeKind.Lab; // a passive bud on its way
         foreach (var n in garden.Nodes) n.Power = n.Store / 2;
 
         var stats = GardenStats.Of(garden);

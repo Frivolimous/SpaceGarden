@@ -1,19 +1,19 @@
 namespace SpaceGarden.Core.Tests;
 
-// Step 3e (DESIGN.md, Growth and pruning): a bud the player plants starts at once and forms like a wild one; every bud
+// Step 3e (DESIGN.md, Growth and pruning): a bud the player plants starts at once and forms like a passive one; every bud
 // grows on its own at its part's fill, and growth blobs hurry it; fruit grows only from blobs.
 public class BudTests
 {
     static PlantNode Add(Garden garden, PlantNode parent, NodeKind kind) =>
         garden.GrowBranch(parent, kind) ?? throw new InvalidOperationException($"no room for a {kind} on {parent.Spec.Kind}");
 
-    // core - stem, no wild buds, no groves.
+    // core - stem, no passive buds, no groves.
     static (Garden Garden, PlantNode Stem) WithAStem(int seed = 7)
     {
         var garden = Garden.New(Layout.Radial, seed);
         garden.Capacity = new Capacity(3, 1, 1);
         garden.Unlocks = Tuning.UnlockTrack.Length; // the track done: no raises
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         return (garden, stem);
     }
@@ -115,11 +115,11 @@ public class BudTests
     }
 
     [Fact]
-    public void AWildBudGrowsOnItsOwnToo()
+    public void APassiveBudGrowsOnItsOwnToo()
     {
-        // A wild bud starts from a blob, then grows alone even once no grove is left to feed it.
+        // A passive bud starts from a blob, then grows alone even once no grove is left to feed it.
         var (garden, first) = WithAStem();
-        garden.WildGrowth = true;
+        garden.PassiveGrowth = true;
         var middle = Add(garden, first, NodeKind.Stem);
         var grove = Add(garden, middle, NodeKind.Grove);
         GrowAt(garden, 1, () => garden.Nodes.Any(n => n.FormingBud), 3600);
@@ -135,7 +135,7 @@ public class BudTests
     [Fact]
     public void ANewPlayersFirstGroveEmergesInTheOpeningMinutes()
     {
-        // As a new game starts (see Main.PlantAtHome): the core and its first stem, no grove, so nothing grows wild.
+        // As a new game starts (see Main.PlantAtHome): the core and its first stem, no grove, so nothing grows passively.
         // The player plants a grove on the stem straight away; it forms at the stem's own fill, which starts empty.
         var garden = Garden.New(Layout.Radial, 7);
         var stem = garden.Sprout()!;

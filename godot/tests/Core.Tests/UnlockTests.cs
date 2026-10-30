@@ -31,7 +31,7 @@ public class UnlockTests
     static (Garden Garden, PlantNode Lab) WithALab()
     {
         var garden = NewGarden(new Capacity(1, 0, 1));
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var lab = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Lab);
         foreach (var n in garden.Nodes) n.Power = n.Store;
         return (garden, lab);
@@ -55,7 +55,7 @@ public class UnlockTests
         // core - stem - fork, the fork carrying the lab and a long side branch: blobs wander down it as often as up
         // to the core, and those that don't find the core in time fade with their genes.
         var garden = NewGarden(new Capacity(22, 0, 1), fixedCaps: true);
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var fork = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
         var lab = Add(garden, fork, NodeKind.Lab);
         var tip = fork;
@@ -176,7 +176,7 @@ public class UnlockTests
     {
         // A core, stems and a grove make none: the first unlock waits for the first lab.
         var garden = NewGarden();
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Grove);
         garden.Grow(Day);
         Assert.DoesNotContain(garden.Nodes, n => n.Spec.Kind == NodeKind.Lab);
@@ -230,19 +230,19 @@ public class UnlockTests
     }
 
     [Fact]
-    public void RaisedCapsGiveWildGrowthRoom()
+    public void RaisedCapsGivePassiveGrowthRoom()
     {
-        // The player plants a grove and a lab, and after a day prunes the wild flowers that took every free link: the
-        // next unlock, landing then, fills with wild stems.
+        // The player plants a grove and a lab, and after a day prunes the passive flowers that took every free link: the
+        // next unlock, landing then, fills with passive stems.
         var garden = Planted();
         var stem = garden.Nodes[1];
         var grove = Add(garden, stem, NodeKind.Grove);
         var lab = Add(garden, Add(garden, stem, NodeKind.Stem), NodeKind.Lab); // leaving the second stem a free link
         garden.Grow(Day);
         while (garden.Nodes.FirstOrDefault(n => n != grove && n != lab
-            && n.Spec.Kind is NodeKind.Grove or NodeKind.Lab or NodeKind.Generator) is { } wild)
+            && n.Spec.Kind is NodeKind.Grove or NodeKind.Lab or NodeKind.Generator) is { } passive)
         {
-            garden.Prune(wild);
+            garden.Prune(passive);
             garden.ForgetPrune();
         }
         int stemsBefore = Count(garden, NodeKind.Stem);

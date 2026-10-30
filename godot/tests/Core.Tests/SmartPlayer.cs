@@ -2,9 +2,9 @@ namespace SpaceGarden.Core.Tests;
 
 // A smart, attentive player, for pacing runs (DESIGN.md: "simulations assume a smart player who is actively tending"):
 // the plant is stupid, so this is the brain. Each check-in it
-//   - prunes wild groves past the ones it wants (the farthest first);
+//   - prunes passive groves past the ones it wants (the farthest first);
 //   - prunes drains: while the garden would cost more than it makes at full power, the lab furthest from the core
-//     goes (wild ones are usually far out), then any lab too far out for its genes to find the core;
+//     goes (passive ones are usually far out), then any lab too far out for its genes to find the core;
 //   - makes room: when the stem or generator cap has room but no free link, prunes the farthest flowers (MakeRoom);
 //   - fills the stem cap with stems, nearest the core first;
 //   - adds labs near the core (within MaxLabDepth) while the power to spare covers one, keeping a small reserve and
@@ -37,7 +37,7 @@ public static class SmartPlayer
         while (Bud(garden, NodeKind.Generator, nearFirst: false, hungriest: true)) { }
         while (Count(garden, NodeKind.Grove) < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
         // The player doesn't undo, and the 30 s undo window passes (counted in physics ticks, which a pacing run
-        // doesn't run; left open, it would hold off wild buds for good).
+        // doesn't run; left open, it would hold off passive buds for good).
         garden.ForgetPrune();
     }
 
@@ -48,7 +48,7 @@ public static class SmartPlayer
 
     static int FreeLinks(Garden garden) => garden.Nodes.Count(n => !n.Spec.IsFruit && n.CanBranch);
 
-    // While the stem or generator cap has room but no link can take one (wild flowers took them all), the farthest
+    // While the stem or generator cap has room but no link can take one (passive flowers took them all), the farthest
     // flower off a stem goes, a lab before a grove, always keeping one of each: its link then takes a stem or generator.
     static void MakeRoom(Garden garden)
     {
@@ -74,7 +74,7 @@ public static class SmartPlayer
 
     static void PruneDrains(Garden garden)
     {
-        // Wild groves past the one-per-GroveEvery-stems the garden needs only drain it and take slots: the farthest go.
+        // Passive groves past the one-per-GroveEvery-stems the garden needs only drain it and take slots: the farthest go.
         while (Count(garden, NodeKind.Grove) > GrovesWanted(garden)
             && garden.Nodes.Where(n => n.Spec.Kind == NodeKind.Grove).MaxBy(n => n.Depth) is { } grove) garden.Prune(grove);
         while (Spare(garden) < 0 && FarthestLab(garden, _ => true) is { } lab) garden.Prune(lab);

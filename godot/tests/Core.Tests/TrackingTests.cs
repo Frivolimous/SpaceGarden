@@ -27,7 +27,7 @@ public class TrackingTests
         Converters = { new JsonStringEnumConverter() },
     };
 
-    // core - stem - lab and a grove on another stem, all full: genes and wild growth both under way.
+    // core - stem - lab and a grove on another stem, all full: genes and passive growth both under way.
     static Garden Growing()
     {
         var garden = NewGarden(new Capacity(6, 1, 2));
@@ -63,16 +63,16 @@ public class TrackingTests
     }
 
     [Fact]
-    public void WildBudsAreCountedAsGrowthBlobsStartThem()
+    public void PassiveBudsAreCountedAsGrowthBlobsStartThem()
     {
         var garden = Growing();
         garden.Grow(12 * Hour);
-        Assert.True(garden.Tracking.WildBuds > 0);
-        Assert.Single(garden.Tracking.Journal, e => e.Text == "The garden budded on its own for the first time");
-        // Every wild bud started is a branch grown or still forming.
+        Assert.True(garden.Tracking.PassiveBuds > 0);
+        Assert.Single(garden.Tracking.Journal, e => e.Text == "First passive bud started");
+        // Every passive bud started is a branch grown or still forming.
         int forming = garden.Nodes.Count(n => n.FormingBud);
         int branches = garden.Tracking.Grown.Where(g => !NodeSpecs.All[g.Key].IsFruit).Sum(g => g.Value) - 4; // the 4 placed
-        Assert.Equal(garden.Tracking.WildBuds, branches + forming);
+        Assert.Equal(garden.Tracking.PassiveBuds, branches + forming);
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class TrackingTests
 
     // ==== SAVES ==== \\
 
-    // Through the save's JSON (version 8) and back: the totals, every tier, the minute half gathered and the journal,
+    // Through the save's JSON (version 9) and back: the totals, every tier, the minute half gathered and the journal,
     // and the garden carries on as the original does.
     [Fact]
     public void TrackingSurvivesTheSave()
@@ -156,7 +156,7 @@ public class TrackingTests
         var (a, b) = (garden.Tracking, loaded.Tracking);
         Assert.Equal(a.Age, b.Age);
         Assert.Equal(a.Grown, b.Grown);
-        Assert.Equal((a.Pruned, a.WildBuds, a.MostParts), (b.Pruned, b.WildBuds, b.MostParts));
+        Assert.Equal((a.Pruned, a.PassiveBuds, a.MostParts), (b.Pruned, b.PassiveBuds, b.MostParts));
         Assert.Equal(a.History.Minutes, b.History.Minutes);
         Assert.Equal(a.History.Hours, b.History.Hours);
         Assert.Equal(a.Journal, b.Journal);
@@ -242,7 +242,7 @@ public class TrackingTests
     {
         // Full, but badly overloaded: a chain of stems, each with a lab, costing far more than the core makes.
         var garden = NewGarden(Capacity.Unlimited);
-        garden.WildGrowth = false;
+        garden.PassiveGrowth = false;
         var at = garden.Core;
         while (garden.FullPowerBalance() is var (made, cost) && cost < made * 4)
         {

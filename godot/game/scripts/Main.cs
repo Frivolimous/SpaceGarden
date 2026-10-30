@@ -88,7 +88,7 @@ public partial class Main : Node2D
         if (save != null && Widget.IdleRates.Contains(save.IdleFps)) widget.IdleFps = save.IdleFps;
         if (save == null) PlantAtHome();
         else widget.KeepOnScreen();
-        // Dev aid: a new garden with its first grove and lab already planted (nothing grows wild without a grove).
+        // Dev aid: a new garden with its first grove and lab already planted (nothing grows passively without a grove).
         if (save == null && args.ContainsKey("grove"))
         {
             var stem = Garden.Nodes[1];
