@@ -127,6 +127,22 @@ public class WildTests
     }
 
     [Fact]
+    public void ABuffersBlobsRaiseNearbyProduction()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        var buffer = Add(garden, stem, NodeKind.Buffer);
+        var generator = Add(garden, stem, NodeKind.Generator);
+        float plain = Garden.FullProductionPerSecond(generator);
+        for (int i = 0; i < 10 && generator.Buff <= 0; i++)
+        {
+            buffer.Blob = 1;
+            garden.Grow(Tuning.EconomyStepSeconds);
+        }
+        Assert.True(generator.Buff > 0);
+        Assert.Equal(plain * (1 + Tuning.BuffBonus), Garden.FullProductionPerSecond(generator), 1e-3f);
+    }
+
+    [Fact]
     public void DiscoveryIsLoggedOnceAndSaved()
     {
         var (garden, stem) = Make(wildLimit: 2);

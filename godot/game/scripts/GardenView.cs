@@ -394,7 +394,10 @@ public partial class GardenView : Node2D
             var colour = ColourOf(node.Spec);
             float halo = Mathf.Min(1, Level(node));
             colour.A = 0.15f * halo * halo; // faint, and only on full parts
-            halos.AddRound(At(node), Size(node) * 3.6f, colour);
+            // A Comet Bloom is bright: a wider, stronger halo.
+            bool bright = node.Spec.Kind == NodeKind.CometBloom;
+            if (bright) colour.A *= 3;
+            halos.AddRound(At(node), Size(node) * (bright ? 5.5f : 3.6f), colour);
             if (node.Glow <= 0) continue;
             // Tight round the part and strong: the halo twice over.
             var glow = Rgb(node.GlowRgb).Lightened(0.2f);

@@ -190,6 +190,22 @@ public static class Tuning
     public const float LichenUpkeep = 3, LichenBlobs = 360;
     public const int LichenLeaves = 4;
 
+    // The passive-only kinds, white. Buffer: BufferBlobs buff blobs an hour; each wanders BufferReach links
+    // (BufferAmplifiedReach more once it passes an Amplifier), and every part it passes makes BuffBonus more (power
+    // and blobs) for the next BuffSeconds.
+    public const float BufferBlobs = 240, BuffBonus = 0.15f, BuffSeconds = 60;
+    public const int BufferReach = 5, BufferAmplifiedReach = 3;
+    // Comet Bloom: sends CometBurst blobs as it appears (growth, genes and buff in turn), then nothing; withers after
+    // CometLifeSeconds.
+    public const int CometBurst = 12;
+    public const float CometLifeSeconds = 86400;
+    // Moonflower: each makes buds within WildBoostReach links MoonflowerBoost likelier to grow wild (half again).
+    public const float MoonflowerBoost = 0.5f;
+    // Nebula Bloom: a seedling within NebulaReach links fills NebulaFill times as fast. Inert until seedlings (5c)
+    // read these.
+    public const int NebulaReach = 3;
+    public const float NebulaFill = 2;
+
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in
     // order. Placeholders for playtesting. Stems and generators each raise their cap by 1 (to 30 stems and 10

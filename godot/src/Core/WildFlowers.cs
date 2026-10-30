@@ -78,13 +78,22 @@ static class WildFlowers
             PowerPerSecond = -Tuning.LichenUpkeep, BlobsPerHour = Tuning.LichenBlobs,
             Fruit = NodeKind.Leaf, MaxFruits = Tuning.LichenLeaves,
         };
-        yield return Wild(passive, NodeKind.Buffer, "Buffer", Shape.Circle, 0xF2F2F2, WildUnlock.Start,
-            "Buff blobs raise nearby production, up to 5 links away (8 if amplified).", "Local only.");
-        yield return Wild(passive, NodeKind.CometBloom, "Comet Bloom", Shape.Circle, 0xFFFFFF, WildUnlock.Start,
-            "Bright; bursts all kinds of blob as it appears.", "Withers after about a day.");
-        yield return Wild(passive, NodeKind.Moonflower, "Moonflower", Shape.Circle, 0xE6ECFA, WildUnlock.Start,
-            "Buds nearby are a little likelier to grow wild.", "Takes a slot.");
-        yield return Wild(passive, NodeKind.NebulaBloom, "Nebula Bloom", Shape.Circle, 0xF4EEFA, WildUnlock.Start,
+        yield return Wild(passive, NodeKind.Buffer, "Buffer", Shape.Sun, 0xF2F2F2, WildUnlock.Start,
+            "Buff blobs raise nearby production, up to 5 links away (8 if amplified).", "Local only.") with
+        {
+            Sends = BlobKind.Buff, BlobsPerHour = Tuning.BufferBlobs,
+        };
+        yield return Wild(passive, NodeKind.CometBloom, "Comet Bloom", Shape.Sparkle, 0xFFFFFF, WildUnlock.Start,
+            "Bright; bursts all kinds of blob as it appears.", "Withers after about a day.") with
+        {
+            Sends = BlobKind.All, EmergeBurst = Tuning.CometBurst, LifeSeconds = Tuning.CometLifeSeconds,
+        };
+        yield return Wild(passive, NodeKind.Moonflower, "Moonflower", Shape.Rose, 0xE6ECFA, WildUnlock.Start,
+            "Buds nearby are a little likelier to grow wild.", "Takes a slot.") with
+        {
+            WildBoost = Tuning.MoonflowerBoost,
+        };
+        yield return Wild(passive, NodeKind.NebulaBloom, "Nebula Bloom", Shape.Galaxy, 0xF4EEFA, WildUnlock.Start,
             "A seedling within a few links fills twice as fast.", "Useless without a seedling.");
     }
 }

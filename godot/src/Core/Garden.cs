@@ -678,6 +678,8 @@ public sealed class Garden
         if (parent == null) node.MaxLinks = Capacity.CoreLinks;
         Nodes.Add(node);
         if (parent != null && !loading) Tracking.Grew(spec, Nodes.Count);
+        // A Comet Bloom bursts every kind of blob as it appears.
+        if (spec.EmergeBurst > 0 && !loading) node.Blob = spec.EmergeBurst;
         if (!spec.IsFruit && !loading)
         {
             Tracking.Reached(Nodes.Count(n => !n.Spec.IsFruit));
@@ -726,6 +728,7 @@ public sealed class Garden
             node.Power = Math.Max(0, node.Power + (made - cost) * dt);
             node.Blob += BlobsPerHour(node) * hours;
             node.Life += seconds;
+            node.Buff = Math.Max(0, node.Buff - dt);
             if (node.Spec.LifeSeconds > 0 && node.Life >= node.Spec.LifeSeconds) ending.Add(node);
         }
         if (ending.Count > 0)
@@ -844,7 +847,7 @@ public sealed class Garden
     // What a part makes per second when full (its fruit adding a little each: see FruitBonus; an Ember less as it
     // dims).
     public static float FullProductionPerSecond(PlantNode node) =>
-        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node);
+        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node) * Buffed(node);
 
     // A part's own fruit raise its output, each by its FlowerBonus (times the part's FruitBonusScale: a Wild Lab's
     // count double).
@@ -878,7 +881,10 @@ public sealed class Garden
     public static float BlobsPerHour(PlantNode node) => FullBlobsPerHour(node) * Output(node);
 
     // The same when full.
-    public static float FullBlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node);
+    public static float FullBlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node) * Buffed(node);
+
+    // A part a Buffer'"'"'s buff blob passed lately makes BuffBonus more.
+    static float Buffed(PlantNode node) => node.Buff > 0 ? 1 + Tuning.BuffBonus : 1;
 
     // ==== BLOBS ==== \\
 
@@ -935,6 +941,9 @@ public sealed class Garden
                 return 0;
             case BlobKind.Growth:
                 return SendGrowth(flower, flower, ref counts, null, Tuning.BlobMaxHops, 0, canDouble: true);
+            case BlobKind.Buff:
+                SendBuff(flower);
+                return 0;
             default:
                 return 0;
         }
@@ -1003,6 +1012,37 @@ public sealed class Garden
         if (doubled is { } d)
             grew += SendGrowth(grove, d.At, ref counts, d.From, hops - d.Hops, delay + d.Hops * Tuning.MoteLinkSeconds, canDouble: false);
         return grew;
+    }
+
+    // A Buffer's buff blob leaves (DESIGN.md, Wild flowers). It wanders as the others do, but nothing absorbs it:
+    // every part it passes, for BufferReach links (BufferAmplifiedReach more once it passes an Amplifier), makes
+    // BuffBonus more for BuffSeconds. A Resistor stops it. Settled now, as the others are; shown fading where it ends.
+    void SendBuff(PlantNode buffer)
+    {
+        var route = RouteIfShown();
+        route?.Add(buffer);
+        PlantNode? cameFrom = null;
+        var at = buffer;
+        int reach = Tuning.BufferReach;
+        bool amplified = false;
+        for (int hop = 0; hop < reach; hop++)
+        {
+            int options = at.Branches.Count + (at.Parent != null ? 1 : 0);
+            if (options == 0) break;
+            var skip = options > 1 ? cameFrom : null;
+            var next = Option(at, rng.Next(skip != null ? options - 1 : options), skip);
+            cameFrom = at;
+            at = next;
+            route?.Add(at);
+            if (at.Spec.BlocksBlobs) break;
+            at.Buff = Tuning.BuffSeconds;
+            if (!amplified && at.Spec.DoublesBlobs)
+            {
+                amplified = true;
+                reach += Tuning.BufferAmplifiedReach;
+            }
+        }
+        Show(route, buffer);
     }
 
     // A part with something forming always absorbs a growth blob; one with room to start a fruit or a bud does
