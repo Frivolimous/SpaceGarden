@@ -155,63 +155,60 @@ public static class Tuning
     // Labs are the only source: the first upgrade waits for the first lab's genes to find the core.
     public const float BlobGenes = 1;
 
-    // ==== WILD FLOWERS ==== \\
-    // The chance a new bud grows wild, per free wild flower slot, by how it started (DESIGN.md, Wild flowers): a
-    // passive bud's and a planted one's. Placeholders, as every wild flower number here.
+    // ==== WILD FLOWERS ==== \
+    // Placeholders, as every wild flower number here (DESIGN.md, Wild flowers). The balance target: a wild flower slot
+    // is worth about 0.65 labs, so each kind should be worth its base plus about that; upkeep and transfer are the
+    // fine-tuning dials. The chance a new bud grows wild, per free wild flower slot, by how it started: a passive
+    // bud's and a planted one's.
     public const float PassiveWildChance = 0.05f;
     public const float PlantedWildChance = 0.04f;
-    // An Evolution kind (Big Stem, Pulsar, Twin Star) may grow this many more each time its evolution is taken.
-    public const int WildUnlockCap = 2;
-    // A Moonflower's boost reaches buds on parts up to this many links away.
-    public const int WildBoostReach = 3;
 
-    // Each kind's quirks, first passes (DESIGN.md, Wild flowers, the table), in WildFlowers.cs. Amplifier: a blob
-    // passing through becomes two, once each (2 links, no fruit). Resistor: blocks every blob, and sends power on at
-    // ResistorTransfer a second (a stem's 30), slowing what's beyond it.
+    // Each kind's own numbers (the kinds in WildFlowers.cs). Amplifier: each one a gene or growth blob passes doubles
+    // it AmplifyChance of the time, once a blob at most (50% larger on average, the blobs still whole).
+    public const float AmplifyChance = 0.5f;
+    // Resistor: blobs never step onto it, from either side; it sends power on at ResistorTransfer a second (a stem 30).
     public const float ResistorTransfer = 6;
     // Tendril: its link TendrilLink times as long and TendrilSpring as springy; holds TendrilStore (a stem 150) and
-    // counts as TendrilWeight as empty as it is when its neighbours choose where to send power (a stem 1.1), so it
-    // fills slowly.
-    public const float TendrilLink = 2.5f, TendrilSpring = 0.3f, TendrilStore = 600, TendrilWeight = 0.5f;
-    // Ember: a generator's rate whatever its fill, no upkeep; it dims to EmberDimTo of that over EmberLifeSeconds,
-    // then burns out.
-    public const float EmberLifeSeconds = 3 * 86400, EmberDimTo = 0.25f;
-    // Lumber Grove: LumberBlobs growth blobs an hour (a grove 1,200) at LumberUpkeep a second (a grove 4).
-    public const float LumberBlobs = 2400, LumberUpkeep = 8;
-    // Seed Pod: SeedPodBlobs an hour, but they leave SeedPodBurst at once (about every 2.5 minutes at full fill).
-    public const float SeedPodBlobs = 1440;
-    public const int SeedPodBurst = 60;
-    // Wild Lab: WildLabBlobs gene blobs an hour (a lab 720), but WildLabFruits research (a lab 3), each counting
-    // WildLabFruitScale times: with all six, 480 x 2.2 = 1,056 an hour against a full lab's 936.
-    public const float WildLabBlobs = 480, WildLabFruitScale = 2;
-    public const int WildLabFruits = 6;
-    // Lichen: LichenUpkeep a second (a lab 6) and LichenBlobs gene blobs an hour; its LichenLeaves leaves, a quarter
-    // off each, bring its upkeep to 0.
-    public const float LichenUpkeep = 3, LichenBlobs = 360;
-    public const int LichenLeaves = 4;
-
-    // The Evolution kinds, locked until their evolution (5c) calls Garden.UnlockWild. Big Stem: 4 links, sending power
-    // on at BigStemTransfer a second (a stem 30).
+    // sends on at TendrilTransfer.
+    public const float TendrilLink = 2.5f, TendrilSpring = 0.3f, TendrilStore = 600, TendrilTransfer = 20;
+    // Big Stem: 4 links, sending power on at BigStemTransfer (a stem 30).
     public const float BigStemTransfer = 15;
-    // Pulsar: makes PulsarGen a second (a generator 12) while below full, built up unseen and released into its store
+    // Pulsar: makes PulsarGen a second (1.5 generators) while below full, built up unseen and released into its store
     // every PulsarSeconds, swelling it past full; it holds PulsarStore and sends on at PulsarTransfer (a generator 18).
     public const float PulsarGen = 18, PulsarSeconds = 20, PulsarStore = 300, PulsarTransfer = 24;
-    // Twin Star: a generator with 2 links, carrying the branch on.
+    // Twin Star: a generator with 2 links, making TwinStarGen (80% of a generator's 12).
+    public const float TwinStarGen = 9.6f;
+    // Ember: starts at EmberGen (twice a generator), falling in a straight line to nothing over EmberLifeSeconds (level
+    // with a generator halfway, at a day and a half), then burns out.
+    public const float EmberGen = 24, EmberLifeSeconds = 3 * 86400;
+    // Lumber Grove: LumberBlobs growth blobs an hour (2 groves) at LumberUpkeep a second (1.5 groves).
+    public const float LumberBlobs = 2400, LumberUpkeep = 6;
+    // Seed Pod: SeedPodBlobs an hour (1.5 groves), but they leave SeedPodBurst at once (every 2 minutes at full fill).
+    public const float SeedPodBlobs = 1800;
+    public const int SeedPodBurst = 60;
+    // Wild Lab: a lab's genes, but each of its WildLabFruits research counts WildLabFruitScale times (+20%): twice a
+    // bare lab with all five, against a full lab's 1.3.
+    public const float WildLabFruitScale = 2;
+    // Lichen: LichenBlobs gene blobs an hour (0.8 of a lab) at LichenUpkeep a second (a lab 6); its 4 leaves, a quarter
+    // off each, bring its upkeep to 0.
+    public const float LichenBlobs = 576, LichenUpkeep = 3;
 
-    // The passive-only kinds, white. Buffer: BufferBlobs buff blobs an hour; each wanders BufferReach links
-    // (BufferAmplifiedReach more once it passes an Amplifier), and every part it passes makes BuffBonus more (power
-    // and blobs) for the next BuffSeconds.
-    public const float BufferBlobs = 240, BuffBonus = 0.15f, BuffSeconds = 60;
+    // The passive-only kinds, white. Buffer: BufferBlobs buff blobs an hour (a glow fruit GlowBlobs, a quarter of
+    // that); each wanders BufferReach links (BufferAmplifiedReach more once it passes an Amplifier), and every part it
+    // passes makes BuffBonus more (power and blobs) for the next BuffSeconds. A second buff only starts the time again.
+    public const float BufferBlobs = 240, GlowBlobs = BufferBlobs / 4, BuffBonus = 0.5f, BuffSeconds = 60;
     public const int BufferReach = 5, BufferAmplifiedReach = 3;
-    // Comet Bloom: sends CometBurst blobs as it appears (growth, genes and buff in turn), then nothing; withers after
-    // CometLifeSeconds.
-    public const int CometBurst = 12;
+    // Comet Bloom: as it appears, a burst of gene and growth blobs worth CometHours of a lab and a grove (their blobs
+    // mixed in that share); withers after CometLifeSeconds.
+    public const int CometHours = 2;
     public const float CometLifeSeconds = 86400;
-    // Moonflower: each makes buds within WildBoostReach links MoonflowerBoost likelier to grow wild (half again).
-    public const float MoonflowerBoost = 0.5f;
-    // Nebula Bloom: a seedling within NebulaReach links fills NebulaFill times as fast. Inert until seedlings (5c)
-    // read these.
-    public const int NebulaReach = 3;
+    // Moonflower: each makes buds within MoonflowerReach links MoonflowerBoost more likely to grow wild (three times
+    // as likely, with one), and wild flowers within that reach make MoonlitBonus more (power and blobs; not stacking).
+    public const int MoonflowerReach = 5;
+    public const float MoonflowerBoost = 2, MoonlitBonus = 0.1f;
+    // Nebula Bloom: power reaching a seedling within NebulaReach links counts NebulaFill times. Inert until seedlings
+    // (5c) read these.
+    public const int NebulaReach = 5;
     public const float NebulaFill = 2;
 
     // ==== RESEARCH ==== \\

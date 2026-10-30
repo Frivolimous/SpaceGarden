@@ -54,7 +54,8 @@ public class WildTests
     {
         var (garden, stem) = Make(wildLimit: 1);
         garden.Capacity = garden.Capacity with { Stems = 1 }; // the stem cap is full
-        var tendril = Add(garden, stem, NodeKind.Tendril); // a wild stem takes no stem slot
+        var tendril = Add(garden, stem, NodeKind.Amplifier); // an Amplifier takes no stem slot
+        Assert.Null(garden.GrowBranch(stem, NodeKind.Tendril)); // a Tendril would: the stem cap is full
         Assert.Equal(0, garden.FreeWildSlots);
         Assert.Null(garden.GrowBranch(stem, NodeKind.Amplifier)); // the limit is reached
         garden.Prune(tendril);
@@ -77,13 +78,13 @@ public class WildTests
         Assert.DoesNotContain(rolled, locked.Contains);
         Assert.Contains(NodeKind.Ember, rolled);
 
-        // Its evolution unlocks a kind, with room for WildUnlockCap of it.
+        // Its evolution unlocks a kind: it joins the pool, uncapped (caps stay possible in data).
         garden.UnlockWild(NodeKind.Pulsar);
-        Assert.Equal(Tuning.WildUnlockCap, garden.KindCap(NodeKind.Pulsar));
+        Assert.Null(garden.KindCap(NodeKind.Pulsar));
         var generators = Enumerable.Range(0, 5_000).Select(_ => garden.RollBud(stem, NodeKind.Generator, passive: true)).ToList();
         Assert.Contains(NodeKind.Pulsar, generators);
-        for (int i = 0; i < Tuning.WildUnlockCap; i++) Add(garden, garden.Core.Branches[0], NodeKind.Pulsar);
-        Assert.False(garden.CanGrowWild(NodeKind.Pulsar)); // capped
+        garden.WildCaps[NodeKind.Pulsar] = 0;
+        Assert.False(garden.CanGrowWild(NodeKind.Pulsar)); // a per-kind cap still holds
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class WildTests
         var lab = Add(garden, Add(garden, garden.Core, NodeKind.Amplifier), NodeKind.Lab);
         lab.Blob = 1;
         garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.Equal(2 * Tuning.BlobGenes, garden.Genes);
+        Assert.InRange(garden.Genes, 1, 2 * Tuning.BlobGenes); // doubled half the time
     }
 
     [Fact]
@@ -171,6 +172,6 @@ public class WildTests
         Assert.Equal(garden.Tracking.Discovered, loaded.Tracking.Discovered);
         Assert.Equal(2, loaded.WildCount);
         Assert.Equal(1234, loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Tendril).Life);
-        Assert.Equal(Tuning.WildUnlockCap, loaded.KindCap(NodeKind.BigStem));
+        Assert.Contains(NodeKind.BigStem, loaded.WildUnlocked);
     }
 }

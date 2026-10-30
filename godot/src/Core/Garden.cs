@@ -266,8 +266,8 @@ public sealed class Garden
             if (root.Spec.IsFruit ? parent.Fruits.Count >= parent.Spec.MaxFruits : !parent.CanBranch) return false;
             var counts = CountKinds();
             var (stems, generators, wild) = (counts.Stems, counts.Generators, counts.Wild);
-            stems += nodes.Count(n => n.Spec.Kind == NodeKind.Stem);
-            generators += nodes.Count(n => n.Spec.Kind == NodeKind.Generator);
+            stems += nodes.Count(n => SlotOf(n.Spec.Kind) == NodeKind.Stem);
+            generators += nodes.Count(n => SlotOf(n.Spec.Kind) == NodeKind.Generator);
             wild += nodes.Count(n => n.Spec.IsWild);
             return stems <= Capacity.Stems && generators <= Capacity.Generators && wild <= Capacity.WildFlowers
                 && nodes.Where(n => n.Spec.IsWild).GroupBy(n => n.Spec.Kind)
@@ -484,26 +484,36 @@ public sealed class Garden
     }
 
     // How many stems, generators and wild flowers there are, counting the buds forming (they hold their slot), for the
-    // caps. A wild flower takes a wild flower slot, never its base kind's.
+    // caps. A wild flower takes a wild flower slot, and a stem or generator kind (but the Amplifier and the Resistor) its
+    // base kind's slot too (see SlotOf).
     readonly record struct Counts(int Stems, int Generators, int Wild)
     {
         // With one more of this kind (a bud starting).
-        public Counts With(NodeKind kind) => NodeSpecs.All[kind].IsWild ? this with { Wild = Wild + 1 } : kind switch
+        public Counts With(NodeKind kind)
         {
-            NodeKind.Stem => this with { Stems = Stems + 1 },
-            NodeKind.Generator => this with { Generators = Generators + 1 },
-            _ => this,
-        };
+            var counts = NodeSpecs.All[kind].IsWild ? this with { Wild = Wild + 1 } : this;
+            return SlotOf(kind) switch
+            {
+                NodeKind.Stem => counts with { Stems = Stems + 1 },
+                NodeKind.Generator => counts with { Generators = Generators + 1 },
+                _ => counts,
+            };
+        }
     }
+
+    // The capped kind whose slot a kind takes: a basic kind its own, a wild flower its base's if it takes one
+    // (WildSpec.BaseSlot: a Tendril a stem's, a Pulsar a generator's), else none.
+    internal static NodeKind? SlotOf(NodeKind kind) => NodeSpecs.All[kind].Wild is { } wild ? (wild.BaseSlot ? wild.Base : null) : kind;
 
     Counts CountKinds()
     {
         int stems = 0, generators = 0, wild = 0;
         void Count(NodeKind kind)
         {
-            if (kind == NodeKind.Stem) stems++;
-            else if (kind == NodeKind.Generator) generators++;
-            else if (NodeSpecs.All[kind].IsWild) wild++;
+            var slot = SlotOf(kind);
+            if (slot == NodeKind.Stem) stems++;
+            else if (slot == NodeKind.Generator) generators++;
+            if (NodeSpecs.All[kind].IsWild) wild++;
         }
         foreach (var n in Nodes)
         {
@@ -513,16 +523,18 @@ public sealed class Garden
         return new(stems, generators, wild);
     }
 
-    // Stems and generators are capped; labs and groves only by free links; wild flowers by the wild flower limit (and
-    // whether their kind can grow yet: see CanGrowWild).
-    bool HasRoomFor(NodeKind kind, Counts counts) => NodeSpecs.All[kind].IsWild
-        ? counts.Wild < Capacity.WildFlowers && CanGrowWild(kind)
-        : kind switch
+    // Stems and generators are capped; labs and groves only by free links; wild flowers by the wild flower limit,
+    // whether their kind can grow yet (see CanGrowWild), and their base's cap if they take its slot.
+    bool HasRoomFor(NodeKind kind, Counts counts)
+    {
+        if (NodeSpecs.All[kind].IsWild && (counts.Wild >= Capacity.WildFlowers || !CanGrowWild(kind))) return false;
+        return SlotOf(kind) switch
         {
             NodeKind.Stem => counts.Stems < Capacity.Stems,
             NodeKind.Generator => counts.Generators < Capacity.Generators,
             _ => true,
         };
+    }
 
     // The kinds of passive branch this part could bud now, with their odds: near the core only stems, further out also
     // generators, labs and groves. (A garden with no grove sends no growth blobs, so it never grows its first one
@@ -554,29 +566,32 @@ public sealed class Garden
         return kinds[^1].Kind;
     }
 
-    // ==== WILD FLOWERS ==== \\
+    // ==== WILD FLOWERS ==== \
 
-    // How many of each capped wild flower kind may grow (DESIGN.md, Wild flowers: only Big Stem, Pulsar and Twin Star,
-    // the Evolution kinds): none until its evolution unlocks it (see UnlockWild), +WildUnlockCap each time.
+    // The Evolution kinds unlocked (Big Stem, Pulsar, Twin Star): they join the pool once their evolution is taken
+    // (see UnlockWild).
+    public readonly HashSet<NodeKind> WildUnlocked = new();
+    // Caps on single wild flower kinds, kept in data though none is set for now (DESIGN.md, Wild flowers: no per-kind
+    // caps): a kind with no entry is uncapped.
     public readonly Dictionary<NodeKind, int> WildCaps = new();
 
     // The wild flowers growing and forming, against the limit.
     public int WildCount => CountKinds().Wild;
     public int FreeWildSlots => Math.Max(0, Capacity.WildFlowers - WildCount);
 
-    // The cap on a wild flower kind (null: uncapped, the Start kinds).
-    public int? KindCap(NodeKind kind) =>
-        NodeSpecs.All[kind].Wild is { Unlock: WildUnlock.Evolution } ? WildCaps.GetValueOrDefault(kind) : null;
+    // The cap on a wild flower kind (null: uncapped).
+    public int? KindCap(NodeKind kind) => WildCaps.TryGetValue(kind, out var cap) ? cap : null;
 
-    // Whether a wild flower kind can grow now: a Start kind always (within the limit), an Evolution kind while its cap
-    // has room.
-    public bool CanGrowWild(NodeKind kind) => KindCap(kind) is not { } cap || CountOf(kind) < cap;
+    // Whether a wild flower kind can grow now: a Start kind always, an Evolution kind once unlocked; and within its
+    // cap, if it has one.
+    public bool CanGrowWild(NodeKind kind) =>
+        NodeSpecs.All[kind].Wild is { } wild && (wild.Unlock == WildUnlock.Start || WildUnlocked.Contains(kind))
+        && (KindCap(kind) is not { } cap || CountOf(kind) < cap);
 
-    // Its evolution was taken (step 5c calls this as it blooms): the kind may grow wild, up to WildUnlockCap more.
+    // Its evolution was taken (step 5c calls this as it blooms): the kind joins the pool.
     public void UnlockWild(NodeKind kind)
     {
-        if (NodeSpecs.All[kind].Wild is not { Unlock: WildUnlock.Evolution }) return;
-        WildCaps[kind] = WildCaps.GetValueOrDefault(kind) + Tuning.WildUnlockCap;
+        if (NodeSpecs.All[kind].Wild is { Unlock: WildUnlock.Evolution }) WildUnlocked.Add(kind);
     }
 
     // Parts of a kind, and buds forming of it.
@@ -601,26 +616,47 @@ public sealed class Garden
     internal NodeKind RollBud(PlantNode parent, NodeKind kind, bool passive) => GrowsWild(parent, kind, passive, CountKinds());
 
     // How much likelier a bud on this part is to grow wild: each wild flower with a WildBoost (a Moonflower) within
-    // Tuning.WildBoostReach links adds its boost.
+    // Tuning.MoonflowerReach links adds its boost.
     float WildBoostAt(PlantNode parent)
     {
         float boost = 1;
         if (!Nodes.Any(n => n.Spec.WildBoost > 0)) return boost;
-        var seen = new HashSet<PlantNode> { parent };
-        var ring = new List<PlantNode> { parent };
-        for (int step = 0; step <= Tuning.WildBoostReach && ring.Count > 0; step++)
+        foreach (var n in Within(parent, Tuning.MoonflowerReach)) boost += n.Spec.WildBoost;
+        return boost;
+    }
+
+    // The main parts within so many links of this one, itself included.
+    static IEnumerable<PlantNode> Within(PlantNode from, int links)
+    {
+        var seen = new HashSet<PlantNode> { from };
+        var ring = new List<PlantNode> { from };
+        for (int step = 0; step <= links && ring.Count > 0; step++)
         {
             var next = new List<PlantNode>();
             foreach (var n in ring)
             {
-                boost += n.Spec.WildBoost;
+                yield return n;
                 if (n.Parent != null && seen.Add(n.Parent)) next.Add(n.Parent);
                 foreach (var b in n.Branches)
                     if (seen.Add(b)) next.Add(b);
             }
             ring = next;
         }
-        return boost;
+    }
+
+    // Each economy step: the wild flowers within MoonflowerReach links of a Moonflower make MoonlitBonus more.
+    void MarkMoonlit()
+    {
+        bool any = false;
+        foreach (var n in Nodes)
+        {
+            n.Moonlit = false;
+            any |= n.Spec.WildBoost > 0;
+        }
+        if (!any) return;
+        foreach (var moonflower in Nodes.Where(n => n.Spec.WildBoost > 0).ToList())
+            foreach (var n in Within(moonflower, Tuning.MoonflowerReach))
+                if (n.Spec.IsWild) n.Moonlit = true;
     }
 
     // Dev aid (--wild=KIND) and screenshots: a wild flower of this kind, grown at once on the deepest part with a free
@@ -718,9 +754,15 @@ public sealed class Garden
     {
         float dt = (float)seconds, hours = (float)(seconds / 3600);
         float stored = 0, production = 0, upkeep = 0; // for the history, as the step starts
+        MarkMoonlit();
         foreach (var node in Nodes)
         {
-            if (node.Spec.IsFruit) continue;
+            if (node.Spec.IsFruit)
+            {
+                // A glow sends buff blobs, as a small Buffer.
+                node.Blob += BlobsPerHour(node) * hours;
+                continue;
+            }
             float made = ProductionPerSecond(node), cost = UpkeepPerSecond(node);
             stored += node.Power;
             production += made;
@@ -764,8 +806,8 @@ public sealed class Garden
                 while (flower.Blob >= 1 - 1e-4f) // (a whole blob, give or take rounding)
                 {
                     flower.Blob = Math.Max(0, flower.Blob - 1);
-                    // A Comet Bloom's burst is every kind of blob in turn.
-                    var kind = flower.Spec.Sends == BlobKind.All ? (BlobKind)(1 + (int)MathF.Round(flower.Blob) % 3) : flower.Spec.Sends;
+                    // A Comet Bloom's burst: gene and growth blobs, mixed as a lab's and a grove's are.
+                    var kind = flower.Spec.Sends == BlobKind.All ? CometBlob((int)MathF.Round(flower.Blob)) : flower.Spec.Sends;
                     grew += Send(flower, kind, ref counts);
                 }
             }
@@ -798,6 +840,14 @@ public sealed class Garden
         Tracking.Age += seconds;
         Tracking.History.Record(Tracking.Age, seconds, stored, production, upkeep);
         return grew;
+    }
+
+    // Which blob a Comet Bloom's burst sends, by how many are left: gene and growth blobs in the share a lab's and a
+    // grove's blob rates make them.
+    static BlobKind CometBlob(int left)
+    {
+        int genes = (int)NodeSpecs.All[NodeKind.Lab].BlobsPerHour, growth = (int)NodeSpecs.All[NodeKind.Grove].BlobsPerHour;
+        return left % (genes + growth) < genes ? BlobKind.Genes : BlobKind.Growth;
     }
 
     // Where a part sends a clump of power this step, if anywhere (the original's attemptTransferPower): once it's
@@ -847,9 +897,9 @@ public sealed class Garden
     // How hard a part works (DESIGN.md: "Everything follows its fill"): in proportion to its fill, up to full.
     public static float Output(PlantNode node) => Math.Clamp(node.Fill, 0, 1);
 
-    // Power a part makes per second now: in proportion to its fill (an Ember's whatever its fill), nothing once full.
+    // Power a part makes per second now: in proportion to its fill, nothing once full.
     public static float ProductionPerSecond(PlantNode node) =>
-        node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * (node.Spec.SteadyOutput ? 1 : Output(node));
+        node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * Output(node);
 
     // What the cards show it making: its full rate once full (when it makes nothing, idling, not starved), else
     // what it makes now.
@@ -859,7 +909,7 @@ public sealed class Garden
     // What a part makes per second when full (its fruit adding a little each: see FruitBonus; an Ember less as it
     // dims).
     public static float FullProductionPerSecond(PlantNode node) =>
-        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node) * Buffed(node);
+        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node) * Boosted(node);
 
     // A part's own fruit raise its output, each by its FlowerBonus (times the part's FruitBonusScale: a Wild Lab's
     // count double).
@@ -870,10 +920,10 @@ public sealed class Garden
         return bonus;
     }
 
-    // How bright a wild flower that dims (an Ember) still is: 1 as it grows, down to EmberDimTo as its life ends.
-    // Others: 1.
+    // How bright a wild flower that dims (an Ember) still is: 1 as it grows, falling in a straight line to 0 as its life
+    // ends (an Ember's rate is twice a generator's, so it's level with one halfway). Others: 1.
     public static float Brightness(PlantNode node) => !node.Spec.Dims ? 1
-        : 1 - (1 - Tuning.EmberDimTo) * (float)Math.Clamp(node.Life / node.Spec.LifeSeconds, 0, 1);
+        : 1 - (float)Math.Clamp(node.Life / node.Spec.LifeSeconds, 0, 1);
 
     // Power a part costs per second now: its full upkeep times its fill (past full, more).
     public static float UpkeepPerSecond(PlantNode node) => FullUpkeepPerSecond(node) * Math.Max(0, node.Fill);
@@ -893,10 +943,10 @@ public sealed class Garden
     public static float BlobsPerHour(PlantNode node) => FullBlobsPerHour(node) * Output(node);
 
     // The same when full.
-    public static float FullBlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node) * Buffed(node);
+    public static float FullBlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node) * Boosted(node);
 
     // A part a Buffer'"'"'s buff blob passed lately makes BuffBonus more.
-    static float Buffed(PlantNode node) => node.Buff > 0 ? 1 + Tuning.BuffBonus : 1;
+    static float Boosted(PlantNode node) => (node.Buff > 0 ? 1 + Tuning.BuffBonus : 1) * (node.Moonlit ? 1 + Tuning.MoonlitBonus : 1);
 
     // ==== BLOBS ==== \\
 
@@ -904,9 +954,9 @@ public sealed class Garden
     // at a dead end, until a part absorbs it (a gene blob: only the core) or BlobMaxHops links have passed. Returns
     // the part that absorbed it, if one did, and adds the parts it passed to route (from the flower), if given: only
     // a blob that will be shown needs one. Many thousands of blobs leave an hour, so it allocates nothing else.
-    // A Resistor stops it dead; the first Amplifier it passes (while canDouble) is noted in Doubled, where a second
-    // blob carries on (see SendGenes, Grow), its walk starting there as if it had come from cameFrom, with the hops
-    // left.
+    // A Resistor is a closed door from both sides: a blob never steps onto it. Each Amplifier it passes (while
+    // canDouble) doubles it AmplifyChance of the time, once at most: noted in Doubled, where a second blob carries on
+    // (see SendGenes, SendGrowth), its walk starting there as if it had come from cameFrom, with the hops left.
     PlantNode? Walk(PlantNode from, bool genes, ref Counts counts, List<PlantNode>? route, PlantNode? cameFrom = null,
         int hops = Tuning.BlobMaxHops, bool canDouble = true)
     {
@@ -915,29 +965,46 @@ public sealed class Garden
         var at = from;
         for (int hop = 0; hop < hops; hop++)
         {
-            int options = at.Branches.Count + (at.Parent != null ? 1 : 0);
-            if (options == 0) return null; // a lone core
-            var skip = options > 1 ? cameFrom : null;
-            var next = Option(at, rng.Next(skip != null ? options - 1 : options), skip);
+            if (StepFrom(at, cameFrom) is not { } next) return null; // a lone core, or walled in by Resistors
             cameFrom = at;
             at = next;
             route?.Add(at);
-            if (at.Spec.BlocksBlobs) return null;
             if (genes ? at == Core : Absorbs(at, counts)) return at;
-            if (canDouble && Doubled == null && at.Spec.DoublesBlobs) Doubled = (at, cameFrom, hop + 1);
+            if (canDouble && Doubled == null && at.Spec.DoublesBlobs && rng.NextDouble() < Tuning.AmplifyChance)
+                Doubled = (at, cameFrom, hop + 1);
         }
         return null;
     }
 
-    // Where the last walk passed an Amplifier: the part, the one it came from, and the hops it had taken.
+    // Where the last walk was doubled by an Amplifier: the part, the one it came from, and the hops it had taken.
     (PlantNode At, PlantNode From, int Hops)? Doubled;
 
-    // The pick-th of a part's branches and then its parent, passing over skip.
+    // One link of a blob's walk, from at (having come from cameFrom): a link at random, never into a Resistor, and
+    // never straight back unless at a dead end. Null if there's nowhere to go.
+    PlantNode? StepFrom(PlantNode at, PlantNode? cameFrom)
+    {
+        int open = Open(at, null);
+        if (open == 0) return null;
+        var skip = open > 1 ? cameFrom : null;
+        return Option(at, rng.Next(skip != null ? Open(at, skip) : open), skip);
+    }
+
+    // How many links a blob could take from a part, passing over skip and any Resistor.
+    static int Open(PlantNode at, PlantNode? skip)
+    {
+        int open = 0;
+        foreach (var branch in at.Branches)
+            if (branch != skip && !branch.Spec.BlocksBlobs) open++;
+        if (at.Parent is { } parent && parent != skip && !parent.Spec.BlocksBlobs) open++;
+        return open;
+    }
+
+    // The pick-th of those: a part's branches and then its parent.
     static PlantNode Option(PlantNode at, int pick, PlantNode? skip)
     {
         foreach (var branch in at.Branches)
         {
-            if (branch == skip) continue;
+            if (branch == skip || branch.Spec.BlocksBlobs) continue;
             if (pick-- == 0) return branch;
         }
         return at.Parent!;
@@ -1026,27 +1093,30 @@ public sealed class Garden
         return grew;
     }
 
-    // A Buffer's buff blob leaves (DESIGN.md, Wild flowers). It wanders as the others do, but nothing absorbs it:
-    // every part it passes, for BufferReach links (BufferAmplifiedReach more once it passes an Amplifier), makes
-    // BuffBonus more for BuffSeconds. A Resistor stops it. Settled now, as the others are; shown fading where it ends.
-    void SendBuff(PlantNode buffer)
+    // A buff blob leaves a Buffer, or a glow fruit (DESIGN.md, Wild flowers). It wanders as the others do, but nothing
+    // absorbs it: every part it passes, for BufferReach links (BufferAmplifiedReach more once it passes an Amplifier),
+    // makes BuffBonus more for BuffSeconds. A glow's starts on the part it hangs from. Settled now, as the others are;
+    // shown fading where it ends.
+    void SendBuff(PlantNode from)
     {
         var route = RouteIfShown();
-        route?.Add(buffer);
+        route?.Add(from);
         PlantNode? cameFrom = null;
-        var at = buffer;
+        var at = from;
+        if (from.Spec.IsFruit && from.Parent is { } parent)
+        {
+            at = parent;
+            route?.Add(at);
+            at.Buff = Tuning.BuffSeconds;
+        }
         int reach = Tuning.BufferReach;
         bool amplified = false;
         for (int hop = 0; hop < reach; hop++)
         {
-            int options = at.Branches.Count + (at.Parent != null ? 1 : 0);
-            if (options == 0) break;
-            var skip = options > 1 ? cameFrom : null;
-            var next = Option(at, rng.Next(skip != null ? options - 1 : options), skip);
+            if (StepFrom(at, cameFrom) is not { } next) break;
             cameFrom = at;
             at = next;
             route?.Add(at);
-            if (at.Spec.BlocksBlobs) break;
             at.Buff = Tuning.BuffSeconds;
             if (!amplified && at.Spec.DoublesBlobs)
             {
@@ -1054,7 +1124,7 @@ public sealed class Garden
                 reach += Tuning.BufferAmplifiedReach;
             }
         }
-        Show(route, buffer);
+        Show(route, from);
     }
 
     // A part with something forming always absorbs a growth blob; one with room to start a fruit or a bud does
@@ -1681,7 +1751,7 @@ public sealed class Garden
         Genes,
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
-        Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought), new(WildCaps));
+        Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought), WildUnlocked.ToList(), new(WildCaps));
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -1698,6 +1768,7 @@ public sealed class Garden
         if (save.Research is { } research)
             (garden.StemsBought, garden.GeneratorsBought, garden.CoreBought) = (research.Stems, research.Generators, research.Core);
         else garden.ReadOldTrack();
+        garden.WildUnlocked.UnionWith(save.WildUnlocked ?? []);
         foreach (var (kind, cap) in save.WildCaps ?? []) garden.WildCaps[kind] = cap;
         garden.GainTools(log: false);
         var byId = new Dictionary<int, PlantNode>();
@@ -1814,7 +1885,7 @@ public sealed record ResearchSave(int Stems, int Generators, int Core);
 public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, float Power,
     float Blob = 0, NodeKind? Forming = null, float Growth = 0, double Life = 0, float Charge = 0);
 
-// (WildCaps since step 5d: the capped wild flower kinds unlocked, see Garden.WildCaps.)
+// (WildUnlocked and WildCaps since step 5d: the Evolution kinds unlocked, and any per-kind caps; see Garden.WildUnlocked.)
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
     double Genes = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null, double GeneBalance = 0,
-    ResearchSave? Research = null, Dictionary<NodeKind, int>? WildCaps = null);
+    ResearchSave? Research = null, List<NodeKind>? WildUnlocked = null, Dictionary<NodeKind, int>? WildCaps = null);

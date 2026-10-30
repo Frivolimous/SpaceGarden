@@ -6,6 +6,7 @@ public enum NodeKind
     Core, Stem, Leaf, Generator, Burr, Lab, Research, Grove, Berry,
     Amplifier, Resistor, Tendril, BigStem, Pulsar, TwinStar, Ember, LumberGrove, SeedPod, WildLab, Lichen,
     Buffer, CometBloom, Moonflower, NebulaBloom,
+    Wood, Glow, // the wild flowers' fruit
 }
 
 // The basic shapes, then the wild flowers' more complex ones, each radially symmetric (drawn from one atlas: see
@@ -16,16 +17,18 @@ public enum Shape
     Bullseye, Gear, Swirl, Quatrefoil, Star5, Star10, Flame, Star8, Pod, Star6, Lobes6, Sun, Sparkle, Rose, Galaxy,
 }
 
-// What blobs a flower sends: growth blobs (groves), gene blobs (labs), buff blobs (a Buffer), or all three in turn
-// (a Comet Bloom's burst).
+// What blobs a flower sends: growth blobs (groves), gene blobs (labs), buff blobs (a Buffer, a glow fruit), or gene
+// and growth blobs mixed (a Comet Bloom's burst).
 public enum BlobKind { None, Growth, Genes, Buff, All }
 
 // When a wild flower kind can start to grow wild: from the first wild flower slot, or once its evolution is taken.
 public enum WildUnlock { Start, Evolution }
 
 // What makes a kind a wild flower (DESIGN.md, Wild flowers): the basic kind whose bud it can replace (null: passive
-// only, any passive bud), when it unlocks, and its quirk, the line on its card saying what it trades.
-public sealed record WildSpec(NodeKind? Base, WildUnlock Unlock, string Quirk)
+// only, any passive bud), when it unlocks, its quirk (the line on its card saying what it trades), and whether it takes
+// its base kind's slot as well as a wild flower slot (BaseSlot: the stem and generator kinds, but the Amplifier and
+// the Resistor; groves and labs are uncapped).
+public sealed record WildSpec(NodeKind? Base, WildUnlock Unlock, string Quirk, bool BaseSlot = false)
 {
     public bool PassiveOnly => Base == null;
 }
@@ -80,12 +83,11 @@ public sealed record NodeSpec(NodeKind Kind)
     public float FlowerBonus { get; init; }
     public float FruitBonusScale { get; init; } = 1;
 
-    // Wild flowers' quirks (see Garden, Wild flowers). SteadyOutput: it makes its full rate whatever its fill (none
-    // once full). PulseSeconds: what it makes builds up unseen and goes into its store all at once, every so many
-    // seconds (0: as it's made). LifeSeconds: it ends itself after so long (0: never), dimming as it goes if Dims.
-    // DoublesBlobs: a blob passing through becomes two (once each); BlocksBlobs: no blob gets past it. EmergeBurst:
-    // blobs it sends at once as it appears. WildBoost: buds near it are this much likelier to grow wild.
-    public bool SteadyOutput { get; init; }
+    // Wild flowers' quirks (see Garden, Wild flowers). PulseSeconds: what it makes builds up unseen and goes into
+    // its store all at once, every so many seconds (0: as it's made). LifeSeconds: it ends itself after so long (0:
+    // never), its output falling to nothing as it goes if Dims. DoublesBlobs: a blob passing through may become two
+    // (AmplifyChance, once a blob); BlocksBlobs: no blob steps onto it. EmergeBurst: blobs it sends at once as it
+    // appears. WildBoost: buds near it are this much likelier to grow wild, and wild flowers near it Moonlit.
     public float PulseSeconds { get; init; }
     public float LifeSeconds { get; init; }
     public bool Dims { get; init; }

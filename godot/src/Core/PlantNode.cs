@@ -45,10 +45,13 @@ public sealed class PlantNode
 
     // Growth seconds since it grew (a wild flower's life cycle runs on it: an Ember's dimming, a Comet Bloom's
     // withering, a Pulsar's bursts). A Pulsar's power built up and not yet released (see Garden.EconomyStep). Seconds
-    // left of a Buffer's buff, which raises what it makes (not saved: it's brief).
+    // left of a buff (from a Buffer or a glow fruit), which raises what it makes (not saved: it's brief).
     public double Life;
     public float Charge;
     public float Buff;
+    // A wild flower within MoonflowerReach links of a Moonflower, which makes it a little more (worked out each
+    // economy step).
+    public bool Moonlit;
 
     // What growth blobs are forming here (DESIGN.md, Economy, Blobs): a fruit of its own kind, or a bud of a new
     // branch, its kind rolled when it started; and how much growth it has absorbed (it completes at FruitGrowth or

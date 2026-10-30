@@ -44,10 +44,14 @@ public sealed record GardenStats(
             if (n.FormingBud) buds[n.Forming!.Value] = buds.GetValueOrDefault(n.Forming!.Value) + 1;
             switch (n.Spec.Kind)
             {
-                case NodeKind.Stem: stems++; break;
-                case NodeKind.Generator: generators++; break;
                 case NodeKind.Grove: groves++; break;
                 case NodeKind.Lab: labs++; break;
+            }
+            // By the slot it takes: a Tendril or Big Stem counts as a stem, a Pulsar, Twin Star or Ember as a generator.
+            switch (Garden.SlotOf(n.Spec.Kind))
+            {
+                case NodeKind.Stem: stems++; break;
+                case NodeKind.Generator: generators++; break;
             }
             // Wild labs (a Wild Lab, Lichen) send genes too.
             if (n.Spec.Sends == BlobKind.Genes) genesPerHour += GenesPerHourFrom(garden, n);
@@ -78,13 +82,15 @@ public sealed record GardenStats(
             next.Clear();
             foreach (var ((at, from), odds) in now)
             {
-                int options = at.Branches.Count + (at.Parent != null ? 1 : 0);
+                int options = 0; // the links it could take (never onto a Resistor)
+                foreach (var branch in at.Branches) if (!branch.Spec.BlocksBlobs) options++;
+                if (at.Parent is { Spec.BlocksBlobs: false }) options++;
                 if (options == 0) continue;
                 var skip = options > 1 ? from : null;
                 double each = odds / (skip != null ? options - 1 : options);
                 void Go(PlantNode to)
                 {
-                    if (to == skip || to.Spec.BlocksBlobs) return; // (a Resistor stops it; an Amplifier's doubling isn't counted)
+                    if (to == skip || to.Spec.BlocksBlobs) return; // (an Amplifier's doubling isn't counted)
                     if (to == core) reached += each;
                     else next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
                 }
