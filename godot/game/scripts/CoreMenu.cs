@@ -5,7 +5,7 @@ namespace SpaceGarden;
 // The core's menu (DESIGN.md, Information display): a half ring of round buttons under the core (over it if there's
 // no room below), so the space above stays clear for the core's toolbar and the shaping bar. Each slot's name shows
 // beside it while the pointer is on it. Slots are spread evenly round the half ring and it widens as more join
-// (Research, later). It fades in and out; the widget opens it on a tap of the core and closes it on
+// (Research joined in step 5b). It fades in and out; the widget opens it on a tap of the core and closes it on
 // another, a tap anywhere else, Escape or a pick.
 public partial class CoreMenu : Control
 {
@@ -14,7 +14,7 @@ public partial class CoreMenu : Control
     // The slots, in order round the ring from left to right.
     static readonly (Tool Tool, string Label)[] Slots =
     [
-        (Tool.Info, "Garden info"), (Tool.Almanac, "Almanac"), (Tool.Build, "Build mode"),
+        (Tool.Info, "Garden info"), (Tool.Almanac, "Almanac"), (Tool.Research, "Research"), (Tool.Build, "Build mode"),
         (Tool.Ambient, $"Ambient ({Hotkey.Name})"), (Tool.Minimise, "Minimise"), (Tool.Settings, "Settings"),
     ];
 

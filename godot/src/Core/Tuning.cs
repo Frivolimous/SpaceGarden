@@ -82,7 +82,7 @@ public static class Tuning
     // ==== ECONOMY ==== \\
     // Power is the original game's (its Config NodeBase and Nodes, and PlantNodePower), its per-tick numbers times 60
     // to make them per second (DESIGN.md, Economy): it fills and drains in seconds, a lively light show, and doesn't
-    // set the garden's pace (the unlock track does). The economy runs in fixed steps of EconomyStepSeconds of growth
+    // set the garden's pace (the upgrades bought with genes do). The economy runs in fixed steps of EconomyStepSeconds of growth
     // time, so a live session, a catch-up and a test all take the same steps whatever chunks the time arrives in. A
     // step is one power transfer: the original's powerDelay, 20 ticks give or take 10% (18.75 here, exact in binary,
     // so the steps don't drift with the chunks).
@@ -102,11 +102,13 @@ public static class Tuning
     // emptiest fruit (at its PowerToFruitPerSecond), so new fruit fill and brighten as they grow in.
     public const float FeedFruitFill = 0.6f;
 
-    // Capacity at the start (DESIGN.md, Linear unlock track: "Start"). The unlock track raises Garden.Capacity.
+    // Capacity at the start (DESIGN.md, Upgrade tracks). Buying upgrades and the garden's size raise Garden.Capacity.
     public const int StartStemCap = 4;
     public const int StartGeneratorCap = 1;
     public const int StartCoreLinks = 1;
     public const int StartPotCap = 1;
+    public const int StartSeedlings = 1;
+    public const int StartWildFlowers = 0;
 
     // ==== SHAPING ==== \\
     // Placeholders, per 60 Hz tick (DESIGN.md, Shaping the garden). A potted part moves PotFollow of the way to its pot
@@ -150,7 +152,7 @@ public static class Tuning
     public const float EmergeSpeed = 1.2f;
 
     // Gene blobs, from labs, each carry BlobGenes (a whole gene, so they can be counted); only the core absorbs them.
-    // Labs are the only source: the first unlock waits for the first lab's genes to find the core.
+    // Labs are the only source: the first upgrade waits for the first lab's genes to find the core.
     public const float BlobGenes = 1;
 
     // ==== WILD FLOWERS ==== \\
@@ -159,23 +161,57 @@ public static class Tuning
     public const float PassiveWildChance = 0.05f;
     public const float PlantedWildChance = 0.04f;
 
-    // The linear unlock track (DESIGN.md, Progression, "Linear unlock track (step 2)"): genes reaching the core over
-    // the garden's life raise the caps at each threshold, in order. Jeremy's week one, reaching 30 stems, 10 generators
-    // and 2 core links in about seven days in a garden a smart player tends (DESIGN.md: simulations assume one; see the
-    // tests' SmartPlayer, and UnlockTests.MonthPacing for when each step lands). Steps 5-9 were retuned (balance pass,
-    // Oct 29) to the genes that really reach the core: under half of a grown garden's gene blobs find it before they
-    // fade. Past week one is long-term pacing, not designed yet: the track ends here. The player plants the first grove and lab at once, so the first step comes
-    // from the first lab's first few minutes.
-    public static readonly UnlockStep[] UnlockTrack =
+    // ==== RESEARCH ==== \\
+    // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in
+    // order. Placeholders for playtesting. Stems and generators each raise their cap by 1 (to 30 stems and 10
+    // generators); the core's track is its own list. Past week one is long-term pacing, not designed yet, so each track
+    // ends: the core's last six (alternating seedling slots and the wild flower limit) are placeholders set in 5b.
+    public static readonly double[] StemCosts =
     [
-        new(200, Stems: 3),
-        new(1_500, Generators: 1),
-        new(7_200, Stems: 4, Generators: 1, Trellises: 1),
-        new(15_000, Stems: 1, Generators: 1, CoreLinks: 1, Pots: 1),
-        new(45_000, Stems: 4, Generators: 1, Wells: 1),
-        new(100_000, Stems: 3, Generators: 1),
-        new(160_000, Stems: 3, Generators: 1),
-        new(270_000, Stems: 3, Generators: 1),
-        new(330_000, Stems: 5, Generators: 2), // 30 stems, 10 generators, 2 core links
+        100, 150, 200, 300, 450, 650, 950, 1_350, 1_850, 2_450, 3_150, 3_950, 4_850, 5_850, 6_950, 8_150, 9_450,
+        10_850, 12_350, 13_950, 15_700, 17_600, 19_650, 21_850, 24_200, 26_700,
     ];
+
+    public static readonly double[] GeneratorCosts = [1_500, 2_500, 3_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000];
+
+    public static readonly (UpgradeKind Kind, double Cost)[] CoreCosts =
+    [
+        (UpgradeKind.WildFlower, 1_500),
+        (UpgradeKind.CoreLink, 4_000),
+        (UpgradeKind.WildFlower, 10_000),
+        (UpgradeKind.Seedling, 20_000),
+        (UpgradeKind.WildFlower, 35_000),
+        (UpgradeKind.Hub, 60_000),
+        (UpgradeKind.Seedling, 90_000),
+        (UpgradeKind.WildFlower, 120_000),
+        (UpgradeKind.Seedling, 160_000),
+        (UpgradeKind.WildFlower, 210_000),
+        (UpgradeKind.Seedling, 270_000),
+        (UpgradeKind.WildFlower, 340_000),
+    ];
+
+    // Shaping tools come from the garden's size, the most main nodes it has had (DESIGN.md, Upgrade tracks): a Gravity
+    // Pot from the start and another at each of PotSizes, then every PotEvery past the last; a Trellis at TrellisSize
+    // and a Gravity Well at WellSize.
+    public static readonly int[] PotSizes = [25, 60, 100];
+    public const int PotEvery = 50;
+    public const int TrellisSize = 15;
+    public const int WellSize = 40;
+
+    // The shaping tools a garden of this size may place.
+    public static (int Pots, int Trellises, int Wells) ToolsAtSize(int size)
+    {
+        int pots = StartPotCap + PotSizes.Count(s => size >= s);
+        if (size >= PotSizes[^1]) pots += (size - PotSizes[^1]) / PotEvery;
+        return (pots, size >= TrellisSize ? 1 : 0, size >= WellSize ? 1 : 0);
+    }
+
+    // The size at which a garden of this size gains its next one of a tool (null: never another).
+    public static int? NextToolSize(ShapingKind kind, int size) => kind switch
+    {
+        ShapingKind.Trellis => size < TrellisSize ? TrellisSize : null,
+        ShapingKind.Well => size < WellSize ? WellSize : null,
+        _ => size < PotSizes[^1] ? PotSizes.First(s => s > size)
+            : PotSizes[^1] + ((size - PotSizes[^1]) / PotEvery + 1) * PotEvery,
+    };
 }

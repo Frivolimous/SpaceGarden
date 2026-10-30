@@ -1,15 +1,15 @@
 namespace SpaceGarden.Core.Tests;
 
-public class UnlockTests
+// Genes from labs to the core, and the pacing of the upgrade tracks they buy, in gardens a smart player tends.
+public class PacingTests
 {
     const double Hour = 3600, Day = 24 * Hour;
     static readonly double BlobHours = 1 / NodeSpecs.All[NodeKind.Lab].BlobsPerHour;
 
-    static Garden NewGarden(Capacity? capacity = null, int seed = 7, bool fixedCaps = false)
+    static Garden NewGarden(Capacity? capacity = null, int seed = 7)
     {
         var garden = Garden.New(Layout.Radial, seed);
         if (capacity != null) garden.Capacity = capacity;
-        if (fixedCaps) garden.Unlocks = Tuning.UnlockTrack.Length; // the track done: no raises
         return garden;
     }
 
@@ -54,7 +54,7 @@ public class UnlockTests
     {
         // core - stem - fork, the fork carrying the lab and a long side branch: blobs wander down it as often as up
         // to the core, and those that don't find the core in time fade with their genes.
-        var garden = NewGarden(new Capacity(22, 0, 1), fixedCaps: true);
+        var garden = NewGarden(new Capacity(22, 0, 1));
         garden.PassiveGrowth = false;
         var fork = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Stem);
         var lab = Add(garden, fork, NodeKind.Lab);
@@ -133,58 +133,23 @@ public class UnlockTests
         Assert.True(caught.ShowBlobs);
     }
 
-    // ==== UNLOCKS ==== \\
-
-    [Fact]
-    public void GenesRaiseTheCapsAlongTheTrack()
-    {
-        var garden = NewGarden();
-        Assert.Equal(Capacity.Start, garden.Capacity);
-        var first = Tuning.UnlockTrack[0];
-        garden.Deliver(first.Genes - 0.01);
-        Assert.Equal(0, garden.Unlocks);
-        garden.Deliver(0.01);
-        Assert.Equal(1, garden.Unlocks);
-        Assert.Equal(Capacity.Start.Raise(first), garden.Capacity);
-
-        // A big delivery passes several thresholds at once, each applied in turn.
-        garden.Deliver(Tuning.UnlockTrack[4].Genes);
-        Assert.Equal(5, garden.Unlocks);
-        Assert.Equal(new Capacity(16, 5, 2, Pots: 2, Trellises: 1, Wells: 1), garden.Capacity); // five steps in: 16 stems, 5 generators, 2 core links, 2 pots, a trellis and a well
-        Assert.Equal(2, garden.Core.MaxLinks);
-    }
-
-    [Fact]
-    public void TheTrackReachesTheDocsWeekOne()
-    {
-        var garden = NewGarden();
-        garden.Deliver(1e9);
-        Assert.Null(garden.NextUnlock);
-        Assert.Equal(9, garden.Unlocks);
-        Assert.Equal(new Capacity(30, 10, 2, Pots: 2, Trellises: 1, Wells: 1), garden.Capacity); // DESIGN.md: 30 stems, 10 generators, 2 core links; 2 pots, a trellis, a well
-    }
-
-    [Fact]
-    public void ThresholdsOnlyRise()
-    {
-        for (int i = 1; i < Tuning.UnlockTrack.Length; i++)
-            Assert.True(Tuning.UnlockTrack[i].Genes > Tuning.UnlockTrack[i - 1].Genes);
-    }
 
     [Fact]
     public void OnlyLabsMakeGenes()
     {
-        // A core, stems and a grove make none: the first unlock waits for the first lab.
+        // A core, stems and a grove make none: the first upgrade waits for the first lab.
         var garden = NewGarden();
         garden.PassiveGrowth = false;
         Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Grove);
         garden.Grow(Day);
         Assert.DoesNotContain(garden.Nodes, n => n.Spec.Kind == NodeKind.Lab);
         Assert.Equal(0, garden.Genes);
-        Assert.Equal(0, garden.Unlocks);
+        Assert.Equal(0, garden.GeneBalance);
     }
 
-    // A garden a smart player has tended for a while (see SmartPlayer).
+    // ==== TENDED GARDENS ==== \\
+
+    // A garden a smart player has tended for a while (see SmartPlayer): it spends its genes as it checks in.
     static Garden Tended(int seed, double hours)
     {
         var garden = Planted(seed);
@@ -197,13 +162,17 @@ public class UnlockTests
     }
 
     [Fact]
-    public void UnlocksSurviveSaveAndLoad()
+    public void ATendedGardenBuysAndKeepsWhatItBought()
     {
         var garden = Tended(7, 2 * 24 + 5);
-        Assert.True(garden.Unlocks >= 3);
+        Assert.True(garden.StemsBought >= 5);
+        Assert.True(garden.Capacity.Stems > Tuning.StartStemCap);
+        Assert.True(garden.GeneBalance < garden.Genes); // spent
         var loaded = Garden.FromSave(garden.ToSave(), seed: 7);
         Assert.Equal(garden.Genes, loaded.Genes);
-        Assert.Equal(garden.Unlocks, loaded.Unlocks);
+        Assert.Equal(garden.GeneBalance, loaded.GeneBalance);
+        Assert.Equal((garden.StemsBought, garden.GeneratorsBought, garden.CoreBought),
+            (loaded.StemsBought, loaded.GeneratorsBought, loaded.CoreBought));
         Assert.Equal(garden.Capacity, loaded.Capacity);
         Assert.Equal(garden.Core.MaxLinks, loaded.Core.MaxLinks);
         for (int i = 0; i < garden.Nodes.Count; i++)
@@ -215,25 +184,26 @@ public class UnlockTests
     }
 
     [Fact]
-    public void CatchUpUnlocksAsLivingThroughItDoes()
+    public void CatchUpGrowsAsLivingThroughItDoes()
     {
         var caught = Tended(7, 10);
         var live = Tended(7, 10);
         caught.CatchUp(Tuning.CatchUpCapSeconds);
         for (int i = 0; i < (int)(Tuning.CatchUpCapSeconds / 7); i++) live.Grow(7);
         live.Grow(Tuning.CatchUpCapSeconds % 7);
-        Assert.True(caught.Unlocks >= 3);
-        Assert.Equal(live.Unlocks, caught.Unlocks);
         Assert.Equal(live.Capacity, caught.Capacity);
         Assert.Equal(live.Genes, caught.Genes, 1e-3);
+        Assert.Equal(live.GeneBalance, caught.GeneBalance, 1e-3);
+        Assert.Equal(live.Tracking.MostMainNodes, caught.Tracking.MostMainNodes);
         Assert.Equal(live.Nodes.Select(n => (n.Spec.Kind, n.Parent?.Id)), caught.Nodes.Select(n => (n.Spec.Kind, n.Parent?.Id)));
     }
 
     [Fact]
-    public void RaisedCapsGivePassiveGrowthRoom()
+    public void ABoughtCapGivesGrowthRoom()
     {
-        // The player plants a grove and a lab, and after a day prunes the passive flowers that took every free link: the
-        // next unlock, landing then, fills with passive stems.
+        // The player plants a grove and a lab, and after a day prunes the passive flowers that took every free link:
+        // stems bought then have room to bud there, and passive growth keeps within the new caps (which kind fills each
+        // freed link is up to its roll).
         var garden = Planted();
         var stem = garden.Nodes[1];
         var grove = Add(garden, stem, NodeKind.Grove);
@@ -245,23 +215,37 @@ public class UnlockTests
             garden.Prune(passive);
             garden.ForgetPrune();
         }
-        int stemsBefore = Count(garden, NodeKind.Stem);
-        int unlocks = garden.Unlocks;
-        garden.Deliver(garden.NextUnlock!.Genes - garden.Genes);
-        garden.Grow(Hour);
-        Assert.True(garden.Unlocks > unlocks);
-        Assert.True(Count(garden, NodeKind.Stem) > stemsBefore);
+        Assert.Equal(garden.Capacity.Stems, Count(garden, NodeKind.Stem)); // the start's stems all grown
+        bool StemRoom() => garden.Nodes.Any(n => n.Parent != null && garden.CanSproutFrom(n, NodeKind.Stem));
+        Assert.False(StemRoom());
+        garden.Deliver(450); // three stems: 100, 150 and 200
+        for (int i = 0; i < 3; i++) Assert.True(garden.Buy(Track.Stems));
+        Assert.True(StemRoom());
+        garden.Grow(Day);
         Assert.True(Count(garden, NodeKind.Stem) <= garden.Capacity.Stems);
         Assert.True(Count(garden, NodeKind.Generator) <= garden.Capacity.Generators);
         Assert.True(garden.Core.Links <= garden.Capacity.CoreLinks);
     }
 
-    // ==== PACING ==== \
+    // ==== PACING ==== \\
 
-    // When each unlock should fire, in hours from planting (see Tuning.UnlockTrack; Day N is the start of day N): the
-    // first four where Jeremy's draft thresholds land (kept as they are: early and easy), the rest spread over week one
-    // (the balance pass, Oct 29, retuned 5-9 to these at the real gene delivery, about 40-60%).
-    static readonly double[] TargetHours = [1.0 / 3, 1.5, 5, 10, 24, 48, 72, 120, 168];
+    // The moments the pacing run times (DESIGN.md, Upgrade tracks): the first of each track, the core link, the Hub,
+    // the last stem and generator, and the genes for all of that (stems 213,650 + generators 112,500 + the core to the
+    // Hub 130,500 = 456,650) earned.
+    static readonly (string Name, Func<Garden, bool> Reached)[] Milestones =
+    [
+        ("first stem", g => g.StemsBought >= 1),
+        ("first generator", g => g.GeneratorsBought >= 1),
+        ("first wild flower slot", g => g.CoreBought >= 1),
+        ("core link", g => g.CoreBought >= 2),
+        ("10 stems", g => g.StemsBought >= 6),
+        ("5 generators", g => g.GeneratorsBought >= 4),
+        ("20 stems", g => g.StemsBought >= 16),
+        ("Hub", g => g.CoreBought >= 6),
+        ("last generator", g => g.GeneratorsBought >= Tuning.GeneratorCosts.Length),
+        ("last stem", g => g.StemsBought >= Tuning.StemCosts.Length),
+        ("456,650 genes earned", g => g.Genes >= 456_650),
+    ];
 
     static string Describe(Garden garden)
     {
@@ -269,27 +253,28 @@ public class UnlockTests
         return $"{Count(garden, NodeKind.Stem)}/{garden.Capacity.Stems} stems, "
             + $"{Count(garden, NodeKind.Generator)}/{garden.Capacity.Generators} generators, "
             + $"{Count(garden, NodeKind.Lab)} labs, {Count(garden, NodeKind.Grove)} groves, {garden.Core.Links}/{garden.Capacity.CoreLinks} core links, "
+            + $"core track {garden.CoreBought}, size {garden.Tracking.MostMainNodes}, "
             + $"{garden.Nodes.Count(n => !n.Spec.IsFruit)} main, {garden.Nodes.Count(n => n.Spec.IsFruit)} fruit, "
-            + $"labs at {Fills(garden, NodeKind.Lab)}, groves at {Fills(garden, NodeKind.Grove)}, genes {garden.Genes:0}, "
-            + $"+{production:0.0}/s -{upkeep:0.0}/s";
+            + $"labs at {Fills(garden, NodeKind.Lab)}, groves at {Fills(garden, NodeKind.Grove)}, "
+            + $"genes {garden.Genes:0} (balance {garden.GeneBalance:0}), +{production:0.0}/s -{upkeep:0.0}/s";
     }
 
     // The average fill of a kind of part, as a percentage.
     static string Fills(Garden garden, NodeKind kind) =>
         garden.Nodes.Where(n => n.Spec.Kind == kind).Select(n => n.Fill).DefaultIfEmpty(0).Average().ToString("0%");
 
-    sealed record Run(double[,] Fired, double[,] GenesAt, int[] WeekOne, int[] Month);
+    // When each milestone was reached (hours from planting; infinity if not), and the genes earned by each day's end.
+    sealed record Run(double[,] Reached, double[,] GenesByDay);
 
-    // A month from planting for a few seeds, a smart player tending it (see SmartPlayer): when each unlock fired, the
-    // genes at each target time, and the garden on some days.
-    static Run Month(Action<string>? log, int days = 30)
+    // Some days from planting for a few seeds, a smart player tending and buying (see SmartPlayer): when each milestone
+    // was reached, and the garden on some days.
+    static Run Days(Action<string>? log, int days)
     {
         var seeds = new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         var shownDays = new[] { 1, 3, 7, 10, 14, 21, 30 }.Where(d => d <= days).Append(days).ToHashSet();
-        var run = new Run(new double[seeds.Length, Tuning.UnlockTrack.Length], new double[seeds.Length, TargetHours.Length],
-            new int[seeds.Length], new int[seeds.Length]);
+        var run = new Run(new double[seeds.Length, Milestones.Length], new double[seeds.Length, days]);
         for (int s = 0; s < seeds.Length; s++)
-            for (int u = 0; u < Tuning.UnlockTrack.Length; u++) run.Fired[s, u] = double.PositiveInfinity;
+            for (int m = 0; m < Milestones.Length; m++) run.Reached[s, m] = double.PositiveInfinity;
         const double step = 600;
         // The seeds run side by side (each garden is its own), their lines kept in seed order.
         var lines = seeds.Select(_ => new List<string>()).ToArray();
@@ -298,29 +283,28 @@ public class UnlockTests
             var garden = Planted(seeds[s]);
             double t = 0;
             lines[s].Add($"seed {seeds[s]}:");
+            void Check(double hours)
+            {
+                for (int m = 0; m < Milestones.Length; m++)
+                    if (double.IsPositiveInfinity(run.Reached[s, m]) && Milestones[m].Reached(garden)) run.Reached[s, m] = hours;
+            }
             for (int day = 1; day <= days; day++)
             {
                 // A minute at a time through the opening, when the player checks in every minute.
                 for (double dt; t < day * Day; t += dt)
                 {
                     dt = t < Hour ? 60 : step;
-                    double hours = t / Hour;
                     if (SmartPlayer.CheckIn(t))
                     {
-                        // A short run shows every two-hourly check-in, as the player found the garden.
-                        if (days <= 2 && t >= Hour) lines[s].Add($"  {hours,4:0} h: {Describe(garden)}");
                         SmartPlayer.Tend(garden);
+                        Check(t / Hour); // bought at the check-in
                     }
-                    int before = garden.Unlocks;
                     garden.Grow(dt);
-                    for (int u = before; u < garden.Unlocks; u++) run.Fired[s, u] = (t + dt) / Hour;
-                    for (int h = 0; h < TargetHours.Length; h++)
-                        if (Math.Abs(TargetHours[h] * Hour - (t + dt)) < 1) run.GenesAt[s, h] = garden.Genes;
+                    Check((t + dt) / Hour); // genes earned as they arrive
                 }
+                run.GenesByDay[s, day - 1] = garden.Genes;
                 if (shownDays.Contains(day)) lines[s].Add($"  day {day,2}: {Describe(garden)}");
-                if (day == 7) run.WeekOne[s] = garden.Unlocks;
             }
-            run.Month[s] = garden.Unlocks;
         });
         foreach (var line in lines.SelectMany(l => l)) log?.Invoke(line);
         return run;
@@ -332,85 +316,34 @@ public class UnlockTests
         return sorted[sorted.Count / 2];
     }
 
-    // Prints the curve (for tuning), and checks every unlock's median lands within a loose band of its target and
-    // every garden keeps up (see the end). A tuning aid run by hand (PACING=1): since power moved to the original's
-    // clumps (economy steps of 0.3125 s) a month takes minutes, and the thresholds wait on a retune. PACING_DAYS=N
-    // runs only the first N days (a day takes seconds), checking the unlocks due by then.
+    static string Hours(double hours) => double.IsPositiveInfinity(hours) ? "not yet"
+        : hours < 48 ? $"{hours:0.#} h" : $"day {hours / 24 + 1:0.#}";
+
+    // Prints when each milestone lands (the median of eight seeds, and their range) and the genes earned by each day's
+    // end, for tuning the tracks' costs. A tuning aid run by hand (PACING=1): a day takes a few seconds; PACING_DAYS=N
+    // runs N days (14 by default). Every garden must buy its first stem within the opening hour; the rest is reported
+    // (as the skip message, so it shows), not checked: the costs wait on the real-week check.
     [Fact]
-    public void MonthPacing()
+    public void TrackPacing()
     {
         Assert.SkipUnless(Environment.GetEnvironmentVariable("PACING") == "1", "a tuning aid, run by hand (PACING=1)");
-        Assert.Equal(Tuning.UnlockTrack.Length, TargetHours.Length);
-        int days = int.TryParse(Environment.GetEnvironmentVariable("PACING_DAYS"), out int d) ? d : 30;
+        int days = int.TryParse(Environment.GetEnvironmentVariable("PACING_DAYS"), out int d) ? d : 14;
         var text = new System.Text.StringBuilder();
         void Log(string line)
         {
             TestContext.Current.TestOutputHelper?.WriteLine(line);
             text.AppendLine(line);
         }
-        var run = Month(Log, days);
-        var medians = new List<double>();
-        int due = TargetHours.Count(h => h < days * 24);
-        for (int u = 0; u < due; u++)
+        var run = Days(Log, days);
+        for (int m = 0; m < Milestones.Length; m++)
         {
-            var hours = Enumerable.Range(0, run.Fired.GetLength(0)).Select(s => run.Fired[s, u]).Order().ToList();
-            double median = Median(run.Fired, u);
-            Log($"unlock {u + 1,2} at {Tuning.UnlockTrack[u].Genes,6:0} genes (target {TargetHours[u]:0.#} h, "
-                + $"day {TargetHours[u] / 24 + 1:0.#}): median {median:0.#} h, range {hours[0]:0.#}-{hours[^1]:0.#} h; "
-                + $"genes at target: median {Median(run.GenesAt, u):0}");
-            medians.Add(median);
+            var hours = Enumerable.Range(0, run.Reached.GetLength(0)).Select(s => run.Reached[s, m]).Order().ToList();
+            Log($"{Milestones[m].Name,-22} median {Hours(Median(run.Reached, m)),-10} range {Hours(hours[0])} to {Hours(hours[^1])}");
         }
-        var late = Enumerable.Range(0, due)
-            .Where(u => medians[u] < TargetHours[u] * 0.75 || medians[u] > TargetHours[u] * 1.25 + 0.2).ToList();
-        Assert.True(late.Count == 0, $"unlocks {string.Join(", ", late.Select(u => u + 1))} off target\n{text}");
-        if (days < 30)
-        {
-            Assert.Skip(text.ToString());
-            return;
-        }
-        // Every garden has had week one's nine steps (DESIGN.md's 30 stems, 10 generators, 2 core links) by the end of
-        // day 7, and is at most two steps short of the end of the track by the end of day 30 (at real-speed blob rates
-        // gardens spread out: the slowest seed runs about a fifth behind the median).
-        Assert.All(run.WeekOne, u => Assert.True(u >= 9, $"{u} unlocks by day 7"));
-        Assert.All(run.Month, u => Assert.True(u >= Tuning.UnlockTrack.Length - 2, $"{u} unlocks by day 30"));
-        // Shows the curve even when it passes (as the skip message), for tuning.
+        for (int day = 1; day <= days; day++)
+            Log($"genes earned by the end of day {day,2}: median {Median(run.GenesByDay, day - 1):#,0}");
+        for (int s = 0; s < run.Reached.GetLength(0); s++)
+            Assert.True(run.Reached[s, 0] <= 1, $"seed {s + 1} bought its first stem at {run.Reached[s, 0]:0.#} h\n{text}");
         Assert.Skip(text.ToString());
-    }
-
-    // For retuning the thresholds after a change to the economy: sets each one to the median genes at its target
-    // time, runs again, and repeats until they settle, then reports them and the last run's gardens (as the skip
-    // message, so it shows). Run it by hand: dotnet test -- --filter-method "*RetuneThresholds*" with RETUNE=1 set;
-    // PACING_DAYS=N retunes only the unlocks due in the first N days, leaving the rest.
-    [Fact]
-    public void RetuneThresholds()
-    {
-        Assert.SkipUnless(Environment.GetEnvironmentVariable("RETUNE") == "1", "a tuning aid, run by hand (RETUNE=1)");
-        int days = int.TryParse(Environment.GetEnvironmentVariable("PACING_DAYS"), out int d) ? d : 30;
-        int due = TargetHours.Count(h => h < days * 24);
-        var report = new System.Text.StringBuilder();
-        var original = Tuning.UnlockTrack.ToArray();
-        try
-        {
-            for (int pass = 0; pass < 6; pass++)
-            {
-                var run = Month(pass == 5 ? line => report.AppendLine(line) : null, days);
-                double previous = 0;
-                for (int u = 0; u < due; u++)
-                {
-                    double median = Median(run.GenesAt, u);
-                    // Rounded to three figures, so the table reads easily.
-                    double scale = median < 100 ? 1 : Math.Pow(10, Math.Floor(Math.Log10(median)) - 2);
-                    double genes = Math.Max(previous + 1, Math.Round(median / scale) * scale);
-                    Tuning.UnlockTrack[u] = Tuning.UnlockTrack[u] with { Genes = genes };
-                    previous = genes;
-                }
-                report.AppendLine($"pass {pass + 1}: " + string.Join(", ", Tuning.UnlockTrack.Select(s => s.Genes)));
-            }
-        }
-        finally
-        {
-            for (int u = 0; u < original.Length; u++) Tuning.UnlockTrack[u] = original[u];
-        }
-        Assert.Skip(report.ToString());
     }
 }

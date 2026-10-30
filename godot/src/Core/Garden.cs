@@ -46,15 +46,15 @@ public sealed class Garden
     }
     Capacity capacity = Capacity.Start;
 
-    // Genes that have reached the core over the garden's life, and how many steps of the unlock track they've passed
-    // (each one raised Capacity once). The view compares Unlocks with what it has shown, to say what's new. The track
-    // counts genes earned until step 5b's upgrade tracks replace it.
+    // Genes that have reached the core over the garden's life (they never drop).
     public double Genes;
-    public int Unlocks;
     // The genes left to spend (DESIGN.md, Upgrade tracks): every gene reaching the core adds to it as to Genes, and
-    // only spending takes from it (see Spend). Nothing spends yet; step 5b's Research panel will.
+    // only spending takes from it (see Spend, and Buy, which the Research panel calls).
     public double GeneBalance;
-    public UnlockStep? NextUnlock => Unlocks < Tuning.UnlockTrack.Length ? Tuning.UnlockTrack[Unlocks] : null;
+    // How many of each track's upgrades have been bought (see Buy). The view compares their sum with what it has
+    // shown, to ripple the core.
+    public int StemsBought, GeneratorsBought, CoreBought;
+    public int Bought => StemsBought + GeneratorsBought + CoreBought;
 
     // Its lifetime totals, history and journal (see Tracking).
     public Tracking Tracking { get; private set; } = new();
@@ -571,7 +571,11 @@ public sealed class Garden
         if (parent == null) node.MaxLinks = Capacity.CoreLinks;
         Nodes.Add(node);
         if (parent != null && !loading) Tracking.Grew(spec, Nodes.Count);
-        if (!spec.IsFruit && !loading) Tracking.Reached(Nodes.Count(n => !n.Spec.IsFruit));
+        if (!spec.IsFruit && !loading)
+        {
+            Tracking.Reached(Nodes.Count(n => !n.Spec.IsFruit));
+            GainTools(log: true);
+        }
         if (parent != null)
         {
             (spec.IsFruit ? parent.Fruits : parent.Branches).Add(node);
@@ -917,20 +921,82 @@ public sealed class Garden
         return budding.Count;
     }
 
-    // ==== GENES AND UNLOCKS ==== \\
+    // ==== GENES AND UPGRADES ==== \\
 
-    // Genes reach the core: each threshold of the unlock track they pass raises the caps, in order.
+    // Genes reach the core, to be spent.
     public void Deliver(double genes)
     {
         Genes += genes;
         GeneBalance += genes;
         Tracking.History.AddGenes(genes);
-        while (NextUnlock is { } next && Genes >= next.Genes)
+    }
+
+    // A track's next upgrade and its cost (null: every one bought).
+    public Upgrade? Next(Track track)
+    {
+        switch (track)
         {
-            Capacity = Capacity.Raise(next);
-            Unlocks++;
-            Tracking.Log(JournalKind.Unlock, UnlockText(next, Capacity));
+            case Track.Stems:
+                return StemsBought < Tuning.StemCosts.Length ? new(track, UpgradeKind.Stem, Tuning.StemCosts[StemsBought]) : null;
+            case Track.Generators:
+                return GeneratorsBought < Tuning.GeneratorCosts.Length
+                    ? new(track, UpgradeKind.Generator, Tuning.GeneratorCosts[GeneratorsBought]) : null;
+            default:
+                if (CoreBought >= Tuning.CoreCosts.Length) return null;
+                var (kind, cost) = Tuning.CoreCosts[CoreBought];
+                return new(track, kind, cost);
         }
+    }
+
+    // The cheapest next upgrade across the three tracks (null: every one bought).
+    public Upgrade? Cheapest => Enum.GetValues<Track>().Select(Next).Where(u => u != null).MinBy(u => u!.Cost);
+
+    // Buys a track's next upgrade from the balance, if it covers the cost: the caps rise at once. A core link or the
+    // Hub is a moment in the journal (stems, generators and the core's counters aren't). Returns whether it bought.
+    public bool Buy(Track track)
+    {
+        if (Next(track) is not { } upgrade || !Spend(upgrade.Cost)) return false;
+        switch (track)
+        {
+            case Track.Stems: StemsBought++; break;
+            case Track.Generators: GeneratorsBought++; break;
+            default: CoreBought++; break;
+        }
+        Capacity = Capacity.Raise(upgrade.Kind);
+        if (upgrade.Kind == UpgradeKind.CoreLink)
+            Tracking.Log(JournalKind.Purchase, $"{Capitalised(Ordinal(Capacity.CoreLinks))} core link bought");
+        if (upgrade.Kind == UpgradeKind.Hub) Tracking.Log(JournalKind.Purchase, "Hub bought");
+        return true;
+    }
+
+    // The shaping tools come from the garden's size (DESIGN.md, Upgrade tracks): raises their caps to what its size
+    // allows (never lowering them: the --shaping dev aid may have raised them past it), each tool gained a moment in
+    // the journal when log is on.
+    void GainTools(bool log)
+    {
+        int size = Tracking.MostMainNodes;
+        var (pots, trellises, wells) = Tuning.ToolsAtSize(size);
+        var gained = new List<ShapingKind>();
+        if (trellises > Capacity.Trellises) gained.Add(ShapingKind.Trellis);
+        if (wells > Capacity.Wells) gained.Add(ShapingKind.Well);
+        if (pots > Capacity.Pots) gained.Add(ShapingKind.Pot);
+        if (gained.Count == 0) return;
+        Capacity = Capacity with
+        {
+            Pots = Math.Max(Capacity.Pots, pots),
+            Trellises = Math.Max(Capacity.Trellises, trellises),
+            Wells = Math.Max(Capacity.Wells, wells),
+        };
+        if (!log) return;
+        foreach (var kind in gained) Tracking.Log(JournalKind.Tool, ToolGainedText(kind, Capacity.Of(kind), size));
+    }
+
+    // A shaping tool gained, in the journal: "Trellis gained at garden size 15", "Second Gravity Pot gained at garden
+    // size 25".
+    public static string ToolGainedText(ShapingKind kind, int cap, int size)
+    {
+        string name = cap > 1 ? $"{Capitalised(Ordinal(cap))} {ToolName(kind)}" : ToolName(kind);
+        return $"{name} gained at garden size {size}";
     }
 
     // Whether the balance covers a cost.
@@ -944,30 +1010,11 @@ public sealed class Garden
         return true;
     }
 
-    // An unlock in the Almanac, after DESIGN.md's "Second core link unlocked": what it opens, the biggest first (a core
-    // link, then shaping tools, each named by how many there may be now), then the room it adds for stems and
-    // generators.
-    public static string UnlockText(UnlockStep step, Capacity after)
-    {
-        var opened = new List<string>();
-        void Opened(int raised, int cap, string name)
-        {
-            if (raised > 0) opened.Add(cap > 1 && cap < Ordinals.Length ? $"{Ordinals[cap]} {name}" : name);
-        }
-        Opened(step.CoreLinks, after.CoreLinks, "core link");
-        Opened(step.Wells, after.Wells, ToolName(ShapingKind.Well));
-        Opened(step.Trellises, after.Trellises, ToolName(ShapingKind.Trellis));
-        Opened(step.Pots, after.Pots, ToolName(ShapingKind.Pot));
-        var room = new List<string>();
-        if (step.Stems > 0) room.Add(step.Stems == 1 ? "1 more stem" : $"{step.Stems} more stems");
-        if (step.Generators > 0) room.Add(step.Generators == 1 ? "1 more generator" : $"{step.Generators} more generators");
-        string rooms = room.Count == 0 ? "" : $"room for {string.Join(" and ", room)}";
-        if (opened.Count == 0) return rooms.Length == 0 ? "Unlock reached" : $"Unlocked {rooms}";
-        var text = Capitalised(string.Join(" and ", opened) + " unlocked");
-        return rooms.Length == 0 ? text : $"{text}, with {rooms}";
-    }
-
     static readonly string[] Ordinals = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"];
+
+    // "second", or past the words "11th", "12th", "23rd".
+    static string Ordinal(int n) => n < Ordinals.Length ? Ordinals[n]
+        : n + ((n % 100) is 11 or 12 or 13 ? "th" : (n % 10) switch { 1 => "st", 2 => "nd", 3 => "rd", _ => "th" });
 
     static string Capitalised(string text) => char.ToUpperInvariant(text[0]) + text[1..];
 
@@ -1417,10 +1464,10 @@ public sealed class Garden
         Layout, EconomyClock, Capacity,
         Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
             n.Power, n.Blob, n.Forming, n.Growth)).ToList(),
-        Genes, Unlocks,
+        Genes,
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
-        Tracking.ToSave(), GeneBalance);
+        Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought));
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -1430,11 +1477,14 @@ public sealed class Garden
             EconomyClock = save.EconomyClock,
             Capacity = save.Capacity,
             Genes = save.Genes,
-            Unlocks = save.Unlocks,
             GeneBalance = save.GeneBalance,
             Tracking = Tracking.FromSave(save.Tracking),
             loading = true,
         };
+        if (save.Research is { } research)
+            (garden.StemsBought, garden.GeneratorsBought, garden.CoreBought) = (research.Stems, research.Generators, research.Core);
+        else garden.ReadOldTrack();
+        garden.GainTools(log: false);
         var byId = new Dictionary<int, PlantNode>();
         foreach (var n in save.Nodes)
         {
@@ -1459,26 +1509,43 @@ public sealed class Garden
         garden.SettleLooks();
         return garden;
     }
+
+    // A version 9 save from before the tracks (step 5a) raised its caps on the old unlock track: they're kept, read as
+    // the stem and generator upgrades bought, and a second core link as the core track bought up to it (so its wild
+    // flower slot comes too). Its seedling slot is the start's.
+    void ReadOldTrack()
+    {
+        StemsBought = Math.Clamp(Capacity.Stems - Tuning.StartStemCap, 0, Tuning.StemCosts.Length);
+        GeneratorsBought = Math.Clamp(Capacity.Generators - Tuning.StartGeneratorCap, 0, Tuning.GeneratorCosts.Length);
+        CoreBought = Capacity.CoreLinks > Tuning.StartCoreLinks ? 2 : 0;
+        Capacity = Capacity with
+        {
+            WildFlowers = Tuning.StartWildFlowers + (CoreBought > 0 ? 1 : 0),
+            Seedlings = Tuning.StartSeedlings,
+            Hubs = 0,
+        };
+    }
 }
 
-// The limits on growth (DESIGN.md, Capacity): how many stems and generators the garden may have, and how many links
-// the core has, and how many of each shaping tool may be placed. Labs and other flowers are uncapped; free links and
-// power limit them. The unlock track raises these.
+// The limits on growth (DESIGN.md, Capacity): how many stems and generators the garden may have, how many links the
+// core has, and how many of each shaping tool may be placed. Labs and other flowers are uncapped; free links and power
+// limit them. The wild flower limit, seedling slots and Hubs are counters for now (their mechanics come in 5c, 5d and
+// the Hub's step). Upgrades bought raise these, and the garden's size the shaping tools.
 public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots = Tuning.StartPotCap, int Trellises = 0,
-    int Wells = 0)
+    int Wells = 0, int WildFlowers = Tuning.StartWildFlowers, int Seedlings = Tuning.StartSeedlings, int Hubs = 0)
 {
     public static readonly Capacity Start = new(Tuning.StartStemCap, Tuning.StartGeneratorCap, Tuning.StartCoreLinks);
     public static readonly Capacity Unlimited = new(int.MaxValue, int.MaxValue, 2, 3, 3, 3); // stress tests (--parts)
 
-    // These limits with an unlock's raises added (never past int.MaxValue, so an unlimited garden stays so).
-    public Capacity Raise(UnlockStep step) => this with
+    // These limits with an upgrade's +1 (never past int.MaxValue, so an unlimited garden stays so).
+    public Capacity Raise(UpgradeKind kind) => kind switch
     {
-        Stems = Add(Stems, step.Stems),
-        Generators = Add(Generators, step.Generators),
-        CoreLinks = Add(CoreLinks, step.CoreLinks),
-        Pots = Add(Pots, step.Pots),
-        Trellises = Add(Trellises, step.Trellises),
-        Wells = Add(Wells, step.Wells),
+        UpgradeKind.Stem => this with { Stems = Add(Stems, 1) },
+        UpgradeKind.Generator => this with { Generators = Add(Generators, 1) },
+        UpgradeKind.CoreLink => this with { CoreLinks = Add(CoreLinks, 1) },
+        UpgradeKind.WildFlower => this with { WildFlowers = Add(WildFlowers, 1) },
+        UpgradeKind.Seedling => this with { Seedlings = Add(Seedlings, 1) },
+        _ => this with { Hubs = Add(Hubs, 1) },
     };
 
     public int Of(ShapingKind kind) => kind switch
@@ -1491,16 +1558,44 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots
     static int Add(int a, int b) => (int)Math.Min(int.MaxValue, (long)a + b);
 }
 
-// One step of the linear unlock track: once Genes have reached the core over the garden's life, the caps rise by
-// these. Only stems, generators, core links and shaping tools unlock (DESIGN.md: groves and labs are limited by slots
-// and power).
-public sealed record UnlockStep(double Genes, int Stems = 0, int Generators = 0, int CoreLinks = 0, int Pots = 0,
-    int Trellises = 0, int Wells = 0);
+// The three upgrade tracks of the Research panel (DESIGN.md, Upgrade tracks), and what an upgrade raises by 1.
+public enum Track { Stems, Generators, Core }
+
+public enum UpgradeKind { Stem, Generator, WildFlower, CoreLink, Seedling, Hub }
+
+// A track's next upgrade: what it raises and its cost in genes.
+public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
+{
+    // As the Research panel and the garden card name it: "+1 stem", "Hub".
+    public string Name => Kind switch
+    {
+        UpgradeKind.Stem => "+1 stem",
+        UpgradeKind.Generator => "+1 generator",
+        UpgradeKind.WildFlower => "+1 wild flower",
+        UpgradeKind.CoreLink => "+1 core link",
+        UpgradeKind.Seedling => "+1 seedling slot",
+        _ => "Hub",
+    };
+
+    // What it gives, a line for the Research panel's tooltip.
+    public string Does => Kind switch
+    {
+        UpgradeKind.Stem => "Room for one more stem.",
+        UpgradeKind.Generator => "Room for one more generator.",
+        UpgradeKind.WildFlower => "Raises the wild flower limit: room for one more wild flower.",
+        UpgradeKind.CoreLink => "One more branch off the core.",
+        UpgradeKind.Seedling => "One more seedling slot: each slot is one evolution.",
+        _ => "The Hub: planted by hand, it catches genes for boosts to each kind.",
+    };
+}
+
+// How many of each track's upgrades were bought.
+public sealed record ResearchSave(int Stems, int Generators, int Core);
 
 // (Saves from before step 3d also carry Pinned, from when parts could be pinned; it's ignored.)
 public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, float Power,
     float Blob = 0, NodeKind? Forming = null, float Growth = 0);
 
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
-    double Genes = 0, int Unlocks = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null,
-    double GeneBalance = 0);
+    double Genes = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null, double GeneBalance = 0,
+    ResearchSave? Research = null);

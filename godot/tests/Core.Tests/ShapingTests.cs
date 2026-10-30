@@ -12,7 +12,6 @@ public class ShapingTests
     {
         var garden = Garden.New(Layout.Radial, seed);
         garden.Capacity = new Capacity(5, 0, 1, Pots: 2, Trellises: 2, Wells: 2);
-        garden.Unlocks = Tuning.UnlockTrack.Length; // fixed caps
         garden.PassiveGrowth = false;
         var trunk = Add(garden, garden.Core, NodeKind.Stem);
         var tip = trunk;
@@ -209,9 +208,11 @@ public class ShapingTests
     // ==== CAPS, SAVES, PRUNES ==== \\
 
     [Fact]
-    public void ToolsUnlockAlongTheTrack()
+    public void ToolsComeWithTheGardensSize()
     {
         var garden = Garden.New(Layout.Radial, seed: 7);
+        garden.Capacity = garden.Capacity with { Stems = 100, Generators = 100 };
+        garden.PassiveGrowth = false;
         Assert.True(garden.CanPlace(ShapingKind.Pot));
         Assert.False(garden.CanPlace(ShapingKind.Trellis));
         Assert.False(garden.CanPlace(ShapingKind.Well));
@@ -219,20 +220,63 @@ public class ShapingTests
         Assert.Null(garden.Place(ShapingKind.Pot, Vector2.Zero)); // one pot to start
         Assert.Null(garden.Place(ShapingKind.Trellis, Vector2.Zero));
 
-        garden.Deliver(7_200);
+        // A line of stems off the core: the garden's size is its main nodes, the core too.
+        var tip = garden.Core;
+        void GrowTo(int size)
+        {
+            while (garden.Tracking.MostMainNodes < size) tip = Add(garden, tip, NodeKind.Stem);
+        }
+        GrowTo(14);
+        Assert.False(garden.CanPlace(ShapingKind.Trellis));
+        GrowTo(15);
         Assert.True(garden.CanPlace(ShapingKind.Trellis));
         Assert.False(garden.CanPlace(ShapingKind.Pot));
-        garden.Deliver(15_000 - 7_200);
+        GrowTo(25);
         Assert.True(garden.CanPlace(ShapingKind.Pot));
         Assert.False(garden.CanPlace(ShapingKind.Well));
-        garden.Deliver(70_000 - 15_000);
+        GrowTo(40);
         Assert.True(garden.CanPlace(ShapingKind.Well));
+        Assert.Equal(new[] { "Trellis gained at garden size 15", "Second Gravity Pot gained at garden size 25",
+            "Gravity Well gained at garden size 40" },
+            garden.Tracking.Journal.Where(e => e.Kind == JournalKind.Tool).Select(e => e.Text));
+
+        // Pruning never takes a tool away: the size is the most the garden has had.
+        garden.Prune(garden.Core.Branches[0]);
+        Assert.True(garden.CanPlace(ShapingKind.Well));
+        Assert.Equal(2, garden.Capacity.Pots);
 
         // Taking one away makes room again.
         garden.Place(ShapingKind.Well, Vector2.Zero);
         Assert.False(garden.CanPlace(ShapingKind.Well));
         garden.Remove(garden.Shaping.Single(t => t.Kind == ShapingKind.Well));
         Assert.True(garden.CanPlace(ShapingKind.Well));
+    }
+
+    [Fact]
+    public void ToolsByGardenSizeFollowTheDocs()
+    {
+        // DESIGN.md, Upgrade tracks: a pot at the start, a trellis at 15, a second pot at 25, a well at 40, +1 pot at
+        // 60 and 100, then every 50.
+        Assert.Equal((1, 0, 0), Tuning.ToolsAtSize(1));
+        Assert.Equal((1, 0, 0), Tuning.ToolsAtSize(14));
+        Assert.Equal((1, 1, 0), Tuning.ToolsAtSize(15));
+        Assert.Equal((2, 1, 0), Tuning.ToolsAtSize(25));
+        Assert.Equal((2, 1, 1), Tuning.ToolsAtSize(40));
+        Assert.Equal((3, 1, 1), Tuning.ToolsAtSize(60));
+        Assert.Equal((3, 1, 1), Tuning.ToolsAtSize(99));
+        Assert.Equal((4, 1, 1), Tuning.ToolsAtSize(100));
+        Assert.Equal((4, 1, 1), Tuning.ToolsAtSize(149));
+        Assert.Equal((5, 1, 1), Tuning.ToolsAtSize(150));
+        Assert.Equal((6, 1, 1), Tuning.ToolsAtSize(200));
+
+        Assert.Equal(15, Tuning.NextToolSize(ShapingKind.Trellis, 3));
+        Assert.Null(Tuning.NextToolSize(ShapingKind.Trellis, 15));
+        Assert.Equal(40, Tuning.NextToolSize(ShapingKind.Well, 39));
+        Assert.Equal(25, Tuning.NextToolSize(ShapingKind.Pot, 1));
+        Assert.Equal(60, Tuning.NextToolSize(ShapingKind.Pot, 25));
+        Assert.Equal(100, Tuning.NextToolSize(ShapingKind.Pot, 60));
+        Assert.Equal(150, Tuning.NextToolSize(ShapingKind.Pot, 100));
+        Assert.Equal(200, Tuning.NextToolSize(ShapingKind.Pot, 170));
     }
 
     [Fact]

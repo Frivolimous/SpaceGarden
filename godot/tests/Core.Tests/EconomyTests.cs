@@ -9,7 +9,6 @@ public class EconomyTests
     {
         var garden = Garden.New(Layout.Radial, seed: 7);
         if (capacity != null) garden.Capacity = capacity;
-        garden.Unlocks = Tuning.UnlockTrack.Length; // the track done: these test the economy at fixed caps
         return garden;
     }
 

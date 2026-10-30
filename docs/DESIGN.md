@@ -170,7 +170,7 @@ Implemented in step 1.
 - **Low-power idle.** When nothing is being touched or moving, rendering drops to the idle frame rate.
 - **Catch-up on return.** The save stores when the garden was last seen; on launch the elapsed time is simulated without drawing, capped at **72 hours** (`Tuning.CatchUpCapSeconds`, to be tuned). Time hidden behind a lock screen or full-screen app is caught up the same way when the garden shows again.
 - **Absence never hurts.** Catch-up can't destroy nodes (bar a wild flower whose own life cycle ends it, such as Ember; see Wild flowers); the worst case is an overloaded garden running low, which the player fixes by pruning.
-- **While you were away** (step 4): on return, a short note says what changed (new growth, power dips, and in step 5 seedlings bloomed, new wild flowers, Hub points and burned-out Embers), drawn from the tracking and the Almanac. The old "unlocks reached" goes with the unlock track; its replacement needs new wording in the build.
+- **While you were away** (step 4): on return, a short note says what changed (new growth, power dips, and in step 5 seedlings bloomed, new wild flowers, Hub points and burned-out Embers), drawn from the tracking and the Almanac. The old "unlocks reached" went with the unlock track; since 5b it lists shaping tools gained from the garden's size.
 
 ## Growth and pruning
 
@@ -217,7 +217,7 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 - Passive growth respects pots, so a direction set once keeps shaping the garden.
 - Shaping tools are purely about shape, with no economy effect.
 
-**Three shaping tools** (step 3a, done; step 5 moves their unlocks from gene thresholds to garden size, the highest number of main nodes ever reached, see Progression). They're overlays, not graph nodes, so they take no node slot and count against no cap but their own. The rules are in `godot/src/Core/Shaping.cs` and `Garden.cs` (Shaping), their strengths in `Tuning` (Shaping).
+**Three shaping tools** (step 3a, done; since 5b they come with garden size, the highest number of main nodes ever reached, not gene thresholds: see Progression). They're overlays, not graph nodes, so they take no node slot and count against no cap but their own. The rules are in `godot/src/Core/Shaping.cs` and `Garden.cs` (Shaping), their strengths in `Tuning` (Shaping).
 
 | Tool | What it does | Holds | Unlocks |
 | --- | --- | --- | --- |
@@ -229,7 +229,7 @@ Fruit is never tied or pushed by a pot: it follows its node (a well pulls it alo
 
 **Build mode** is where the garden is arranged: the core menu's Build switch (or Ctrl+B with the garden focused) in Active mode; Build again, Done, Escape or leaving Active ends it.
 - A dark, opaque disc fades in round the plant and its tools, catching every click on it, so arranging never clicks through to the desktop.
-- A bar above the disc holds the three tools (each with how many more the caps allow, greyed with what unlocks it until then) and Done. Pressing a tool takes a new one off the bar and carries it until let go; a tap sets it down just under the bar.
+- A bar above the disc holds the three tools (each with how many more the caps allow, greyed, with the garden size that brings it, until then) and Done. Pressing a tool takes a new one off the bar and carries it until let go; a tap sets it down just under the bar.
 - Drag a tool's body to move it, a pot's knob (just beyond its node) to turn it, a trellis's end posts to swing and stretch it. A potted node is locked, so dragging it moves its pot, in build mode or out (a tap still opens the node's toolbar). Handles come before nodes under the pointer, since a pot's knob sits where its branch grows. Tapping a tool opens a small toolbar with Remove; dragging a tool back onto the bar also puts it away.
 - Dragging a node and letting go over a pot or trellis ties it there, and an empty pot let go over a node plants it. A tied node's toolbar gains Unhook.
 - Each node that can have 2 or more links shows its links used against its most, "used/most" (a forming bud counts, as it holds one): white at 1/N (only its parent), yellow in between, red when full (N/N). So the player sees at a glance where there's room to bud (Jeremy, Oct 29).
@@ -304,7 +304,7 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 
 ### Upgrade tracks (5b)
 
-**Genes are spent.** Labs' gene blobs still end at the core, which adds them to the garden's gene balance. (5a: `Garden.GeneBalance`, beside `Garden.Genes`, the genes earned over the garden's life, which never drop; spending takes from the balance alone. The old unlock track counts genes earned until 5b replaces it.) The core menu's **Research** slot opens a panel with three columns (Stems, Generators, Core), each showing **only its next upgrade and its cost**. How the player learns something is affordable is part of the alerts design (see Open for step 5); red dots were found distracting. A new garden starts with the core at 1 link, 4 stems, 1 generator, 1 seedling slot and 1 Gravity Pot.
+**Genes are spent.** Labs' gene blobs still end at the core, which adds them to the garden's gene balance. (5a: `Garden.GeneBalance`, beside `Garden.Genes`, the genes earned over the garden's life, which never drop; spending takes from the balance alone. 5b replaced the old unlock track, which counted genes earned.) The core menu's **Research** slot opens a panel with three columns (Stems, Generators, Core), each showing **only its next upgrade and its cost**. How the player learns something is affordable is part of the alerts design (see Open for step 5); red dots were found distracting. A new garden starts with the core at 1 link, 4 stems, 1 generator, 1 seedling slot and 1 Gravity Pot.
 
 - **Stems (+1 cap each):** 100, 150, 200, 300, 450, 650, 950, 1,350, 1,850, 2,450, 3,150, 3,950, 4,850, 5,850, 6,950, 8,150, 9,450, 10,850, 12,350, 13,950, 15,700, 17,600, 19,650, 21,850, 24,200, 26,700 (26 upgrades, to 30 stems).
 - **Generators (+1 cap each):** 1,500, 2,500, 3,500, 5,000, 10,000, 15,000, 20,000, 25,000, 30,000 (9 upgrades, to 10 generators).
@@ -318,9 +318,16 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 | Seedling slot +1 | 20,000 |
 | Wild flower limit +1 | 35,000 |
 | Hub | 60,000 |
-| Then alternating seedling slots and wild flower limit | Costs to set |
+| Seedling slot +1 | 90,000 (placeholder, 5b) |
+| Wild flower limit +1 | 120,000 (placeholder, 5b) |
+| Seedling slot +1 | 160,000 (placeholder, 5b) |
+| Wild flower limit +1 | 210,000 (placeholder, 5b) |
+| Seedling slot +1 | 270,000 (placeholder, 5b) |
+| Wild flower limit +1 | 340,000 (placeholder, 5b) |
 
-Third and later core links come only from evolutions (Second Path). Groves and labs stay uncapped, limited by free links and power upkeep.
+The six after the Hub alternate seedling slots and the wild flower limit at costs set in 5b as placeholders (each about a third dearer than the last); then the track ends, as long-term pacing isn't designed yet. Third and later core links come only from evolutions (Second Path). Groves and labs stay uncapped, limited by free links and power upkeep.
+
+**Built in 5b** (`Garden.Buy`, `Garden.Next`; the costs are data in `Tuning`, Research). Buying spends the balance and raises the cap at once; the core ripples in the genes' purple. The wild flower limit, seedling slots and the Hub are counters in `Capacity` until 5c, 5d and the Hub's step give them mechanics. The levels bought go in the save, still version 9 (5a's v9 shipped on master, and the new field is optional): a 5a save, which has none, keeps its caps and reads them as the stem and generator upgrades bought (a second core link as the core track bought up to it). The Research panel is a window like the Almanac's (its header dragged, ✕ or the slot to close): the balance in its header ("1,600 genes"), then a column per track with its cap so far ("Cap 6", or "2 of 12 bought" for the core), the next upgrade ("+1 stem", "+1 wild flower", "+1 core link", "+1 seedling slot", "Hub"), its cost and **Buy**, greyed while the balance falls short (its tooltip says how many genes more); a finished track reads "All bought". No alert yet: that waits on the alerts design.
 
 All three tracks share one gene income, and the stem and generator tracks will probably need trimming in playtesting.
 
@@ -334,9 +341,14 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | 40 | Gravity Well |
 | 60, 100, then every 50 | +1 Gravity Pot |
 
-The garden's card, the build bar's "greyed with what unlocks it" and the old gene-threshold wording for tools need new text in the build.
+**Wording, settled in the build (5b):**
+- **The build bar:** a tool not yet gained is greyed, its tooltip saying "Trellis: comes at garden size 15 (now 9: the most stems and flowers it has had, the core too)"; one gained says "Another at garden size 60" while more will come.
+- **A tool gained** is a journal moment, "Trellis gained at garden size 15", "Second Gravity Pot gained at garden size 25", in the tools' moonlight blue. Live, a short note in that blue says it ("… Place it in build mode."); after time away, the away note lists it first among the moments.
+- **Purchases in the journal:** "Second core link bought" and "Hub bought", in the genes' purple. Stems, generators, wild flower and seedling slots bought aren't moments.
+- **The totals export** swaps `unlocks_reached` for `upgrades_bought`, with `stems_bought`, `generators_bought` and `core_bought`.
+- The garden card's lines are under Information display.
 
-**Pacing assumption.** The timings assume a smart player actively tending (see Vision and pillars). The pacing simulation scripts one: it watches the first hour (a check-in every minute), then checks in every two hours while awake; it plants the first grove and lab at once, keeps labs within four links of the core (further out, most of their gene blobs wander off), fills the stem cap nearest the core and the generator cap where the plant is hungriest, keeps a grove per 15 stems, and prunes passive groves past that and labs that run dry or drain the garden. Passive growth fills every free link within minutes of an upgrade or a prune. A garden with no labs makes no genes, and one with no grove doesn't grow. The simulation needs updating for spending before the real-week check (see Step 5).
+**Pacing assumption.** The timings assume a smart player actively tending (see Vision and pillars). The pacing simulation scripts one: it watches the first hour (a check-in every minute), then checks in every two hours while awake; it plants the first grove and lab at once, keeps labs within four links of the core (further out, most of their gene blobs wander off), fills the stem cap nearest the core and the generator cap where the plant is hungriest, keeps a grove per 15 stems, and prunes passive groves past that and labs that run dry or drain the garden. Passive growth fills every free link within minutes of an upgrade or a prune. A garden with no labs makes no genes, and one with no grove doesn't grow. Since 5b it also spends at each check-in: while the garden is short of power and its generators are all grown, it buys (or saves for) the next generator; otherwise the cheapest next upgrade across the tracks, again and again while the balance covers it (`SmartPlayer.Research`; `PacingTests.TrackPacing`, run by hand with `PACING=1`).
 
 **Long-term pacing: TBD.** Week one has to feel right first; pacing beyond it gets planned once it does.
 
@@ -429,8 +441,8 @@ Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid an
 Garden
 Power: 6178 / 6800
 Gen: 79/s, Drain: 81/s
-Genes: 18401
-Next: Stem, 3,150 (ETA 4h 47m)
+Genes: 1840
+Next: +1 stem, 3,150 (ETA 4h 47m)
 
 Stems: 16 / 16
 Generators: 5 / 5
@@ -438,15 +450,15 @@ Core links: 2 / 2
 Groves: 4, Labs: 9
 ```
 
-Gen and Drain are what the garden makes and costs now; Gen's value is coloured by how it compares with Drain (see below). **Needs new wording in the build (step 5):** with spending, Genes is the balance left and Next names the cheapest upgrade across the three tracks with its ETA (the example above is a sketch); the old form was the total against the next unlock's threshold. The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
+Gen and Drain are what the garden makes and costs now; Gen's value is coloured by how it compares with Drain (see below). Since 5b, Genes is the balance left to spend and Next names the cheapest next upgrade across the three tracks, its cost and its ETA, or "(in Research)" once the balance covers it; with every upgrade bought it reads "Next: every upgrade bought". (Through step 4 it was the total against the next unlock's threshold.) The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
 
 **Colour coding** (Jeremy, Oct 29): only the value, or a fraction's numerator, is tinted; labels and denominators stay white.
 - **Power** (a part's, and the garden's total): white when full, shading to yellow above full (all yellow at 125%) and to red below it (all red at 50% and under).
 - **Gen**: white when it matches Drain, shading to yellow as it makes more (all yellow at 125% of Drain) and to red as it makes less (all red at 80%, since an overload matters sooner than a low store).
-- **Genes**: purple shading to white as the total nears the next unlock (needs a new rule and wording in the build: the balance against the next upgrade's cost).
+- **Genes**: purple shading to white as the balance nears the cheapest next upgrade's cost (white once it covers it).
 - **Stems, Generators, Core links**: green with all the room left, shading to white as it fills (white when full).
 
-**The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card), **Almanac** (step 4: the journal's window) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient** (its label names the hotkey, Ctrl+Alt+G), **Minimise** and **Settings**, which close it. **Research** (step 5b: the three gene tracks) joins it: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
+**The core's menu.** Tapping the core opens a half ring of round icon buttons under it (over it if there's no room below), which keeps the space above it clear for its toolbar and the shaping bar. The icons are drawn in the toolbar's style, and each slot's name shows beside it under the pointer. Slots: **Info** (the garden card), **Almanac** (step 4: the journal's window) and **Build** (build mode), switches that are lit while on and leave the menu and the core's toolbar open; **Ambient** (its label names the hotkey, Ctrl+Alt+G), **Minimise** and **Settings**, which close it. **Research** (step 5b: the three gene tracks; a flask, between Almanac and Build, lit while its panel is open, which only its slot or ✕ closes, like the Almanac) joins it: the ring spreads its slots evenly and widens as more join. It closes, with the core's card, on another tap of the core, a tap anywhere off it, Escape, or a pick of Ambient, Minimise or Settings. The core's own toolbar (its buds) opens with it, above the core (below it if the menu had to go above), and closes with it; tapping the core also shows the core's card.
 
 **Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little and shows the selection ring while the pointer is on it, and one tap switches to Active and opens its menu.
 
@@ -480,7 +492,7 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
 | 3e | Manual planting (done) | A manual bud starts at once and forms like a passive one; every node bud grows on its own at its parent's fill (about 2 minutes at full), growth blobs hurry it, and fruit still grows only from blobs. Planting stays free, and a garden with no grove needs no special case. See Growth and pruning |
 | 4 | Information and tracking (done) | Lifetime totals and four time series with tiered history (save v8), a debug-only export, the Almanac as a journal of moments, a "while you were away" note, power visuals at the top of the range, a light balance pass. See Step 4 below |
-| 5 | Progression (decided Oct 30; 5a done) | 5a (done): prep work (the passive growth rename in the game's text, gene spending and save v9 groundwork). 5b: three gene-spending upgrade tracks (stems, generators, core) behind the core menu's Research slot, shaping tools from garden size. 5c: seedlings and evolutions with marker fruits. 5d: wild flowers (wild growth, 15 kinds, one limit). The Hub, the Codex, journal and away-note additions, save v9. The real-week tuning check (moved from step 4) is postponed until step 5 is built. See Step 5 below |
+| 5 | Progression (decided Oct 30; 5a and 5b done) | 5a (done): prep work (the passive growth rename in the game's text, gene spending and save v9 groundwork). 5b (done): three gene-spending upgrade tracks (stems, generators, core) behind the core menu's Research slot, shaping tools from garden size. 5c: seedlings and evolutions with marker fruits. 5d: wild flowers (wild growth, 15 kinds, one limit). The Hub, the Codex, journal and away-note additions, save v9. The real-week tuning check (moved from step 4) is postponed until step 5 is built. See Step 5 below |
 | 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows passively without one). Revisit idle CPU against the benchmarks before release. Achievements: Steam achievements only, with no in-game toast or list; test whether Steam's overlay toast shows over the transparent window, and keep a clean path without Steam. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
 
@@ -493,7 +505,7 @@ Open: where events and seasons, and identity features fall in the plan.
 ### Step 4: information and tracking (decided Oct 29)
 
 **Tracking, kept small.**
-- **Lifetime totals:** garden age, genes earned, parts grown, parts pruned, passive buds, unlocks reached (step 5 replaces the last with upgrades bought and adds a peak main-node count).
+- **Lifetime totals:** garden age, genes earned, parts grown, parts pruned, passive buds, unlocks reached (5b replaced the last with upgrades bought, by track; 5a added the peak main-node count).
 - **Time series, four metrics only:** stored power, Gen, Drain, and genes reaching the core.
 - **History is tiered:** per minute for the last day, per hour for the last month, per day beyond that. The totals and history go in the save, which bumps it to **version 8**.
 - **Settled in the build (Oct 29):**
@@ -510,9 +522,9 @@ Open: where events and seasons, and identity features fall in the plan.
 
 **The Almanac is a journal of moments.**
 - Milestones are logged automatically, such as "First grove emerged" or "Second core link unlocked".
-  - Built: the planting, each kind's first part ("First grove emerged", "First leaf grew"), the first time the garden buds on its own, and every unlock (step 5 replaces the unlock moments; see Step 5). They favour the garden's own moments (Jeremy, Oct 29). Of the player's doings only genuine milestones count: the first of each shaping tool placed (not the first prune).
+  - Built: the planting, each kind's first part ("First grove emerged", "First leaf grew"), the first time the garden buds on its own, and every unlock (5b replaced the unlock moments with core links and the Hub bought, and shaping tools gained; see Upgrade tracks). They favour the garden's own moments (Jeremy, Oct 29). Of the player's doings only genuine milestones count: the first of each shaping tool placed (not the first prune).
   - Also the first time the garden reaches 25, 50, 100, 200, 300, 400 and 500 parts.
-  - Built for the old track: an unlock is named by what it opens, biggest first, then the room it adds (needs new wording in step 5): "Second core link and second Gravity Pot unlocked, with room for 1 more stem and 1 more generator", or "Unlocked room for 3 more stems".
+  - Built for the old track (replaced in 5b): an unlock was named by what it opened, biggest first, then the room it added: "Second core link and second Gravity Pot unlocked, with room for 1 more stem and 1 more generator", or "Unlocked room for 3 more stems".
 - The catalogue of node kinds is the Codex tab (step 5): discovered kinds only.
 - There is no big stats page.
 - It opens from the Almanac slot in the core's menu. ~~As a larger panel in the cards' fixed spot, closing the way they do.~~ Changed by Jeremy, Oct 29: it's a large window of its own with a draggable header and a ✕.
@@ -521,18 +533,18 @@ Open: where events and seasons, and identity features fall in the plan.
   - The first time, it opens beside the plant on the side with room. After that it opens wherever it was left, until the garden quits.
   - It hides while the garden is in Ambient or Minimised (only the core takes clicks there) and comes back in Active.
   - Tabs across the top, shown even with one: the **Journal** now, the **Codex** in step 5 (discovered kinds, each with a description and when it was first found), **Stats** if player-facing graphs come.
-  - The Journal groups moments under day headings ("Day 1", "Day 2": each 24 hours of the garden's age), newest first, each with its time on that day. The header shows the garden's day and time. Unlocks are in the genes' purple. It scrolls under the wheel.
+  - The Journal groups moments under day headings ("Day 1", "Day 2": each 24 hours of the garden's age), newest first, each with its time on that day. The header shows the garden's day and time. Purchases are in the genes' purple, shaping tools gained in the tools' blue. It scrolls under the wheel.
   - It can be resized by the grip in its bottom-right corner (300 × 240 at least). Size and place are kept until the garden quits.
 
 **No advanced stats on the cards.** They stay as trimmed in 3d.
 
 **While you were away.**
-- On return from a catch-up, a short note says what changed: new growth, unlocks reached, power dips. (Step 5 swaps unlocks for seedlings bloomed, new wild flowers, Hub points earned and Embers burned out.)
+- On return from a catch-up, a short note says what changed: new growth, unlocks reached, power dips. (5b swapped unlocks for shaping tools gained; 5c and on add seedlings bloomed, new wild flowers, Hub points earned and Embers burned out.)
 - It draws on the tracking and journal data.
 - **Built:** it replaces the old "says what grew" message, as a small panel above the plant for 15 s.
-  - It lists the parts grown by kind, the genes that reached the core, and up to 3 of the journal's moments (unlocks first; step 5 changes this, see Step 5), then how many more are in the Almanac.
+  - It lists the parts grown by kind, the genes that reached the core, and up to 3 of the journal's moments (shaping tools gained first, since 5b), then how many more are in the Almanac.
   - A dip is stored power falling below half of what the garden held when the player left. (Its store grows as it does, so a share of the store would flag every growing garden.)
-  - It shows on launch, and on un-hiding after at least 5 minutes away. It covers that catch-up's unlocks, so their own note doesn't show as well.
+  - It shows on launch, and on un-hiding after at least 5 minutes away. It covers that catch-up's shaping tools gained, so their own note doesn't show as well.
 
 **Power visuals at the top of the range** (done): parts still visibly grow and shrink now that stores are larger. Size and brightness follow the square of the fill, and past full a part swells at half its overfill (see Size follows fill).
 
@@ -556,7 +568,7 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 | Sub-step | Contents |
 | --- | --- |
 | 5a (done) | Prep: the passive growth rename in the game's text, the gene balance (spent apart from genes earned), the garden size counter, the wild chance tuning variables, save v9. See Review decisions, 2 |
-| 5b | Upgrade tracks: spending genes on stems, generators and the core, the Research panel, shaping tools from garden size |
+| 5b (done) | Upgrade tracks: spending genes on stems, generators and the core, the Research panel, shaping tools from garden size |
 | 5c | Seedlings and evolutions, marker fruits, repeats |
 | 5d | Wild flowers: the 15 kinds, the chance and limit, shapes |
 | Hub | Planted by hand, its own pool, points and per-kind panel |
@@ -565,7 +577,7 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 - **Codex tab** in the Almanac: lists only discovered kinds, each with its description and when it was first found.
 - **Journal:** each kind's first appearance, each evolution chosen and bloomed, the first Hub planted, core links bought and the Hub bought. These replace the old unlock moments (a core link or the Hub still reads as a moment; stems and generators bought do not).
 - **While you were away:** seedlings bloomed, new wild flowers (discoveries highlighted), Hub points earned, Embers burned out. This replaces the old "unlocks reached".
-- **Display text that named unlocks needs new wording in the build:** the garden card's "Next" line and Genes colouring (now the cheapest next upgrade and the balance), the away note's "unlocks reached", the journal's unlock moments (and their naming), the build bar's tool captions, and the Step 4 totals' "unlocks reached".
+- **Display text that named unlocks** got new wording in 5b: the garden card's "Next" line and Genes colouring (the cheapest next upgrade and the balance), the away note's "unlocks reached" and the journal's unlock moments (shaping tools gained, core links and the Hub bought), the build bar's tool captions (garden size), and the Step 4 totals' "unlocks reached" (upgrades bought). See Upgrade tracks, Wording.
 - **Save version 9.** Older saves are set aside, not migrated. It adds gene spending and track levels, seedlings and marker fruits, wild flowers and their state (an Ember's dimness, a Comet Bloom's age), the Hub (pool, points, levels, dormancy), discovered kinds, and the peak main-node count. 5a opened version 9 with the gene balance and the peak main-node count; 5b to 5d add their own fields as they're built.
 - **Crawlers'** starting assumption moves to around week two, after the Hub.
 - **The real-week tuning check is postponed until step 5 is built.** Then: run a real week on the new tracks, retune costs, and check the gene income ceiling (whether flat gene income, with labs needing to sit near the core, is a real problem).
@@ -579,7 +591,7 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 6. **Gene totals.** Stems 213,650 + generators 112,500 + core to Hub 130,500 come to about 457k genes, against about 330k for the old week-one track. At 55-70k a day, that's roughly 7-8 days before the Hub's points and later core items. Kept, with the trimming note.
 
 **Open for step 5**
-- **Alerts.** How the garden tells the player that something waits: an upgrade affordable, a seedling's choice, a bloom, a discovery. Red dots are distracting (the core's dot was dropped in 3d), so look for a different way, for example a lit or pulsing Research slot, a glint on the core, a journal moment, or the away note. To design before 5b's Research panel is finished.
+- **Alerts.** How the garden tells the player that something waits: an upgrade affordable, a seedling's choice, a bloom, a discovery. Red dots are distracting (the core's dot was dropped in 3d), so look for a different way, for example a lit or pulsing Research slot, a glint on the core, a journal moment, or the away note. 5b shipped the Research panel with no signal (the garden card's Next line says "(in Research)" once the cheapest upgrade is affordable, when Info is on); the alert is still to design.
 
 ## Parked ideas
 
@@ -616,8 +628,8 @@ Design layers still to work through:
 - [x] Choice-based core levels and seedling slot timing (step 5): replaced by the three gene-spending tracks, with seedling slots in the core track
 - [x] Which basic node each evolution becomes, and its fruit (step 5): the evolution table and marker fruits
 - [ ] Step 5 open points (destruction exception, 5a, rename scope, planted buds growing wild, Research dot, content batching, gene totals)
-- [ ] Build step 5 (5a prep done; 5b, 5c, 5d, Hub), then the real-week tuning check
-- [ ] Alerts: how the garden signals that something waits, without red dots (before 5b's Research panel is finished)
+- [ ] Build step 5 (5a prep and 5b tracks done; 5c, 5d, Hub), then the real-week tuning check
+- [ ] Alerts: how the garden signals that something waits, without red dots (5b shipped the Research panel without one; still open)
 - [ ] Hub details: N for the points curve, milestone levels, upkeep per upgrade, respec
 - [ ] Onboarding over the first days (step 6), starting with planting the first grove
 - [ ] Identity: what makes each garden uniquely yours after months

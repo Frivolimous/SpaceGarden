@@ -12,7 +12,6 @@ public class BudTests
     {
         var garden = Garden.New(Layout.Radial, seed);
         garden.Capacity = new Capacity(3, 1, 1);
-        garden.Unlocks = Tuning.UnlockTrack.Length; // the track done: no raises
         garden.PassiveGrowth = false;
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         return (garden, stem);

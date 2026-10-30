@@ -16,7 +16,6 @@ public class PruneTests
     {
         var garden = Garden.New(Layout.Radial, seed: 7);
         garden.Capacity = new Capacity(3, 0, 1);
-        garden.Unlocks = Tuning.UnlockTrack.Length; // fixed caps
         garden.PassiveGrowth = false;
         var trunk = Add(garden, garden.Core, NodeKind.Stem);
         var fork = Add(garden, trunk, NodeKind.Stem);

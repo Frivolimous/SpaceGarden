@@ -62,7 +62,7 @@ public static class NodeBase
 }
 
 // Ported from the TS game's data/NodeData.ts and data/Colors.ts (radius, mass, force, links, shape, colour) and its
-// Nodes config (power). The core's links are the garden's Capacity.CoreLinks (1 at the start, raised by unlocks), not
+// Nodes config (power). The core's links are the garden's Capacity.CoreLinks (1 at the start, raised by upgrades), not
 // its spec's. The grove is the TS game's Fruit Grove (an orange square); its fruit, the TS "gen", is a berry here.
 // Every kind has a name and description (StatsTests checks).
 public static class NodeSpecs

@@ -9,7 +9,6 @@ public class GroveTests
     {
         var garden = Garden.New(Layout.Radial, seed);
         if (capacity != null) garden.Capacity = capacity;
-        garden.Unlocks = Tuning.UnlockTrack.Length; // the track done: no raises
         return garden;
     }
 
