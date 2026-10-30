@@ -165,6 +165,31 @@ public static class Tuning
     // A Moonflower's boost reaches buds on parts up to this many links away.
     public const int WildBoostReach = 3;
 
+    // Each kind's quirks, first passes (DESIGN.md, Wild flowers, the table), in WildFlowers.cs. Amplifier: a blob
+    // passing through becomes two, once each (2 links, no fruit). Resistor: blocks every blob, and sends power on at
+    // ResistorTransfer a second (a stem's 30), slowing what's beyond it.
+    public const float ResistorTransfer = 6;
+    // Tendril: its link TendrilLink times as long and TendrilSpring as springy; holds TendrilStore (a stem 150) and
+    // counts as TendrilWeight as empty as it is when its neighbours choose where to send power (a stem 1.1), so it
+    // fills slowly.
+    public const float TendrilLink = 2.5f, TendrilSpring = 0.3f, TendrilStore = 600, TendrilWeight = 0.5f;
+    // Ember: a generator's rate whatever its fill, no upkeep; it dims to EmberDimTo of that over EmberLifeSeconds,
+    // then burns out.
+    public const float EmberLifeSeconds = 3 * 86400, EmberDimTo = 0.25f;
+    // Lumber Grove: LumberBlobs growth blobs an hour (a grove 1,200) at LumberUpkeep a second (a grove 4).
+    public const float LumberBlobs = 2400, LumberUpkeep = 8;
+    // Seed Pod: SeedPodBlobs an hour, but they leave SeedPodBurst at once (about every 2.5 minutes at full fill).
+    public const float SeedPodBlobs = 1440;
+    public const int SeedPodBurst = 60;
+    // Wild Lab: WildLabBlobs gene blobs an hour (a lab 720), but WildLabFruits research (a lab 3), each counting
+    // WildLabFruitScale times: with all six, 480 x 2.2 = 1,056 an hour against a full lab's 936.
+    public const float WildLabBlobs = 480, WildLabFruitScale = 2;
+    public const int WildLabFruits = 6;
+    // Lichen: LichenUpkeep a second (a lab 6) and LichenBlobs gene blobs an hour; its LichenLeaves leaves, a quarter
+    // off each, bring its upkeep to 0.
+    public const float LichenUpkeep = 3, LichenBlobs = 360;
+    public const int LichenLeaves = 4;
+
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in
     // order. Placeholders for playtesting. Stems and generators each raise their cap by 1 (to 30 stems and 10

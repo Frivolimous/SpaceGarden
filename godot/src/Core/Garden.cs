@@ -751,7 +751,7 @@ public sealed class Garden
                     flower.Blob = Math.Max(0, flower.Blob - 1);
                     // A Comet Bloom's burst is every kind of blob in turn.
                     var kind = flower.Spec.Sends == BlobKind.All ? (BlobKind)(1 + (int)MathF.Round(flower.Blob) % 3) : flower.Spec.Sends;
-                    if (Send(flower, kind, ref counts)) grew++;
+                    grew += Send(flower, kind, ref counts);
                 }
             }
         }
@@ -832,26 +832,33 @@ public sealed class Garden
     // How hard a part works (DESIGN.md: "Everything follows its fill"): in proportion to its fill, up to full.
     public static float Output(PlantNode node) => Math.Clamp(node.Fill, 0, 1);
 
-    // Power a part makes per second now: in proportion to its fill, nothing once full.
+    // Power a part makes per second now: in proportion to its fill (an Ember's whatever its fill), nothing once full.
     public static float ProductionPerSecond(PlantNode node) =>
-        node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * Output(node);
+        node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * (node.Spec.SteadyOutput ? 1 : Output(node));
 
     // What the cards show it making: its full rate once full (when it makes nothing, idling, not starved), else
     // what it makes now.
     public static float ShownProductionPerSecond(PlantNode node) =>
         node.Power >= node.Store ? FullProductionPerSecond(node) : ProductionPerSecond(node);
 
-    // What a part makes per second when full (its fruit adding a little each: see FruitBonus).
+    // What a part makes per second when full (its fruit adding a little each: see FruitBonus; an Ember less as it
+    // dims).
     public static float FullProductionPerSecond(PlantNode node) =>
-        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node);
+        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node);
 
-    // A part's own fruit raise its output, each by its FlowerBonus.
+    // A part's own fruit raise its output, each by its FlowerBonus (times the part's FruitBonusScale: a Wild Lab's
+    // count double).
     static float FruitBonus(PlantNode node)
     {
         float bonus = 1;
-        foreach (var fruit in node.Fruits) bonus += fruit.Spec.FlowerBonus;
+        foreach (var fruit in node.Fruits) bonus += fruit.Spec.FlowerBonus * node.Spec.FruitBonusScale;
         return bonus;
     }
+
+    // How bright a wild flower that dims (an Ember) still is: 1 as it grows, down to EmberDimTo as its life ends.
+    // Others: 1.
+    public static float Brightness(PlantNode node) => !node.Spec.Dims ? 1
+        : 1 - (1 - Tuning.EmberDimTo) * (float)Math.Clamp(node.Life / node.Spec.LifeSeconds, 0, 1);
 
     // Power a part costs per second now: its full upkeep times its fill (past full, more).
     public static float UpkeepPerSecond(PlantNode node) => FullUpkeepPerSecond(node) * Math.Max(0, node.Fill);
@@ -879,12 +886,16 @@ public sealed class Garden
     // at a dead end, until a part absorbs it (a gene blob: only the core) or BlobMaxHops links have passed. Returns
     // the part that absorbed it, if one did, and adds the parts it passed to route (from the flower), if given: only
     // a blob that will be shown needs one. Many thousands of blobs leave an hour, so it allocates nothing else.
-    PlantNode? Walk(PlantNode from, bool genes, ref Counts counts, List<PlantNode>? route)
+    // A Resistor stops it dead; the first Amplifier it passes (while canDouble) is noted in Doubled, where a second
+    // blob carries on (see SendGenes, Grow), its walk starting there as if it had come from cameFrom, with the hops
+    // left.
+    PlantNode? Walk(PlantNode from, bool genes, ref Counts counts, List<PlantNode>? route, PlantNode? cameFrom = null,
+        int hops = Tuning.BlobMaxHops, bool canDouble = true)
     {
+        Doubled = null;
         route?.Add(from);
-        PlantNode? cameFrom = null;
         var at = from;
-        for (int hop = 0; hop < Tuning.BlobMaxHops; hop++)
+        for (int hop = 0; hop < hops; hop++)
         {
             int options = at.Branches.Count + (at.Parent != null ? 1 : 0);
             if (options == 0) return null; // a lone core
@@ -893,10 +904,15 @@ public sealed class Garden
             cameFrom = at;
             at = next;
             route?.Add(at);
+            if (at.Spec.BlocksBlobs) return null;
             if (genes ? at == Core : Absorbs(at, counts)) return at;
+            if (canDouble && Doubled == null && at.Spec.DoublesBlobs) Doubled = (at, cameFrom, hop + 1);
         }
         return null;
     }
+
+    // Where the last walk passed an Amplifier: the part, the one it came from, and the hops it had taken.
+    (PlantNode At, PlantNode From, int Hops)? Doubled;
 
     // The pick-th of a part's branches and then its parent, passing over skip.
     static PlantNode Option(PlantNode at, int pick, PlantNode? skip)
@@ -909,28 +925,29 @@ public sealed class Garden
         return at.Parent!;
     }
 
-    // One blob leaves a flower, of this kind. Returns whether a part grew from it.
-    bool Send(PlantNode flower, BlobKind kind, ref Counts counts)
+    // One blob leaves a flower, of this kind. Returns how many parts grew from it (an Amplifier can make it two).
+    int Send(PlantNode flower, BlobKind kind, ref Counts counts)
     {
         switch (kind)
         {
             case BlobKind.Genes:
-                SendGenes(flower, ref counts);
-                return false;
+                SendGenes(flower, flower, ref counts, null, Tuning.BlobMaxHops, 0, canDouble: true);
+                return 0;
             case BlobKind.Growth:
-                return SendGrowth(flower, ref counts) != null;
+                return SendGrowth(flower, flower, ref counts, null, Tuning.BlobMaxHops, 0, canDouble: true);
             default:
-                return false;
+                return 0;
         }
     }
 
     // A blob is shown following its route, unless in a catch-up or with too many already in flight.
     List<PlantNode>? RouteIfShown() => ShowBlobs && Motes.Count < Tuning.MaxMotes ? new List<PlantNode>() : null;
 
-    Mote? Show(List<PlantNode>? route, PlantNode flower)
+    // Shown setting off after delay seconds (an Amplifier's second blob waits for the first to reach it).
+    Mote? Show(List<PlantNode>? route, PlantNode flower, float delay = 0)
     {
         if (route == null || route.Count < 2) return null;
-        var mote = new Mote(route, flower.Spec.Rgb);
+        var mote = new Mote(route, flower.Spec.Rgb) { Delay = delay };
         Motes.Add(mote);
         return mote;
     }
@@ -943,40 +960,49 @@ public sealed class Garden
         return Walk(lab, genes: true, ref counts, null) != null;
     }
 
-    // A lab's gene blob leaves. Only the core absorbs it; its genes count at the core in this same step, so a
-    // catch-up (which runs no physics) and a live session agree, and the blob shown is their journey made visible.
-    // A blob that never finds the core fades, its genes lost: labs near the core waste fewer.
-    void SendGenes(PlantNode lab, ref Counts counts)
+    // A lab's gene blob leaves (from the lab, or carries on from an Amplifier that doubled it, its walk shown delay
+    // seconds later). Only the core absorbs it; its genes count at the core in this same step, so a catch-up (which
+    // runs no physics) and a live session agree, and the blob shown is their journey made visible. A blob that never
+    // finds the core fades, its genes lost: labs near the core waste fewer.
+    void SendGenes(PlantNode lab, PlantNode from, ref Counts counts, PlantNode? cameFrom, int hops, float delay, bool canDouble)
     {
         var route = RouteIfShown();
-        bool found = Walk(lab, genes: true, ref counts, route) != null;
+        bool found = Walk(from, genes: true, ref counts, route, cameFrom, hops, canDouble) != null;
+        var doubled = Doubled;
         if (found) Deliver(Tuning.BlobGenes);
-        if (Show(route, lab) is { } mote) mote.Absorbed = found;
+        if (Show(route, lab, delay) is { } mote) mote.Absorbed = found;
+        if (doubled is { } d)
+            SendGenes(lab, d.At, ref counts, d.From, hops - d.Hops, delay + d.Hops * Tuning.MoteLinkSeconds, canDouble: false);
     }
 
-    // A grove's growth blob leaves. Where it goes and what it does are settled now, from the garden's own dice, so a
-    // catch-up and a live session agree: the part that absorbs it forms more of its fruit or bud, and a part that
-    // completes is added now, hidden (its Age below zero) until the blob, shown following the same walk, arrives.
-    // Returns the part that grew, if one did. Counts are the step's, kept up to date as buds start.
-    PlantNode? SendGrowth(PlantNode grove, ref Counts counts)
+    // A grove's growth blob leaves (or carries on from an Amplifier, as SendGenes). Where it goes and what it does are
+    // settled now, from the garden's own dice, so a catch-up and a live session agree: the part that absorbs it forms
+    // more of its fruit or bud, and a part that completes is added now, hidden (its Age below zero) until the blob,
+    // shown following the same walk, arrives. Returns how many parts grew. Counts are the step's, kept up to date as
+    // buds start.
+    int SendGrowth(PlantNode grove, PlantNode from, ref Counts counts, PlantNode? cameFrom, int hops, float delay, bool canDouble)
     {
         var route = RouteIfShown();
-        var absorber = Walk(grove, genes: false, ref counts, route);
-        if (absorber == null)
+        var absorber = Walk(from, genes: false, ref counts, route, cameFrom, hops, canDouble);
+        var doubled = Doubled;
+        int grew = 0;
+        if (absorber == null) Show(route, grove, delay);
+        else
         {
-            Show(route, grove);
-            return null;
+            var grown = Feed(absorber, ref counts);
+            if (grown != null) grew++;
+            if (Show(route, grove, delay) is { } mote)
+            {
+                mote.Growth = Tuning.BlobGrowth;
+                mote.Absorbed = true;
+                mote.Completes = grown != null;
+                if (grown != null) grown.Age = -delay - (route!.Count - 1) * Tuning.MoteLinkSeconds;
+            }
+            else absorber.FormingLook = absorber.Growth;
         }
-        var grown = Feed(absorber, ref counts);
-        if (Show(route, grove) is { } mote)
-        {
-            mote.Growth = Tuning.BlobGrowth;
-            mote.Absorbed = true;
-            mote.Completes = grown != null;
-            if (grown != null) grown.Age = -(route!.Count - 1) * Tuning.MoteLinkSeconds;
-        }
-        else absorber.FormingLook = absorber.Growth;
-        return grown;
+        if (doubled is { } d)
+            grew += SendGrowth(grove, d.At, ref counts, d.From, hops - d.Hops, delay + d.Hops * Tuning.MoteLinkSeconds, canDouble: false);
+        return grew;
     }
 
     // A part with something forming always absorbs a growth blob; one with room to start a fruit or a bud does
@@ -1528,6 +1554,11 @@ public sealed class Garden
         for (int i = Motes.Count - 1; i >= 0; i--)
         {
             var mote = Motes[i];
+            if (mote.Delay > 0)
+            {
+                mote.Delay -= dt;
+                continue;
+            }
             mote.T += dt / Tuning.MoteLinkSeconds;
             if (mote.T < 1) continue;
 

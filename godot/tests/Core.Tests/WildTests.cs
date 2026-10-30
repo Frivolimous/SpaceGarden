@@ -87,6 +87,46 @@ public class WildTests
     }
 
     [Fact]
+    public void AnEmberBurnsOutAndFreesItsSlot()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        var ember = Add(garden, stem, NodeKind.Ember);
+        Assert.Equal(0, garden.FreeWildSlots);
+        ember.Life = Tuning.EmberLifeSeconds - 1;
+        Assert.True(Garden.Brightness(ember) < 0.3f); // dim near its end
+        garden.Grow(2);
+        Assert.DoesNotContain(ember, garden.Nodes);
+        Assert.Equal(1, garden.FreeWildSlots);
+        Assert.Equal(0, garden.Tracking.Pruned); // no prune: nothing to undo
+        Assert.False(garden.CanUndoPrune);
+        Assert.Contains(garden.Tracking.Journal, e => e is { Kind: JournalKind.Ended, Text: "An Ember burned out" });
+        Assert.Equal(1, garden.Tracking.EndedCount[NodeKind.Ember]);
+    }
+
+    [Fact]
+    public void AResistorBlocksBlobs()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        var resistor = Add(garden, stem, NodeKind.Resistor);
+        var lab = Add(garden, resistor, NodeKind.Lab);
+        Assert.Equal(0, GardenStats.GeneReach(garden, lab));
+        Assert.All(Enumerable.Range(0, 200), _ => Assert.False(garden.WalkGene(lab)));
+    }
+
+    [Fact]
+    public void AnAmplifierDoublesABlobOnce()
+    {
+        var garden = Garden.New(Layout.Radial, 3);
+        garden.PassiveGrowth = false;
+        garden.Capacity = new Capacity(10, 4, 1, WildFlowers: 1);
+        // core - amplifier - lab: the lab's one blob passes the amplifier, and both find the core.
+        var lab = Add(garden, Add(garden, garden.Core, NodeKind.Amplifier), NodeKind.Lab);
+        lab.Blob = 1;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.Equal(2 * Tuning.BlobGenes, garden.Genes);
+    }
+
+    [Fact]
     public void DiscoveryIsLoggedOnceAndSaved()
     {
         var (garden, stem) = Make(wildLimit: 2);

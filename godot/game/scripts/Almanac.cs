@@ -43,7 +43,7 @@ public partial class Almanac : FloatingWindow
         var group = new ButtonGroup();
         tabs.AddChild(journalTab = Tab("Journal", group, () => ShowCodex(false)));
         tabs.AddChild(codexTab = Tab("Codex", group, () => ShowCodex(true)));
-        journalTab.ButtonPressed = true;
+        journalTab.SetPressedNoSignal(true);
         Column.AddChild(new HSeparator { MouseFilter = MouseFilterEnum.Ignore, Modulate = new Color(1, 1, 1, 0.3f) });
         scroll = new ScrollContainer
         {

@@ -84,7 +84,7 @@ public sealed record GardenStats(
                 double each = odds / (skip != null ? options - 1 : options);
                 void Go(PlantNode to)
                 {
-                    if (to == skip) return;
+                    if (to == skip || to.Spec.BlocksBlobs) return; // (a Resistor stops it; an Amplifier's doubling isn't counted)
                     if (to == core) reached += each;
                     else next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
                 }

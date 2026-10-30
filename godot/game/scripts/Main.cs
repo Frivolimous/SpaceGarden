@@ -84,7 +84,7 @@ public partial class Main : Node2D
 
         widget = new Widget(this) { Name = "Widget" };
         AddChild(widget);
-        widget.CoverScreen(save?.PlantScale ?? 0.75f);
+        widget.CoverScreen(args.TryGetValue("scale", out var sc) ? float.Parse(sc) : save?.PlantScale ?? 0.75f);
         if (save != null && Widget.IdleRates.Contains(save.IdleFps)) widget.IdleFps = save.IdleFps;
         if (save == null) PlantAtHome();
         else widget.KeepOnScreen();
@@ -167,9 +167,10 @@ public partial class Main : Node2D
         Garden.Sprout();
     }
 
-    // Dev aid, --wild=KIND[,KIND...] (or --wild=all, one of each): grows those wild flowers at once, each on the deepest
-    // part with a free link (a new core link and stem first if none has one, past the caps), whatever their lock, the
-    // wild flower limit raised to fit (see Garden.GrowWild). Kinds by their NodeKind name (Ember, LumberGrove).
+    // Dev aid, --wild=KIND[,KIND...] (or --wild=all, one of each, for a sheet of their looks): grows those wild flowers
+    // at once, each on a stem of its own from the core (a new core link and stem past the caps), whatever their lock,
+    // the wild flower limit raised to fit (see Garden.GrowWild); an inline kind gets a stem beyond it, to show it
+    // carries on. Every part starts full, so they show at full size. Kinds by their NodeKind name (Ember, LumberGrove).
     void GrowWild(string which)
     {
         var kinds = which is "" or "all"
@@ -177,16 +178,21 @@ public partial class Main : Node2D
             : which.Split(',').Select(k => Enum.Parse<NodeKind>(k, true)).ToList();
         foreach (var kind in kinds)
         {
-            if (Garden.GrowWild(kind) != null) continue;
             int stems = Garden.Nodes.Count(n => n.Spec.Kind == NodeKind.Stem);
             Garden.Capacity = Garden.Capacity with
             {
                 CoreLinks = Garden.Core.Links + 1,
-                Stems = Math.Max(Garden.Capacity.Stems, stems + 1),
+                Stems = Math.Max(Garden.Capacity.Stems, stems + 2),
             };
-            if (Garden.GrowBranch(Garden.Core, NodeKind.Stem) is { } stem) Garden.GrowWild(kind, stem);
+            if (Garden.GrowBranch(Garden.Core, NodeKind.Stem) is not { } stem || Garden.GrowWild(kind, stem) is not { } flower)
+                continue;
+            if (flower.MaxLinks == 2) Garden.GrowBranch(flower, NodeKind.Stem);
         }
-        for (int i = 0; i < 600; i++) Garden.Step(); // ten seconds' settling
+        // A sheet of them all: in the middle of the screen, where there's room round it.
+        if (kinds.Count > 3 && Garden.Borders is var (min, max)) Garden.Translate((min + max) / 2 - Garden.Core.Position);
+        foreach (var node in Garden.Nodes) node.Power = node.Store;
+        Garden.SettleLooks();
+        for (int i = 0; i < 900; i++) Garden.Step(); // fifteen seconds' settling
         foreach (var node in Garden.Nodes) node.Age = Math.Max(node.Age, 10);
     }
 
@@ -233,7 +239,7 @@ public partial class Main : Node2D
     void ShowGarden()
     {
         View?.QueueFree();
-        View = new GardenView(Garden) { Name = "GardenView", Frozen = HiddenReason != null };
+        View = new GardenView(Garden) { Name = "GardenView", Frozen = HiddenReason != null, Labels = args.ContainsKey("labels") };
         AddChild(View);
     }
 
