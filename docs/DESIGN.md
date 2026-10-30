@@ -19,7 +19,7 @@ Space Garden is a calm desktop companion with a strategy economy underneath: a s
 
 **Constraints carried from the first draft**
 
-- **Never punishing.** Absence is fine; coming back is a pleasant surprise. The only consequence of neglect is a garden running low on power (see Economy), working slower, and it never destroys anything. (Step 5 proposes one exception: a wild flower's own life cycle may end it, never neglect; see Open for step 5.)
+- **Never punishing.** Absence is fine; coming back is a pleasant surprise. The only consequence of neglect is a garden running low on power (see Economy), working slower, and it never destroys anything. The one exception (step 5): a wild flower whose own life cycle ends it (Ember, Comet Bloom), never neglect; see Wild flowers.
 - **Lightweight presence.** Runs all day without anyone noticing it in CPU, memory or battery. See Performance budget and its benchmarks.
 - **No progress gated on the window being open.** Time away is caught up (see Time model).
 
@@ -169,7 +169,7 @@ Implemented in step 1.
 - **Wall-clock driven.** Growth advances by real elapsed time, not frames.
 - **Low-power idle.** When nothing is being touched or moving, rendering drops to the idle frame rate.
 - **Catch-up on return.** The save stores when the garden was last seen; on launch the elapsed time is simulated without drawing, capped at **72 hours** (`Tuning.CatchUpCapSeconds`, to be tuned). Time hidden behind a lock screen or full-screen app is caught up the same way when the garden shows again.
-- **Absence never hurts.** Catch-up can't destroy nodes (bar the proposed exception for a wild flower's own life cycle; see Open for step 5); the worst case is an overloaded garden running low, which the player fixes by pruning.
+- **Absence never hurts.** Catch-up can't destroy nodes (bar a wild flower whose own life cycle ends it, such as Ember; see Wild flowers); the worst case is an overloaded garden running low, which the player fixes by pruning.
 - **While you were away** (step 4): on return, a short note says what changed (new growth, power dips, and in step 5 seedlings bloomed, new wild flowers, Hub points and burned-out Embers), drawn from the tracking and the Almanac. The old "unlocks reached" goes with the unlock track; its replacement needs new wording in the build.
 
 ## Growth and pruning
@@ -261,7 +261,7 @@ Each flower type has its own set of fruits, all grown by growth blobs. Leaves on
 
 A new bud can turn into a special kind. That is **wild growth**, and the results are **wild flowers**. They are quirks, not upgrades: each trades something for something, and the player prunes what they don't want. (Settled Oct 30, step 5. Every number here is a placeholder for playtesting.)
 
-- **Any new bud can grow wild**, planted or passive. The chance is a few percent per free wild flower slot (draft 4%), and zero when none is free. The roll is made when the bud starts.
+- **Any new bud can grow wild**, planted or passive. The chance is per free wild flower slot and differs by how the bud started: `PassiveWildChance` 5% for a passive bud, `PlantedWildChance` 4% for a planted one (two tuning variables; whether planted buds should grow wild at all is watched in playtesting). It is zero when no slot is free. The roll is made when the bud starts.
 - **One total limit**, the wild flower limit, raised in the core track and by seedlings. A wild flower takes a wild flower slot, not its base type's slot. There are no per-kind caps except where noted (Big Stem, Pulsar, Twin Star, whose evolutions add 2 each).
 - **Pruning frees the slot.** A later bud may roll another wild flower, possibly a different kind in a different place.
 - **Looks:** each kind has its own, more complex, radially symmetric shape. The base node's hue is kept, at most with a subtle shift. Passive-only kinds have no base and are white. Shapes echo the base where that works (Pulsar is a 5-pointed star).
@@ -287,7 +287,7 @@ A new bud can turn into a special kind. That is **wild growth**, and the results
 
 Home leaves the pool: crawlers bring their own home node (step 7). The Hub is no longer a rare; it is planted (see Progression). Resistor, Amplifier and Buffer are the grey/white specialists in the visual language, the garden's modifiers of flow and output now that spells are cut.
 
-Ember and Comet Bloom end themselves, which is the one exception to "never destroys anything" (see Open for step 5 under Step 5).
+Ember and Comet Bloom end themselves, the one exception to "never destroys anything" (decided Oct 30): only a wild flower's own life cycle ends it, never neglect; its slot is freed and the away note says so.
 
 ## Progression
 
@@ -304,7 +304,7 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 
 ### Upgrade tracks (5b)
 
-**Genes are spent.** Labs' gene blobs still end at the core, which adds them to the garden's gene balance. The core menu's **Research** slot opens a panel with three columns (Stems, Generators, Core), each showing **only its next upgrade and its cost**. A red dot sits on the Research slot (never the core) when something is affordable. A new garden starts with the core at 1 link, 4 stems, 1 generator, 1 seedling slot and 1 Gravity Pot.
+**Genes are spent.** Labs' gene blobs still end at the core, which adds them to the garden's gene balance. The core menu's **Research** slot opens a panel with three columns (Stems, Generators, Core), each showing **only its next upgrade and its cost**. How the player learns something is affordable is part of the alerts design (see Open for step 5); red dots were found distracting. A new garden starts with the core at 1 link, 4 stems, 1 generator, 1 seedling slot and 1 Gravity Pot.
 
 - **Stems (+1 cap each):** 100, 150, 200, 300, 450, 650, 950, 1,350, 1,850, 2,450, 3,150, 3,950, 4,850, 5,850, 6,950, 8,150, 9,450, 10,850, 12,350, 13,950, 15,700, 17,600, 19,650, 21,850, 24,200, 26,700 (26 upgrades, to 30 stems).
 - **Generators (+1 cap each):** 1,500, 2,500, 3,500, 5,000, 10,000, 15,000, 20,000, 25,000, 30,000 (9 upgrades, to 10 generators).
@@ -450,7 +450,7 @@ Gen and Drain are what the garden makes and costs now; Gen's value is coloured b
 
 **Waking from Ambient.** In Ambient everything is click-through but the core. The core brightens a little and shows the selection ring while the pointer is on it, and one tap switches to Active and opens its menu.
 
-**No needs-attention dot on the core.** A red dot on the core (for an overloaded garden, later waiting evolutions and research) was tried and dropped (Jeremy, Oct 29): more confusing than helpful. The garden card's Gen colour shows an overload. Step 5 (Oct 30) allows one dot, on the **Research slot only**, when something there is affordable; it never goes on the core.
+**No needs-attention dot on the core.** A red dot on the core (for an overloaded garden, later waiting evolutions and research) was tried and dropped (Jeremy, Oct 29): more confusing than helpful. The garden card's Gen colour shows an overload. How step 5 signals an affordable upgrade, a choice waiting or a bloom is the alerts design, still open (see Open for step 5).
 
 **Settings.** Right-click (and the tray icon's right-click) opens them as a shortcut; so does Settings in the core's menu. For the player: Size, Idle frame rate, New garden (which asks first) and Quit. A Developer submenu, only in debug builds (`OS.IsDebugBuild()`), holds Always on top, Growth speed and Physics. Display mode moved to the core's menu.
 
@@ -480,7 +480,7 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
 | 3e | Manual planting (done) | A manual bud starts at once and forms like a passive one; every node bud grows on its own at its parent's fill (about 2 minutes at full), growth blobs hurry it, and fruit still grows only from blobs. Planting stays free, and a garden with no grove needs no special case. See Growth and pruning |
 | 4 | Information and tracking (done) | Lifetime totals and four time series with tiered history (save v8), a debug-only export, the Almanac as a journal of moments, a "while you were away" note, power visuals at the top of the range, a light balance pass. See Step 4 below |
-| 5 | Progression (decided Oct 30) | 5b: three gene-spending upgrade tracks (stems, generators, core) behind the core menu's Research slot, shaping tools from garden size. 5c: seedlings and evolutions with marker fruits. 5d: wild flowers (wild growth, 15 kinds, one limit). The Hub, the Codex, journal and away-note additions, save v9. The real-week tuning check (moved from step 4) is postponed until step 5 is built. See Step 5 below |
+| 5 | Progression (decided Oct 30) | 5a: prep work (the passive growth rename in the game's text, gene spending and save v9 groundwork). 5b: three gene-spending upgrade tracks (stems, generators, core) behind the core menu's Research slot, shaping tools from garden size. 5c: seedlings and evolutions with marker fruits. 5d: wild flowers (wild growth, 15 kinds, one limit). The Hub, the Codex, journal and away-note additions, save v9. The real-week tuning check (moved from step 4) is postponed until step 5 is built. See Step 5 below |
 | 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows passively without one). Revisit idle CPU against the benchmarks before release. Achievements: Steam achievements only, with no in-game toast or list; test whether Steam's overlay toast shows over the transparent window, and keep a clean path without Steam. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
 
@@ -569,14 +569,16 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 - **Crawlers'** starting assumption moves to around week two, after the Hub.
 - **The real-week tuning check is postponed until step 5 is built.** Then: run a real week on the new tracks, retune costs, and check the gene income ceiling (whether flat gene income, with labs needing to sit near the core, is a real problem).
 
-**Open for step 5** (raised in review; none decided)
-1. **Destruction.** Ember destroying itself and Comet Bloom withering contradict "Never punishing ... never destroys anything" (Constraints) and "Catch-up can't destroy nodes" (Time model). Proposal: an explicit exception, where only a wild flower's own life cycle ends it and never neglect, the slot is freed, and the away note reports it. Those two lines point here.
-2. **What 5a is.** The brief's letters start at 5b. Proposal: 5a is the naming pass in the game's text, plus gene spending and save v9 groundwork.
-3. **Rename scope in the game.** The garden card's "wild buds forming", the tracking total `wild_buds`, the journal's "budded on its own" moment, and identifiers in `Tuning`. Proposal: player-facing text in 5a, identifiers as the code is touched.
-4. **Planted buds can grow wild.** A planted grove might come up as a Seed Pod against the player's intent. The brief accepts this; it's a playtest watch item, with the alternatives of a lower chance for planted buds or exempting them.
-5. **The Research red dot** only shows while the core menu is open, so it never draws the player in from outside. Is that enough?
-6. **Content size.** Hub paths for every kind (about 19) and 15 wild flowers, each with its own shape. Proposal: build 5d in batches, the Start-unlocked kinds first.
-7. **Gene totals.** Stems 213,650 + generators 112,500 + core to Hub 130,500 is about 457k genes, against about 330k for the old week-one track. At 55-70k a day that's roughly 7-8 days before the Hub's points and later core items. Plausible, and it matches the trimming note.
+**Review decisions (Oct 30)**
+1. **Destruction.** Wild flowers that end themselves (Ember, Comet Bloom) are the one exception to "never destroys anything". Only their own life cycle ends them, never neglect. The slot is freed, and the away note says so.
+2. **5a is prep work.** It covers the passive growth rename in the game's text, plus groundwork for gene spending and save v9. The one-week real playtest (once planned as 5a) runs at the end of step 5.
+3. **Rename scope.** Player-facing text changes in 5a: the garden card's "wild buds forming", the journal's "budded on its own" moment, and the tracking total's export name `wild_buds`. Code identifiers are renamed as the code is touched.
+4. **Planted buds can grow wild.** Watched in playtesting. There are two tuning variables: `PassiveWildChance` (5%) and `PlantedWildChance` (4%), each per free wild flower slot.
+5. **Content size.** 5d is built in batches, the Start-unlocked kinds first.
+6. **Gene totals.** Stems 213,650 + generators 112,500 + core to Hub 130,500 come to about 457k genes, against about 330k for the old week-one track. At 55-70k a day, that's roughly 7-8 days before the Hub's points and later core items. Kept, with the trimming note.
+
+**Open for step 5**
+- **Alerts.** How the garden tells the player that something waits: an upgrade affordable, a seedling's choice, a bloom, a discovery. Red dots are distracting (the core's dot was dropped in 3d), so look for a different way, for example a lit or pulsing Research slot, a glint on the core, a journal moment, or the away note. To design before 5b's Research panel is finished.
 
 ## Parked ideas
 
@@ -613,7 +615,8 @@ Design layers still to work through:
 - [x] Choice-based core levels and seedling slot timing (step 5): replaced by the three gene-spending tracks, with seedling slots in the core track
 - [x] Which basic node each evolution becomes, and its fruit (step 5): the evolution table and marker fruits
 - [ ] Step 5 open points (destruction exception, 5a, rename scope, planted buds growing wild, Research dot, content batching, gene totals)
-- [ ] Build step 5 (5b, 5c, 5d, Hub), then the real-week tuning check
+- [ ] Build step 5 (5a prep, 5b, 5c, 5d, Hub), then the real-week tuning check
+- [ ] Alerts: how the garden signals that something waits, without red dots (before 5b's Research panel is finished)
 - [ ] Hub details: N for the points curve, milestone levels, upkeep per upgrade, respec
 - [ ] Onboarding over the first days (step 6), starting with planting the first grove
 - [ ] Identity: what makes each garden uniquely yours after months
