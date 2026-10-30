@@ -16,7 +16,8 @@ public partial class ResearchPanel : FloatingWindow
     const float GlowSeconds = 2.4f; // one swell and fade of an affordable card's glow
 
     static readonly Color GeneInk = new(0.82f, 0.74f, 1f); // the genes' purple, lightened
-    static readonly Color Back = new(0.06f, 0.07f, 0.09f); // the cards' dark ground, as the parts' fill
+    static readonly Color CoreBrown = new(0.55f, 0.36f, 0.22f); // the Core card's hue: a dark, earthy brown
+    static readonly Color Back =new(0.06f, 0.07f, 0.09f); // the cards' dark ground, as the parts' fill
 
     sealed record TrackCard(Color Hue, StyleBoxFlat Style, TrackGlyph Glyph, Label Name, HBoxContainer Cost, Label Price,
         Button Buy)
@@ -39,7 +40,7 @@ public partial class ResearchPanel : FloatingWindow
         Column.AddChild(row);
         row.AddChild(Card(Track.Stems, "Stems", GardenView.Rgb(NodeSpecs.All[NodeKind.Stem].Rgb).Lightened(0.15f)));
         row.AddChild(Card(Track.Generators, "Generators", GardenView.Rgb(NodeSpecs.All[NodeKind.Generator].Rgb)));
-        row.AddChild(Card(Track.Core, "Core", GeneInk.Darkened(0.05f)));
+        row.AddChild(Card(Track.Core, "Core", CoreBrown));
         Column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8), MouseFilter = MouseFilterEnum.Ignore });
     }
 
