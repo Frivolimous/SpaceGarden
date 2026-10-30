@@ -43,6 +43,16 @@ public sealed class PlantNode
     // it.
     public float Blob;
 
+    // Growth seconds since it grew (a wild flower's life cycle runs on it: an Ember's dimming, a Comet Bloom's
+    // withering, a Pulsar's bursts). A Pulsar's power built up and not yet released (see Garden.EconomyStep). Seconds
+    // left of a buff (from a Buffer or a glow fruit), which raises what it makes (not saved: it's brief).
+    public double Life;
+    public float Charge;
+    public float Buff;
+    // A wild flower within MoonflowerReach links of a Moonflower, which makes it a little more (worked out each
+    // economy step).
+    public bool Moonlit;
+
     // What growth blobs are forming here (DESIGN.md, Economy, Blobs): a fruit of its own kind, or a bud of a new
     // branch, its kind rolled when it started; and how much growth it has absorbed (it completes at FruitGrowth or
     // BudGrowth). A bud holds its link and its cap slot while it forms. FormingLook is the growth as shown: it rises
@@ -111,8 +121,13 @@ public sealed class Link
         Origin = origin;
         Target = target;
         float r = origin.Spec.Radius + target.Spec.Radius;
-        Length = target.Spec.IsFruit ? r : r * 1.5f;
+        // A Tendril's links are long and soft both ways: to its parent, and to what grows from it (not its fruit).
+        Length = target.Spec.IsFruit ? r : r * 1.5f * Math.Max(origin.Spec.LinkScale, target.Spec.LinkScale);
+        Spring = target.Spec.IsFruit ? 1 : Math.Min(origin.Spec.Spring, target.Spec.Spring);
     }
+
+    // How hard it pulls when stretched, against the usual (a Tendril's link is soft).
+    public readonly float Spring;
 }
 
 // A branch just pruned (Nodes[0] was cut from its parent), every link in it cut too, its parts drifting loose for
@@ -135,6 +150,8 @@ public sealed class Mote
 {
     public PlantNode From, To;
     public float T;
+    // Seconds before it sets off (and shows): the second blob an Amplifier makes waits for the first to reach it.
+    public float Delay;
     // A blob follows the Route its walk was worked out on when it left (Route[Leg] is From). A growth blob that a
     // part absorbs ends there and adds Growth to what's forming as it arrives (Completes: it finished it, and the new
     // part shows then).

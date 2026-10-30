@@ -708,6 +708,7 @@ public partial class Widget : Node
                 Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core);
                 break;
             case "core": Select(Garden.Core); break;
+            case "wild": Select(Garden.Nodes.FirstOrDefault(n => n.Spec.IsWild) ?? Garden.Core); break;
             case "" or "lab": Select(Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Lab) ?? Garden.Core); break;
         }
         // As if a part were tapped: its toolbar and card. A stem with every link taken, or a part forming a bud.
@@ -723,7 +724,11 @@ public partial class Widget : Node
             Tap(tapped);
             devTapped = true; // its toolbar stays, with no pointer to keep it
         }
-        if (Value("almanac") != null) SetAlmanac(true);
+        if (Value("almanac") is { } page)
+        {
+            SetAlmanac(true);
+            if (page == "codex") almanac.ShowCodex(true);
+        }
         if (Value("research") is { } shown)
         {
             SetResearch(true);

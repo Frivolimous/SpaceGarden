@@ -28,10 +28,12 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   **Build** are switches, lit while on: Info shows the garden's card (power, what it makes and drains, the gene
   balance, the cheapest next upgrade with its cost and ETA, or "in Research" once affordable, and the caps) above the
   part's whenever you tap the plant, and Build is build mode.
-  **Almanac** (lit while open) opens a window with tabs across the top (just **Journal** for now): the garden's
+  **Almanac** (lit while open) opens a window with tabs across the top, **Journal** and **Codex**. The Journal is the garden's
   moments under day headings ("Day 2"), newest first, each with its time on that day. They're its planting, each
   kind's first part, its first passive bud, core links and the Hub bought (in the genes' purple), shaping tools gained
-  from the garden's size (in the tools' blue), part counts reached, and the first of each shaping tool placed.
+  from the garden's size (in the tools' blue), part counts reached, the first of each shaping tool placed, and wild
+  flowers discovered (a pale gold) or ended. The Codex lists the kinds the garden has grown (only those), each with
+  when it was first found and what it does.
   Drag its header to move it, its corner grip to resize it; the wheel scrolls it. It stays open (clicks elsewhere,
   Escape and losing the focus leave it) until its ✕ or the slot again; it hides in Ambient and Minimised and comes
   back in Active.
@@ -102,11 +104,25 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Upgrade tracks** (step 5b, `Garden.Buy`, `Garden.Next`, costs in `Tuning` under Research): genes reaching the
   core fill the gene balance, and the Research panel spends it. Stems (+1 cap each, 26 upgrades to 30 stems),
   Generators (+1 cap each, 9 to 10) and the Core track (the wild flower limit, a second core link, seedling slots
-  and the Hub, in a fixed order). The wild flower limit, seedling slots and the Hub are counters in `Capacity` for
-  now; 5c, 5d and the Hub's step give them mechanics. The levels bought are saved (`GardenSave.Research`); a 5a
+  and the Hub, in a fixed order). Seedling slots and the Hub are counters in `Capacity` for
+  now; 5c and the Hub's step give them mechanics (the wild flower limit has its own since 5d). The levels bought are saved (`GardenSave.Research`); a 5a
   save without them keeps its caps and reads them as upgrades bought. The shaping tools come from the garden's
   size instead (`Tuning.ToolsAtSize`): a Gravity Pot at the start, a Trellis at 15, a second pot at 25, a Gravity
   Well at 40, another pot at 60 and 100, then every 50.
+- **Wild flowers** (step 5d, `src/Core/WildFlowers.cs`, numbers in `Tuning` under Wild flowers; DESIGN.md, Wild
+  flowers): each wild flower limit bought in the Core track is a slot. A new bud, passive or planted, rolls as it
+  starts: `PassiveWildChance` (5%) or `PlantedWildChance` (4%) per free slot. If it grows wild it forms as one of the
+  kinds that can stand in for its basic kind (and, for a passive bud, the white passive-only kinds) and takes a wild
+  slot; a stem or generator kind takes its base's slot too (a Tendril a stem's, a Pulsar a generator's), but the
+  Amplifier and the Resistor don't. Pruning frees the slots. Fifteen kinds, each with its own shape: Amplifier,
+  Resistor, Tendril, Big Stem, Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen, Buffer, Comet
+  Bloom, Moonflower, Nebula Bloom. Big Stem, Pulsar and Twin Star join the pool only through `Garden.UnlockWild`
+  (their evolutions, step 5c). An Amplifier doubles half the blobs passing it; blobs never step onto a Resistor. An
+  Ember fades from twice a generator to nothing over 3 days and a Comet Bloom withers after one: the only parts the
+  garden ever loses on its own, drifting off like a prune; the journal and the away note say so. Their fruit
+  includes two new kinds: glow (white, sending buff blobs at a quarter of a Buffer's rate) and wood. The part's card
+  shows its quirk under its name (and how long an Ember or Comet Bloom has left); the garden card a "Wild flowers:
+  1 / 2" line once there's a limit. All wild flowers draw from one atlas texture in one batch per layer.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Tracking
@@ -139,11 +155,11 @@ upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
 (act as if hidden for FOR seconds from AT seconds after start, to test the pause),
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits; with it,
 `--prune=N` and `--undo=N` prune the biggest branch and undo it at tick N), `--shaping[=N]` (places one of each
-shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card
+shaping tool, at once or at tick N), `--build` (starts in build mode), `--inspect` (a lab's card, `--inspect=wild` a wild flower's
 open, or the core's with no lab; `--inspect=core`, or `--inspect=garden` for Info on as well), `--coremenu[=SLOT]` (the core's
 menu open, with that slot's name showing, e.g. `--coremenu=settings`), `--tap=full` or `--tap=forming` (as if a stem
 with every link taken, or a part forming a bud, were tapped: its toolbar and card, the toolbar staying open),
-`--almanac` (the Almanac open), `--research` (the Research panel open, or `--research=hint` with the Stems card's hint showing; with `--genes=N` for a balance to show,
+`--almanac` (the Almanac open, or `--almanac=codex` on its Codex), `--research` (the Research panel open, or `--research=hint` with the Stems card's hint showing; with `--genes=N` for a balance to show,
 e.g. `--fresh --grove --genes=1200 --research`),
 `--awaynote[=HOURS]` (catch up that long at once, 8 h by default, on the garden loaded or planted, and show the away
 note; with `--grove` a new garden has something to grow), `--export=PATH` (debug builds: write the tracking CSVs, see
@@ -151,7 +167,11 @@ Tracking, then quit unless screenshotting), `--ambient` (starts in Ambient) and
 `--corehover` (as if the pointer were on the core there),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--genes=N` (bring the gene balance
-up to N, as if they had reached the core), `--fpslog` (prints
+up to N, as if they had reached the core), `--wildlimit=N` (set the wild flower limit), `--wild=KIND[,KIND...]` (grow those
+wild flowers at once, each on a new stem from the core, whatever their lock and the caps, every part full;
+`--wild=all` lays out one of each round the middle of the screen: with `--scale=2 --labels` it's the sheet of their
+looks), `--unlockwild[=KIND,...]` (unlock Big Stem, Pulsar and Twin Star, as their evolutions will), `--scale=N`
+(the plant's scale, past the Size setting's range), `--labels` (each wild flower's name beside it), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 
 ## Performance
@@ -170,7 +190,8 @@ The empty garden's cost is Godot's own: a bare Godot project with an empty scene
 spending CPU to hold its timing), which saved about 2.5 points of a core at the same 30 fps. Tried without effect:
 vsync off, a smaller window, a dummy audio driver; ANGLE (Direct3D) cost more.
 
-How: drawing is 8-10 draw calls whatever the size, every layer one instanced batch (see `GardenView`), stems
+How: drawing is 8-10 draw calls whatever the size, every layer one instanced batch (see `GardenView`; the wild
+flowers add two at most, their fifteen shapes sharing one atlas texture and a batch per layer), stems
 included (soft-edged quads stretched along each stem, which cost the renderer a third of Godot's antialiased lines).
 Parts push each other through a grid, exact for neighbours and summed per cell for distant ones (`Garden.Repel`),
 so it no longer checks every pair. The distant push is kept and worked out again every 4 ticks, a quarter of the
@@ -187,5 +208,5 @@ Tried on the way: fruit only meeting its own family (no borrowed push) was as ch
 overlaps); adding a push from nearby stems to that was tidy but slower than the grid (0.24 ms).
 
 ## Not in the prototype
-No crawlers, skills, seedlings, rares, player-facing graphs, or sound; no launch-on-startup; it still shows in
+No crawlers, skills, seedlings, the Hub, player-facing graphs, or sound; no launch-on-startup; it still shows in
 the taskbar.

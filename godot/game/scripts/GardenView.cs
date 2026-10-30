@@ -25,6 +25,9 @@ public partial class GardenView : Node2D
 
     public PlantNode? Highlight;
 
+    // Dev aid (--labels): each wild flower's name beside it, for a sheet of their looks.
+    public bool Labels;
+
     // CoreHover: the pointer is on the core in Ambient mode, where a tap wakes the garden, and the core brightens a
     // little.
     public bool CoreHover;
@@ -47,13 +50,15 @@ public partial class GardenView : Node2D
 
     readonly Garden garden;
     readonly Node2D backdropLayer = new(), shapingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(),
-        formingLayer = new(), potLayer = new(), markLayer = new(), moteLayer = new();
+        formingLayer = new(), potLayer = new(), markLayer = new(), moteLayer = new(), wildLayer = new(), wildFormingLayer = new();
     // Stems are tapered (links, linkEdges); fruit stalks and the lit stretch of a power flash are straight.
     readonly Batch links = new(), linkEdges = new(), straight = new(), halos = new(), moteDots = new();
     const float MoteRadius = 2; // a blob's dot, in garden units (the original's)
     // A power flash's light flooding along its stem, then draining: done before the next (at most 3 a second).
     const float FillSeconds = 0.05f, DrainSeconds = 0.15f;
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
+    // The wild flowers' shapes, from one atlas (see Textures.Atlas): one batch for the parts, one for their buds.
+    readonly Batch wildShapes = new(cells: true), wildForming = new(cells: true);
     float highlightRing;
     float blend = 1;
 
@@ -90,13 +95,20 @@ public partial class GardenView : Node2D
         linkLayer.Draw += DrawLinks;
         haloLayer.Draw += DrawHalos;
         shapeLayer.Draw += DrawShapes;
+        wildLayer.Draw += DrawWild;
+        wildFormingLayer.Draw += DrawWildForming;
         formingLayer.Draw += DrawForming;
         markLayer.Draw += DrawMarks;
         moteLayer.Draw += DrawMotes;
         backdropLayer.Draw += DrawBackdrop;
         shapingLayer.Draw += DrawShaping;
         potLayer.Draw += DrawPots;
-        foreach (var layer in new[] { backdropLayer, shapingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, formingLayer, potLayer, markLayer })
+        foreach (var layer in new[] { wildLayer, wildFormingLayer })
+        {
+            layer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
+            layer.Material = Textures.AtlasMaterial;
+        }
+        foreach (var layer in new[] { backdropLayer, shapingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, wildLayer, formingLayer, wildFormingLayer, potLayer, markLayer })
             AddChild(layer);
     }
 
@@ -132,6 +144,8 @@ public partial class GardenView : Node2D
         haloLayer.QueueRedraw();
         shapeLayer.QueueRedraw();
         formingLayer.QueueRedraw();
+        wildLayer.QueueRedraw();
+        wildFormingLayer.QueueRedraw();
         markLayer.QueueRedraw();
         moteLayer.QueueRedraw();
     }
@@ -380,7 +394,10 @@ public partial class GardenView : Node2D
             var colour = ColourOf(node.Spec);
             float halo = Mathf.Min(1, Level(node));
             colour.A = 0.15f * halo * halo; // faint, and only on full parts
-            halos.AddRound(At(node), Size(node) * 3.6f, colour);
+            // A Comet Bloom is bright: a wider, stronger halo.
+            bool bright = node.Spec.Kind == NodeKind.CometBloom;
+            if (bright) colour.A *= 3;
+            halos.AddRound(At(node), Size(node) * (bright ? 5.5f : 3.6f), colour);
             if (node.Glow <= 0) continue;
             // Tight round the part and strong: the halo twice over.
             var glow = Rgb(node.GlowRgb).Lightened(0.2f);
@@ -396,13 +413,26 @@ public partial class GardenView : Node2D
     // Each part is its shape three times: a thin dark edge, so it stands out over a light window too; then, as in the
     // original, a crisp outline in its hue and a dark fill tinted with it a little smaller on top. Power brightens
     // both; even a drained part keeps an outline that reads. A pruned branch drifting off fades out as it goes.
-    void DrawShapes()
+    void DrawShapes() => DrawParts(atlas: false);
+
+    // The wild flowers, from the atlas, in a layer of their own over the rest (its material moves each quad onto its
+    // cell).
+    void DrawWild() => DrawParts(atlas: true);
+
+    void DrawParts(bool atlas)
     {
-        foreach (var batch in shapes.Values) batch.Begin();
-        foreach (var node in garden.Nodes) AddPart(node, 1);
+        if (atlas) wildShapes.Begin();
+        else foreach (var batch in shapes.Values) batch.Begin();
+        foreach (var node in garden.Nodes)
+            if (Textures.InAtlas(node.Spec.Shape) == atlas) AddPart(node, 1);
         foreach (var cut in garden.Cut)
-            foreach (var node in cut.Nodes) AddPart(node, cut.FadeOf(node));
-        foreach (var (shape, batch) in shapes) batch.Draw(shapeLayer, Textures.Shape(shape));
+            foreach (var node in cut.Nodes)
+                if (Textures.InAtlas(node.Spec.Shape) == atlas) AddPart(node, cut.FadeOf(node));
+        if (atlas)
+        {
+            if (wildShapes.Count > 0) wildShapes.Draw(wildLayer, Textures.Atlas);
+        }
+        else foreach (var (shape, batch) in shapes) batch.Draw(shapeLayer, Textures.Shape(shape));
     }
 
     void AddPart(PlantNode node, float alpha)
@@ -411,30 +441,44 @@ public partial class GardenView : Node2D
         if (size < 0.2f) return;
         float level = Level(node);
         var colour = ColourOf(node.Spec);
+        // An Ember dims as its life runs out.
+        if (node.Spec.Dims) colour = Shade(colour, 0.35f + 0.65f * Garden.Brightness(node));
         var outline = Shade(colour, OutlineDim + OutlineLit * level);
         var fill = Shade(colour, FillDim + FillLit * level);
         var edge = Edge;
         outline.A = fill.A = alpha;
         edge.A *= alpha;
-        var batch = shapes[node.Spec.Shape];
+        var (batch, cell) = BatchFor(node.Spec.Shape, shapes, wildShapes);
         var at = At(node);
         var (sin, cos) = MathF.SinCos(node.Rotation);
-        batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), cos, sin, edge);
-        batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, outline);
-        batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), cos, sin, fill);
+        batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), cos, sin, edge, cell);
+        batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, outline, cell);
+        batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), cos, sin, fill, cell);
     }
+
+    // The batch a shape is drawn in (a wild flower's: the atlas's), and its cell there.
+    static (Batch, Vector2) BatchFor(Shape shape, Dictionary<Shape, Batch> basic, Batch atlas) =>
+        Textures.InAtlas(shape) ? (atlas, Textures.CellOf(shape)) : (basic[shape], default);
 
     // What growth blobs are forming (DESIGN.md, Economy, Blobs), over the parts. A fruit bud swells from a speck to
     // its full size just off its part's rim, where it'll hang. A bud of a new part is a full-sized silhouette inside its
     // parent from the moment it starts, dark and grey, brightening into its final hue as it grows, until it pops out
     // (see Garden.AddNear).
-    void DrawForming()
+    void DrawForming() => DrawBuds(atlas: false);
+
+    // A wild flower's bud, from the atlas (see DrawWild).
+    void DrawWildForming() => DrawBuds(atlas: true);
+
+    void DrawBuds(bool atlas)
     {
-        foreach (var batch in forming.Values) batch.Begin();
+        if (atlas) wildForming.Begin();
+        else foreach (var batch in forming.Values) batch.Begin();
         foreach (var node in garden.Nodes)
         {
             if (node.Forming is not { } kind || (node.FormingLook <= 0 && !node.FormingBud)) continue;
             var spec = NodeSpecs.All[kind];
+            if (Textures.InAtlas(spec.Shape) != atlas) continue;
+            var (batch, cell) = BatchFor(spec.Shape, forming, wildForming);
             float grown = node.FormingLook / (spec.IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth);
             float level = Level(node) * GrowIn(node);
             var at = At(node);
@@ -461,12 +505,16 @@ public partial class GardenView : Node2D
                 // A thin, almost white rim round it, so it reads against the parent's fill however dark it starts
                 // (opaque on top, so the rim doesn't show through).
                 var rim = BudRim with { A = BudRim.A * level };
-                forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size + BudRimWidth), cos, sin, rim);
+                batch.AddTurned(at, Textures.ShapeDiameter(size + BudRimWidth), cos, sin, rim, cell);
                 colour.A = 1;
             }
-            forming[spec.Shape].AddTurned(at, Textures.ShapeDiameter(size), cos, sin, colour);
+            batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, colour, cell);
         }
-        foreach (var (shape, batch) in forming) batch.Draw(formingLayer, Textures.Shape(shape));
+        if (atlas)
+        {
+            if (wildForming.Count > 0) wildForming.Draw(wildFormingLayer, Textures.Atlas);
+        }
+        else foreach (var (shape, batch) in forming) batch.Draw(formingLayer, Textures.Shape(shape));
     }
 
     // The core's light while the pointer is on it in Ambient mode, build mode's link counts, and the hover ring.
@@ -478,6 +526,7 @@ public partial class GardenView : Node2D
             markLayer.DrawCircle(At(core), Size(core) * 1.02f, ColourOf(core.Spec).Lightened(0.6f) with { A = 0.22f * coreHover });
 
         if (backdropAlpha > 0) DrawLinkCounts();
+        if (Labels) DrawLabels();
 
         if (Highlight != null && highlightRing > 0)
         {
@@ -512,6 +561,29 @@ public partial class GardenView : Node2D
             var origin = new Vector2(-extent.X / 2, font.GetAscent(size) - extent.Y / 2);
             markLayer.DrawStringOutline(font, origin, text, HorizontalAlignment.Left, -1, size, 4, new Color(0, 0, 0, 0.8f * alpha));
             markLayer.DrawString(font, origin, text, HorizontalAlignment.Left, -1, size, colour with { A = alpha });
+        }
+        markLayer.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+    }
+
+    // Each wild flower's name just outside it, away from the core, at screen size (--labels).
+    void DrawLabels()
+    {
+        var font = ThemeDB.FallbackFont;
+        float k = GetViewport().GetCanvasTransform().X.Length();
+        const int size = 13;
+        var core = At(garden.Core);
+        foreach (var node in garden.Nodes)
+        {
+            if (!node.Spec.IsWild) continue;
+            var at = At(node);
+            var away = (at - core).Normalized();
+            var extent = font.GetStringSize(node.Spec.Name, HorizontalAlignment.Left, -1, size);
+            // Its middle far enough out that the text clears the part, whichever way it lies.
+            var centre = at + away * (Size(node) + (Mathf.Abs(away.X) * extent.X / 2 + Mathf.Abs(away.Y) * extent.Y / 2 + 4) / k);
+            markLayer.DrawSetTransform(centre, 0, new Vector2(1 / k, 1 / k));
+            var origin = new Vector2(-extent.X / 2, font.GetAscent(size) - extent.Y / 2);
+            markLayer.DrawStringOutline(font, origin, node.Spec.Name, HorizontalAlignment.Left, -1, size, 4, new Color(0, 0, 0, 0.8f));
+            markLayer.DrawString(font, origin, node.Spec.Name, HorizontalAlignment.Left, -1, size, ColourOf(node.Spec).Lightened(0.3f));
         }
         markLayer.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
@@ -584,6 +656,7 @@ public partial class GardenView : Node2D
         // stays hidden until it arrives (see GrowIn).
         foreach (var mote in garden.Motes)
         {
+            if (mote.Delay > 0) continue; // an Amplifier's second blob, waiting for the first to reach it
             var p = At(mote.From).Lerp(At(mote.To), mote.T);
             moteDots.AddRound(p, Textures.ShapeDiameter(MoteRadius), Rgb(mote.Rgb).Lightened(0.4f));
         }
@@ -632,39 +705,53 @@ public partial class GardenView : Node2D
     public static Vector2 V(Num.Vector2 v) => new(v.X, v.Y);
 }
 
-// One instanced draw call: a textured unit quad per instance, each with its own centre, size, turn and colour.
-// Filled each frame with Begin/Add, then sent to the GPU in one go with Draw.
+// One instanced draw call: a textured unit quad per instance, each with its own centre, size, turn and colour (and,
+// for an atlas, which of its cells: see Textures.Atlas). Filled each frame with Begin/Add, then sent to the GPU in one
+// go with Draw.
 public sealed class Batch
 {
-    const int Floats = 12; // per instance: a 2D transform (8) and a colour (4)
+    readonly int floats; // per instance: a 2D transform (8) and a colour (4), and with cells a custom vec4 (4)
 
     static readonly ArrayMesh Quad = MakeQuad();
 
-    readonly MultiMesh multiMesh = new()
-    {
-        TransformFormat = MultiMesh.TransformFormatEnum.Transform2D,
-        UseColors = true,
-        Mesh = Quad,
-    };
-    float[] buffer = new float[Floats * 64];
+    readonly MultiMesh multiMesh;
+    float[] buffer;
     float[] sent = [];
     int count;
 
+    public Batch(bool cells = false)
+    {
+        floats = cells ? 16 : 12;
+        multiMesh = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform2D,
+            UseColors = true,
+            UseCustomData = cells,
+            Mesh = Quad,
+        };
+        buffer = new float[floats * 64];
+    }
+
+    public int Count => count;
+
     public void Begin() => count = 0;
 
-    // A quad centred here, its unit square mapped onto the two axes (the quad's width along x, height along y).
-    public void AddAxes(Vector2 centre, Vector2 x, Vector2 y, Color colour)
+    // A quad centred here, its unit square mapped onto the two axes (the quad's width along x, height along y); in an
+    // atlas batch, showing this cell.
+    public void AddAxes(Vector2 centre, Vector2 x, Vector2 y, Color colour, Vector2 cell = default)
     {
-        if ((count + 1) * Floats > buffer.Length) Array.Resize(ref buffer, buffer.Length * 2);
-        int i = count++ * Floats;
+        if ((count + 1) * floats > buffer.Length) Array.Resize(ref buffer, buffer.Length * 2);
+        int i = count++ * floats;
         buffer[i] = x.X; buffer[i + 1] = y.X; buffer[i + 2] = 0; buffer[i + 3] = centre.X;
         buffer[i + 4] = x.Y; buffer[i + 5] = y.Y; buffer[i + 6] = 0; buffer[i + 7] = centre.Y;
         buffer[i + 8] = colour.R; buffer[i + 9] = colour.G; buffer[i + 10] = colour.B; buffer[i + 11] = colour.A;
+        if (floats < 16) return;
+        buffer[i + 12] = cell.X; buffer[i + 13] = cell.Y; buffer[i + 14] = 0; buffer[i + 15] = 0;
     }
 
     // A square this wide, turned by the angle whose cosine and sine these are.
-    public void AddTurned(Vector2 centre, float diameter, float cos, float sin, Color colour) =>
-        AddAxes(centre, new Vector2(cos, sin) * diameter, new Vector2(-sin, cos) * diameter, colour);
+    public void AddTurned(Vector2 centre, float diameter, float cos, float sin, Color colour, Vector2 cell = default) =>
+        AddAxes(centre, new Vector2(cos, sin) * diameter, new Vector2(-sin, cos) * diameter, colour, cell);
 
     // A square this wide, unturned (for round things).
     public void AddRound(Vector2 centre, float diameter, Color colour) =>
@@ -673,9 +760,9 @@ public sealed class Batch
     public void Draw(CanvasItem onto, Texture2D texture)
     {
         if (count == 0) return;
-        if (sent.Length != count * Floats)
+        if (sent.Length != count * floats)
         {
-            sent = new float[count * Floats];
+            sent = new float[count * floats];
             multiMesh.InstanceCount = count;
         }
         Array.Copy(buffer, sent, sent.Length);
@@ -763,6 +850,150 @@ public static class Textures
 
     // The quad size that draws a shape at this radius.
     public static float ShapeDiameter(float radius) => radius * 2 / ShapeFill;
+
+    // ==== THE WILD FLOWERS' ATLAS ==== \\
+    // The wild flowers' shapes (Shape.Plus on) share one texture, a grid of cells, so all of them draw in one
+    // batch per layer (a draw call each for the parts and the buds, however many kinds are out) instead of one per
+    // shape: each instance names its cell (the MultiMesh's custom data), and AtlasMaterial's shader moves the quad's
+    // UVs onto it. Each shape fills the middle of its cell as a lone shape fills its texture (so ShapeDiameter holds),
+    // with a clear gutter round it, so the smaller mipmaps don't bleed one cell into the next. Made the first time a
+    // wild flower shows.
+    const int AtlasColumns = 4, AtlasGutter = 16;
+    const int AtlasCell = ShapeSize + 2 * AtlasGutter;
+    static readonly int AtlasRows = (AtlasShapes + AtlasColumns - 1) / AtlasColumns;
+    static int AtlasShapes => Enum.GetValues<Shape>().Length - (int)SpaceGarden.Core.Shape.Plus;
+
+    public static bool InAtlas(Shape shape) => shape >= SpaceGarden.Core.Shape.Plus;
+
+    // A shape's cell, as the shader takes it (column, row).
+    public static Vector2 CellOf(Shape shape)
+    {
+        int i = shape - SpaceGarden.Core.Shape.Plus;
+        return new Vector2(i % AtlasColumns, i / AtlasColumns);
+    }
+
+    static Texture2D? atlas;
+    public static Texture2D Atlas => atlas ??= MakeAtlas();
+
+    static ShaderMaterial? atlasMaterial;
+    public static ShaderMaterial AtlasMaterial => atlasMaterial ??= MakeAtlasMaterial();
+
+    static ShaderMaterial MakeAtlasMaterial()
+    {
+        var shader = new Shader
+        {
+            Code = """
+                shader_type canvas_item;
+                uniform vec2 cells;   // columns, rows
+                uniform float inset;  // the gutter, as a share of a cell
+                void vertex() {
+                    UV = (INSTANCE_CUSTOM.xy + vec2(inset) + UV * (1.0 - 2.0 * inset)) / cells;
+                }
+                """,
+        };
+        var material = new ShaderMaterial { Shader = shader };
+        material.SetShaderParameter("cells", new Vector2(AtlasColumns, AtlasRows));
+        material.SetShaderParameter("inset", AtlasGutter / (float)AtlasCell);
+        return material;
+    }
+
+    static Texture2D MakeAtlas()
+    {
+        var image = Image.CreateEmpty(AtlasColumns * AtlasCell, AtlasRows * AtlasCell, false, Image.Format.Rgba8);
+        image.Fill(new Color(1, 1, 1, 0));
+        for (var shape = SpaceGarden.Core.Shape.Plus; (int)shape < Enum.GetValues<Shape>().Length; shape++)
+        {
+            var cell = CellOf(shape);
+            int left = (int)cell.X * AtlasCell + AtlasGutter, top = (int)cell.Y * AtlasCell + AtlasGutter;
+            var parts = WildShape(shape);
+            for (int y = 0; y < ShapeSize; y++)
+                for (int x = 0; x < ShapeSize; x++)
+                {
+                    int inside = 0;
+                    for (int sy = 0; sy < Supersample; sy++)
+                        for (int sx = 0; sx < Supersample; sx++)
+                        {
+                            var p = new Vector2(x + (sx + 0.5f) / Supersample, y + (sy + 0.5f) / Supersample) / ShapeSize * 2 - Vector2.One;
+                            if (parts(p / ShapeFill)) inside++;
+                        }
+                    image.SetPixel(left + x, top + y, new Color(1, 1, 1, inside / (float)(Supersample * Supersample)));
+                }
+        }
+        image.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    // The wild flowers' shapes, each radially symmetric within the unit circle, as a test of whether a point is inside.
+    // Each echoes its base where it can (DESIGN.md, Wild flowers): the stem's circle, the generator's pentagon, the
+    // grove's square, the lab's hexagon. First passes, for Jeremy to review.
+    static Func<Vector2, bool> WildShape(Shape shape)
+    {
+        // Polar helpers: the radius, the angle, and a lobe profile running 0-1 with n lobes round the circle.
+        static float R(Vector2 p) => p.Length();
+        static float A(Vector2 p) => Mathf.Atan2(p.Y, p.X);
+        static float Lobes(float angle, int n) => 0.5f + 0.5f * Mathf.Cos(n * angle);
+        // (Polygons worked out once, not per sample.)
+        var star5 = Star(5, 1, 0.45f);
+        var (pentA, pentB, heart) = (Star(5, 1, 1, 0), Star(5, 1, 1, Mathf.Pi / 5), Star(5, 0.55f, 0.55f, Mathf.Pi / 5));
+        var (squareA, squareB) = (Star(4, 1, 1, 0), Star(4, 1, 1, Mathf.Pi / 4));
+        var (triangleA, triangleB) = (Star(3, 1, 1, 0), Star(3, 1, 1, Mathf.Pi / 3));
+        var burst = Star(8, 1, 0.7f);
+        return shape switch
+        {
+            // Amplifier: a white plus (Jeremy, Oct 30).
+            SpaceGarden.Core.Shape.Plus => p => (Mathf.Abs(p.X) <= 0.32f && Mathf.Abs(p.Y) <= 0.95f) || (Mathf.Abs(p.Y) <= 0.32f && Mathf.Abs(p.X) <= 0.95f),
+            // Resistor: a white minus.
+            SpaceGarden.Core.Shape.Minus => p => Mathf.Abs(p.Y) <= 0.34f && Mathf.Abs(p.X) <= 0.95f,
+            // Tendril: a Big Stem's lobed disc with three bumps.
+            SpaceGarden.Core.Shape.Trefoil => p => R(p) <= 0.6f + 0.4f * Mathf.Abs(Mathf.Cos(1.5f * A(p))),
+            // Big Stem: a stem's disc with four round lobes, for its four links.
+            SpaceGarden.Core.Shape.Quatrefoil => p => R(p) <= 0.62f + 0.38f * Mathf.Abs(Mathf.Cos(2 * A(p))),
+            // Pulsar: a five-pointed star (the generator's pentagon, sharpened).
+            SpaceGarden.Core.Shape.Star5 => p => InPolygon(star5, p),
+            // Twin Star: two pentagons, one turned on the other.
+            SpaceGarden.Core.Shape.Star10 => p => InPolygon(pentA, p) || InPolygon(pentB, p),
+            // Ember: five flame-tipped petals round a pentagon's heart.
+            SpaceGarden.Core.Shape.Flame => p => R(p) <= 0.42f + 0.58f * Mathf.Pow(Lobes(A(p), 5), 3) || InPolygon(heart, p),
+            // Lumber Grove: two squares, one turned on the other, a sawn eight-pointed star.
+            SpaceGarden.Core.Shape.Star8 => p => InPolygon(squareA, p) || InPolygon(squareB, p),
+            // Seed Pod: a plain oval pod.
+            SpaceGarden.Core.Shape.Oval => p => p.X * p.X + p.Y * p.Y / (0.62f * 0.62f) <= 1,
+            // Wild Lab: a six-pointed star (the lab's hexagon, two triangles).
+            SpaceGarden.Core.Shape.Star6 => p => InPolygon(triangleA, p) || InPolygon(triangleB, p),
+            // Lichen: a hexagon gone soft, six round scallops.
+            SpaceGarden.Core.Shape.Lobes6 => p => R(p) <= 0.78f + 0.22f * Mathf.Abs(Mathf.Cos(3 * A(p))),
+            // Buffer (and its glow fruit): a solid eight-pointed burst.
+            SpaceGarden.Core.Shape.Burst8 => p => InPolygon(burst, p),
+            // Comet Bloom: a disc with six square teeth (once the Resistor's; Jeremy liked it).
+            SpaceGarden.Core.Shape.Gear => p => R(p) <= 0.72f || (R(p) <= 1 && Mathf.Cos(6 * A(p)) > -0.1f),
+            // Moonflower: six petals, open round a small heart.
+            SpaceGarden.Core.Shape.Rose => p => R(p) <= Mathf.Abs(Mathf.Cos(3 * A(p))) || R(p) <= 0.3f,
+            // Nebula Bloom: three arms curling round a heart (once the Tendril's).
+            SpaceGarden.Core.Shape.Swirl => p => R(p) <= 0.3f + 0.7f * Mathf.Pow(Lobes(A(p) + 2.4f * R(p), 3), 2),
+            _ => p => R(p) <= 1,
+        };
+    }
+
+    // The corners of a star with n points (outer radius) and n dents (inner radius) between them, turned by turn; with
+    // inner as outer it's a regular n-gon. Starting from the x axis, as UnitPolygon does.
+    static Vector2[] Star(int n, float outer, float inner, float turn = 0)
+    {
+        if (Mathf.IsEqualApprox(outer, inner))
+            return Enumerable.Range(0, n).Select(i => Vector2.FromAngle(turn + Mathf.Tau * i / n) * outer).ToArray();
+        return Enumerable.Range(0, 2 * n).Select(i => Vector2.FromAngle(turn + Mathf.Pi * i / n) * (i % 2 == 0 ? outer : inner)).ToArray();
+    }
+
+    // Whether a point is inside a polygon, convex or not (counting crossings).
+    static bool InPolygon(Vector2[] corners, Vector2 p)
+    {
+        bool inside = false;
+        for (int i = 0, j = corners.Length - 1; i < corners.Length; j = i++)
+        {
+            var (a, b) = (corners[i], corners[j]);
+            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
+        }
+        return inside;
+    }
 
     static Texture2D MakeShape(Shape shape)
     {

@@ -134,7 +134,8 @@ public partial class Toolbar : PanelContainer
             {
                 button.Visible = buds;
                 button.Enabled = CanGrow(Target, kind);
-                button.Forming = Target.Forming == kind; // its bud is growing here now
+                // Its bud is growing here now (or a wild flower standing in for it).
+                button.Forming = Target.Forming is { } forming && (forming == kind || NodeSpecs.All[forming].Wild?.Base == kind);
             }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
         // Every link taken (a bud forming holds one, but then its button shows it growing instead).

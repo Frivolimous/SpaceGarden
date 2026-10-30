@@ -1,13 +1,42 @@
 namespace SpaceGarden.Core;
 
-public enum NodeKind { Core, Stem, Leaf, Generator, Burr, Lab, Research, Grove, Berry }
+// The basic kinds, then the wild flowers (DESIGN.md, Wild flowers), in the table's order.
+public enum NodeKind
+{
+    Core, Stem, Leaf, Generator, Burr, Lab, Research, Grove, Berry,
+    Amplifier, Resistor, Tendril, BigStem, Pulsar, TwinStar, Ember, LumberGrove, SeedPod, WildLab, Lichen,
+    Buffer, CometBloom, Moonflower, NebulaBloom,
+    Wood, Glow, // the wild flowers' fruit
+}
 
-public enum Shape { Circle, Triangle, Square, Pentagon, Hexagon }
+// The basic shapes, then the wild flowers' more complex ones, each radially symmetric (drawn from one atlas: see
+// GardenView's Textures.Atlas).
+public enum Shape
+{
+    Circle, Triangle, Square, Pentagon, Hexagon,
+    Plus, Minus, Trefoil, Quatrefoil, Star5, Star10, Flame, Star8, Oval, Star6, Lobes6, Burst8, Gear, Rose, Swirl,
+}
+
+// What blobs a flower sends: growth blobs (groves), gene blobs (labs), buff blobs (a Buffer, a glow fruit), or gene
+// and growth blobs mixed (a Comet Bloom's burst).
+public enum BlobKind { None, Growth, Genes, Buff, All }
+
+// When a wild flower kind can start to grow wild: from the first wild flower slot, or once its evolution is taken.
+public enum WildUnlock { Start, Evolution }
+
+// What makes a kind a wild flower (DESIGN.md, Wild flowers): the basic kind whose bud it can replace (null: passive
+// only, any passive bud), when it unlocks, its quirk (the line on its card saying what it trades), and whether it takes
+// its base kind's slot as well as a wild flower slot (BaseSlot: the stem and generator kinds, but the Amplifier and
+// the Resistor; groves and labs are uncapped).
+public sealed record WildSpec(NodeKind? Base, WildUnlock Unlock, string Quirk, bool BaseSlot = false)
+{
+    public bool PassiveOnly => Base == null;
+}
 
 // One kind of plant part, all its numbers in one place, as the TS game's Nodes config. MaxLinks counts the link to
 // the parent too (as in the TS game), so a stem with 3 has two branches; fruits have none and hang from their parent
 // outside that count. Name heads the part's card (DESIGN.md, Information display); Description, a line on what it
-// does, is off the card since step 3d and kept for the Almanac.
+// does, is off the card since step 3d and kept for the Almanac's Codex.
 public sealed record NodeSpec(NodeKind Kind)
 {
     public required string Name { get; init; }
@@ -22,6 +51,14 @@ public sealed record NodeSpec(NodeKind Kind)
     public required uint Rgb { get; init; }
     public NodeKind? Fruit { get; init; }
     public int MaxFruits { get; init; }
+    // Its links (to its parent and its branches) are this many times the usual length, and pull this hard when
+    // stretched (1: as usual).
+    public float LinkScale { get; init; } = 1;
+    public float Spring { get; init; } = 1;
+
+    // Set on a wild flower (null on the basic kinds).
+    public WildSpec? Wild { get; init; }
+    public bool IsWild => Wild != null;
 
     // Power (DESIGN.md, Economy), as the original's powerMax, powerGen, powerWeight and powerClump: how much it holds;
     // what it makes (above 0) or costs (below 0) a second when full; how much emptier than it is it counts as when
@@ -34,14 +71,31 @@ public sealed record NodeSpec(NodeKind Kind)
     // How fast it can feed its fruit (the original's fruitClump; see Garden.FruitToFeed).
     public float PowerToFruitPerSecond { get; init; }
 
-    // Blobs it makes an hour when full: growth blobs from a grove, gene blobs from a lab.
+    // Blobs it makes an hour when full, and which: growth blobs from a grove, gene blobs from a lab. They leave once
+    // BlobBurst have built up (1: each as it's made).
     public float BlobsPerHour { get; init; }
+    public BlobKind Sends { get; init; }
+    public int BlobBurst { get; init; } = 1;
 
     // A fruit's effect on the part it hangs from (its flower): its full upkeep is multiplied by 1 plus the sum of
     // its fruits' FlowerPowerFactor (a leaf's -0.25: one leaf, three quarters; two, half), and its output (power, or
-    // blobs) by 1 plus the sum of their FlowerBonus.
+    // blobs) by 1 plus the sum of their FlowerBonus, times the flower's FruitBonusScale.
     public float FlowerPowerFactor { get; init; }
     public float FlowerBonus { get; init; }
+    public float FruitBonusScale { get; init; } = 1;
+
+    // Wild flowers' quirks (see Garden, Wild flowers). PulseSeconds: what it makes builds up unseen and goes into
+    // its store all at once, every so many seconds (0: as it's made). LifeSeconds: it ends itself after so long (0:
+    // never), its output falling to nothing as it goes if Dims. DoublesBlobs: a blob passing through may become two
+    // (AmplifyChance, once a blob); BlocksBlobs: no blob steps onto it. EmergeBurst: blobs it sends at once as it
+    // appears. WildBoost: buds near it are this much likelier to grow wild, and wild flowers near it Moonlit.
+    public float PulseSeconds { get; init; }
+    public float LifeSeconds { get; init; }
+    public bool Dims { get; init; }
+    public bool DoublesBlobs { get; init; }
+    public bool BlocksBlobs { get; init; }
+    public int EmergeBurst { get; init; }
+    public float WildBoost { get; init; }
 
     public bool IsFruit => MaxLinks == 0;
     public float InverseMass => 1 / Mass;
@@ -67,72 +121,82 @@ public static class NodeBase
 // Every kind has a name and description (StatsTests checks).
 public static class NodeSpecs
 {
-    public static readonly IReadOnlyDictionary<NodeKind, NodeSpec> All = new Dictionary<NodeKind, NodeSpec>
+    public static readonly IReadOnlyDictionary<NodeKind, NodeSpec> All = Build();
+
+    // The wild flower kinds, in the table's order.
+    public static readonly IReadOnlyList<NodeSpec> Wild = All.Values.Where(s => s.IsWild).OrderBy(s => s.Kind).ToList();
+
+    static Dictionary<NodeKind, NodeSpec> Build()
     {
-        [NodeKind.Core] = new(NodeKind.Core)
+        var all = new Dictionary<NodeKind, NodeSpec>
         {
-            Name = "Core", Description = "The heart: makes the most power, and takes in genes.",
-            Radius = 30, Mass = 30, Force = 30, MaxLinks = Tuning.StartCoreLinks, Shape = Shape.Circle, Rgb = 0xE5E570,
-            PowerStore = NodeBase.PowerStore * 4, PowerPerSecond = NodeBase.CoreGen, PowerWeight = 1.5f,
-            PowerTransferPerSecond = NodeBase.CoreGen * 1.2f,
-        },
-        [NodeKind.Stem] = new(NodeKind.Stem)
-        {
-            Name = "Stem", Description = "Structure: carries power and blobs. Cheap upkeep, less with leaves.",
-            Radius = 10, Mass = 1, Force = 1, MaxLinks = 3, Shape = Shape.Circle, Rgb = 0x07E000,
-            Fruit = NodeKind.Leaf, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
-            PowerStore = NodeBase.PowerStore * 3/4, PowerPerSecond = NodeBase.StemDrain, PowerWeight = 1.1f,
-            PowerTransferPerSecond = NodeBase.PowerTransfer,
-        },
-        [NodeKind.Generator] = new(NodeKind.Generator)
-        {
-            Name = "Generator", Description = "Makes power for its branch, at half the core's rate.",
-            Radius = 15, Mass = 3, Force = 3, MaxLinks = 1, Shape = Shape.Pentagon, Rgb = 0xE5E570,
-            Fruit = NodeKind.Burr, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
-            PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.SmallGen,
-            PowerTransferPerSecond = NodeBase.SmallGen * 1.5f,
-        },
-        [NodeKind.Lab] = new(NodeKind.Lab)
-        {
-            Name = "Lab", Description = "Sends gene blobs; only those that find the core count.",
-            Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Hexagon, Rgb = 0x9370E0,
-            Fruit = NodeKind.Research, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
-            PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain * 1.5f,
-            PowerTransferPerSecond = NodeBase.PowerTransferSub,
-            BlobsPerHour = 720, // one every 5 s
-        },
-        [NodeKind.Grove] = new(NodeKind.Grove)
-        {
-            Name = "Grove", Description = "Sends growth blobs that grow fruit and new parts.",
-            Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Square, Rgb = 0xE07000,
-            Fruit = NodeKind.Berry, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
-            PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain,
-            PowerTransferPerSecond = NodeBase.PowerTransferSub,
-            BlobsPerHour = 1200, // one every 3 s
-        },
-        [NodeKind.Leaf] = new(NodeKind.Leaf)
-        {
-            Name = "Leaf", Description = "Cuts its stem's upkeep by a quarter.",
-            Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Triangle, Rgb = 0x03AA03,
-            PowerStore = NodeBase.FruitStore, FlowerPowerFactor = -0.25f,
-        },
-        [NodeKind.Burr] = new(NodeKind.Burr)
-        {
-            Name = "Burr", Description = "Raises its generator's output a little.",
-            Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Triangle, Rgb = 0xE02323,
-            PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
-        },
-        [NodeKind.Research] = new(NodeKind.Research)
-        {
-            Name = "Research", Description = "Raises its lab's gene output a little.",
-            Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Pentagon, Rgb = 0x9370E0,
-            PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
-        },
-        [NodeKind.Berry] = new(NodeKind.Berry)
-        {
-            Name = "Berry", Description = "Raises its grove's growth output a little.",
-            Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Circle, Rgb = 0xF0A040,
-            PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
-        },
-    };
+            [NodeKind.Core] = new(NodeKind.Core)
+            {
+                Name = "Core", Description = "The heart: makes the most power, and takes in genes.",
+                Radius = 30, Mass = 30, Force = 30, MaxLinks = Tuning.StartCoreLinks, Shape = Shape.Circle, Rgb = 0xE5E570,
+                PowerStore = NodeBase.PowerStore * 4, PowerPerSecond = NodeBase.CoreGen, PowerWeight = 1.5f,
+                PowerTransferPerSecond = NodeBase.CoreGen * 1.2f,
+            },
+            [NodeKind.Stem] = new(NodeKind.Stem)
+            {
+                Name = "Stem", Description = "Structure: carries power and blobs. Cheap upkeep, less with leaves.",
+                Radius = 10, Mass = 1, Force = 1, MaxLinks = 3, Shape = Shape.Circle, Rgb = 0x07E000,
+                Fruit = NodeKind.Leaf, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
+                PowerStore = NodeBase.PowerStore * 3/4, PowerPerSecond = NodeBase.StemDrain, PowerWeight = 1.1f,
+                PowerTransferPerSecond = NodeBase.PowerTransfer,
+            },
+            [NodeKind.Generator] = new(NodeKind.Generator)
+            {
+                Name = "Generator", Description = "Makes power for its branch, at half the core's rate.",
+                Radius = 15, Mass = 3, Force = 3, MaxLinks = 1, Shape = Shape.Pentagon, Rgb = 0xE5E570,
+                Fruit = NodeKind.Burr, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
+                PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.SmallGen,
+                PowerTransferPerSecond = NodeBase.SmallGen * 1.5f,
+            },
+            [NodeKind.Lab] = new(NodeKind.Lab)
+            {
+                Name = "Lab", Description = "Sends gene blobs; only those that find the core count.",
+                Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Hexagon, Rgb = 0x9370E0,
+                Fruit = NodeKind.Research, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
+                PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain * 1.5f,
+                PowerTransferPerSecond = NodeBase.PowerTransferSub,
+                BlobsPerHour = 720, Sends = BlobKind.Genes, // one every 5 s
+            },
+            [NodeKind.Grove] = new(NodeKind.Grove)
+            {
+                Name = "Grove", Description = "Sends growth blobs that grow fruit and new parts.",
+                Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Square, Rgb = 0xE07000,
+                Fruit = NodeKind.Berry, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
+                PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain,
+                PowerTransferPerSecond = NodeBase.PowerTransferSub,
+                BlobsPerHour = 1200, Sends = BlobKind.Growth, // one every 3 s
+            },
+            [NodeKind.Leaf] = new(NodeKind.Leaf)
+            {
+                Name = "Leaf", Description = "Cuts its stem's upkeep by a quarter.",
+                Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Triangle, Rgb = 0x03AA03,
+                PowerStore = NodeBase.FruitStore, FlowerPowerFactor = -0.25f,
+            },
+            [NodeKind.Burr] = new(NodeKind.Burr)
+            {
+                Name = "Burr", Description = "Raises its generator's output a little.",
+                Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Triangle, Rgb = 0xE02323,
+                PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
+            },
+            [NodeKind.Research] = new(NodeKind.Research)
+            {
+                Name = "Research", Description = "Raises its lab's gene output a little.",
+                Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Pentagon, Rgb = 0x9370E0,
+                PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
+            },
+            [NodeKind.Berry] = new(NodeKind.Berry)
+            {
+                Name = "Berry", Description = "Raises its grove's growth output a little.",
+                Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Circle, Rgb = 0xF0A040,
+                PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
+            },
+        };
+        foreach (var spec in WildFlowers.All(all)) all[spec.Kind] = spec;
+        return all;
+    }
 }

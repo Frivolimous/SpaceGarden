@@ -43,11 +43,23 @@ public sealed class Tracking
     // The garden reached these many parts at once (a part count milestone in the Almanac, the first time).
     public static readonly int[] PartMilestones = [25, 50, 100, 200, 300, 400, 500];
 
-    // A part grew (not loaded): counts it, and logs its kind's first and any part count reached for the first time.
+    // The kinds the garden has grown, each with the age it first grew at (the core: its planting). The Almanac's
+    // Codex lists only these (DESIGN.md, Step 5: a kind is discovered the first time it grows).
+    public readonly Dictionary<NodeKind, double> Discovered = new();
+    // Wild flowers whose own life cycle ended them, by kind (an Ember burned out, a Comet Bloom withered).
+    public readonly Dictionary<NodeKind, int> EndedCount = new();
+
+    // A part grew (not loaded): counts it, and logs its kind's first (a wild flower's as its discovery) and any part
+    // count reached for the first time.
     internal void Grew(NodeSpec spec, int parts)
     {
         Grown[spec.Kind] = Grown.GetValueOrDefault(spec.Kind) + 1;
-        First($"grew:{spec.Kind}", $"First {spec.Name.ToLowerInvariant()} {(spec.IsFruit ? "grew" : "emerged")}");
+        bool found = Discovered.TryAdd(spec.Kind, Age);
+        if (spec.IsWild)
+        {
+            if (found) Log(JournalKind.Discovery, $"Wild flower discovered: {spec.Name}");
+        }
+        else First($"grew:{spec.Kind}", $"First {spec.Name.ToLowerInvariant()} {(spec.IsFruit ? "grew" : "emerged")}");
         if (parts <= MostParts) return;
         foreach (var milestone in PartMilestones)
             if (MostParts < milestone && parts >= milestone) Log(JournalKind.Milestone, $"The garden reached {milestone} parts");
@@ -57,10 +69,22 @@ public sealed class Tracking
     // The garden has this many main nodes now (not loaded): its size rises if that's a new most.
     internal void Reached(int mainNodes) => MostMainNodes = Math.Max(MostMainNodes, mainNodes);
 
+    // A wild flower's life cycle ended it: "An Ember burned out", "A Comet Bloom withered".
+    internal void Ended(NodeSpec spec)
+    {
+        EndedCount[spec.Kind] = EndedCount.GetValueOrDefault(spec.Kind) + 1;
+        Log(JournalKind.Ended, $"{Article(spec.Name)} {spec.Name} {EndedVerb(spec)}");
+    }
+
+    public static string EndedVerb(NodeSpec spec) => spec.Dims ? "burned out" : "withered";
+
+    // "A" or "An" before a name.
+    public static string Article(string name) => "AEIOU".Contains(name[0]) ? "An" : "A";
+
     // ==== SAVES ==== \\
 
     public TrackingSave ToSave() => new(Age, new(Grown), Pruned, PassiveBuds, MostParts, History.ToSave(),
-        Journal.ToList(), Firsts.ToList(), MostMainNodes);
+        Journal.ToList(), Firsts.ToList(), MostMainNodes, new(Discovered), new(EndedCount));
 
     public static Tracking FromSave(TrackingSave? save)
     {
@@ -75,6 +99,10 @@ public sealed class Tracking
         tracking.History.Load(save.History);
         tracking.Journal.AddRange(save.Journal);
         tracking.Firsts.UnionWith(save.Firsts);
+        // A save from before step 5d has no discoveries: the kinds it grew count as found at its start.
+        if (save.Discovered != null) foreach (var (kind, age) in save.Discovered) tracking.Discovered[kind] = age;
+        else foreach (var kind in save.Grown.Keys.Append(NodeKind.Core)) tracking.Discovered[kind] = 0;
+        foreach (var (kind, count) in save.Ended ?? []) tracking.EndedCount[kind] = count;
         return tracking;
     }
 
@@ -113,6 +141,10 @@ public sealed class Tracking
         Row("core_bought", garden.CoreBought);
         Row("parts_now", garden.Nodes.Count);
         Row("most_main_nodes", MostMainNodes);
+        Row("wild_flowers_now", garden.WildCount);
+        Row("wild_flower_limit", garden.Capacity.WildFlowers);
+        Row("kinds_discovered", Discovered.Count);
+        Row("wild_flowers_ended", EndedCount.Values.Sum());
         foreach (var kind in Enum.GetValues<NodeKind>())
             if (Grown.TryGetValue(kind, out var count)) Row($"grown_{kind.ToString().ToLowerInvariant()}", count);
         return csv.ToString();
@@ -149,8 +181,9 @@ public sealed class Tracking
 }
 
 // Unlock is the old unlock track's (before step 5b), kept so older journals still read; Purchase is a core link or the
-// Hub bought, Tool a shaping tool gained from the garden's size.
-public enum JournalKind { Planted, First, Unlock, Milestone, Purchase, Tool }
+// Hub bought, Tool a shaping tool gained from the garden's size; Discovery a wild flower kind's first appearance, Ended
+// a wild flower whose life cycle ended it (step 5d).
+public enum JournalKind { Planted, First, Unlock, Milestone, Purchase, Tool, Discovery, Ended }
 
 // One moment in the Almanac: when (the garden's age), what sort, and what happened.
 public sealed record JournalEntry(double Age, JournalKind Kind, string Text);
@@ -246,7 +279,8 @@ public sealed class History
 
 // What changed while the player was away (DESIGN.md, Step 4: "While you were away"): taken from the tracking and the
 // journal between a Mark made before a catch-up and the garden after it.
-public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines)
+// Highlighted are the lines to pick out (the wild flower kinds discovered), by index.
+public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IReadOnlyList<int> Highlighted)
 {
     // The journal's moments listed at most, the rest left to the Almanac.
     public const int MostMoments = 3;
@@ -256,31 +290,59 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines)
 
     public bool Any => Lines.Count > 0;
 
-    public sealed record Mark(double Age, int JournalCount, Dictionary<NodeKind, int> Grown, double Genes, float Power);
+    public sealed record Mark(double Age, int JournalCount, Dictionary<NodeKind, int> Grown, double Genes, float Power,
+        Dictionary<NodeKind, int> Ended);
 
     public static Mark MarkNow(Garden garden) =>
         new(garden.Tracking.Age, garden.Tracking.Journal.Count, new(garden.Tracking.Grown), garden.Genes,
-            garden.Nodes.Where(n => !n.Spec.IsFruit).Sum(n => n.Power));
+            garden.Nodes.Where(n => !n.Spec.IsFruit).Sum(n => n.Power), new(garden.Tracking.EndedCount));
 
     public static AwayNote Since(Garden garden, Mark mark)
     {
         var tracking = garden.Tracking;
         var lines = new List<string>();
+        var highlighted = new List<int>();
 
         var grew = Enum.GetValues<NodeKind>()
             .Select(k => (Kind: k, Count: tracking.Grown.GetValueOrDefault(k) - mark.Grown.GetValueOrDefault(k)))
             .Where(g => g.Count > 0).ToList();
-        int parts = grew.Sum(g => g.Count);
+        var basic = grew.Where(g => !NodeSpecs.All[g.Kind].IsWild).ToList();
+        int parts = basic.Sum(g => g.Count);
         if (parts > 0)
         {
-            var kinds = grew.Select(g => Count(g.Count, NodeSpecs.All[g.Kind].Name.ToLowerInvariant())).ToList();
+            var kinds = basic.Select(g => Count(g.Count, NodeSpecs.All[g.Kind].Name.ToLowerInvariant())).ToList();
             lines.Add($"{(parts == 1 ? "A new part" : $"{parts} new parts")} grew: {List(kinds)}.");
+        }
+
+        // The wild flowers that grew (by their names), each kind new to the garden on a line of its own, picked out;
+        // then those whose life cycle ended them.
+        var wild = grew.Where(g => NodeSpecs.All[g.Kind].IsWild).ToList();
+        if (wild.Count > 0)
+        {
+            var names = wild.Select(g => g.Count == 1 ? $"{Article(g.Kind).ToLowerInvariant()} {Name(g.Kind)}"
+                : $"{g.Count} {Name(g.Kind)}s").ToList();
+            lines.Add($"Wild flowers grew: {List(names)}.");
+        }
+        foreach (var entry in tracking.Journal.Skip(mark.JournalCount).Where(e => e.Kind == JournalKind.Discovery))
+        {
+            highlighted.Add(lines.Count);
+            lines.Add($"{entry.Text} (see the Codex).");
+        }
+        foreach (var kind in Enum.GetValues<NodeKind>())
+        {
+            int ended = tracking.EndedCount.GetValueOrDefault(kind) - mark.Ended.GetValueOrDefault(kind);
+            if (ended <= 0) continue;
+            var spec = NodeSpecs.All[kind];
+            lines.Add(ended == 1 ? $"{Tracking.Article(spec.Name)} {spec.Name} {Tracking.EndedVerb(spec)}."
+                : $"{ended} {spec.Name}s {Tracking.EndedVerb(spec)}.");
         }
 
         double genes = garden.Genes - mark.Genes;
         if (genes >= 1) lines.Add($"{genes:#,0} genes reached the core.");
 
-        var moments = tracking.Journal.Skip(mark.JournalCount).ToList();
+        // (Discoveries and endings have their own lines above.)
+        var moments = tracking.Journal.Skip(mark.JournalCount)
+            .Where(e => e.Kind is not (JournalKind.Discovery or JournalKind.Ended)).ToList();
         // Shaping tools gained first (what there's to place now), then firsts and milestones.
         static bool Gained(JournalEntry m) => m.Kind is JournalKind.Tool or JournalKind.Purchase or JournalKind.Unlock;
         var shown = moments.Where(Gained).Concat(moments.Where(m => !Gained(m))).Take(MostMoments).ToList();
@@ -294,8 +356,12 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines)
             float lowest = during.Min(s => s.Power) / mark.Power;
             if (lowest < DipFill) lines.Add($"Power ran low: down to {lowest * 100:0}% of what it held when you left.");
         }
-        return new AwayNote(tracking.Age - mark.Age, lines);
+        return new AwayNote(tracking.Age - mark.Age, lines, highlighted);
     }
+
+    static string Name(NodeKind kind) => NodeSpecs.All[kind].Name;
+
+    static string Article(NodeKind kind) => Tracking.Article(Name(kind));
 
     static string Count(int n, string name) => n == 1 ? $"1 {name}" : $"{n} {Plural(name)}";
 
@@ -314,4 +380,5 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines)
 public sealed record HistorySave(List<Sample> Minutes, List<Sample> Hours, List<Sample> Days, Sample Open);
 
 public sealed record TrackingSave(double Age, Dictionary<NodeKind, int> Grown, int Pruned, int PassiveBuds, int MostParts,
-    HistorySave History, List<JournalEntry> Journal, List<string> Firsts, int MostMainNodes = 0);
+    HistorySave History, List<JournalEntry> Journal, List<string> Firsts, int MostMainNodes = 0,
+    Dictionary<NodeKind, double>? Discovered = null, Dictionary<NodeKind, int>? Ended = null);

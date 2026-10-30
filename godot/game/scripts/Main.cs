@@ -84,7 +84,7 @@ public partial class Main : Node2D
 
         widget = new Widget(this) { Name = "Widget" };
         AddChild(widget);
-        widget.CoverScreen(save?.PlantScale ?? 0.75f);
+        widget.CoverScreen(args.TryGetValue("scale", out var sc) ? float.Parse(sc) : save?.PlantScale ?? 0.75f);
         if (save != null && Widget.IdleRates.Contains(save.IdleFps)) widget.IdleFps = save.IdleFps;
         if (save == null) PlantAtHome();
         else widget.KeepOnScreen();
@@ -112,6 +112,14 @@ public partial class Main : Node2D
             Garden.SettleLooks();
         }
         if (args.TryGetValue("genes", out var genes)) Garden.Deliver(Math.Max(0, double.Parse(genes) - Garden.GeneBalance));
+        if (args.TryGetValue("wildlimit", out var limit))
+            Garden.Capacity = Garden.Capacity with { WildFlowers = Math.Max(0, int.Parse(limit)) };
+        // Dev aid: the Evolution kinds unlocked, as their evolutions would (5c), all three or those named.
+        if (args.TryGetValue("unlockwild", out var unlock))
+            foreach (var spec in NodeSpecs.Wild.Where(s => s.Wild!.Unlock == WildUnlock.Evolution))
+                if (unlock == "" || unlock.Split(',').Any(k => k.Equals(spec.Kind.ToString(), StringComparison.OrdinalIgnoreCase)))
+                    Garden.UnlockWild(spec.Kind);
+        if (args.TryGetValue("wild", out var wild)) GrowWild(wild);
         if (args.TryGetValue("shaping", out var shaping) && shaping == "") PlaceShaping(); // else Screenshot does
         if (args.ContainsKey("build")) widget.SetBuilding(true);
         // Dev aid: time away now (HOURS, 8 by default), on whatever garden was loaded or planted, to see its note.
@@ -164,6 +172,35 @@ public partial class Main : Node2D
         Garden.Sprout();
     }
 
+    // Dev aid, --wild=KIND[,KIND...] (or --wild=all, one of each, for a sheet of their looks): grows those wild flowers
+    // at once, each on a stem of its own from the core (a new core link and stem past the caps), whatever their lock,
+    // the wild flower limit raised to fit (see Garden.GrowWild); an inline kind gets a stem beyond it, to show it
+    // carries on. Every part starts full, so they show at full size. Kinds by their NodeKind name (Ember, LumberGrove).
+    void GrowWild(string which)
+    {
+        var kinds = which is "" or "all"
+            ? NodeSpecs.Wild.Select(s => s.Kind).ToList()
+            : which.Split(',').Select(k => Enum.Parse<NodeKind>(k, true)).ToList();
+        foreach (var kind in kinds)
+        {
+            int stems = GardenStats.Of(Garden).Stems; // (a Tendril or Big Stem takes a stem slot too)
+            Garden.Capacity = Garden.Capacity with
+            {
+                CoreLinks = Garden.Core.Links + 1,
+                Stems = Math.Max(Garden.Capacity.Stems, stems + 2),
+            };
+            if (Garden.GrowBranch(Garden.Core, NodeKind.Stem) is not { } stem || Garden.GrowWild(kind, stem) is not { } flower)
+                continue;
+            if (flower.MaxLinks == 2) Garden.GrowBranch(flower, NodeKind.Stem);
+        }
+        // A sheet of them all: in the middle of the screen, where there's room round it.
+        if (kinds.Count > 3 && Garden.Borders is var (min, max)) Garden.Translate((min + max) / 2 - Garden.Core.Position);
+        foreach (var node in Garden.Nodes) node.Power = node.Store;
+        Garden.SettleLooks();
+        for (int i = 0; i < 900; i++) Garden.Step(); // fifteen seconds' settling
+        foreach (var node in Garden.Nodes) node.Age = Math.Max(node.Age, 10);
+    }
+
     // Dev aid, --shaping (now, or --shaping=N at physics tick N): one of each shaping tool, their caps raised to allow
     // it. A pot where the stem with the biggest branch beyond it stands, holding it and facing a little up from its
     // way out; a trellis across the end of another branch, holding the stems there; and a well off to one side.
@@ -207,7 +244,7 @@ public partial class Main : Node2D
     void ShowGarden()
     {
         View?.QueueFree();
-        View = new GardenView(Garden) { Name = "GardenView", Frozen = HiddenReason != null };
+        View = new GardenView(Garden) { Name = "GardenView", Frozen = HiddenReason != null, Labels = args.ContainsKey("labels") };
         AddChild(View);
     }
 
@@ -323,14 +360,15 @@ public partial class Main : Node2D
             MouseFilter = Control.MouseFilterEnum.Ignore,
             LabelSettings = new LabelSettings { FontSize = 15, FontColor = GardenView.Rgb(NodeSpecs.All[NodeKind.Core].Rgb).Lightened(0.35f) },
         });
-        foreach (var line in note.Lines)
+        for (int i = 0; i < note.Lines.Count; i++)
             column.AddChild(new Label
             {
-                Text = line,
+                Text = note.Lines[i],
                 AutowrapMode = TextServer.AutowrapMode.WordSmart,
                 CustomMinimumSize = new Vector2(AwayNoteWidth, 0),
                 MouseFilter = Control.MouseFilterEnum.Ignore,
-                LabelSettings = new LabelSettings { FontSize = 13, FontColor = new Color(1, 1, 1, 0.9f) },
+                // A wild flower discovered is picked out.
+                LabelSettings = new LabelSettings { FontSize = 13, FontColor = note.Highlighted.Contains(i) ? Almanac.DiscoveryInk : new Color(1, 1, 1, 0.9f) },
             });
         layer.AddChild(panel);
         AddChild(layer);
