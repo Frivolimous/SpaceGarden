@@ -183,7 +183,7 @@ public partial class Main : Node2D
             : which.Split(',').Select(k => Enum.Parse<NodeKind>(k, true)).ToList();
         foreach (var kind in kinds)
         {
-            int stems = Garden.Nodes.Count(n => n.Spec.Kind == NodeKind.Stem);
+            int stems = GardenStats.Of(Garden).Stems; // (a Tendril or Big Stem takes a stem slot too)
             Garden.Capacity = Garden.Capacity with
             {
                 CoreLinks = Garden.Core.Links + 1,

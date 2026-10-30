@@ -112,12 +112,15 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Wild flowers** (step 5d, `src/Core/WildFlowers.cs`, numbers in `Tuning` under Wild flowers; DESIGN.md, Wild
   flowers): each wild flower limit bought in the Core track is a slot. A new bud, passive or planted, rolls as it
   starts: `PassiveWildChance` (5%) or `PlantedWildChance` (4%) per free slot. If it grows wild it forms as one of the
-  kinds that can stand in for its basic kind (and, for a passive bud, the white passive-only kinds), and takes a
-  wild slot, not its base kind's. Pruning frees the slot. Fifteen kinds, each with its own shape: Amplifier,
+  kinds that can stand in for its basic kind (and, for a passive bud, the white passive-only kinds) and takes a wild
+  slot; a stem or generator kind takes its base's slot too (a Tendril a stem's, a Pulsar a generator's), but the
+  Amplifier and the Resistor don't. Pruning frees the slots. Fifteen kinds, each with its own shape: Amplifier,
   Resistor, Tendril, Big Stem, Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen, Buffer, Comet
-  Bloom, Moonflower, Nebula Bloom. Big Stem, Pulsar and Twin Star are locked until `Garden.UnlockWild` (their
-  evolutions, step 5c). An Ember burns out after 3 days and a Comet Bloom withers after one: the only parts the
-  garden ever loses on its own, drifting off like a prune; the journal and the away note say so. The part's card
+  Bloom, Moonflower, Nebula Bloom. Big Stem, Pulsar and Twin Star join the pool only through `Garden.UnlockWild`
+  (their evolutions, step 5c). An Amplifier doubles half the blobs passing it; blobs never step onto a Resistor. An
+  Ember fades from twice a generator to nothing over 3 days and a Comet Bloom withers after one: the only parts the
+  garden ever loses on its own, drifting off like a prune; the journal and the away note say so. Their fruit
+  includes two new kinds: glow (white, sending buff blobs at a quarter of a Buffer's rate) and wood. The part's card
   shows its quirk under its name (and how long an Ember or Comet Bloom has left); the garden card a "Wild flowers:
   1 / 2" line once there's a limit. All wild flowers draw from one atlas texture in one batch per layer.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.

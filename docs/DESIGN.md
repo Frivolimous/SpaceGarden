@@ -127,11 +127,11 @@ Capacity is a set of slot limits that cap growth until research raises them. Whe
 | Limit | Covers |
 | --- | --- |
 | Per-type caps | Structure and power only: stems and generators, each raised by buying upgrades. Groves, labs and other basic flowers are uncapped; they are limited by free link slots on stems and by power upkeep, so the player chooses the mix |
-| Wild flower limit | One total for all wild flowers, raised in the core track and by seedlings. No per-kind caps except Big Stem, Pulsar and Twin Star (their evolutions add 2 each) |
+| Wild flower limit | One total for all wild flowers, raised in the core track and by seedlings. A wild flower with a capped base takes its base's slot too (a Tendril a stem's, a Pulsar a generator's). No per-kind caps (see Wild flowers) |
 | Seedling slots | Seedlings planted or bloomed; a slot stays used after its seedling blooms, so each is one evolution |
-| Local caps | Links per node and fruit per node. Stems are fixed at 3 links including the parent, so each stem supports a branching stem, a flower plus a continuation, or two flowers at a dead end. Big Stems (4 links) are a capped wild flower. The core starts with 1 link and gains one in the core track (4,000 genes); third and later links come only from evolutions |
+| Local caps | Links per node and fruit per node. Stems are fixed at 3 links including the parent, so each stem supports a branching stem, a flower plus a continuation, or two flowers at a dead end. Big Stems (4 links) are a wild flower, unlocked by their evolution. The core starts with 1 link and gains one in the core track (4,000 genes); third and later links come only from evolutions |
 
-A bloomed seedling becomes a wild flower and takes a wild flower slot (and adds one to the limit), so evolutions need no separate limit.
+A bloomed seedling becomes a wild flower and takes a wild flower slot, and its base's slot where it has a capped base (and adds one to each), so evolutions need no separate limit.
 
 ## Performance budget
 
@@ -259,53 +259,59 @@ Each flower type has its own set of fruits, all grown by growth blobs. Leaves on
 
 ## Wild flowers
 
-A new bud can turn into a special kind. That is **wild growth**, and the results are **wild flowers**. They are quirks, not upgrades: each trades something for something, and the player prunes what they don't want. (Settled Oct 30, step 5. Every number here is a placeholder for playtesting.)
+A new bud can turn into a special kind. That is **wild growth**, and the results are **wild flowers**. They are quirks, not upgrades: each trades something for something, and the player prunes what they don't want. (Settled Oct 30, step 5; slots, effects and fruit revised the same day by Jeremy's addendum. Every number here is a placeholder for playtesting.)
 
 - **Any new bud can grow wild**, planted or passive. The chance is per free wild flower slot and differs by how the bud started: `PassiveWildChance` 5% for a passive bud, `PlantedWildChance` 4% for a planted one (two tuning variables; whether planted buds should grow wild at all is watched in playtesting). It is zero when no slot is free. The roll is made when the bud starts.
-- **One total limit**, the wild flower limit, raised in the core track and by seedlings. A wild flower takes a wild flower slot, not its base type's slot. There are no per-kind caps except where noted (Big Stem, Pulsar, Twin Star, whose evolutions add 2 each).
+- **One total limit**, the wild flower limit, raised in the core track and by seedlings. A wild flower with a capped base counts as **both** its base type and a wild flower: a Tendril or Big Stem takes a stem slot too, a Pulsar, Twin Star or Ember a generator slot. The Amplifier, the Resistor and the passive-only kinds take only a wild flower slot; groves and labs are uncapped, so the grove and lab kinds do too.
+- **No per-kind caps** for now (the data still supports them). An unlock evolution only adds its kind to the pool, plus its boost. A seedling's bloom adds +1 to the wild flower limit and +1 to its base type's cap, so its own flower costs nothing.
 - **Pruning frees the slot.** A later bud may roll another wild flower, possibly a different kind in a different place.
+- **Balance target:** one wild flower slot is worth about 0.65 labs, so each kind should be worth its base plus about that. Upkeep and transfer rate are the fine-tuning dials. Grove kinds are judged by feel (growth is rarely what a garden lacks), and the Amplifier, which scales with the labs beyond it, may well beat the target: it rewards a good shape.
 - **Looks:** each kind has its own, more complex, radially symmetric shape. The base node's hue is kept, at most with a subtle shift. Passive-only kinds have no base and are white. Shapes echo the base where that works (Pulsar is a 5-pointed star).
 - **Unlocked** says when a kind can start to grow wild: **Start** kinds from the first wild flower slot, **Evolution** kinds once the matching evolution has been taken (see Progression). A bloomed seedling always becomes its evolution's own kind.
 
-| Wild flower | Base | Unlocked | Effect | Quirk |
-| --- | --- | --- | --- | --- |
-| Amplifier | Stem (inline) | Start | Doubles blobs passing through, once each | 2 links, can't fork |
-| Resistor | Stem (inline) | Start | Blocks all blobs | Low transfer, slows power beyond it |
-| Tendril | Stem | Start | Very long, springy; stores a large power reserve | Slow to fill |
-| Big Stem | Stem | Evolution | 4 links | Slower power transfer |
-| Pulsar | Generator | Evolution | More power, released in bursts | Uneven supply |
-| Twin Star | Generator (inline) | Evolution | A generator that continues the branch | Capped |
-| Ember | Generator | Start | No upkeep, steady output | Dims over days, destroys itself when dim enough |
-| Lumber Grove | Grove | Start | Many more growth blobs | Higher upkeep; wood for crawlers later |
-| Seed Pod | Grove | Start | Occasional big burst of growth blobs | Silent in between |
-| Wild Lab | Lab | Start | Fewer genes, holds more fruit; with full fruit beats a basic lab | Slow to pay off |
-| Lichen | Lab | Start | Low upkeep; holds 4 leaves, which bring upkeep to 0 | Slow genes |
-| Buffer | Passive only | Start | Buff blobs raise nearby production, up to 5 links (+3 if amplified) | Local only |
-| Comet Bloom | Passive only | Start | Bright; bursts all blob types when it appears | Withers after about a day |
-| Moonflower | Passive only | Start | Nearby buds slightly more likely to grow wild | Takes a slot |
-| Nebula Bloom | Passive only | Start | A seedling within a few links fills twice as fast | Useless without a seedling |
+| Wild flower | Effect | Cost | Grows from | Unlocked | Fruit |
+| --- | --- | --- | --- | --- | --- |
+| Amplifier | 2 links; gene and growth blobs passing through grow 50% larger | 1 wild | Stem | Start | 1 glow |
+| Resistor | 2 links; blobs bounce off it from both sides; low transfer | 1 wild | Stem | Start | 1 glow |
+| Tendril | 3 links; long springy link, large power store, medium transfer | 1 wild, 1 stem | Stem | Start | 3 leaf |
+| Big Stem | 4 links; slow transfer | 1 wild, 1 stem | Stem | Evolution | 2 leaf |
+| Pulsar | 1.5× a generator's power, released in bursts | 1 wild, 1 generator | Generator | Evolution | 2 burr |
+| Twin Star | 2 links; 80% of a generator's power | 1 wild, 1 generator | Generator | Evolution | 2 berry |
+| Ember | Starts at 2× a generator, 1× at 1.5 days, keeps fading and burns out at 3 days unless pruned earlier | 1 wild, 1 generator | Generator | Start | None |
+| Lumber Grove | 2× a grove's growth blobs at 1.5× upkeep | 1 wild | Grove | Start | 5 wood |
+| Seed Pod | 1.5× a grove's growth blobs, in bursts | 1 wild | Grove | Start | 3 berry |
+| Wild Lab | A lab's genes; its fruit bonus is doubled (+20% each), up to 2× with all 5 | 1 wild | Lab | Start | 5 research |
+| Lichen | 0.8× a lab's genes; 4 leaves bring its upkeep to 0 | 1 wild | Lab | Start | 4 leaf |
+| Buffer | Buff blobs give the parts they pass a 50% production boost | 1 wild | Passive only | Start | 2 glow |
+| Comet Bloom | One burst of gene and growth blobs worth about 2 hours of a lab and a grove; withers after 24 hours | 1 wild | Passive only | Start | 2 glow |
+| Moonflower | Nearby buds much more likely to grow wild; wild flowers within 5 links get +10% output | 1 wild | Passive only | Start | 3 glow |
+| Nebula Bloom | Power reaching seedlings within 5 links counts double | 1 wild | Passive only | Start | 3 glow |
+
+**Fruit:** every fruit gives +10% to its parent's main effect (burr, research, berry, and **wood**, which gains a crawler use later), except leaves (−25% upkeep each) and **glow**, a white fruit that grows like any other and launches buff blobs like a small Buffer (a quarter of its rate; buffs don't stack).
+
+The Comet Bloom's small value against the target is accepted: an attentive player prunes it at once for the slot, as with a fading Ember.
 
 Home leaves the pool: crawlers bring their own home node (step 7). The Hub is no longer a rare; it is planted (see Progression). Resistor, Amplifier and Buffer are the grey/white specialists in the visual language, the garden's modifiers of flow and output now that spells are cut.
 
-Ember and Comet Bloom end themselves, the one exception to "never destroys anything" (decided Oct 30): only a wild flower's own life cycle ends it, never neglect; its slot is freed and the away note says so.
+Ember and Comet Bloom end themselves, the one exception to "never destroys anything" (decided Oct 30): only a wild flower's own life cycle ends it, never neglect; its slot is freed and the away note says so. An Ember rewards attention: pruned once it falls below a plain generator, around day 1.5, it averaged about 1.5 generators, and its slot is free for what grows next; neglected, it just fades out.
 
 **Built in 5d** (Oct 30; the rules in `godot/src/Core/WildFlowers.cs` and `Garden.cs` (Wild flowers), every number a first pass in `Tuning`, Wild flowers). Details settled in the build, for Jeremy to review:
-- **The roll.** A bud's basic kind is rolled first, as before (so it still needs room under its own cap), then whether it grows wild. With no free slot no dice are thrown, so a garden without slots grows exactly as it did. If it does grow wild, its kind is picked alike among the kinds that can stand in for its basic kind, plus the passive-only kinds for a passive bud; a planted bud never becomes a passive-only kind. A wild bud forms as its own silhouette from the start, so the player sees what's coming. The forming bud's toolbar button still pulses for its base kind.
-- **Slots.** A wild flower and a wild bud each hold a slot; undoing a prune needs the slots back, as it needs stem and generator room.
-- **Moonflower:** each within 3 links of a bud's part makes the chance half again (`MoonflowerBoost`, stacking).
-- **Amplifier:** a blob passing through it goes on, and a second blob carries on from the Amplifier with the hops the first had left; the second is never doubled again. Gene blobs then count twice, growth blobs feed twice. **Resistor:** a blob that steps onto it ends there; the gene reach on the garden card counts that (not an Amplifier's doubling).
-- **Buffer:** 240 buff blobs an hour, white. A buff blob wanders like the others for 5 links (8 once past an Amplifier), nothing absorbs it, and every part it passes makes 15% more power and blobs for the next 60 s. A Resistor stops it.
-- **Tendril:** its link 2.5 times as long and 0.3 as springy; holds 600 (a stem 150) and counts as half as empty when neighbours choose where to send, so it fills slowly. **Big Stem:** 4 links, transfer 15 (a stem 30). **Twin Star:** a generator with 2 links (no generator slot either).
-- **Pulsar:** makes 18 a second (a generator 12) into a hidden charge, released into its store every 20 s of its life, swelling it past full until it has sent it on (transfer 24).
-- **Ember:** a generator's 12 a second whatever its fill (none once full), dimming to a quarter over 3 days, drawn darker as it goes; then it burns out. **Comet Bloom:** 12 blobs as it appears (growth, genes and buff in turn), a wider, brighter halo, withers after a day. An ending leaves like a prune (the part drifts off and fades) but isn't one: nothing to undo, not counted as pruned. The part's card counts down ("Burns out in: 2d 4h").
-- **Lumber Grove:** 2,400 growth blobs an hour at 8 upkeep (a grove 1,200 at 4). **Seed Pod:** 1,440 an hour, leaving 60 at once (every 2.5 minutes at full fill). **Wild Lab:** 480 gene blobs an hour, 6 research each counting double: 1,056 an hour once all six have grown, against a full lab's 936. **Lichen:** upkeep 3, 360 gene blobs an hour, 4 leaves that bring its upkeep to 0.
-- **Nebula Bloom** is inert: `NebulaReach` (3) and `NebulaFill` (2) wait for 5c's seedlings.
-- **Locked kinds:** Big Stem, Pulsar and Twin Star have a cap of 0 until `Garden.UnlockWild(kind)`, which 5c calls as the evolution blooms: +2 each time (`WildUnlockCap`).
+- **The roll.** A bud's basic kind is rolled first, as before (so it still needs room under its own cap), then whether it grows wild. With no free slot no dice are thrown, so a garden without slots grows exactly as it did. If it does grow wild, its kind is picked alike among the kinds that can stand in for its basic kind, plus the passive-only kinds for a passive bud; a planted bud never becomes a passive-only kind. A wild bud forms as its own silhouette from the start, so the player sees what's coming. The forming bud's toolbar button still pulses for its base kind. (So an Amplifier or Resistor can't appear while the stem cap is full: accepted.)
+- **Slots.** A wild flower and a wild bud each hold their slots (and their base's where they take one); undoing a prune needs them back. The garden card counts a Tendril or Big Stem among its stems, a Pulsar, Twin Star or Ember among its generators. `Garden.UnlockWild(kind)` adds an Evolution kind to the pool (5c calls it as the evolution blooms); `Garden.WildCaps` holds per-kind caps, none set.
+- **Amplifier:** each Amplifier a gene or growth blob passes doubles it half the time (`AmplifyChance`), at most once a blob, so blobs stay whole genes and chains don't compound: 50% larger on average. The second blob carries on from the Amplifier with the hops the first had left.
+- **Resistor:** never one of a blob's choices of where to go next, from either side, so no hop is wasted; a blob with nowhere else to go ends. The garden card's gene reach counts this exactly (not an Amplifier's doubling). At the base of a lab-free branch it keeps gene blobs from wandering in; labs and passive growth beyond it are cut off. It sends power on at 6 a second (a stem 30).
+- **Buffer:** 240 buff blobs an hour, white; a glow fruit 60. A buff blob wanders like the others for 5 links (8 once past an Amplifier) and a glow's starts on the part it hangs from; nothing absorbs it, and every part it passes makes 50% more power and blobs for the next 60 s. A second buff only starts the time again.
+- **Tendril:** its link 2.5 times as long and 0.3 as springy; holds 600 (a stem 150), sends on at 20 (a stem 30). **Big Stem:** 4 links, transfer 15. **Twin Star:** 9.6 a second, 2 links.
+- **Pulsar:** makes 18 a second into a hidden charge, released into its store every 20 s of its life, swelling it past full until it has sent it on (transfer 24).
+- **Ember:** 24 a second at first, falling in a straight line to 0 over 3 days, drawn darker as it goes; it burns out at 0. **Comet Bloom:** 3,840 blobs as it appears (1,440 gene and 2,400 growth blobs, mixed as a lab's and a grove's are), a wider, brighter halo, withers after a day. An ending leaves like a prune (the part drifts off and fades) but isn't one: nothing to undo, not counted as pruned. The part's card counts down ("Burns out in: 2d 4h").
+- **Lumber Grove:** 2,400 growth blobs an hour at 6 upkeep. **Seed Pod:** 1,800 an hour, leaving 60 at once (every 2 minutes at full fill). **Wild Lab:** 720 gene blobs an hour and 5 research each counting double. **Lichen:** 576 gene blobs an hour at upkeep 3.
+- **Moonflower:** each within 5 links of a bud's part makes the chance three times as high (`MoonflowerBoost` 2, adding up); wild flowers within 5 links of one make 10% more (not stacking).
+- **Nebula Bloom** is inert: `NebulaReach` (5) and `NebulaFill` (2) wait for 5c's seedlings.
 - **Discovery:** a kind is discovered the first time it grows (`Tracking.Discovered`, with the age). A wild flower's discovery is the journal's moment ("Wild flower discovered: Tendril", in a pale gold) in place of "First tendril emerged"; an ending is one too ("An Ember burned out"). The **Codex** tab lists the discovered kinds under Parts, Wild flowers and Fruit, in the order found, each with when ("Found day 2, 14:03") and its Effect line (a wild flower's quirk after it). A save from before 5d counts what it grew as found at its start.
-- **Part cards:** a wild flower's quirk under its name; Growth or Genes by what it sends.
+- **Part cards:** a wild flower's quirk under its name (what it trades, and the base slot it takes); Growth or Genes by what it sends.
 - **Away note:** the basic parts grown as before, then "Wild flowers grew: an Ember and 2 Tendrils.", each discovery on a line of its own in the pale gold ("Wild flower discovered: Ember (see the Codex)."), then "An Ember burned out." These moments aren't repeated among the three listed.
-- **Looks:** each kind's shape (Bullseye, Gear, Swirl, Quatrefoil, five-pointed star, two pentagons, Flame, two squares, Pod, two triangles, scalloped hexagon, Sun, Sparkle, Rose, Galaxy) comes from one atlas texture, drawn in a batch of its own per layer, so every wild flower together costs one draw call for the parts and one for their buds. Hues are the base's, shifted a little; the passive-only kinds are white.
-- **Save:** still version 9 (not shipped to players), with optional fields: each part's life and charge, the unlocked caps, the discoveries and the endings.
+- **Looks:** each kind's shape (Bullseye, Gear, Swirl, Quatrefoil, five-pointed star, two pentagons, Flame, two squares, Pod, two triangles, scalloped hexagon, Sun, Sparkle, Rose, Galaxy) comes from one atlas texture, drawn in a batch of its own per layer, so every wild flower together costs one draw call for the parts and one for their buds. Hues are the base's, shifted a little; the passive-only kinds are white. Glow is a small white sun, wood a brown diamond.
+- **Save:** still version 9 (not shipped to players), with optional fields: each part's life and charge, the Evolution kinds unlocked, any per-kind caps, the discoveries and the endings.
 
 ## Progression
 
@@ -378,9 +384,9 @@ All three tracks share one gene income, and the stem and generator tracks will p
 - **Planting.** Seedlings never grow passively. The player plants them from the toolbar, like a bud.
 - **Filling.** A seedling fills with **power**, not genes: 200 before the choice. Selecting a growing seedling opens a radial menu with **3 random evolutions**. Choosing one raises its target to 1,000 for the first bloom, then ×5 each time (5,000, 25,000 and so on). Consider capping a seedling's intake so early blooms don't finish in seconds.
 - **Marker fruit.** On choosing, a marker fruit grows on the core: a unique shape per evolution, coloured by its theme's role hue. Core fruit shows evolutions chosen.
-- **Bloom.** The effect applies immediately and permanently, and the seedling becomes the evolution's wild flower, which also adds +1 to the wild flower limit. Pruning the flower removes only the flower, never the effect or the marker. All effects, including bundled changes, are net positives with mild drawbacks, so no choice is regretted.
+- **Bloom.** The effect applies immediately and permanently, and the seedling becomes the evolution's wild flower, which also adds +1 to the wild flower limit and +1 to its base type's cap (so the flower, which takes both slots, costs nothing). Pruning the flower removes only the flower, never the effect or the marker. All effects, including bundled changes, are net positives with mild drawbacks, so no choice is regretted.
 - **Repeats.** Evolutions can be taken again ("Build your Core II"). Each has its own repeat limit and per-level values, kept in data. No repeats are offered until the garden has 5 evolutions. Smart Particles is one-off.
-- **Unlock evolutions** (Pulsar Power, Twin Stars, Big Stem) also give a small boost to their base type and +2 cap of their kind.
+- **Unlock evolutions** (Pulsar Power, Twin Stars, Big Stem) also give a small boost to their base type and add their kind to the wild flower pool (no per-kind cap).
 - The original skill tree (see [ORIGINAL_SYSTEMS.md §9](ORIGINAL_SYSTEMS.md)) stays the content pool for later evolutions.
 
 | Evolution | Effect | Becomes |
