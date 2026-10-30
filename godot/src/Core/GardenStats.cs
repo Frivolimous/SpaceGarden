@@ -40,7 +40,7 @@ public sealed record GardenStats(
             }
             held += n.Power;
             store += n.Store;
-            fruitRoom += n.Spec.MaxFruits;
+            fruitRoom += n.MaxFruits;
             if (n.FormingBud) buds[n.Forming!.Value] = buds.GetValueOrDefault(n.Forming!.Value) + 1;
             switch (n.Spec.Kind)
             {
@@ -68,7 +68,8 @@ public sealed record GardenStats(
 
     // The chance a gene blob leaving this lab finds the core before it fades (DESIGN.md, Economy, Blobs): the blob's
     // walk (Garden.Walk) followed exactly, as odds instead of dice. At each part it takes any link but the one it came
-    // by (that one too at a dead end), each alike, for up to BlobMaxHops links. Depends only on the plant's shape.
+    // by (that one too at a dead end), each alike, for up to BlobMaxHops links; never onto a Resistor, and with Smart
+    // Particles never into a dead end but the core (see Garden.Wanders). Depends only on the plant's shape.
     public static double GeneReach(Garden garden, PlantNode lab)
     {
         var core = garden.Core;
@@ -82,15 +83,17 @@ public sealed record GardenStats(
             next.Clear();
             foreach (var ((at, from), odds) in now)
             {
-                int options = 0; // the links it could take (never onto a Resistor)
-                foreach (var branch in at.Branches) if (!branch.Spec.BlocksBlobs) options++;
-                if (at.Parent is { Spec.BlocksBlobs: false }) options++;
+                bool smart = garden.SmartAt(at, BlobKind.Genes);
+                int options = 0; // the links it could take
+                foreach (var branch in at.Branches) if (garden.Wanders(at, branch, BlobKind.Genes, smart)) options++;
+                if (at.Parent is { } parent && garden.Wanders(at, parent, BlobKind.Genes, smart)) options++;
                 if (options == 0) continue;
-                var skip = options > 1 ? from : null;
+                // (As Garden.StepFrom: the way it came is skipped when there's another, if it's an option at all.)
+                var skip = options > 1 && from != null && garden.Wanders(at, from, BlobKind.Genes, smart) ? from : null;
                 double each = odds / (skip != null ? options - 1 : options);
                 void Go(PlantNode to)
                 {
-                    if (to == skip || to.Spec.BlocksBlobs) return; // (an Amplifier's doubling isn't counted)
+                    if (to == skip || !garden.Wanders(at, to, BlobKind.Genes, smart)) return; // (an Amplifier's doubling isn't counted)
                     if (to == core) reached += each;
                     else next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
                 }
@@ -108,10 +111,13 @@ public sealed record GardenStats(
 // power a second; GrowthBlobsPerHour is a grove's growth blobs, GenesPerHour the genes a lab's blobs carry as they
 // leave (production, not what reaches the core: see GardenStats.GeneReach). Links counts the parent's, against
 // MaxLinks (the core's is Capacity.CoreLinks). Forming is the fruit or bud forming in it, if any, and how far along
-// it is, 0-1. A full core or generator makes nothing, so its card shows Makes at its full rate instead.
+// it is, 0-1. A full core or generator makes nothing, so its card shows Makes at its full rate instead. A seedling's
+// Grown is the power it has taken in, against GrowTarget (the choice's 200, then its evolution's target), and
+// Evolution the one chosen, if any.
 public sealed record NodeStats(
     float Power, float Store, float Makes, float Sends, float Upkeep, float GrowthBlobsPerHour, float GenesPerHour,
-    int Links, int MaxLinks, NodeKind? Forming, float FormingProgress)
+    int Links, int MaxLinks, NodeKind? Forming, float FormingProgress, double Grown = 0, double GrowTarget = 0,
+    Evolution? Evolution = null)
 {
     public static NodeStats Of(PlantNode node)
     {
@@ -121,9 +127,10 @@ public sealed record NodeStats(
             ? Math.Clamp(node.Growth / (NodeSpecs.All[kind].IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth), 0, 1)
             : 0;
         return new NodeStats(node.Power, node.Store,
-            Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : spec.PowerTransferPerSecond,
+            Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : Garden.TransferPerSecond(node),
             Garden.UpkeepPerSecond(node),
             spec.Sends == BlobKind.Growth ? blobs : 0, spec.Sends == BlobKind.Genes ? blobs * Tuning.BlobGenes : 0,
-            node.Links, node.MaxLinks, node.Forming, progress);
+            node.Links, node.MaxLinks, node.Forming, progress,
+            node.Evolution?.Fed ?? node.Fed, node.Evolution?.Target ?? Tuning.SeedChoice, node.Evolution);
     }
 }

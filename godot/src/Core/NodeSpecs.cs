@@ -7,6 +7,9 @@ public enum NodeKind
     Amplifier, Resistor, Tendril, BigStem, Pulsar, TwinStar, Ember, LumberGrove, SeedPod, WildLab, Lichen,
     Buffer, CometBloom, Moonflower, NebulaBloom,
     Wood, Glow, // the wild flowers' fruit
+    Seedling, // planted by hand, it blooms into its evolution's wild flower (step 5c)
+    // The marker fruits on the core, one per evolution (see Evolutions).
+    MarkCore, MarkPath, MarkStemmed, MarkSmart, MarkRapid, MarkPower, MarkPulsar, MarkTwin, MarkBigStem, MarkWild,
 }
 
 // The basic shapes, then the wild flowers' more complex ones, each radially symmetric (drawn from one atlas: see
@@ -15,6 +18,7 @@ public enum Shape
 {
     Circle, Triangle, Square, Pentagon, Hexagon,
     Plus, Minus, Trefoil, Quatrefoil, Star5, Star10, Flame, Star8, Oval, Star6, Lobes6, Burst8, Gear, Rose, Swirl,
+    Sprout, // the seedling's (step 5c)
 }
 
 // What blobs a flower sends: growth blobs (groves), gene blobs (labs), buff blobs (a Buffer, a glow fruit), or gene
@@ -96,6 +100,10 @@ public sealed record NodeSpec(NodeKind Kind)
     public bool BlocksBlobs { get; init; }
     public int EmergeBurst { get; init; }
     public float WildBoost { get; init; }
+    // SeedlingBoost: power reaching a seedling within Tuning.NebulaReach links of it counts this many times (a Nebula
+    // Bloom's; not stacking). IsMarker: a marker fruit on the core (step 5c), grown as an evolution is chosen.
+    public float SeedlingBoost { get; init; }
+    public bool IsMarker { get; init; }
 
     public bool IsFruit => MaxLinks == 0;
     public float InverseMass => 1 / Mass;
@@ -136,6 +144,7 @@ public static class NodeSpecs
                 Radius = 30, Mass = 30, Force = 30, MaxLinks = Tuning.StartCoreLinks, Shape = Shape.Circle, Rgb = 0xE5E570,
                 PowerStore = NodeBase.PowerStore * 4, PowerPerSecond = NodeBase.CoreGen, PowerWeight = 1.5f,
                 PowerTransferPerSecond = NodeBase.CoreGen * 1.2f,
+                PowerToFruitPerSecond = NodeBase.PowerToFruit, // its marker fruit (step 5c)
             },
             [NodeKind.Stem] = new(NodeKind.Stem)
             {
@@ -197,6 +206,16 @@ public static class NodeSpecs
             },
         };
         foreach (var spec in WildFlowers.All(all)) all[spec.Kind] = spec;
+        // A seedling (DESIGN.md, Seedlings and evolutions): a small flower at the end of a branch, planted by hand, that
+        // takes in power (its upkeep, Tuning.SeedlingIntake when full) towards its evolution.
+        all[NodeKind.Seedling] = new(NodeKind.Seedling)
+        {
+            Name = "Seedling", Description = "Takes in power, then blooms into its chosen evolution's wild flower.",
+            Radius = 11, Mass = 1.5f, Force = 1.5f, MaxLinks = 1, Shape = Shape.Sprout, Rgb = 0xB4F08C,
+            PowerStore = NodeBase.PowerStore, PowerPerSecond = -Tuning.SeedlingIntake,
+            PowerTransferPerSecond = NodeBase.PowerTransferSub,
+        };
+        foreach (var spec in Evolutions.Markers(all)) all[spec.Kind] = spec;
         return all;
     }
 }

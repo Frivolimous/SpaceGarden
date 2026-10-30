@@ -145,6 +145,9 @@ public sealed class Tracking
         Row("wild_flower_limit", garden.Capacity.WildFlowers);
         Row("kinds_discovered", Discovered.Count);
         Row("wild_flowers_ended", EndedCount.Values.Sum());
+        Row("evolutions_chosen", garden.Evolved.Count);
+        Row("seedlings_bloomed", garden.Blooms);
+        Row("seedling_slots", garden.Capacity.Seedlings);
         foreach (var kind in Enum.GetValues<NodeKind>())
             if (Grown.TryGetValue(kind, out var count)) Row($"grown_{kind.ToString().ToLowerInvariant()}", count);
         return csv.ToString();
@@ -182,8 +185,9 @@ public sealed class Tracking
 
 // Unlock is the old unlock track's (before step 5b), kept so older journals still read; Purchase is a core link or the
 // Hub bought, Tool a shaping tool gained from the garden's size; Discovery a wild flower kind's first appearance, Ended
-// a wild flower whose life cycle ended it (step 5d).
-public enum JournalKind { Planted, First, Unlock, Milestone, Purchase, Tool, Discovery, Ended }
+// a wild flower whose life cycle ended it (step 5d); Chosen and Bloomed an evolution chosen for a seedling, and its
+// seedling bloomed (step 5c).
+public enum JournalKind { Planted, First, Unlock, Milestone, Purchase, Tool, Discovery, Ended, Chosen, Bloomed }
 
 // One moment in the Almanac: when (the garden's age), what sort, and what happened.
 public sealed record JournalEntry(double Age, JournalKind Kind, string Text);
@@ -303,6 +307,12 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
         var lines = new List<string>();
         var highlighted = new List<int>();
 
+        // Seedlings bloomed first (step 5c): "A seedling bloomed: Second Path, now a Tendril."
+        var bloomed = garden.Evolved.Where(e => e.Bloomed && e.BloomedAt >= mark.Age).OrderBy(e => e.BloomedAt)
+            .Select(e => $"{e.Name}, now {Tracking.Article(Name(e.Spec.Becomes)).ToLowerInvariant()} {Name(e.Spec.Becomes)}")
+            .ToList();
+        if (bloomed.Count > 0) lines.Add($"{(bloomed.Count == 1 ? "A seedling" : $"{bloomed.Count} seedlings")} bloomed: {string.Join("; ", bloomed)}.");
+
         var grew = Enum.GetValues<NodeKind>()
             .Select(k => (Kind: k, Count: tracking.Grown.GetValueOrDefault(k) - mark.Grown.GetValueOrDefault(k)))
             .Where(g => g.Count > 0).ToList();
@@ -340,9 +350,10 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
         double genes = garden.Genes - mark.Genes;
         if (genes >= 1) lines.Add($"{genes:#,0} genes reached the core.");
 
-        // (Discoveries and endings have their own lines above.)
+        // (Blooms, discoveries and endings have their own lines above.)
         var moments = tracking.Journal.Skip(mark.JournalCount)
-            .Where(e => e.Kind is not (JournalKind.Discovery or JournalKind.Ended)).ToList();
+            .Where(e => e.Kind is not (JournalKind.Discovery or JournalKind.Ended or JournalKind.Chosen or JournalKind.Bloomed))
+            .ToList();
         // Shaping tools gained first (what there's to place now), then firsts and milestones.
         static bool Gained(JournalEntry m) => m.Kind is JournalKind.Tool or JournalKind.Purchase or JournalKind.Unlock;
         var shown = moments.Where(Gained).Concat(moments.Where(m => !Gained(m))).Take(MostMoments).ToList();

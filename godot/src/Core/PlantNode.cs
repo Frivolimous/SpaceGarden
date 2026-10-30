@@ -53,6 +53,21 @@ public sealed class PlantNode
     // economy step).
     public bool Moonlit;
 
+    // The garden's evolutions' effect on its kind (see Garden.Boosts): set as it's added, and again as one blooms.
+    public Boost Boost = Boost.None;
+
+    // A seedling (step 5c): the power it has taken in towards its choice (up to Tuning.SeedChoice), the evolutions it
+    // offers once there (rolled then, so tapping again shows the same), and the one chosen, which holds its progress
+    // from then on. SeedBoost: how many times the power it takes in counts (a Nebula Bloom within reach: worked out
+    // each economy step).
+    public double Fed;
+    public List<EvolutionKind>? Offers;
+    public Evolution? Evolution;
+    public float SeedBoost = 1;
+    public bool IsSeedling => Spec.Kind == NodeKind.Seedling;
+    // Waiting for the player to choose its evolution.
+    public bool Choosing => IsSeedling && Evolution == null && Offers != null;
+
     // What growth blobs are forming here (DESIGN.md, Economy, Blobs): a fruit of its own kind, or a bud of a new
     // branch, its kind rolled when it started; and how much growth it has absorbed (it completes at FruitGrowth or
     // BudGrowth). A bud holds its link and its cap slot while it forms. FormingLook is the growth as shown: it rises
@@ -94,7 +109,9 @@ public sealed class PlantNode
     public int Links => Branches.Count + (Parent == null ? 0 : 1);
     // A forming bud holds a link, and a forming fruit a fruit slot.
     public bool CanBranch => Links + (FormingBud ? 1 : 0) < MaxLinks;
-    public bool CanFruit => Spec.Fruit != null && Fruits.Count + (FormingFruit ? 1 : 0) < Spec.MaxFruits;
+    public bool CanFruit => Spec.Fruit != null && Fruits.Count + (FormingFruit ? 1 : 0) < MaxFruits;
+    // Its spec's, plus any its evolutions add (Big Stem: a leaf more on each stem).
+    public int MaxFruits => Spec.MaxFruits + Boost.Fruits;
 
     public IEnumerable<PlantNode> Neighbours()
     {
