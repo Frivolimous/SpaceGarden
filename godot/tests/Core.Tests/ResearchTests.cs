@@ -52,8 +52,8 @@ public class ResearchTests
         Assert.Equal(30, garden.Capacity.Stems);
 
         var generators = BuyAll(garden, Track.Generators);
-        Assert.Equal([1_500, 2_500, 3_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000], generators.Select(u => u.Cost));
-        Assert.Equal(112_500, generators.Sum(u => u.Cost));
+        Assert.Equal([1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000], generators.Select(u => u.Cost));
+        Assert.Equal(111_000, generators.Sum(u => u.Cost));
         Assert.Equal(10, garden.Capacity.Generators);
     }
 
@@ -141,7 +141,7 @@ public class ResearchTests
         var garden = NewGarden();
         Assert.Equal(new Upgrade(Track.Stems, UpgradeKind.Stem, 100), garden.Cheapest);
         BuyAll(garden, Track.Stems);
-        Assert.Equal(new Upgrade(Track.Generators, UpgradeKind.Generator, 1_500), garden.Cheapest); // ties: the first track
+        Assert.Equal(new Upgrade(Track.Generators, UpgradeKind.Generator, 1_000), garden.Cheapest);
         BuyAll(garden, Track.Generators);
         Assert.Equal(new Upgrade(Track.Core, UpgradeKind.WildFlower, 1_500), garden.Cheapest);
         BuyAll(garden, Track.Core);

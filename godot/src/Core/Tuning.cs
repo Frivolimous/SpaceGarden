@@ -172,7 +172,7 @@ public static class Tuning
         10_850, 12_350, 13_950, 15_700, 17_600, 19_650, 21_850, 24_200, 26_700,
     ];
 
-    public static readonly double[] GeneratorCosts = [1_500, 2_500, 3_500, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000];
+    public static readonly double[] GeneratorCosts = [1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000];
 
     public static readonly (UpgradeKind Kind, double Cost)[] CoreCosts =
     [

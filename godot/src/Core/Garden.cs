@@ -1577,15 +1577,15 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
         _ => "Hub",
     };
 
-    // What it gives, a line for the Research panel's tooltip.
+    // What it gives, the hint behind the Research panel's (i) (Jeremy's wording for the first three, Oct 30).
     public string Does => Kind switch
     {
-        UpgradeKind.Stem => "Room for one more stem.",
-        UpgradeKind.Generator => "Room for one more generator.",
-        UpgradeKind.WildFlower => "Raises the wild flower limit: room for one more wild flower.",
-        UpgradeKind.CoreLink => "One more branch off the core.",
-        UpgradeKind.Seedling => "One more seedling slot: each slot is one evolution.",
-        _ => "The Hub: planted by hand, it catches genes for boosts to each kind.",
+        UpgradeKind.Stem => "Increases the total number of stems you can add to your garden.",
+        UpgradeKind.Generator => "Increases the total number of generators you can add to your garden.",
+        UpgradeKind.WildFlower => "Lets special, rare wild flowers grow instead of normal stems or flowers.",
+        UpgradeKind.CoreLink => "Lets one more branch grow straight from the core.",
+        UpgradeKind.Seedling => "Lets you plant one more seedling, and so choose one more evolution.",
+        _ => "Unlocks the Hub: plant it by hand, and it catches genes to boost each kind of part.",
     };
 }
 

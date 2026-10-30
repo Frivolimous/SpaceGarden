@@ -16,11 +16,11 @@ public partial class ResearchPanel : FloatingWindow
     const float GlowSeconds = 2.4f; // one swell and fade of an affordable card's glow
 
     static readonly Color GeneInk = new(0.82f, 0.74f, 1f); // the genes' purple, lightened
-    static readonly Color CoreBrown = new(0.55f, 0.36f, 0.22f); // the Core card's hue: a dark, earthy brown
-    static readonly Color Back =new(0.06f, 0.07f, 0.09f); // the cards' dark ground, as the parts' fill
+    static readonly Color CoreGrey = new(0.78f, 0.78f, 0.87f); // the Core card's hue: light grey
+    static readonly Color Back = new(0.06f, 0.07f, 0.09f); // the cards' dark ground, as the parts' fill
 
-    sealed record TrackCard(Color Hue, StyleBoxFlat Style, TrackGlyph Glyph, Label Name, HBoxContainer Cost, Label Price,
-        Button Buy)
+    sealed record TrackCard(Color Hue, StyleBoxFlat Style, TrackGlyph Glyph, InfoMark Info, Label Name, HBoxContainer Cost,
+        Label Price, Control BuyRow, BuyFill Fill, Button Buy)
     {
         public bool Affordable;
     }
@@ -40,7 +40,7 @@ public partial class ResearchPanel : FloatingWindow
         Column.AddChild(row);
         row.AddChild(Card(Track.Stems, "Stems", GardenView.Rgb(NodeSpecs.All[NodeKind.Stem].Rgb).Lightened(0.15f)));
         row.AddChild(Card(Track.Generators, "Generators", GardenView.Rgb(NodeSpecs.All[NodeKind.Generator].Rgb)));
-        row.AddChild(Card(Track.Core, "Core", CoreBrown));
+        row.AddChild(Card(Track.Core, "Core", CoreGrey));
         Column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8), MouseFilter = MouseFilterEnum.Ignore });
     }
 
@@ -65,13 +65,18 @@ public partial class ResearchPanel : FloatingWindow
 
         var glyph = new TrackGlyph(track, hue) { SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
         page.AddChild(glyph);
-        page.AddChild(Text(title.ToUpperInvariant(), 11, hue.Lightened(0.2f) with { A = 0.85f }));
+        // The title, and beside it an (i) whose hint says what the next upgrade gives.
+        var heading = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        heading.AddThemeConstantOverride("separation", 5);
+        heading.AddChild(Text(title.ToUpperInvariant(), 11, hue.Lightened(0.2f) with { A = 0.85f }));
+        var info = new InfoMark(hue) { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        heading.AddChild(info);
+        page.AddChild(heading);
         var line = new ColorRect { Color = hue with { A = 0.18f }, CustomMinimumSize = new Vector2(0, 1), MouseFilter = MouseFilterEnum.Ignore };
         page.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2), MouseFilter = MouseFilterEnum.Ignore });
         page.AddChild(line);
         page.AddChild(new Control { CustomMinimumSize = new Vector2(0, 4), MouseFilter = MouseFilterEnum.Ignore });
         var name = Text("", 16, Ink);
-        name.MouseFilter = MouseFilterEnum.Stop; // for its tooltip
         page.AddChild(name);
 
         // The cost: a gene, then how many.
@@ -83,34 +88,40 @@ public partial class ResearchPanel : FloatingWindow
         page.AddChild(cost);
         page.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6), MouseFilter = MouseFilterEnum.Ignore });
 
+        // Buy, over a fill that grows left to right as the balance nears the cost (seen while it falls short).
+        var buyRow = new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(0, BuyFill.Height) };
+        var fill = new BuyFill(hue);
+        fill.SetAnchorsPreset(LayoutPreset.FullRect);
+        buyRow.AddChild(fill);
         var buy = new Button
         {
             Text = "Buy",
             FocusMode = FocusModeEnum.None,
             MouseDefaultCursorShape = CursorShape.PointingHand,
-            CustomMinimumSize = new Vector2(0, 28),
         };
+        buy.SetAnchorsPreset(LayoutPreset.FullRect);
         StyleBoxFlat Fill(Color colour)
         {
             var s = new StyleBoxFlat { BgColor = colour, ContentMarginTop = 3, ContentMarginBottom = 4 };
-            s.SetCornerRadiusAll(14);
+            s.SetCornerRadiusAll((int)BuyFill.Height / 2);
             return s;
         }
         buy.AddThemeStyleboxOverride("normal", Fill(hue with { A = 0.85f }));
         buy.AddThemeStyleboxOverride("hover", Fill(hue.Lightened(0.25f)));
         buy.AddThemeStyleboxOverride("pressed", Fill(hue.Lightened(0.45f)));
-        var short_ = Fill(hue with { A = 0.07f });
-        short_.BorderColor = hue with { A = 0.2f };
+        var short_ = Fill(Colors.Transparent);
+        short_.BorderColor = hue with { A = 0.25f };
         short_.SetBorderWidthAll(1);
         buy.AddThemeStyleboxOverride("disabled", short_);
         buy.AddThemeFontSizeOverride("font_size", 13);
         foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color" })
             buy.AddThemeColorOverride(state, Back);
-        buy.AddThemeColorOverride("font_disabled_color", hue.Lightened(0.3f) with { A = 0.45f });
+        buy.AddThemeColorOverride("font_disabled_color", hue.Lightened(0.5f) with { A = 0.9f });
         buy.Pressed += () => BuyPressed?.Invoke(track);
-        page.AddChild(buy);
+        buyRow.AddChild(buy);
+        page.AddChild(buyRow);
 
-        cards[track] = new TrackCard(hue, style, glyph, name, cost, price, buy);
+        cards[track] = new TrackCard(hue, style, glyph, info, name, cost, price, buyRow, fill, buy);
         return card;
     }
 
@@ -151,14 +162,15 @@ public partial class ResearchPanel : FloatingWindow
             var next = garden.Next(track);
             card.Glyph.Done = next == null;
             card.Name.Text = next?.Name ?? "All bought";
-            card.Name.TooltipText = next?.Does ?? "";
-            card.Cost.Visible = card.Buy.Visible = next != null;
+            card.Info.TooltipText = next?.Does ?? "Every upgrade on this track is bought.";
+            card.Cost.Visible = card.BuyRow.Visible = next != null;
             card.Affordable = next != null && garden.CanSpend(next.Cost);
             if (next == null) continue;
             card.Price.Text = $"{next.Cost:#,0}";
             card.Buy.Disabled = !card.Affordable;
             card.Buy.Text = card.Affordable ? "Buy" : $"{Math.Ceiling(next.Cost - garden.GeneBalance):#,0} more";
-            card.Buy.TooltipText = card.Affordable ? next.Does : "Not enough genes yet";
+            card.Fill.Progress = card.Affordable ? 1 : (float)Math.Clamp(garden.GeneBalance / next.Cost, 0, 1);
+            card.Fill.Visible = !card.Affordable;
         }
     }
 }
@@ -257,5 +269,72 @@ public partial class GeneDot : Control
         DrawCircle(c, 5, new Color(0.58f, 0.44f, 0.88f, 0.35f));
         DrawCircle(c, 3.2f, new Color(0.75f, 0.62f, 1f));
         DrawCircle(c, 1.3f, new Color(1, 1, 1, 0.9f));
+    }
+}
+
+// Behind a Buy button the balance falls short of: the button's track, dim, and over it a fill in the hue growing left
+// to right with Progress (the balance against the cost), so how close the upgrade is reads at a glance.
+public partial class BuyFill : Control
+{
+    public const float Height = 28;
+
+    readonly Color hue;
+    float progress;
+
+    public float Progress
+    {
+        get => progress;
+        set
+        {
+            if (Mathf.IsEqualApprox(value, progress)) return;
+            progress = value;
+            QueueRedraw();
+        }
+    }
+
+    public BuyFill(Color hue)
+    {
+        this.hue = hue;
+        MouseFilter = MouseFilterEnum.Ignore;
+    }
+
+    public override void _Draw()
+    {
+        Bar(Size.X, hue with { A = 0.07f });
+        // Never narrower than its own height, so its rounded ends stay round; past that it grows with the progress.
+        if (progress > 0) Bar(Mathf.Lerp(Size.Y, Size.X, progress), hue with { A = 0.32f });
+    }
+
+    void Bar(float width, Color colour)
+    {
+        var box = new StyleBoxFlat { BgColor = colour };
+        box.SetCornerRadiusAll((int)(Size.Y / 2));
+        DrawStyleBox(box, new Rect2(0, 0, width, Size.Y));
+    }
+}
+
+// A small (i) in a ring, in a card's hue: its tooltip (set by the panel) says what the track's next upgrade gives.
+public partial class InfoMark : Control
+{
+    readonly Color hue;
+
+    public InfoMark(Color hue)
+    {
+        this.hue = hue;
+        CustomMinimumSize = new Vector2(13, 13);
+        MouseFilter = MouseFilterEnum.Stop; // for its tooltip
+        MouseDefaultCursorShape = CursorShape.Help;
+        MouseEntered += QueueRedraw;
+        MouseExited += QueueRedraw;
+    }
+
+    public override void _Draw()
+    {
+        var c = Size / 2;
+        bool hovered = GetGlobalRect().HasPoint(GetGlobalMousePosition());
+        var ink = hue.Lightened(0.3f) with { A = hovered ? 1 : 0.6f };
+        DrawArc(c, 5.8f, 0, Mathf.Tau, 24, ink, 1.1f, true);
+        DrawCircle(c + new Vector2(0, -2.6f), 0.9f, ink);
+        DrawLine(c + new Vector2(0, -0.6f), c + new Vector2(0, 3.2f), ink, 1.3f, true);
     }
 }

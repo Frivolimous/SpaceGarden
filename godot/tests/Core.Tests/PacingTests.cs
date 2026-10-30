@@ -230,8 +230,8 @@ public class PacingTests
     // ==== PACING ==== \\
 
     // The moments the pacing run times (DESIGN.md, Upgrade tracks): the first of each track, the core link, the Hub,
-    // the last stem and generator, and the genes for all of that (stems 213,650 + generators 112,500 + the core to the
-    // Hub 130,500 = 456,650) earned.
+    // the last stem and generator, and the genes for all of that (stems 213,650 + generators 111,000 + the core to the
+    // Hub 130,500 = 455,150) earned.
     static readonly (string Name, Func<Garden, bool> Reached)[] Milestones =
     [
         ("first stem", g => g.StemsBought >= 1),
@@ -244,7 +244,7 @@ public class PacingTests
         ("Hub", g => g.CoreBought >= 6),
         ("last generator", g => g.GeneratorsBought >= Tuning.GeneratorCosts.Length),
         ("last stem", g => g.StemsBought >= Tuning.StemCosts.Length),
-        ("456,650 genes earned", g => g.Genes >= 456_650),
+        ("455,150 genes earned", g => g.Genes >= 455_150),
     ];
 
     static string Describe(Garden garden)

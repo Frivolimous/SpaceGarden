@@ -38,7 +38,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   **Research** (the flask, lit while open) opens the upgrade tracks' panel, a window like the Almanac's (drag its
   header; ✕ or the slot closes it): the gene balance in its header, and three cards in their roles' hues, **Stems**,
   **Generators** and **Core**, each with a glyph of its part and only its next upgrade, its cost and **Buy** (dim,
-  saying how many more genes it needs, while the balance falls short; a card you can afford glows). Buying
+  saying how many more genes it needs over a fill showing how close the balance is, while it falls short; a card you can afford glows; the (i) by each title says what its next upgrade does). Buying
   spends the balance and raises the cap at once (the core ripples purple). See Upgrade tracks in DESIGN.md.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
