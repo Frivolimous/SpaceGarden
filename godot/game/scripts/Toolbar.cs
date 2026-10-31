@@ -8,7 +8,7 @@ namespace SpaceGarden;
 // Ambient, Minimised and the settings.
 public enum Tool
 {
-    Stem, Generator, Lab, Grove, Seedling, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
+    Stem, Generator, Lab, Grove, Seedling, Hub, HubPanel, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
     Info, Almanac, Research, Build, Ambient, Minimise, Settings,
 }
 
@@ -22,6 +22,10 @@ public partial class Toolbar : PanelContainer
     public ShapingTool? TargetTool { get; private set; }
     // Whether a part has room to grow a bud of a kind (its links, and the garden's capacity).
     public Func<PlantNode, NodeKind, bool> CanGrow = (_, _) => true;
+    // Whether a bud tool shows at all: the seedling's while a seedling slot is free, the Hub's while one can be planted.
+    public Func<NodeKind, bool> Offered = _ => true;
+    // Whether the Hub's panel is open (its button on the Hub's toolbar is lit then).
+    public Func<bool> HubPanelOpen = () => false;
 
     // The kind each bud tool grows.
     public static NodeKind? KindOf(Tool tool) => tool switch
@@ -31,6 +35,7 @@ public partial class Toolbar : PanelContainer
         Tool.Lab => NodeKind.Lab,
         Tool.Grove => NodeKind.Grove,
         Tool.Seedling => NodeKind.Seedling,
+        Tool.Hub => NodeKind.Hub,
         _ => null,
     };
 
@@ -82,7 +87,8 @@ public partial class Toolbar : PanelContainer
         {
             (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
             (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Plant a seedling (it uses a seedling slot)"),
-            (Tool.Unhook, "Take it off its pot or trellis"),
+            (Tool.Hub, "Plant the Hub (one at a time)"),
+            (Tool.HubPanel, "Hub upgrades"), (Tool.Unhook, "Take it off its pot or trellis"),
             (Tool.Prune, "Prune"), (Tool.Remove, "Take this away"),
         })
         {
@@ -131,15 +137,19 @@ public partial class Toolbar : PanelContainer
         full.Visible = false;
         if (Target == null) return;
         buttons[Tool.Unhook].Visible = Target.TiedTo != null;
+        // The Hub's own: its upgrades panel, as the core's menu has Research.
+        buttons[Tool.HubPanel].Visible = Target.IsHub;
+        buttons[Tool.HubPanel].Active = Target.IsHub && HubPanelOpen();
         // A part with room for only its parent's link (a generator, lab or grove) can't grow anything: no buds.
         bool buds = Target.MaxLinks > 1;
         foreach (var (tool, button) in buttons)
             if (KindOf(tool) is { } kind)
             {
-                button.Visible = buds;
-                button.Enabled = CanGrow(Target, kind);
                 // Its bud is growing here now (or a wild flower standing in for it).
                 button.Forming = Target.Forming is { } forming && (forming == kind || NodeSpecs.All[forming].Wild?.Base == kind);
+                // (A seedling's or the Hub's shows only while one could be planted, or one forms here.)
+                button.Visible = buds && (Offered(kind) || button.Forming);
+                button.Enabled = CanGrow(Target, kind);
             }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
         // Every link taken (a bud forming holds one, but then its button shows it growing instead).
@@ -274,6 +284,10 @@ public partial class ToolButton : Control
                 DrawPolyline([c + new Vector2(-7, -4), c + new Vector2(0, -2.5f), c + new Vector2(7, -4), c + new Vector2(7, 5),
                     c + new Vector2(0, 6.5f), c + new Vector2(-7, 5), c + new Vector2(-7, -4)], ink, w, true);
                 DrawLine(c + new Vector2(0, -2.5f), c + new Vector2(0, 6.5f), ink, w, true);
+                break;
+            case Tool.HubPanel: // two chevrons rising: upgrades
+                DrawPolyline([c + new Vector2(-5.5f, 0), c + new Vector2(0, -5), c + new Vector2(5.5f, 0)], ink, w, true);
+                DrawPolyline([c + new Vector2(-5.5f, 5.5f), c + new Vector2(0, 0.5f), c + new Vector2(5.5f, 5.5f)], ink, w, true);
                 break;
             case Tool.Research: // a flask, a gene bubbling in it
                 DrawPolyline([c + new Vector2(-2.5f, -7), c + new Vector2(-2.5f, -2), c + new Vector2(-7, 6),

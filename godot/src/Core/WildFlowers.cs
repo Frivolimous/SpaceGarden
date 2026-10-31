@@ -54,7 +54,7 @@ static class WildFlowers
         // The stem kinds. The Amplifier and the Resistor take only a wild flower slot, and are white, the specialists'
         // hue (Jeremy, Oct 30).
         var amplifier = Wild(stem, NodeKind.Amplifier, "Amplifier", Shape.Plus, 0xF2F2F2, WildUnlock.Start,
-            "Gene and growth blobs passing through grow 50% larger.", "2 links: it can't fork.");
+            "Gene and growth blobs passing through have a 50% chance to double.", "2 links: it can't fork.");
         yield return amplifier with
         {
             Radius = 11, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, DoublesBlobs = true,

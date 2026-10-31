@@ -18,7 +18,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   when it's shown again. Its taskbar button, Ctrl+Alt+G or the tray icon bring it back in Active. Only one running
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
-  (grow a stem, generator, lab or grove from it, or plant a seedling, on parts with room for branches; the kind growing there now has a
+  (grow a stem, generator, lab or grove from it, or plant a seedling or the Hub, their buttons shown only while one can be planted, on parts with room for branches; the kind growing there now has a
   pulsing outline, and a part with every link taken shows "3/3 Connections Used" in their place; prune it and everything beyond
   it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
   ("Drain: 6/s", "Genes: 12/min", what's
@@ -104,8 +104,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **Upgrade tracks** (step 5b, `Garden.Buy`, `Garden.Next`, costs in `Tuning` under Research): genes reaching the
   core fill the gene balance, and the Research panel spends it. Stems (+1 cap each, 26 upgrades to 30 stems),
   Generators (+1 cap each, 9 to 10) and the Core track (the wild flower limit, a second core link, seedling slots
-  and the Hub, in a fixed order). Seedling slots and the Hub are counters in `Capacity` for
-  now; 5c and the Hub's step give them mechanics (the wild flower limit has its own since 5d). The levels bought are saved (`GardenSave.Research`); a 5a
+  and the Hub, in a fixed order). The wild flower limit (5d), seedling slots (5c) and the Hub
+  (its own step) have their mechanics. The levels bought are saved (`GardenSave.Research`); a 5a
   save without them keeps its caps and reads them as upgrades bought. The shaping tools come from the garden's
   size instead (`Tuning.ToolsAtSize`): a Gravity Pot at the start, a Trellis at 15, a second pot at 25, a Gravity
   Well at 40, another pot at 60 and 100, then every 50.
@@ -136,6 +136,17 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   each adding level I's effect again (Build your Core ×1.5, ×2, ×2.5); Long Stemmed is offered only then. Power reaching a seedling within 5 links of a Nebula Bloom counts twice. Pruning a
   seedling after its choice leaves the evolution waiting for the next one planted. The card shows a seedling's
   evolution and its power against its target; the journal its choice and bloom; the away note its bloom.
+- **The Hub** (`src/Core/Hubs.cs` and `Garden.cs`, numbers in `Tuning` under The Hub; DESIGN.md, The Hub): once
+  bought in the Core track, plant it from a part's toolbar (one at a time; it never grows wild). A teal-green wheel
+  that takes no stem slot, it catches gene blobs as the core does, into its own pool (they never reach the gene
+  balance): the first hub point at 3,000 genes, each later one 400 more. The upgrades button on its toolbar opens its panel: 20 paths, one
+  for each kind, basic and wild ("???" until the garden grows one), and the Hub's own (+1 link a level, up to 6).
+  Basic kinds have 5 levels (+20% a level, milestones at 3 and 5), wild flowers and the Hub 3 (+30% or their own
+  effect, and their family: stems, generators, groves, labs or the core's power; a milestone at 3), 96 points in
+  all (the paths and milestones are data in `Hubs.Paths`). Every level adds 0.5/s to the Hub's upkeep. Complete,
+  gene blobs pass through the Hub instead of being caught. Pruned, its levels go dormant until another is planted.
+  Its card shows its points, its pool and the genes to its next point; the journal its first planting; the away
+  note the points it earned. Saved in `GardenSave.Hub`.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Tracking
@@ -186,7 +197,7 @@ wild flowers at once, each on a new stem from the core, whatever their lock and 
 looks), `--unlockwild[=KIND,...]` (unlock Big Stem, Pulsar and Twin Star, as their evolutions do), `--evolve=NAME[,NAME]`
 (choose and bloom those evolutions at once, by name: `SecondPath` or `second-path`), `--seedling` (plant a seedling at
 once), `--seedfill=N` (set its power, planting one if there is none: full at 200 brings its choice), `--choose=N`
-(each waiting seedling takes its Nth offer), `--bloom` (fill each chosen seedling, so it blooms with its burst), `--tap=seedling` (tap it: its choice menu open, the first card showing), `--almanac=evolutions` (the Almanac at its Evolutions tab), `--scale=N`
+(each waiting seedling takes its Nth offer), `--bloom` (fill each chosen seedling, so it blooms with its burst), `--tap=seedling` (tap it: its choice menu open, the first card showing), `--hub` (plant the Hub at once, bought if it wasn't), `--hubpoints=N` (give it N points), `--hubbuy=KIND[,KIND]` (buy a level of each kind named, e.g. `Lab,Lab,Stem`), `--hubpanel` (tap it: its card and panel open; e.g. `--fresh --grove --hub --hubpoints=9 --hubbuy=Lab,Stem --hubpanel`), `--almanac=evolutions` (the Almanac at its Evolutions tab), `--scale=N`
 (the plant's scale, past the Size setting's range), `--labels` (each wild flower's name beside it), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 
@@ -224,5 +235,5 @@ Tried on the way: fruit only meeting its own family (no borrowed push) was as ch
 overlaps); adding a push from nearby stems to that was tidy but slower than the grid (0.24 ms).
 
 ## Not in the prototype
-No crawlers, skills, seedlings, the Hub, player-facing graphs, or sound; no launch-on-startup; it still shows in
+No crawlers, skills, player-facing graphs, or sound; no launch-on-startup; it still shows in
 the taskbar.

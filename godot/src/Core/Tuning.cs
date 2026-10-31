@@ -223,6 +223,19 @@ public static class Tuning
     public const double FirstBloom = 1_000, BloomGrowth = 5;
     public const int ChoiceCount = 3, RepeatsAfter = 5;
 
+    // ==== THE HUB ==== \\
+    // Placeholders (DESIGN.md, The Hub; Jeremy's step 5 addendum). Gene blobs it catches fill its pool, which turns into
+    // hub points, linearly: the first at HubFirstPoint genes, each after HubPointStep more than the last (3,000, 3,400,
+    // 3,800 ...). The paths, their costs and effects are data in Hubs.Paths. The Hub's upkeep is HubUpkeep a second,
+    // plus HubUpkeepPerLevel for every level bought (HubUpkeepCut of that once its own path reaches level 3). The
+    // milestones read where they act: the stem's (HubStemCap more stems), the Amplifier's (a doubling blob tripled
+    // HubTripleChance of the time), the Buffer's (every buff HubBuffStrength times as strong), the Moonflower's (its
+    // reach HubMoonflowerReach links) and the Nebula Bloom's (power to its seedlings counts HubNebulaFill times).
+    public const double HubFirstPoint = 3_000, HubPointStep = 400;
+    public const float HubUpkeep = 3, HubUpkeepPerLevel = 0.5f, HubUpkeepCut = 0.8f;
+    public const int HubStemCap = 2, HubMoonflowerReach = 8;
+    public const float HubTripleChance = 0.2f, HubBuffStrength = 1.1f, HubNebulaFill = 3;
+
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in
     // order. Placeholders for playtesting. Stems and generators each raise their cap by 1 (to 30 stems and 10

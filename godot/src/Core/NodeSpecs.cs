@@ -8,6 +8,7 @@ public enum NodeKind
     Buffer, CometBloom, Moonflower, NebulaBloom,
     Wood, Glow, // the wild flowers' fruit
     Seedling, // planted by hand, it blooms into its evolution's wild flower (step 5c)
+    Hub, // planted by hand once bought, one at a time: catches genes for points of its own (see Hubs.cs)
 }
 
 // The basic shapes, then the wild flowers' more complex ones, each radially symmetric (drawn from one atlas: see
@@ -17,6 +18,7 @@ public enum Shape
     Circle, Triangle, Square, Pentagon, Hexagon,
     Plus, Minus, Trefoil, Quatrefoil, Star5, Star10, Flame, Star8, Oval, Star6, Lobes6, Burst8, Gear, Rose, Swirl,
     Sprout, // the seedling's (step 5c)
+    Wheel, // the Hub's
 }
 
 // What blobs a flower sends: growth blobs (groves), gene blobs (labs), buff blobs (a Buffer, a glow fruit), or gene
@@ -211,6 +213,15 @@ public static class NodeSpecs
             Radius = 11, Mass = 1.5f, Force = 1.5f, MaxLinks = 1, Shape = Shape.Sprout, Rgb = 0xB4F08C,
             PowerStore = NodeBase.PowerStore, PowerPerSecond = 0, PowerWeight = 1.5f,
             PowerTransferPerSecond = 0,
+        };
+        // The Hub (DESIGN.md, The Hub): a stem in its own shade of green, taking no stem slot, that catches gene blobs as
+        // the core does, into a pool of its own. Its upkeep rises with every level bought on it (see Garden.UpdateBoosts).
+        all[NodeKind.Hub] = new(NodeKind.Hub)
+        {
+            Name = "Hub", Description = "Catches gene blobs for points of its own, which boost each kind of part.",
+            Radius = 25, Mass = 20, Force = 20, MaxLinks = 3, Shape = Shape.Wheel, Rgb = 0x2ED89A,
+            PowerStore = NodeBase.PowerStore * 10f, PowerPerSecond = -Tuning.HubUpkeep, PowerWeight = 1.1f,
+            PowerTransferPerSecond = NodeBase.PowerTransfer * 0.5f,
         };
         return all;
     }

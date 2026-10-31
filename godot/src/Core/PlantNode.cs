@@ -49,6 +49,8 @@ public sealed class PlantNode
     public double Life;
     public float Charge;
     public float Buff;
+    // How much more a buff makes it make (Tuning.BuffBonus, stronger with the Buffer's Hub milestone), set as it's buffed.
+    public float BuffBonus = Tuning.BuffBonus;
     // A wild flower within MoonflowerReach links of a Moonflower, which makes it a little more (worked out each
     // economy step).
     public bool Moonlit;
@@ -63,6 +65,7 @@ public sealed class PlantNode
     public Evolution? Evolution;
     public float SeedBoost = 1;
     public bool IsSeedling => Spec.Kind == NodeKind.Seedling;
+    public bool IsHub => Spec.Kind == NodeKind.Hub;
     // Waiting for the player to choose its evolution.
     public bool Choosing => IsSeedling && Evolution == null && Offers != null;
 
@@ -101,8 +104,8 @@ public sealed class PlantNode
     }
 
     // How much power it holds (none for fruit), and how full it is.
-    // (A seedling's, once its evolution is chosen, is the evolution's target.)
-    public float Store => Evolution is { } evolution ? (float)evolution.Target : Spec.PowerStore;
+    // (A seedling's, once its evolution is chosen, is the evolution's target; a Pulsar's more with its Hub milestone.)
+    public float Store => Evolution is { } evolution ? (float)evolution.Target : Spec.PowerStore * Boost.Store;
     // Whether its power counts as the garden's (the cards' and the history's): not fruit, nor a seedling's, which is
     // spent on its evolution.
     public bool HoldsGardenPower => !Spec.IsFruit && !IsSeedling;
@@ -171,6 +174,8 @@ public sealed class Mote
     public float T;
     // Seconds before it sets off (and shows): the second blob an Amplifier makes waits for the first to reach it.
     public float Delay;
+    // How many times as fast as usual it travels (a lab's gene blobs with its Hub milestone).
+    public float Speed = 1;
     // A blob follows the Route its walk was worked out on when it left (Route[Leg] is From). A growth blob that a
     // part absorbs ends there and adds Growth to what's forming as it arrives (Completes: it finished it, and the new
     // part shows then).

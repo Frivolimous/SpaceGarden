@@ -87,6 +87,7 @@ public partial class Widget : Node
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
     readonly Almanac almanac = new(); // its own window, open until its slot or ✕ closes it (see SetAlmanac)
     readonly ResearchPanel research = new(); // its own window too (see SetResearch)
+    readonly HubPanel hubPanel = new(); // the Hub's, opened from its toolbar (see Use)
     readonly UndoPill undo = new();
     readonly CoreMenu coreMenu = new();
     readonly EvolutionMenu evolutionMenu = new(); // a seedling's choice (see Tap)
@@ -167,14 +168,24 @@ public partial class Widget : Node
         toolbarLayer.AddChild(cards);
         toolbarLayer.AddChild(almanac);
         toolbarLayer.AddChild(research);
+        toolbarLayer.AddChild(hubPanel);
         toolbarLayer.AddChild(coreMenu); // over the windows, so its names show over them
         almanac.CloseRequested += () => SetAlmanac(false);
         research.CloseRequested += () => SetResearch(false);
         research.BuyPressed += Buy;
+        hubPanel.CloseRequested += () => hubPanel.Close();
+        hubPanel.BuyPressed += BuyHubLevel;
         coreMenu.Picked += PickFromCoreMenu;
         toolbarLayer.AddChild(evolutionMenu);
         evolutionMenu.Picked += ChooseEvolution;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
+        toolbar.HubPanelOpen = () => hubPanel.IsOpen;
+        toolbar.Offered = kind => kind switch
+        {
+            NodeKind.Seedling => Garden.FreeSeedlingSlots > 0,
+            NodeKind.Hub => Garden.CanPlantHub,
+            _ => true,
+        };
         toolbarLayer.AddChild(shapingBar);
         shapingBar.Started += TakeFromBar;
         shapingBar.Done += () => SetBuilding(false);
@@ -264,6 +275,7 @@ public partial class Widget : Node
         Mode = mode;
         almanac.SetAway(mode != DisplayMode.Active); // only the core takes clicks outside Active
         research.SetAway(mode != DisplayMode.Active);
+        hubPanel.SetAway(mode != DisplayMode.Active);
         if (mode != DisplayMode.Active)
         {
             SetBuilding(false);
@@ -511,7 +523,8 @@ public partial class Widget : Node
         bool overBar = shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool overAlmanac = almanac.Catches(pointer / Dpi);
         bool overResearch = research.Catches(pointer / Dpi);
-        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac && !overResearch;
+        bool overHub = hubPanel.Catches(pointer / Dpi);
+        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac && !overResearch && !overHub;
         var handle = free ? HandleAt(world) : null;
         var under = free && handle == null ? Garden.NodeAt(world, HoverSlop) : null;
         var underTool = handle ?? (Building && free && under == null ? Garden.ShapingAt(world, HoverSlop) : null);
@@ -530,6 +543,8 @@ public partial class Widget : Node
         gardenCard.Update(Garden, main.GrowthSpeed, delta);
         almanac.Update(Garden, pointer / Dpi, viewport, delta);
         research.Update(Garden, pointer / Dpi, viewport, delta);
+        if (hubPanel.IsOpen && !Garden.HubPlanted) hubPanel.Close(); // pruned: its levels sleep
+        hubPanel.Update(Garden, pointer / Dpi, viewport, delta);
         coreMenu.SetActive(Tool.Info, gardenInfo);
         coreMenu.SetActive(Tool.Almanac, almanac.IsOpen);
         coreMenu.SetActive(Tool.Research, research.IsOpen);
@@ -577,7 +592,7 @@ public partial class Widget : Node
 
         bool catchMouse = pressed || overToolbar || overUndo || overMenu || under != null || overBar || onBackdrop
             || underTool != null || movingTool != null || overAlmanac || almanac.Dragging
-            || overResearch || research.Dragging;
+            || overResearch || research.Dragging || overHub || hubPanel.Dragging;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || evolutionMenu.Visible || Garden.Held != null
@@ -703,7 +718,8 @@ public partial class Widget : Node
     // slot's name showing); --tap=full or --tap=forming taps a stem with every link taken, or a part forming a bud
     // (starting a lab bud on a stem if none is), its toolbar staying open, or --tap=seedling a seedling (its evolutions
     // open if it waits for its choice, the first one's card showing); --almanac opens the Almanac (--almanac=codex or
-    // =evolutions at that page), --research the Research panel (--research=hint with the Stems card's hint showing);
+    // =evolutions at that page), --research the Research panel (--research=hint with the Stems card's hint showing),
+    // --hubpanel the Hub tapped (its card, toolbar and panel);
     // --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
     void DevFlags()
     {
@@ -751,6 +767,13 @@ public partial class Widget : Node
         {
             SetResearch(true);
             if (shown == "hint") research.Hinting = Track.Stems; // as if the pointer were on its (i)
+        }
+        // As if the Hub were tapped and its upgrades button pressed: its card, toolbar and panel.
+        if (Value("hubpanel") != null && Garden.Hub is { } hub)
+        {
+            Tap(hub);
+            devTapped = true;
+            OpenHubPanel();
         }
         if (Value("ambient") != null)
         {
@@ -890,6 +913,23 @@ public partial class Widget : Node
         }
     }
 
+    // The Hub's panel opens from the upgrades button on the Hub's toolbar and stays until that button or its ✕ closes it
+    // (or the Hub is pruned): the first time beside the plant, like the Research panel, then wherever it was left.
+    void OpenHubPanel()
+    {
+        var size = hubPanel.GetCombinedMinimumSize();
+        var (anchor, onLeft) = Beside(size, top: size.Y / 2);
+        hubPanel.Open(anchor - new Vector2(onLeft ? size.X : 0, 0));
+    }
+
+    // The Hub panel's buy: a kind's next level, if the points cover it (its effect rises at once).
+    void BuyHubLevel(NodeKind kind)
+    {
+        if (!Garden.BuyHubLevel(kind)) return;
+        hubPanel.RefreshNow();
+        partCard.RefreshNow();
+    }
+
     // A pick from a seedling's evolutions: chosen (its store rises to the target), and the menu goes.
     void ChooseEvolution(EvolutionKind kind)
     {
@@ -1020,6 +1060,13 @@ public partial class Widget : Node
             return;
         }
         if (toolbar.Target is not { } node) return;
+        // The Hub's upgrades button opens or closes its panel, its toolbar staying (as the core menu's Research slot).
+        if (tool == Tool.HubPanel)
+        {
+            if (hubPanel.IsOpen) hubPanel.Close();
+            else OpenHubPanel();
+            return;
+        }
         if (Toolbar.KindOf(tool) is { } kind) Garden.SproutFrom(node, kind);
         switch (tool)
         {
