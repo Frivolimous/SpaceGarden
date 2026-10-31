@@ -653,6 +653,7 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 
 **Open for step 5**
 - **Alerts.** How the garden tells the player that something waits: an upgrade affordable, a seedling's choice, a bloom, a discovery. Red dots are distracting (the core's dot was dropped in 3d), so look for a different way, for example a lit or pulsing Research slot, a glint on the core, a journal moment, or the away note. 5b shipped the Research panel with no signal (the garden card's Next line says "(in Research)" once the cheapest upgrade is affordable, when Info is on); the alert is still to design.
+- **To check in the next notification / UI pass** (Jeremy, Oct 31): the away note lists a bloomed seedling twice, in "A seedling bloomed: Second Path, now an Amplifier." and again under "Wild flowers grew: …". Trim one when the alerts and away note are next looked at.
 
 ## Parked ideas
 
