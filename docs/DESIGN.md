@@ -481,12 +481,12 @@ Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid an
 | Kind | Lines |
 | --- | --- |
 | Core | Power, Gen X/s (sends Y/s), Connections |
-| Stem | Power, Drain X/s, Connections |
+| Stem | Power, Drain X/s (sends Y/s), Connections |
 | Generator | Power, Gen X/s (sends Y/s) |
 | Grove | Power, Drain X/s, Growth X/min |
 | Lab | Power, Drain X/s, Genes X/min |
 
-- **Power** is held against its store. **Sends** is how fast it can send power on (its transfer rate).
+- **Power** is held against its store. **Sends** is how fast it can send power on (its transfer rate), beside Gen or Drain on every power maker and every part that can have 2 or more links (a stem, the core, the inline wild flowers; Oct 31).
 - **Growth** (growth blobs a minute) and **Genes** (genes a minute) are what the flower makes, not what arrives: many of a far lab's genes never find the core.
 - **Connections** (links against the most it can have, the core's from Capacity) shows only on a node with 2 or more.
 - **Forming** ("Forming: Lab bud 60%", "Forming: Leaf 40%") shows only while a fruit or bud is forming in the node.

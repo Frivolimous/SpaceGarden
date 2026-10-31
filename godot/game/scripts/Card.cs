@@ -97,9 +97,13 @@ public partial class Card : PanelContainer
         // A wild flower's quirk, under its name: what it trades for its effect.
         if (spec.Wild is { } wild) Line(ref used, (wild.Quirk, QuirkInk));
         Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
+        // How fast it can send power on, beside its Gen or Drain: on every power maker, and on every part that can have 2
+        // or more links (one that passes power along a branch).
+        string sends = spec.PowerPerSecond > 0 || stats.MaxLinks >= 2 ? $" (sends {stats.Sends * speed:0}/s)" : "";
         if (spec.PowerPerSecond > 0) // by kind, so the lines stay put when a rate falls to 0
-            Line(ref used, $"Gen: {stats.Makes * speed:0}/s (sends {stats.Sends * speed:0}/s)");
-        if (spec.PowerPerSecond < 0) Line(ref used, $"Drain: {stats.Upkeep * speed:0}/s");
+            Line(ref used, $"Gen: {stats.Makes * speed:0}/s{sends}");
+        else if (spec.PowerPerSecond < 0) Line(ref used, $"Drain: {stats.Upkeep * speed:0}/s{sends}");
+        else if (sends != "") Line(ref used, $"Sends: {stats.Sends * speed:0}/s");
         if (spec.Sends == BlobKind.Growth) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
         if (spec.Sends == BlobKind.Genes) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
         if (stats.Links >= 2) Line(ref used, $"Connections: {stats.Links} / {stats.MaxLinks}");
