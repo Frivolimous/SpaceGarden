@@ -439,7 +439,6 @@ public partial class GardenView : Node2D
         {
             if (Textures.InAtlas(node.Spec.Shape) != atlas) continue;
             AddPart(node, 1);
-            if (node == garden.Core) AddEvolutionMarks(node);
         }
         foreach (var cut in garden.Cut)
             foreach (var node in cut.Nodes)
@@ -470,34 +469,6 @@ public partial class GardenView : Node2D
         batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), cos, sin, edge, cell);
         batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, outline, cell);
         batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), cos, sin, fill, cell);
-    }
-
-    // The garden's record of its evolutions (step 5c; Jeremy, Oct 31, in place of marker fruits, which read as flowers
-    // or as buttons): each bloomed evolution sets a small gem into the core's rim, a round stone in its theme's role hue on a
-    // dark edge, in the order they bloomed, clockwise from the top, turning with the core. A repeat sets another. Part
-    // of the core's drawing (in its batch, sized with it), so nothing to tap and no physics.
-    const float GemSize = 0.11f, GemSet = 0.86f; // its radius, and how far out its centre sits, as shares of the core's
-    const int GemsRound = 16; // gems a full ring holds before they close up
-
-    void AddEvolutionMarks(PlantNode core)
-    {
-        if (garden.Blooms == 0) return;
-        float size = Size(core);
-        var at = At(core);
-        var bloomed = garden.Evolved.Where(e => e.Bloomed).OrderBy(e => e.BloomedAt).ToList();
-        float step = Mathf.Tau / Mathf.Max(GemsRound, bloomed.Count);
-        var batch = shapes[Shape.Circle]; // (after the core's own disc, so over it)
-        float gem = size * GemSize, lit = 0.75f + 0.35f * Level(core);
-        for (int i = 0; i < bloomed.Count; i++)
-        {
-            float angle = core.Rotation - Mathf.Pi / 2 + i * step;
-            var (sin, cos) = MathF.SinCos(angle);
-            var spot = at + new Vector2(cos, sin) * size * GemSet;
-            var hue = Shade(Rgb(bloomed[i].Spec.Rgb), lit);
-            hue.A = 1;
-            batch.AddTurned(spot, Textures.ShapeDiameter(gem + EdgeWidth), cos, sin, Edge, default);
-            batch.AddTurned(spot, Textures.ShapeDiameter(gem), cos, sin, hue, default);
-        }
     }
 
     // The batch a shape is drawn in (a wild flower's: the atlas's), and its cell there.
@@ -678,7 +649,7 @@ public partial class GardenView : Node2D
 
     // A seedling blooming into its wild flower, the garden's biggest moment: a bright flash that swells and fades, twelve
     // long rays turning out from it, and three rings in the flower's hue, one after another, widening to six times its
-    // size. (Its gem is set in the core's rim at the same time.)
+    // size.
     void DrawBloom(PlantNode flower, float t)
     {
         var at = At(flower);

@@ -58,8 +58,8 @@ public sealed record EvolutionLevel
     }
 }
 
-// An evolution: its name, the wild flower its seedling becomes, its theme's role hue (its mark on the core's rim and
-// its slot in the menu), and its effect at each level it can be taken to (Levels.Length is its repeat limit: 1, one-off).
+// An evolution: its name, the wild flower its seedling becomes, its theme's role hue (its slot in the choice menu, its
+// name in the Almanac), and its effect at each level it can be taken to (Levels.Length is its repeat limit: 1, one-off).
 public sealed record EvolutionSpec(EvolutionKind Kind, string Name, NodeKind Becomes, uint Rgb,
     EvolutionLevel[] Levels)
 {

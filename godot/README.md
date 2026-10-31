@@ -130,8 +130,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   shape in its role hue; the one under the pointer says what it does and the wild flower it blooms into). Choosing
   raises its store to the target: 1,000 for the first, then ×5 for each later one. Full again, it blooms with a
   burst of light: the effect applies for good, the wild flower limit (and its flower's base cap, where it takes that
-  slot) rises by 1, the seedling becomes its wild flower, and a gem in its theme's hue is set into the core's rim
-  (the Almanac's Evolutions tab lists them all, with their levels and when each was chosen). The ten
+  slot) rises by 1, the seedling becomes its wild flower (the Almanac's Evolutions tab lists them
+  all, with their levels and when each was chosen). The ten
   evolutions and their levels are data (`Evolutions.All`); repeats ("More Power II") come once the garden has five;
   Smart Particles is one-off. Power reaching a seedling within 5 links of a Nebula Bloom counts twice. Pruning a
   seedling after its choice leaves the evolution waiting for the next one planted. The card shows a seedling's

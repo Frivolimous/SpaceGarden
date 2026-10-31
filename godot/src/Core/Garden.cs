@@ -1258,12 +1258,12 @@ public sealed class Garden
     // DESIGN.md, Seedlings and evolutions. A seedling is planted by hand (never passively) where a seedling slot is
     // free. It only takes power in, from its neighbours (no upkeep, no transfer of its own). Full, it waits for the
     // player to choose one of the evolutions it offers; that raises its store to the evolution's target, and full again
-    // it blooms: the effect applies for good, the seedling becomes the evolution's wild flower, and the evolution's
-    // mark is set in the core's rim (drawn by the view from Evolved). A slot stays used once its evolution is chosen,
-    // so each slot is one evolution: the slots are counted from Evolved, never from anything drawn.
+    // it blooms: the effect applies for good and the seedling becomes the evolution's wild flower (the Almanac lists
+    // the evolutions from Evolved). A slot stays used once its evolution is chosen, so each slot is one evolution:
+    // the slots are counted from Evolved.
 
-    // The evolutions chosen, in the order chosen, bloomed or still growing: the garden's record of them (the core's
-    // rim marks, the Almanac's list) and its seedling slots used.
+    // The evolutions chosen, in the order chosen, bloomed or still growing: the garden's record of them (the
+    // Almanac's list) and its seedling slots used.
     public readonly List<Evolution> Evolved = new();
     // Smart Particles has bloomed: blobs never wander into dead ends (see Wanders).
     public bool SmartBlobs { get; private set; }
@@ -1371,7 +1371,7 @@ public sealed class Garden
     public readonly List<PlantNode> JustBloomed = new();
 
     // A seedling full of its evolution's target blooms (see Apply): it becomes the evolution's wild flower where it
-    // stands (full, from the power it held), and its mark appears in the core's rim.
+    // stands (full, from the power it held).
     void Bloom(PlantNode seedling)
     {
         var evolution = seedling.Evolution!;
@@ -1472,7 +1472,7 @@ public sealed class Garden
         CheckSeedlings();
     }
 
-    // Dev aid (--evolve=NAME): an evolution chosen and bloomed at once, as a seedling's would be (its mark, effect and
+    // Dev aid (--evolve=NAME): an evolution chosen and bloomed at once, as a seedling's would be (its effect and
     // caps, a slot added if none is free), its flower grown on the deepest part with a free link, if one has. Returns
     // the evolution, or null if it's at its repeat limit.
     public Evolution? EvolveNow(EvolutionKind kind)
