@@ -127,6 +127,8 @@ public partial class Toolbar : PanelContainer
     public void Refresh()
     {
         foreach (var (tool, button) in buttons) button.Visible = (tool == Tool.Remove) == (TargetTool != null);
+        // (A shaping tool's toolbar has no buds, so no note over them: it mustn't keep the last part's.)
+        full.Visible = false;
         if (Target == null) return;
         buttons[Tool.Unhook].Visible = Target.TiedTo != null;
         // A part with room for only its parent's link (a generator, lab or grove) can't grow anything: no buds.
