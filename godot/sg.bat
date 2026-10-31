@@ -39,7 +39,7 @@ if not exist "%GODOT%" (
 )
 echo   Building...
 dotnet build -v q -nologo || (pause & exit /b 1)
-if "%PICK%"=="1" start "Space Garden" "%GODOT%" --path game -- --fresh
+if "%PICK%"=="1" start "Space Garden" "%GODOT%" --path game
 if "%PICK%"=="2" start "Space Garden" "%GODOT%" --path game -- --grow=60
 if "%PICK%"=="3" start "Space Garden" "%GODOT%" --path game -- --fresh --grow=3600 --profile=fast
 if "%PICK%"=="4" start "Space Garden" "%GODOT%" --path game -- --grow=1 --away=24

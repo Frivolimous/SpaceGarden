@@ -2,12 +2,14 @@ namespace SpaceGarden.Core;
 
 // What the garden card tells a player tending the garden (DESIGN.md, Information display): a snapshot of its power,
 // its caps, its flowers, what's forming, its genes to spend and how fast more reach the core. Worked out from the
-// garden as it is now; it changes nothing.
+// garden as it is now; it changes nothing. Seedlings counts the seedlings growing, and SeedlingPower and SeedlingStore
+// sum their power and stores (kept apart from PowerHeld and PowerStore: their power goes to their evolutions).
 public sealed record GardenStats(
     float PowerHeld, float PowerStore, float Production, float Upkeep, float FullProduction, float FullUpkeep,
     int Stems, int Generators, int Groves, int Labs, int CoreLinksUsed, Capacity Capacity,
     int Fruit, int FruitRoom, IReadOnlyDictionary<NodeKind, int> BudsForming,
-    double Genes, double GeneBalance, double GenesPerHour, Upgrade? Cheapest, int WildFlowers = 0)
+    double Genes, double GeneBalance, double GenesPerHour, Upgrade? Cheapest, int WildFlowers = 0,
+    int Seedlings = 0, float SeedlingPower = 0, float SeedlingStore = 0)
 {
     public float PowerFill => PowerStore > 0 ? PowerHeld / PowerStore : 0;
 
@@ -29,6 +31,8 @@ public sealed record GardenStats(
         var (fullProduction, fullUpkeep) = garden.FullPowerBalance();
         float held = 0, store = 0;
         int stems = 0, generators = 0, groves = 0, labs = 0, fruit = 0, fruitRoom = 0;
+        int seedlings = 0;
+        float seedlingPower = 0, seedlingStore = 0;
         double genesPerHour = 0;
         var buds = new Dictionary<NodeKind, int>();
         foreach (var n in garden.Nodes)
@@ -38,7 +42,13 @@ public sealed record GardenStats(
                 fruit++;
                 continue;
             }
-            if (n.HoldsGardenPower) // (a seedling's power goes to its evolution)
+            if (n.IsSeedling)
+            {
+                seedlings++;
+                seedlingPower += n.Power;
+                seedlingStore += n.Store;
+            }
+            if (n.HoldsGardenPower) // (a seedling's power goes to its evolution: counted apart)
             {
                 held += n.Power;
                 store += n.Store;
@@ -61,7 +71,7 @@ public sealed record GardenStats(
         }
         return new GardenStats(held, store, production, upkeep, fullProduction, fullUpkeep, stems, generators, groves, labs,
             garden.Core.Branches.Count, garden.Capacity, fruit, fruitRoom, buds, garden.Genes, garden.GeneBalance, genesPerHour,
-            garden.Cheapest, garden.WildCount);
+            garden.Cheapest, garden.WildCount, seedlings, seedlingPower, seedlingStore);
     }
 
     // The genes a lab gets to the core per growth hour, on average: the blobs it makes now, times the chance each

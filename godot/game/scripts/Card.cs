@@ -139,6 +139,8 @@ public partial class Card : PanelContainer
         heading.LabelSettings.FontColor = GardenTint.Lightened(0.35f);
         Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0}", PowerInk(stats.PowerHeld, stats.PowerStore)),
             ($" / {stats.PowerStore:0}", Ink));
+        // While seedlings grow: their power against their stores, summed (Jeremy, Oct 31).
+        if (stats.Seedlings > 0) Line(ref used, $"Seedling: {stats.SeedlingPower:#,0} / {stats.SeedlingStore:#,0}");
         // Now (they follow the fills). Gen's colour weighs what the garden makes against what it costs.
         Line(ref used, ("Gen: ", Ink), ($"{stats.Production * speed:0}/s", GenInk(stats.Production, stats.Upkeep)),
             ($", Drain: {stats.Upkeep * speed:0}/s", Ink));
