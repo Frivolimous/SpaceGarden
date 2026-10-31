@@ -210,8 +210,9 @@ public partial class Almanac : FloatingWindow
         }
     }
 
-    // The Codex: the kinds discovered, under Parts, Wild flowers and Fruit, each in the order first found. Each shows
-    // its name in its hue and when it was first found, then what it does (and a wild flower's quirk).
+    // The Codex: the kinds discovered, under Parts, Wild flowers and Fruit, each in the order first found, as cards two
+    // to a row (see EntryCard): its shape and name in its hue, what it does (and a wild flower's quirk), and when it was
+    // first found.
     void RefreshCodex(Tracking tracking)
     {
         if (tracking == codexFor && tracking.Discovered.Count == shownKinds) return;
@@ -231,36 +232,12 @@ public partial class Almanac : FloatingWindow
                 CustomMinimumSize = new Vector2(0, codex.GetChildCount() > 0 ? 30 : 0),
                 VerticalAlignment = VerticalAlignment.Bottom,
             });
+            var grid = Cards();
             foreach (var (spec, age) in kinds)
-            {
-                var entry = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
-                entry.AddThemeConstantOverride("separation", 0);
-                var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
-                top.AddChild(new Label
-                {
-                    Text = spec.Name,
-                    SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                    MouseFilter = MouseFilterEnum.Pass,
-                    LabelSettings = new LabelSettings { FontSize = 14, FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f) },
-                });
-                top.AddChild(new Label
-                {
-                    Text = spec.Kind == NodeKind.Core ? "At the planting" : $"Found day {Tracking.DayOf(age)}, {Tracking.ClockOf(age)}",
-                    MouseFilter = MouseFilterEnum.Pass,
-                    LabelSettings = new LabelSettings { FontSize = 12, FontColor = Dim },
-                });
-                entry.AddChild(top);
-                string text = spec.Wild is { } wild ? $"{spec.Description} {wild.Quirk}" : spec.Description;
-                entry.AddChild(new Label
-                {
-                    Text = text,
-                    AutowrapMode = TextServer.AutowrapMode.WordSmart,
-                    SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                    MouseFilter = MouseFilterEnum.Pass,
-                    LabelSettings = new LabelSettings { FontSize = 13, FontColor = Ink },
-                });
-                codex.AddChild(entry);
-            }
+                grid.AddChild(EntryCard(spec.Name, spec.Shape, GardenView.Rgb(spec.Rgb),
+                    spec.Wild is { } wild ? $"{spec.Description} {wild.Quirk}" : spec.Description,
+                    spec.Kind == NodeKind.Core ? "At the planting" : $"Found day {Tracking.DayOf(age)}, {Tracking.ClockOf(age)}"));
+            codex.AddChild(grid);
         }
         Section("Parts", s => !s.IsFruit && !s.IsWild);
         Section("Wild flowers", s => s.IsWild);
@@ -269,13 +246,12 @@ public partial class Almanac : FloatingWindow
 
     Tracking? codexFor;
 
-    // Evolutions (step 5c; Jeremy, Oct 31): each evolution the garden has taken, in the order first chosen: its name at
-    // its current level in its role hue, when that level was chosen, its level against its limit and the flower it
-    // blooms into (or that its latest level is still growing, or waiting for a seedling), then its effect in all at that
-    // level.
+    // Evolutions (step 5c; Jeremy, Oct 31): every level the garden has chosen, in the order chosen ("Pulsar Power", then
+    // "Pulsar Power II"), as cards two to a row: the shape of the flower it blooms into and its name in its role hue,
+    // its effect in all at that level ("Core power ×2"), and when it was chosen.
     void RefreshEvolutions(Garden garden)
     {
-        var shown = (garden, garden.Evolved.Count, garden.Blooms, garden.Waiting.Count());
+        var shown = (garden, garden.Evolved.Count);
         if (shown == evolutionsShown) return;
         evolutionsShown = shown;
         foreach (var child in evolutions.GetChildren()) child.QueueFree();
@@ -290,50 +266,80 @@ public partial class Almanac : FloatingWindow
             });
             return;
         }
-        var waiting = garden.Waiting.ToHashSet();
-        foreach (var taken in garden.Evolved.GroupBy(e => e.Kind))
+        var grid = Cards();
+        foreach (var evolution in garden.Evolved)
         {
-            var latest = taken.MaxBy(e => e.Level)!;
-            var spec = latest.Spec;
-            var entry = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
-            entry.AddThemeConstantOverride("separation", 0);
-            var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
-            top.AddChild(new Label
-            {
-                Text = latest.Name,
-                SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                MouseFilter = MouseFilterEnum.Pass,
-                LabelSettings = new LabelSettings { FontSize = 14, FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f) },
-            });
-            top.AddChild(new Label
-            {
-                Text = $"Chosen day {Tracking.DayOf(latest.ChosenAt)}, {Tracking.ClockOf(latest.ChosenAt)}",
-                MouseFilter = MouseFilterEnum.Pass,
-                LabelSettings = new LabelSettings { FontSize = 12, FontColor = Dim },
-            });
-            entry.AddChild(top);
-            string flower = NodeSpecs.All[spec.Becomes].Name;
-            string state = latest.Bloomed ? $"bloomed into {Tracking.Article(flower).ToLowerInvariant()} {flower}"
-                : waiting.Contains(latest) ? "waiting for a seedling" : "growing in a seedling";
-            entry.AddChild(new Label
-            {
-                Text = $"Level {latest.Level} of {spec.MaxLevel}, {state}",
-                MouseFilter = MouseFilterEnum.Pass,
-                LabelSettings = new LabelSettings { FontSize = 12, FontColor = Dim },
-            });
-            entry.AddChild(new Label
-            {
-                Text = spec.Effect.At(latest.Level).Text + ".", // in all, at its level ("Core power ×2")
-                AutowrapMode = TextServer.AutowrapMode.WordSmart,
-                SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                MouseFilter = MouseFilterEnum.Pass,
-                LabelSettings = new LabelSettings { FontSize = 13, FontColor = Ink },
-            });
-            evolutions.AddChild(entry);
+            var spec = evolution.Spec;
+            grid.AddChild(EntryCard(evolution.Name, NodeSpecs.All[spec.Becomes].Shape, GardenView.Rgb(spec.Rgb),
+                spec.Effect.At(evolution.Level).Text + ".",
+                $"Chosen day {Tracking.DayOf(evolution.ChosenAt)}, {Tracking.ClockOf(evolution.ChosenAt)}"));
         }
+        evolutions.AddChild(grid);
     }
 
-    (Garden, int, int, int)? evolutionsShown;
+    (Garden, int)? evolutionsShown;
+
+    // Cards two to a row, each half the page wide.
+    static GridContainer Cards()
+    {
+        var grid = new GridContainer { Columns = 2, MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        grid.AddThemeConstantOverride("h_separation", 6);
+        grid.AddThemeConstantOverride("v_separation", 6);
+        return grid;
+    }
+
+    // One entry as a small card (the Codex's and Evolutions' pages): its shape in its hue beside its name, then a few
+    // words on what it does, then when (dim).
+    static PanelContainer EntryCard(string name, Shape shape, Color hue, string text, string when)
+    {
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(1, 1, 1, 0.04f),
+            BorderColor = new Color(1, 1, 1, 0.1f),
+            BorderWidthLeft = 1, BorderWidthTop = 1, BorderWidthRight = 1, BorderWidthBottom = 1,
+            ContentMarginLeft = 8, ContentMarginRight = 8, ContentMarginTop = 6, ContentMarginBottom = 6,
+        };
+        style.SetCornerRadiusAll(6);
+        var card = new PanelContainer
+        {
+            MouseFilter = MouseFilterEnum.Pass,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.Fill, // the row's height, so cards side by side line up
+        };
+        card.AddThemeStyleboxOverride("panel", style);
+        var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+        column.AddThemeConstantOverride("separation", 2);
+        card.AddChild(column);
+        var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+        top.AddThemeConstantOverride("separation", 6);
+        top.AddChild(new ShapeIcon(shape, hue));
+        top.AddChild(new Label
+        {
+            Text = name,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            VerticalAlignment = VerticalAlignment.Center,
+            MouseFilter = MouseFilterEnum.Pass,
+            LabelSettings = new LabelSettings { FontSize = 14, FontColor = hue.Lightened(0.35f) },
+        });
+        column.AddChild(top);
+        column.AddChild(new Label
+        {
+            Text = text,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill, // pushes the date to the card's foot
+            MouseFilter = MouseFilterEnum.Pass,
+            LabelSettings = new LabelSettings { FontSize = 13, FontColor = Ink },
+        });
+        column.AddChild(new Label
+        {
+            Text = when,
+            MouseFilter = MouseFilterEnum.Pass,
+            LabelSettings = new LabelSettings { FontSize = 11, FontColor = Dim },
+        });
+        return card;
+    }
 
     // A moment's colour: upgrades bought (and the old track's unlocks) in the genes' purple, shaping tools gained in
     // the tools' blue, wild flowers discovered in a pale gold.
@@ -363,5 +369,27 @@ public partial class AlmanacGrip : Control
         var ink = new Color(1, 1, 1, 0.35f);
         for (int i = 1; i <= 3; i++)
             DrawLine(new Vector2(14 - i * 4, 13), new Vector2(13, 14 - i * 4), ink, 1.2f, true);
+    }
+}
+
+// A part's shape in its hue, as the cards in the Almanac show it (a wild flower's from its own texture too).
+public partial class ShapeIcon : Control
+{
+    readonly Shape shape;
+    readonly Color hue;
+
+    public ShapeIcon(Shape shape, Color hue)
+    {
+        this.shape = shape;
+        this.hue = hue;
+        CustomMinimumSize = new Vector2(20, 20);
+        SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        MouseFilter = MouseFilterEnum.Pass;
+    }
+
+    public override void _Draw()
+    {
+        ToolButton.DrawShape(this, Size / 2, shape, 8.5f, new Color(0, 0, 0, 0.5f));
+        ToolButton.DrawShape(this, Size / 2, shape, 7.5f, hue);
     }
 }

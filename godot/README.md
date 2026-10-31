@@ -32,8 +32,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   moments under day headings ("Day 2"), newest first, each with its time on that day. They're its planting, each
   kind's first part, its first passive bud, core links and the Hub bought (in the genes' purple), shaping tools gained
   from the garden's size (in the tools' blue), part counts reached, the first of each shaping tool placed, and wild
-  flowers discovered (a pale gold) or ended. The Codex lists the kinds the garden has grown (only those), each with
-  when it was first found and what it does.
+  flowers discovered (a pale gold) or ended. The Codex lists the kinds the garden has grown (only those), each a card
+  with its shape, what it does and when it was first found; Evolutions shows each level chosen as a card the same way.
   Drag its header to move it, its corner grip to resize it; the wheel scrolls it. It stays open (clicks elsewhere,
   Escape and losing the focus leave it) until its ✕ or the slot again; it hides in Ambient and Minimised and comes
   back in Active.
