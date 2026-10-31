@@ -70,7 +70,7 @@ public sealed record GardenStats(
             if (n.Spec.Sends == BlobKind.Genes) genesPerHour += GenesPerHourFrom(garden, n);
         }
         return new GardenStats(held, store, production, upkeep, fullProduction, fullUpkeep, stems, generators, groves, labs,
-            garden.Core.Branches.Count, garden.Capacity, fruit, fruitRoom, buds, garden.Genes, garden.GeneBalance, genesPerHour,
+            garden.Core.Branches.Count, garden.Caps, fruit, fruitRoom, buds, garden.Genes, garden.GeneBalance, genesPerHour,
             garden.Cheapest, garden.WildCount, seedlings, seedlingPower, seedlingStore);
     }
 
@@ -92,7 +92,8 @@ public sealed record GardenStats(
         var now = new Dictionary<(PlantNode At, PlantNode? From), double> { [(lab, null)] = 1 };
         var next = new Dictionary<(PlantNode At, PlantNode? From), double>();
         double reached = 0;
-        for (int hop = 0; hop < Tuning.BlobMaxHops && now.Count > 0; hop++)
+        int hops = (int)MathF.Round(Tuning.BlobMaxHops * lab.Boost.Reach); // (further with the labs' Hub milestone)
+        for (int hop = 0; hop < hops && now.Count > 0; hop++)
         {
             next.Clear();
             foreach (var ((at, from), odds) in now)
@@ -123,8 +124,9 @@ public sealed record GardenStats(
             void Go(PlantNode to)
             {
                 if (to == skip || !garden.Wanders(at, to, BlobKind.Genes, smart)) return; // (an Amplifier's doubling isn't counted)
-                if (to == core) reached += each;
-                else if (!to.IsHub) next[(to, at)] = next.GetValueOrDefault((to, at)) + each; // (the Hub keeps what it catches)
+                // (The Hub keeps what it catches, unless every path is complete: then it passes it on.)
+                if (to == core || (to.IsHub && garden.HubComplete)) reached += each;
+                else if (!to.IsHub) next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
             }
             foreach (var branch in at.Branches) Go(branch);
             if (at.Parent != null) Go(at.Parent);

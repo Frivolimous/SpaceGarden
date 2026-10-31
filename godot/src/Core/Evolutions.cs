@@ -154,10 +154,20 @@ public sealed class Evolution
 }
 
 // A garden's evolutions' and Hub's effect on one kind: its power made, its upkeep, how fast it sends power on, its
-// blobs, fruit it can hold beyond its spec's, and its own quirk (Effect: see HubAxis) (see Garden.UpdateBoosts).
-public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, float Blobs = 1, int Fruits = 0,
-    float Effect = 1)
+// blobs, fruit it can hold beyond its spec's (see Garden.UpdateBoosts). The Hub's paths add: links beyond its spec's,
+// its store and life multiplied, the share of its output that holds whatever its fill (OutputFloor), how much further
+// and faster its gene blobs go (Reach), a share of output each leaf adds (LeafBonus), and how much faster its buds grow
+// on their own (BudGrow) (see HubMilestone).
+public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, float Blobs = 1, int Fruits = 0)
 {
+    public int Links { get; init; }
+    public float Store { get; init; } = 1;
+    public float Life { get; init; } = 1;
+    public float OutputFloor { get; init; }
+    public float Reach { get; init; } = 1;
+    public float LeafBonus { get; init; }
+    public float BudGrow { get; init; } = 1;
+
     public static readonly Boost None = new();
 }
 

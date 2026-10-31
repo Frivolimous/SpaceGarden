@@ -62,10 +62,11 @@ public class HubTests
         var hub = Add(garden, garden.Core, NodeKind.Hub);
         Add(garden, hub, NodeKind.Lab);
         Assert.Contains(garden.Tracking.Journal, e => e.Text == "First Hub planted");
-        GrowFull(garden, 3600);
+        GrowFull(garden, 600);
         Assert.Equal(0, garden.Genes); // none reached the core's balance
-        Assert.True(garden.HubGenes > 600);
-        // 250 for the first point, 300 for the second, 350 ...
+        Assert.True(garden.HubGenes > 50);
+        garden.CatchAtHub(10_000);
+        // 3,000 for the first point, 3,400 for the second, 3,800 ...
         double spent = 0;
         for (int i = 0; i < garden.HubPointsEarned; i++) spent += Tuning.HubFirstPoint + Tuning.HubPointStep * i;
         Assert.Equal(garden.HubGenes, spent + garden.HubPool, 6);
@@ -85,19 +86,66 @@ public class HubTests
         Assert.True(garden.BuyHubLevel(NodeKind.Lab));
         Assert.Equal(2, garden.HubPoints);
         Assert.Equal(1, garden.HubLevel(NodeKind.Lab));
-        Assert.Equal(blobs * 1.1f, Garden.FullBlobsPerHour(lab), 3);
+        Assert.Equal(blobs * 1.2f, Garden.FullBlobsPerHour(lab), 3);
         Assert.Equal(upkeep + Tuning.HubUpkeepPerLevel, Garden.FullUpkeepPerSecond(hub), 3); // the Hub's upkeep rises
 
-        // A milestone level costs more, and adds its own: level 5's lab holds a research more.
-        garden.HubLevels[NodeKind.Lab] = 4;
+        // A milestone level costs more, and adds its own: level 3's lab costs a fifth less upkeep.
+        float labUpkeep = Garden.FullUpkeepPerSecond(lab);
+        garden.HubLevels[NodeKind.Lab] = 2;
         garden.HubPoints = 1;
         Assert.False(garden.BuyHubLevel(NodeKind.Lab));
         garden.HubPoints = 2;
-        int fruits = lab.MaxFruits;
         Assert.True(garden.BuyHubLevel(NodeKind.Lab));
         Assert.Equal(0, garden.HubPoints);
-        Assert.Equal(fruits + 1, lab.MaxFruits);
-        Assert.Equal(blobs * 1.5f, Garden.FullBlobsPerHour(lab), 3);
+        Assert.Equal(labUpkeep * 0.8f, Garden.FullUpkeepPerSecond(lab), 3);
+        Assert.Equal(blobs * 1.6f, Garden.FullBlobsPerHour(lab), 3);
+    }
+
+    [Fact]
+    public void ThePathsCost96PointsAndTheHubsOwnAddsLinks()
+    {
+        Assert.Equal(96, Hubs.TotalPoints);
+        Assert.Equal(20, Hubs.Paths.Count);
+        var (garden, _, _, hub) = Make();
+        garden.HubPoints = 4;
+        Assert.Equal(3, hub.MaxLinks);
+        Assert.True(garden.BuyHubLevel(NodeKind.Hub));
+        Assert.True(garden.BuyHubLevel(NodeKind.Hub));
+        Assert.True(garden.BuyHubLevel(NodeKind.Hub));
+        Assert.Equal(6, hub.MaxLinks);
+        Assert.False(garden.BuyHubLevel(NodeKind.Hub)); // its top level
+        // Its level 3 cuts what each level adds to its upkeep by a fifth.
+        Assert.Equal(Tuning.HubUpkeep + 3 * Tuning.HubUpkeepPerLevel * Tuning.HubUpkeepCut, Garden.FullUpkeepPerSecond(hub), 3);
+    }
+
+    [Fact]
+    public void AWildFlowersLevelsBoostItsFamilyToo()
+    {
+        var (garden, stem, _, _) = Make();
+        garden.Capacity = garden.Capacity with { WildFlowers = 1 };
+        Assert.NotNull(garden.GrowWild(NodeKind.Tendril, garden.Core));
+        garden.HubPoints = 1;
+        Assert.True(garden.BuyHubLevel(NodeKind.Tendril));
+        Assert.Equal(1.1f, stem.Boost.Transfer, 3); // stems +10%
+        Assert.Equal(1.3f, garden.Nodes.First(n => n.Spec.Kind == NodeKind.Tendril).Boost.Transfer, 3);
+    }
+
+    [Fact]
+    public void ACompleteHubPassesTheGenesItCatchesToTheCore()
+    {
+        var garden = Garden.New(Layout.Radial, 5);
+        garden.PassiveGrowth = false;
+        garden.Capacity = new Capacity(10, 4, 1, Hubs: 1);
+        var hub = Add(garden, garden.Core, NodeKind.Hub);
+        Add(garden, hub, NodeKind.Lab);
+        foreach (var path in Hubs.Paths) garden.HubLevels[path.Kind] = path.MaxLevel;
+        garden.HubLevels[NodeKind.Hub] = 2;
+        garden.HubPoints = 2;
+        Assert.True(garden.BuyHubLevel(NodeKind.Hub));
+        Assert.True(garden.HubComplete);
+        GrowFull(garden, 600);
+        Assert.True(garden.Genes > 50);
+        Assert.Equal(0, garden.HubGenes);
     }
 
     [Fact]
@@ -108,7 +156,7 @@ public class HubTests
         var generator = Add(garden, garden.Core, NodeKind.Generator);
         float gen = Garden.FullProductionPerSecond(generator);
         Assert.True(garden.BuyHubLevel(NodeKind.Generator));
-        Assert.Equal(gen * 1.1f, Garden.FullProductionPerSecond(generator), 3);
+        Assert.Equal(gen * 1.2f, Garden.FullProductionPerSecond(generator), 3);
 
         garden.Prune(hub);
         Assert.Equal(gen, Garden.FullProductionPerSecond(generator), 3); // dormant
@@ -118,7 +166,7 @@ public class HubTests
 
         garden.ForgetPrune();
         Add(garden, stem, NodeKind.Hub);
-        Assert.Equal(gen * 1.1f, Garden.FullProductionPerSecond(generator), 3); // back
+        Assert.Equal(gen * 1.2f, Garden.FullProductionPerSecond(generator), 3); // back
         Assert.Equal(1f, lab.Boost.Blobs);
     }
 
@@ -137,7 +185,7 @@ public class HubTests
         Assert.Equal((120.0, 1, 7, 2_300.0), (loaded.HubPool, loaded.HubPoints, loaded.HubPointsEarned, loaded.HubGenes));
         Assert.Equal(1, loaded.HubLevel(NodeKind.Stem));
         var stem = loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Stem);
-        Assert.Equal(1 + Tuning.HubBoost, stem.Boost.Transfer, 3); // working again, with the Hub loaded
+        Assert.Equal(1.2f, stem.Boost.Transfer, 3); // working again, with the Hub loaded
         Assert.True(loaded.HubPlanted);
     }
 }

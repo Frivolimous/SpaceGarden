@@ -271,7 +271,7 @@ A new bud can turn into a special kind. That is **wild growth**, and the results
 
 | Wild flower | Effect | Cost | Grows from | Unlocked | Fruit |
 | --- | --- | --- | --- | --- | --- |
-| Amplifier | 2 links; gene and growth blobs passing through grow 50% larger | 1 wild | Stem | Start | 1 glow |
+| Amplifier | 2 links; gene and growth blobs passing through have a 50% chance to double, once per blob | 1 wild | Stem | Start | 1 glow |
 | Resistor | 2 links; blobs bounce off it from both sides; low transfer | 1 wild | Stem | Start | 1 glow |
 | Tendril | 3 links; long springy link, large power store, medium transfer | 1 wild, 1 stem | Stem | Start | 3 leaf |
 | Big Stem | 4 links; slow transfer | 1 wild, 1 stem | Stem | Evolution | 2 leaf |
@@ -298,7 +298,7 @@ Ember and Comet Bloom end themselves, the one exception to "never destroys anyth
 **Built in 5d** (Oct 30; the rules in `godot/src/Core/WildFlowers.cs` and `Garden.cs` (Wild flowers), every number a first pass in `Tuning`, Wild flowers). Details settled in the build, for Jeremy to review:
 - **The roll.** A bud's basic kind is rolled first, as before (so it still needs room under its own cap), then whether it grows wild. With no free slot no dice are thrown, so a garden without slots grows exactly as it did. If it does grow wild, its kind is picked among the kinds that can stand in for its basic kind, plus the passive-only kinds for a passive bud; a planted bud never becomes a passive-only kind. For a passive bud the pick is weighted toward its base's own kinds (decided Oct 30, built in 5c; first built evenly, which made a grove bud a passive-only kind two times in three): when both groups have kinds that can grow, a passive bud picks among its base's own kinds two times in three (`Tuning.PassiveBaseShare`) and among the passive-only kinds the rest, alike within each group. A wild bud forms as its own silhouette from the start, so the player sees what's coming. The forming bud's toolbar button still pulses for its base kind. (So an Amplifier or Resistor can't appear while the stem cap is full: accepted.)
 - **Slots.** A wild flower and a wild bud each hold their slots (and their base's where they take one); undoing a prune needs them back. The garden card counts a Tendril or Big Stem among its stems, a Pulsar, Twin Star or Ember among its generators. `Garden.UnlockWild(kind)` adds an Evolution kind to the pool (5c calls it as the evolution blooms); `Garden.WildCaps` holds per-kind caps, none set.
-- **Amplifier:** each Amplifier a gene or growth blob passes doubles it half the time (`AmplifyChance`), at most once a blob, so blobs stay whole genes and chains don't compound: 50% larger on average. The second blob carries on from the Amplifier with the hops the first had left.
+- **Amplifier:** each Amplifier a gene or growth blob passes doubles it half the time (`AmplifyChance`), at most once a blob, so blobs stay whole genes and chains don't compound: a 50% chance to double (Jeremy's wording, Oct 31, replacing "50% larger"). The second blob carries on from the Amplifier with the hops the first had left.
 - **Resistor:** never one of a blob's choices of where to go next, from either side, so no hop is wasted; a blob with nowhere else to go ends. The garden card's gene reach counts this exactly (not an Amplifier's doubling). At the base of a lab-free branch it keeps gene blobs from wandering in; labs and passive growth beyond it are cut off. It sends power on at 6 a second (a stem 30).
 - **Buffer:** 240 buff blobs an hour, white; a glow fruit 60. A buff blob wanders like the others for 5 links (8 once past an Amplifier) and a glow's starts on the part it hangs from; nothing absorbs it, and every part it passes makes 50% more power and blobs for the next 60 s. A second buff only starts the time again.
 - **Tendril:** its links, to its parent and to its own branches, 2.5 times as long and 0.3 as springy; holds 600 (a stem 150), sends on at 20 (a stem 30). **Big Stem:** 4 links, transfer 15. **Twin Star:** 9.6 a second, 2 links.
@@ -322,7 +322,7 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 | Linear / numeric | +1 stem cap, +1 generator cap, wild flower limit | The three gene tracks in the Research panel |
 | Mechanic change / unlock / bundled change | Core power ×1.5, Big Stem unlocked, labs ×2 genes at more upkeep | Seedlings: evolutions |
 | Shaping tools | Gravity Pot, Trellis, Gravity Well | Garden size |
-| Per-kind boosts | +10% to a kind's main effect | The Hub's points |
+| Per-kind boosts | +20% (basic) or +30% (wild) to a kind's main effect, milestones | The Hub's points |
 
 *History:* through step 4, genes reaching the core raised caps automatically along one fixed track of about a week (nine thresholds up to 330,000 genes), with only about 55-70k genes a day arriving from day 2, since 40-60% of blobs reach the core by day 3.
 
@@ -439,18 +439,56 @@ All three tracks share one gene income, and the stem and generator tracks will p
 
 - **Unlocked** in the core track (60,000 genes) and **planted by hand** from the toolbar like a seedling. It is not a wild flower; one at a time. It reads as a stem in the visual language, in its own shade of green, but takes no stem slot and counts against no stem cap.
 - It **catches gene blobs like the core**, into **its own pool**, converted to **hub points**: 1 point every N genes, with N rising each time.
-- **Tapping it opens its own upgrade panel** with **a path for every node type**, basic and wild (about 19 paths). Undiscovered kinds show "???"; a kind is discovered the first time it grows in the garden.
-- Each level costs 1 point (2-3 for milestone levels) and gives +10% to that kind's main effect by default, with some hand-crafted milestones. Each upgrade raises the Hub's own power upkeep.
+- **Tapping it opens its own upgrade panel** with **a path for every node type**, basic and wild, and one for the Hub itself (20 paths). Undiscovered kinds show "???"; a kind is discovered the first time it grows in the garden.
+- Each upgrade raises the Hub's own power upkeep.
+
+**Step 5 addendum: Hub paths** (Jeremy, Oct 31; every number a placeholder for playtesting).
+- **Structure.** The Hub is meant to be finished. Basic kinds have 5 levels (milestones at 3 and 5, costing 1, 1, 2, 1, 3 points); wild flowers and the Hub's own path 3 levels (a milestone at 3, costing 1, 1, 2). Milestone levels include the normal per-level boost. 96 points in all.
+- **Point curve:** linear. The first hub point at 3,000 genes caught, each later point 400 more. When every path is complete, the Hub passes the genes it catches on to the core's balance.
+- **Family boosts:** wild paths also boost their family. Stem, generator, grove and lab kinds boost their base type; the Amplifier, Resistor and passive-only kinds boost core power (+20% a level).
+- **The Hub's own path:** it starts with 3 links and gains +1 a level, up to 6. Level 3 also cuts the upkeep each Hub upgrade adds by 20%.
+
+| Kind | Per level | Level 3 | Level 5 |
+| --- | --- | --- | --- |
+| Stem | +20% transfer | Buds forming on stems self-grow twice as fast | Stem cap +2 |
+| Generator | +20% power | Power transfer ×1.5 | Output ranges 50–100% with stored power, instead of 0–100% |
+| Grove | +20% growth | +1 berry slot | +2 berry slots |
+| Lab | +20% genes | Upkeep −20% | Gene blobs travel 33% faster and 33% more links |
+
+| Wild flower | Per level | Level 3 milestone |
+| --- | --- | --- |
+| Amplifier | +10% chance to double; core +20% power | 20% chance to triple |
+| Resistor | +1 glow; core +20% power | +1 link |
+| Tendril | +30% transfer; stems +10% transfer | +1 link |
+| Big Stem | Upkeep −30%; stems +10% transfer | +1 link |
+| Pulsar | +30% power; generators +10% power | Power store ×1.5, transfer +50% |
+| Twin Star | +30% power; generators +10% power | Transfer +50% |
+| Ember | +30% power; generators +10% power | Burns 50% longer (fades over 4.5 days) |
+| Lumber Grove | +30% growth; groves +10% growth | Upkeep −50% |
+| Seed Pod | +30% growth; groves +10% growth | Upkeep −50% |
+| Wild Lab | +30% genes; labs +10% genes | Upkeep −50% |
+| Lichen | +30% genes; labs +10% genes | Each leaf also adds +5% genes |
+| Buffer | Upkeep −20%; core +20% power | All buffs +10% stronger |
+| Comet Bloom | Upkeep −20%; core +20% power | Lingers 6 hours instead of 24 |
+| Moonflower | Upkeep −20%; core +20% power | Range from 5 links to 8 |
+| Nebula Bloom | Upkeep −20%; core +20% power | Power to nearby seedlings counts triple |
+| Hub | +1 link (3 to 6) | The upkeep each Hub upgrade adds −20% |
 - If pruned, its upgrades go dormant until a new Hub is planted. A respec option comes later.
 
 **Built: the Hub** (Oct 31; the rules in `godot/src/Core/Hubs.cs` and `Garden.cs` (The Hub), every number a placeholder in `Tuning` (The Hub) or the paths' data). Details settled in the build, for Jeremy to review:
 - **Planting.** Once bought, the Hub is a sixth bud button in a part's toolbar (its wheel, in its green), hidden until then and greyed while one is planted or forming. It forms as a bud, never growing wild. Undoing its prune needs no other Hub planted since.
-- **The part.** A stem's size and links (3, so it can sit inline), in its own teal green (`0x2ED89A`), drawn as a wheel: a hub and a rim joined by six spokes (first pass). It takes no stem slot. Upkeep 3 a second (a stem's), plus 0.5 for every level bought.
-- **Catching genes.** A gene blob stepping onto the Hub is taken in, as at the core, into the Hub's pool; it never reaches the gene balance or the history's genes. Smart Particles treat the Hub as a taker, like the core, and the garden card's gene reach counts what the Hub takes as lost to the core. So where the Hub stands decides its share: inline between the labs and the core it takes nearly all; on a side branch, about the blobs that wander in.
-- **Points.** The pool turns into a point every N genes, N being 250 for the first and 50 more for each after (250, 300, 350 ...). Points and pool are kept through a prune.
-- **The panel.** Tapping the Hub opens its panel too (a window like the Research panel: dragged by its header, closed by its ✕; it closes if the Hub is pruned). The header shows the points to spend, under it the pool's bar to the next point ("120 / 350 genes to the next point"). Then a row per path, in two columns, Parts then Wild flowers: the kind's shape and name in its hue, what its levels give ("+20% genes", and the milestone reached or the next one), ten pips (a milestone's ringed), and the next level's button ("1 pt", "2 pts", "Max"). A kind not yet grown shows "???", "Not found in the garden yet", with no hue, pips or button. The row's tooltip lists its milestones. Discovery is `Tracking.Discovered`, which already held the basic kinds (a part's first growth adds it).
-- **Paths and main effects.** 19: stem, generator, lab and grove, then the 15 wild flowers. Each level adds 10% of the base, adding up (level 3: ×1.3), times the evolutions' effects. Main effects: stems and the stem kinds (Resistor, Tendril, Big Stem) transfer; generators, Pulsar, Twin Star and Ember power; labs, Wild Lab and Lichen genes; groves, Lumber Grove and Seed Pod growth; Buffer buff blobs; and a quirk for the rest: the Amplifier's chance to double a blob (50%, 55% ...), a Comet Bloom's burst, a Moonflower's pull on buds, a Nebula Bloom's boost to seedlings. 10 levels each (`HubMaxLevel`).
-- **Milestones** (first-pass ideas, on the basic kinds only): level 5 (2 points) a fruit slot more (stems a leaf, generators a burr, labs a research, groves a berry); level 10 (3 points) stems' upkeep ×0.75, generator transfer ×1.5, labs' upkeep ×0.75, groves' upkeep ×0.75. Ideas for later wild ones: a Tendril's longer reach, an Ember's slower fade, a Comet Bloom's longer life.
+- **The part.** A stem's size and links (3, so it can sit inline; up to 6 on its own path), in its own teal green (`0x2ED89A`), drawn as a wheel: a hub and a rim joined by six spokes (first pass). It takes no stem slot. Upkeep 3 a second (a stem's), plus 0.5 for every level bought (0.4 once its own path reaches level 3).
+- **Catching genes.** A gene blob stepping onto the Hub is taken in, as at the core, into the Hub's pool; it never reaches the gene balance or the history's genes. Smart Particles treat the Hub as a taker, like the core, and the garden card's gene reach counts what the Hub takes as lost to the core. So where the Hub stands decides its share: inline between the labs and the core it takes nearly all; on a side branch, about the blobs that wander in. Complete (every path at its top level), it delivers what it catches to the core as the core would, and the gene reach counts it so.
+- **Points.** The pool turns into a point every N genes, N being 3,000 for the first and 400 more for each after (3,000, 3,400, 3,800 ...; first built at 250 and +50, before the addendum). Points and pool are kept through a prune.
+- **The panel.** Tapping the Hub opens its panel too (a window like the Research panel: dragged by its header, closed by its ✕; it closes if the Hub is pruned). The header shows the points to spend, under it the pool's bar to the next point ("120 / 350 genes to the next point"). Then a row per path, in two columns, Parts, Wild flowers and the Hub's own: the kind's shape and name in its hue, what its next level gives ("Next: +20% genes", or its milestone; "Complete: …" at the top), a pip a level (5 or 3; a milestone's ringed), and the next level's button ("1 pt", "2 pts", "Max"). A kind not yet grown shows "???", "Not found in the garden yet", with no hue, pips or button. The row's tooltip has each level's effect and the milestones, as the longest lines clip in the row. Discovery is `Tracking.Discovered`, which already held the basic kinds (a part's first growth adds it).
+- **Paths and effects** (rebuilt for the addendum; `Hubs.Paths`, data). A path's per-level shares add up (Lab level 3: ×1.6 genes), family shares add to the kind's own (a stem's transfer with Stem 2 and Tendril 1: ×1.5), and the sum multiplies the evolutions' effects. Upkeep shares take off (Big Stem 3: ×0.1). Milestones multiply on top. Read in the build:
+  - The Amplifier's levels add to its chance (50%, 60%, 70%, 80%); with its milestone a fifth of all blobs passing are tripled, within that chance (so at level 3: 20% tripled, 60% doubled).
+  - "All buffs +10% stronger": each buff's 50% becomes 55%, from Buffers and glow fruit alike.
+  - The generators' level 5: output is 50% plus 50% of their fill, instead of their fill.
+  - The labs' level 5: basic labs' gene blobs go 40 links instead of 30, and are shown moving a third faster.
+  - The Grove's "+2 berry slots" at level 5 adds to level 3's (+3 in all).
+  - Comet Bloom: its life is 6 hours instead of 24 ("lingers": the slot frees sooner).
+  - A milestone's links (Resistor, Tendril, Big Stem, the Hub's own) go when the Hub sleeps: a part keeps its branches, but has no room for more.
 - **Dormant.** Pruned, the levels stay bought but give nothing (the parts' boosts are worked out again without them) and none can be bought; the next Hub planted wakes them at once.
 - **Card, journal, away note.** The Hub's card adds "Hub points: 4", "Pool: 120 genes" and "Next point: 230 more genes" under its Drain. The journal logs "First Hub planted"; the away note says "The Hub earned 3 points (5 to spend).", after the genes that reached the core. Export: `hub_genes`, `hub_points_earned`, `hub_levels`.
 - **Save:** still version 9, with an optional `Hub` field: the pool, points to spend, points earned, genes caught and the levels. A loaded garden works the levels' effects out again once its parts are in.
@@ -706,7 +744,7 @@ Design layers still to work through:
 - [ ] Step 5 open points (destruction exception, 5a, rename scope, planted buds growing wild, Research dot, content batching, gene totals)
 - [ ] Build step 5 (5a prep, 5b tracks, 5c seedlings, 5d wild flowers and the Hub done), then the real-week tuning check
 - [ ] Alerts: how the garden signals that something waits, without red dots (5b shipped the Research panel without one; still open)
-- [ ] Hub details: N for the points curve, milestone levels, upkeep per upgrade, respec (placeholders picked in the build: see Built: the Hub)
+- [ ] Hub details: respec (the paths, point curve and milestones are set by the step 5 addendum; upkeep per upgrade a placeholder: see Built: the Hub)
 - [ ] Onboarding over the first days (step 6), starting with planting the first grove
 - [ ] Identity: what makes each garden uniquely yours after months
 - [ ] Events and surprises: rare blooms, seasons, day and night

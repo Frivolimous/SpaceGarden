@@ -139,10 +139,12 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **The Hub** (`src/Core/Hubs.cs` and `Garden.cs`, numbers in `Tuning` under The Hub; DESIGN.md, The Hub): once
   bought in the Core track, plant it from a part's toolbar (one at a time; it never grows wild). A teal-green wheel
   that takes no stem slot, it catches gene blobs as the core does, into its own pool (they never reach the gene
-  balance): a hub point every 250 genes, 50 more each time. Tapping it opens its panel: a path for each of the 19
-  kinds, basic and wild, "???" until the garden grows one; each level costs a point (milestones 2 or 3) and gives
-  +10% to the kind's main effect, the basic kinds' milestones a fruit slot at level 5 and cheaper upkeep or faster
-  transfer at 10. Every level adds 0.5/s to the Hub's upkeep. Pruned, its levels go dormant until another is planted.
+  balance): the first hub point at 3,000 genes, each later one 400 more. Tapping it opens its panel: 20 paths, one
+  for each kind, basic and wild ("???" until the garden grows one), and the Hub's own (+1 link a level, up to 6).
+  Basic kinds have 5 levels (+20% a level, milestones at 3 and 5), wild flowers and the Hub 3 (+30% or their own
+  effect, and their family: stems, generators, groves, labs or the core's power; a milestone at 3), 96 points in
+  all (the paths and milestones are data in `Hubs.Paths`). Every level adds 0.5/s to the Hub's upkeep. Complete,
+  the Hub passes the genes it catches on to the core. Pruned, its levels go dormant until another is planted.
   Its card shows its points, its pool and the genes to its next point; the journal its first planting; the away
   note the points it earned. Saved in `GardenSave.Hub`.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.

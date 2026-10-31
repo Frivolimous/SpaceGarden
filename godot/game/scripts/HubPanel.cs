@@ -4,8 +4,8 @@ namespace SpaceGarden;
 
 // The Hub's panel (DESIGN.md, The Hub): a window of its own (see FloatingWindow), opened by tapping the Hub and closed
 // by its ✕ (or the Hub pruned). Its header shows the points to spend; under it, the pool's progress to the next point.
-// Then a row for every kind's path (Hubs.Paths), the basic parts then the wild flowers, in two columns: the kind's shape
-// and name in its hue, what its levels give so far ("+20% genes"), its levels as pips (a milestone's ringed), and a
+// Then a row for every kind's path (Hubs.Paths), the basic parts, the wild flowers and the Hub's own, in two columns: the
+// kind's shape and name in its hue, what its next level gives ("Next: +20% genes", or its milestone), its levels as pips (a milestone's ringed), and a
 // button to buy the next, its cost in points. A kind the garden hasn't grown yet shows "???". Buying is the rules'
 // (Garden.BuyHubLevel): the widget does it on BuyPressed.
 public partial class HubPanel : FloatingWindow
@@ -13,8 +13,8 @@ public partial class HubPanel : FloatingWindow
     public event Action<NodeKind>? BuyPressed;
 
     const double RefreshSeconds = 0.25;
-    const float RowWidth = 270;
-    const int LeftRows = 10; // the basic parts and the first wild flowers; the rest on the right
+    const float RowWidth = 320;
+    const int LeftRows = 10; // the basic parts and the first wild flowers; the rest and the Hub's on the right
 
     static readonly Color Hue = GardenView.Rgb(NodeSpecs.All[NodeKind.Hub].Rgb);
     static readonly Color HueInk = Hue.Lightened(0.3f);
@@ -55,6 +55,7 @@ public partial class HubPanel : FloatingWindow
             var into = i < LeftRows ? left : right;
             bool firstWild = NodeSpecs.All[path.Kind].IsWild && (i == 0 || !NodeSpecs.All[Hubs.Paths[i - 1].Kind].IsWild);
             if (firstWild) into.AddChild(Heading("WILD FLOWERS"));
+            else if (path.Kind == NodeKind.Hub) into.AddChild(Heading("HUB"));
             else if (i == LeftRows) into.AddChild(Heading("")); // level with the left column's first row
             into.AddChild(Row(path));
             i++;
@@ -143,10 +144,8 @@ public partial class HubPanel : FloatingWindow
         line.AddChild(buy);
 
         // Its milestones, in the row's tooltip.
-        row.TooltipText = path.Milestones.Length == 0
-            ? $"Each level: +{Tuning.HubBoost * 100:0}% {path.Effect}."
-            : $"Each level: +{Tuning.HubBoost * 100:0}% {path.Effect}.\n"
-              + string.Join("\n", path.Milestones.Select(m => $"Level {m.Level} ({m.Cost} points): {m.Text}."));
+        row.TooltipText = $"Each level: {path.PerLevel}.\n"
+            + string.Join("\n", path.Milestones.Select(m => $"Level {m.Level} ({path.Cost(m.Level)} points): {m.Text}."));
         rows.Add(new PathRow(path, style, hue, glyph, name, detail, pips, buy, row));
         return row;
     }
@@ -187,11 +186,11 @@ public partial class HubPanel : FloatingWindow
                 row.Detail.Text = "Not found in the garden yet";
                 continue;
             }
-            string so = level == 0 ? "No levels yet" : $"+{Tuning.HubBoost * 100 * level:0}% {row.Path.Effect}";
-            if (row.Path.Milestones.LastOrDefault(m => m.Level <= level) is { } reached) so += $"; {reached.Text}";
-            else if (level < Tuning.HubMaxLevel && row.Path.MilestoneAt(level + 1) is { } next) so += $"; next: {next.Text}";
-            row.Detail.Text = so;
-            if (level >= Tuning.HubMaxLevel)
+            // What the next level gives: its milestone, or each level's share; complete, the last milestone.
+            int max = row.Path.MaxLevel;
+            row.Detail.Text = level >= max ? $"Complete: {row.Path.MilestoneAt(max)?.Text ?? row.Path.PerLevel}"
+                : row.Path.MilestoneAt(level + 1) is { } next ? $"Next: {next.Text}" : $"Next: {row.Path.PerLevel}";
+            if (level >= max)
             {
                 row.Buy.Text = "Max";
                 row.Buy.Disabled = true;
@@ -269,13 +268,13 @@ public partial class LevelPips : Control
     {
         this.path = path;
         this.hue = hue;
-        CustomMinimumSize = new Vector2(Gap * Tuning.HubMaxLevel + 2, 12);
+        CustomMinimumSize = new Vector2(Gap * Hubs.Paths.Max(p => p.MaxLevel) + 2, 12); // (every row's alike)
         MouseFilter = MouseFilterEnum.Ignore;
     }
 
     public override void _Draw()
     {
-        for (int i = 1; i <= Tuning.HubMaxLevel; i++)
+        for (int i = 1; i <= path.MaxLevel; i++)
         {
             var c = new Vector2(Gap * (i - 0.5f) + 1, Size.Y / 2);
             bool filled = i <= level;
