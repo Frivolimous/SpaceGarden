@@ -874,7 +874,9 @@ public sealed class Garden
     // Where a part sends a clump of power this step, if anywhere (the original's attemptTransferPower): once it's
     // fuller than SendFill and has a whole clump to spare, to the neighbour (not fruit) with the lowest fill for its
     // weight among those less full than itself (fills past full count as full). A part with no transfer rate (a
-    // seedling) sends nothing.
+    // seedling) sends nothing. A seedling, not yet full, counts as less full while its fill for its weight is (its
+    // weight 1.5: it fills on to half again its neighbour's fill), so it can fill past the parts round it (Jeremy, Oct
+    // 31) and reach full from any neighbour two thirds full.
     PlantNode? SendTo(PlantNode node, float spare)
     {
         if (node.Fill <= Tuning.SendFill || Clump(node) <= 0 || spare < Clump(node)) return null;
@@ -888,7 +890,8 @@ public sealed class Garden
         void Consider(PlantNode other)
         {
             float otherFill = other.Fill, weighed = otherFill / other.Spec.PowerWeight;
-            if (Math.Min(1, otherFill) >= fill || weighed >= bestWeighed) return;
+            bool fuller = other.IsSeedling ? otherFill >= 1 || weighed >= fill : Math.Min(1, otherFill) >= fill;
+            if (fuller || weighed >= bestWeighed) return;
             best = other;
             bestWeighed = weighed;
         }
