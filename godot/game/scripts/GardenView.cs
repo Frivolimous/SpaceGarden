@@ -75,6 +75,11 @@ public partial class GardenView : Node2D
     static readonly Color RippleTint = new(0.82f, 0.74f, 1f); // the genes' purple, lightened
     readonly List<float> ripples = new();
     int boughtSeen;
+    // A seedling's bloom (step 5c): a burst off the wild flower it became, seconds since it began.
+    const float BloomSeconds = 2.4f;
+    readonly List<(PlantNode Flower, float Age)> blooms = new();
+    // Whether a bloom's burst is showing (the widget runs at full frame rate meanwhile).
+    public bool Blooming => blooms.Count > 0;
     readonly HashSet<PlantNode> restored = new(); // put back by an undo: they grow in again, with no moment
 
     public void Restored(IEnumerable<PlantNode> nodes) => restored.UnionWith(nodes);
@@ -133,6 +138,13 @@ public partial class GardenView : Node2D
         boughtSeen = garden.Bought;
         for (int i = ripples.Count - 1; i >= 0; i--)
             if ((ripples[i] += dt) >= RippleSeconds + RippleGap) ripples.RemoveAt(i);
+        foreach (var flower in garden.JustBloomed) blooms.Add((flower, 0));
+        garden.JustBloomed.Clear();
+        for (int i = blooms.Count - 1; i >= 0; i--)
+        {
+            blooms[i] = (blooms[i].Flower, blooms[i].Age + dt);
+            if (blooms[i].Age >= BloomSeconds || !garden.Nodes.Contains(blooms[i].Flower)) blooms.RemoveAt(i);
+        }
         blend = (float)Engine.GetPhysicsInterpolationFraction();
         toolsAlpha = Mathf.MoveToward(toolsAlpha, ToolsWanted, dt * 3);
         backdropAlpha = Mathf.MoveToward(backdropAlpha, Building ? 1 : 0, dt * 3);
@@ -424,7 +436,10 @@ public partial class GardenView : Node2D
         if (atlas) wildShapes.Begin();
         else foreach (var batch in shapes.Values) batch.Begin();
         foreach (var node in garden.Nodes)
-            if (Textures.InAtlas(node.Spec.Shape) == atlas) AddPart(node, 1);
+        {
+            if (Textures.InAtlas(node.Spec.Shape) != atlas) continue;
+            AddPart(node, 1);
+        }
         foreach (var cut in garden.Cut)
             foreach (var node in cut.Nodes)
                 if (Textures.InAtlas(node.Spec.Shape) == atlas) AddPart(node, cut.FadeOf(node));
@@ -628,6 +643,45 @@ public partial class GardenView : Node2D
                 float r = core.Spec.Radius * (1.05f + 0.45f * EaseOut(t)); // out to half again the core's size
                 Ring(At(core), r, 0.5f + 2f * (1 - t), RippleTint, 0.75f * (1 - t));
             }
+
+        foreach (var (flower, age) in blooms) DrawBloom(flower, age / BloomSeconds);
+    }
+
+    // A seedling blooming into its wild flower, the garden's biggest moment: a bright flash that swells and fades, twelve
+    // long rays turning out from it, and three rings in the flower's hue, one after another, widening to six times its
+    // size.
+    void DrawBloom(PlantNode flower, float t)
+    {
+        var at = At(flower);
+        float r = flower.Spec.Radius;
+        var hue = ColourOf(flower.Spec).Lightened(0.35f);
+        float fade = 1 - t;
+
+        float flash = Mathf.Clamp(1 - t * 3, 0, 1); // the first third
+        if (flash > 0)
+        {
+            markLayer.DrawCircle(at, r * (1.2f + 1.8f * EaseOut(t * 3)), hue.Lightened(0.6f) with { A = 0.55f * flash * flash });
+            markLayer.DrawCircle(at, r * (0.9f + 0.6f * EaseOut(t * 3)), new Color(1, 1, 1, 0.8f * flash));
+        }
+
+        float reach = r * (1.5f + 3.5f * EaseOut(t));
+        float turn = t * 0.8f;
+        for (int i = 0; i < 12; i++)
+        {
+            var dir = Vector2.FromAngle(turn + i * Mathf.Tau / 12);
+            float length = reach * (i % 2 == 0 ? 1 : 0.6f);
+            var from = at + dir * r * (0.8f + t);
+            var to = at + dir * length;
+            markLayer.DrawLine(from, to, new Color(0, 0, 0, 0.3f * fade), 3.5f, true);
+            markLayer.DrawLine(from, to, hue.Lightened(0.4f) with { A = fade * fade }, 1.6f, true);
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            float u = (t - i * 0.12f) / 0.76f;
+            if (u <= 0 || u >= 1) continue;
+            Ring(at, r * (1.2f + 4.8f * EaseOut(u)), 0.5f + 2.5f * (1 - u), hue, 0.85f * (1 - u));
+        }
     }
 
     void Ring(Vector2 at, float radius, float width, Color colour, float alpha)
@@ -970,6 +1024,8 @@ public static class Textures
             SpaceGarden.Core.Shape.Rose => p => R(p) <= Mathf.Abs(Mathf.Cos(3 * A(p))) || R(p) <= 0.3f,
             // Nebula Bloom: three arms curling round a heart (once the Tendril's).
             SpaceGarden.Core.Shape.Swirl => p => R(p) <= 0.3f + 0.7f * Mathf.Pow(Lobes(A(p) + 2.4f * R(p), 3), 2),
+            // Seedling (5c, first pass): a round seed with two pointed leaves opening from it.
+            SpaceGarden.Core.Shape.Sprout => p => R(p) <= 0.5f || R(p) <= 0.35f + 0.65f * Mathf.Pow(Lobes(A(p), 2), 6),
             _ => p => R(p) <= 1,
         };
     }
@@ -995,21 +1051,23 @@ public static class Textures
         return inside;
     }
 
+    // (A wild flower's shape too, on its own: the toolbar's and the evolution menu's icons draw them.)
     static Texture2D MakeShape(Shape shape)
     {
         var corners = GardenView.UnitPolygon(shape);
+        Func<Vector2, bool> inside = InAtlas(shape) ? WildShape(shape) : p => Inside(shape, corners, p);
         var image = Image.CreateEmpty(ShapeSize, ShapeSize, false, Image.Format.Rgba8);
         for (int y = 0; y < ShapeSize; y++)
             for (int x = 0; x < ShapeSize; x++)
             {
-                int inside = 0;
+                int count = 0;
                 for (int sy = 0; sy < Supersample; sy++)
                     for (int sx = 0; sx < Supersample; sx++)
                     {
                         var p = new Vector2(x + (sx + 0.5f) / Supersample, y + (sy + 0.5f) / Supersample) / ShapeSize * 2 - Vector2.One;
-                        if (Inside(shape, corners, p / ShapeFill)) inside++;
+                        if (inside(p / ShapeFill)) count++;
                     }
-                image.SetPixel(x, y, new Color(1, 1, 1, inside / (float)(Supersample * Supersample)));
+                image.SetPixel(x, y, new Color(1, 1, 1, count / (float)(Supersample * Supersample)));
             }
         image.GenerateMipmaps();
         return ImageTexture.CreateFromImage(image);

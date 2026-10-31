@@ -144,7 +144,7 @@ static class WildFlowers
         yield return Wild(passive, NodeKind.NebulaBloom, "Nebula Bloom", Shape.Swirl, 0xF4EEFA, WildUnlock.Start,
             "Power reaching a seedling within 5 links counts double.", "Useless without a seedling.") with
         {
-            MaxFruits = 3,
+            MaxFruits = 3, SeedlingBoost = Tuning.NebulaFill,
         };
     }
 }

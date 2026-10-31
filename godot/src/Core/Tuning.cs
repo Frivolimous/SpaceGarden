@@ -206,10 +206,22 @@ public static class Tuning
     // as likely, with one), and wild flowers within that reach make MoonlitBonus more (power and blobs; not stacking).
     public const int MoonflowerReach = 5;
     public const float MoonflowerBoost = 2, MoonlitBonus = 0.1f;
-    // Nebula Bloom: power reaching a seedling within NebulaReach links counts NebulaFill times. Inert until seedlings
-    // (5c) read these.
+    // Nebula Bloom: power reaching a seedling within NebulaReach links counts NebulaFill times (not stacking).
     public const int NebulaReach = 5;
     public const float NebulaFill = 2;
+    // A passive bud that grows wild picks among its base's own kinds PassiveBaseShare of the time and among the
+    // passive-only kinds the rest (alike within each), when there are both. Picked evenly (5d's first build), a grove
+    // bud became a passive-only kind two times in three.
+    public const double PassiveBaseShare = 2.0 / 3;
+
+    // ==== SEEDLINGS ==== \\
+    // Placeholders (DESIGN.md, Seedlings and evolutions). A seedling's fill is its power (its own numbers are in its
+    // NodeSpec: its store, the choice's 200, no upkeep, a heavy power weight, and no transfer, so it only takes power
+    // in). Full, it offers ChoiceCount evolutions; choosing one raises its store to its target, FirstBloom times
+    // BloomGrowth for each evolution chosen before; full again, it blooms. Repeats are offered only once the garden has
+    // RepeatsAfter evolutions.
+    public const double FirstBloom = 1_000, BloomGrowth = 5;
+    public const int ChoiceCount = 3, RepeatsAfter = 5;
 
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in

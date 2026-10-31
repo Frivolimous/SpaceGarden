@@ -99,7 +99,7 @@ Draft rates, to tune in play, at real speed: a fully powered grove sends a growt
 - Stems are cheap to maintain. Leaves cut a stem's upkeep: each takes a quarter off, so two leaves halve it. Leaves grow from growth blobs, like all fruit.
 - A lab costs half as much again as a grove to keep (6 a second against 4).
 - Generator, grove and lab fruits each raise their flower's output by their `FlowerBonus` (a tenth: a generator holds two fruit, so +20%; a grove or lab three, so +30%). A flower's upkeep is multiplied by 1 plus its fruits' `FlowerPowerFactor` (a leaf's is -0.25). Both are set on the fruit's own spec.
-- The core has no fruit of the usual kind; its fruit are the marker fruits that show evolutions chosen (see Progression).
+- The core has no fruit.
 
 Fruit, once grown, stays. Groves are needed while the garden grows; if growth stalls, they stop being useful. The upgrade costs should be paced so a small number of groves always stays useful, keeping up with new stems and flowers.
 
@@ -253,7 +253,7 @@ Nodes come in two tiers. Main nodes are called **stems** (the structure) and **f
 | Wild flowers | 15 kinds (see Wild flowers) | Any new bud, planted or passive, can grow wild, within the wild flower limit; a bloomed seedling becomes one |
 | Seedling | Seedling | Planted by hand from the toolbar, never passive (see Progression) |
 | Hub | Hub | Planted by hand, one at a time; not a wild flower (see Progression) |
-| Fruits | Leaf on stems, each flower's own fruit set, and marker fruits on the core | Grown by growth blobs; a marker fruit appears when an evolution is chosen |
+| Fruits | Leaf on stems and each flower's own fruit set | Grown by growth blobs |
 
 Each flower type has its own set of fruits, all grown by growth blobs. Leaves on stems cut the stem's power upkeep; generator, grove and lab fruits raise their flower's efficiency (see Economy).
 
@@ -296,7 +296,7 @@ Home leaves the pool: crawlers bring their own home node (step 7). The Hub is no
 Ember and Comet Bloom end themselves, the one exception to "never destroys anything" (decided Oct 30): only a wild flower's own life cycle ends it, never neglect; its slot is freed and the away note says so. An Ember rewards attention: pruned once it falls below a plain generator, around day 1.5, it averaged about 1.5 generators, and its slot is free for what grows next; neglected, it just fades out.
 
 **Built in 5d** (Oct 30; the rules in `godot/src/Core/WildFlowers.cs` and `Garden.cs` (Wild flowers), every number a first pass in `Tuning`, Wild flowers). Details settled in the build, for Jeremy to review:
-- **The roll.** A bud's basic kind is rolled first, as before (so it still needs room under its own cap), then whether it grows wild. With no free slot no dice are thrown, so a garden without slots grows exactly as it did. If it does grow wild, its kind is picked among the kinds that can stand in for its basic kind, plus the passive-only kinds for a passive bud; a planted bud never becomes a passive-only kind. For a passive bud the pick is weighted toward its base's own kinds (decided Oct 30, to build with 5c; first built evenly, which made a grove bud a passive-only kind two times in three). A wild bud forms as its own silhouette from the start, so the player sees what's coming. The forming bud's toolbar button still pulses for its base kind. (So an Amplifier or Resistor can't appear while the stem cap is full: accepted.)
+- **The roll.** A bud's basic kind is rolled first, as before (so it still needs room under its own cap), then whether it grows wild. With no free slot no dice are thrown, so a garden without slots grows exactly as it did. If it does grow wild, its kind is picked among the kinds that can stand in for its basic kind, plus the passive-only kinds for a passive bud; a planted bud never becomes a passive-only kind. For a passive bud the pick is weighted toward its base's own kinds (decided Oct 30, built in 5c; first built evenly, which made a grove bud a passive-only kind two times in three): when both groups have kinds that can grow, a passive bud picks among its base's own kinds two times in three (`Tuning.PassiveBaseShare`) and among the passive-only kinds the rest, alike within each group. A wild bud forms as its own silhouette from the start, so the player sees what's coming. The forming bud's toolbar button still pulses for its base kind. (So an Amplifier or Resistor can't appear while the stem cap is full: accepted.)
 - **Slots.** A wild flower and a wild bud each hold their slots (and their base's where they take one); undoing a prune needs them back. The garden card counts a Tendril or Big Stem among its stems, a Pulsar, Twin Star or Ember among its generators. `Garden.UnlockWild(kind)` adds an Evolution kind to the pool (5c calls it as the evolution blooms); `Garden.WildCaps` holds per-kind caps, none set.
 - **Amplifier:** each Amplifier a gene or growth blob passes doubles it half the time (`AmplifyChance`), at most once a blob, so blobs stay whole genes and chains don't compound: 50% larger on average. The second blob carries on from the Amplifier with the hops the first had left.
 - **Resistor:** never one of a blob's choices of where to go next, from either side, so no hop is wasted; a blob with nowhere else to go ends. The garden card's gene reach counts this exactly (not an Amplifier's doubling). At the base of a lab-free branch it keeps gene blobs from wandering in; labs and passive growth beyond it are cut off. It sends power on at 6 a second (a stem 30).
@@ -306,8 +306,8 @@ Ember and Comet Bloom end themselves, the one exception to "never destroys anyth
 - **Ember:** 24 a second at first, falling in a straight line to 0 over 3 days, drawn darker as it goes; it burns out at 0. **Comet Bloom:** 3,840 blobs as it appears (1,440 gene and 2,400 growth blobs, mixed as a lab's and a grove's are), a wider, brighter halo, withers after a day. An ending leaves like a prune (the part drifts off and fades) but isn't one: nothing to undo, not counted as pruned. The part's card counts down ("Burns out in: 2d 4h").
 - **Lumber Grove:** 2,400 growth blobs an hour at 6 upkeep. **Seed Pod:** 1,800 an hour, leaving 60 at once (every 2 minutes at full fill). **Wild Lab:** 720 gene blobs an hour and 5 research each counting double. **Lichen:** 576 gene blobs an hour at upkeep 3.
 - **Moonflower:** each within 5 links of a bud's part makes the chance three times as high (`MoonflowerBoost` 2, adding up); wild flowers within 5 links of one make 10% more (not stacking).
-- **Nebula Bloom** is inert: `NebulaReach` (5) and `NebulaFill` (2) wait for 5c's seedlings.
-- **Discovery:** a kind is discovered the first time it grows (`Tracking.Discovered`, with the age). A wild flower's discovery is the journal's moment ("Wild flower discovered: Tendril", in a pale gold) in place of "First tendril emerged"; an ending is one too ("An Ember burned out"). The **Codex** tab lists the discovered kinds under Parts, Wild flowers and Fruit, in the order found, each with when ("Found day 2, 14:03") and its Effect line (a wild flower's quirk after it). A save from before 5d counts what it grew as found at its start.
+- **Nebula Bloom:** `NebulaReach` (5) and `NebulaFill` (2), inert in 5d, read by 5c's seedlings (see Built in 5c).
+- **Discovery:** a kind is discovered the first time it grows (`Tracking.Discovered`, with the age). A wild flower's discovery is the journal's moment ("Wild flower discovered: Tendril", in a pale gold) in place of "First tendril emerged"; an ending is one too ("An Ember burned out"). The **Codex** tab lists the discovered kinds under Parts, Wild flowers and Fruit, in the order found, each with when ("Found day 2, 14:03") and its Effect line (a wild flower's quirk after it). (5c, Jeremy, Oct 31: each kind is a card, two to a row, with its shape and name in its hue, the description, then when it was found.) A save from before 5d counts what it grew as found at its start.
 - **Part cards:** a wild flower's quirk under its name (what it trades, and the base slot it takes); Growth or Genes by what it sends.
 - **Away note:** the basic parts grown as before, then "Wild flowers grew: an Ember and 2 Tendrils.", each discovery on a line of its own in the pale gold ("Wild flower discovered: Ember (see the Codex)."), then "An Ember burned out." These moments aren't repeated among the three listed.
 - **Looks** (revised after Jeremy's review of the first sheet): Amplifier a white plus, Resistor a white minus, Tendril a Big Stem's lobed disc with three bumps, Big Stem four lobes, Pulsar a five-pointed star, Twin Star two pentagons, Ember five flame petals, Lumber Grove two squares (an eight-pointed star; "ok, not the best"), Seed Pod a plain oval, Wild Lab two triangles, Lichen a scalloped hexagon at a stem's size, Buffer a solid eight-pointed burst (its glow fruit too), Comet Bloom a white six-toothed gear (the Resistor's first shape, kept as an idea), Moonflower six petals, Nebula Bloom three curling arms (the Tendril's first shape). They come from one atlas texture, drawn in a batch of its own per layer, so every wild flower together costs one draw call for the parts and one for their buds. Hues are the base's, shifted a little; the passive-only kinds are white. Glow is a small white burst, wood a brown diamond.
@@ -351,7 +351,7 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 
 The six after the Hub alternate seedling slots and the wild flower limit at costs set in 5b as placeholders (each about a third dearer than the last); then the track ends, as long-term pacing isn't designed yet. Third and later core links come only from evolutions (Second Path). Groves and labs stay uncapped, limited by free links and power upkeep.
 
-**Built in 5b** (`Garden.Buy`, `Garden.Next`; the costs are data in `Tuning`, Research). Buying spends the balance and raises the cap at once; the core ripples in the genes' purple. The wild flower limit, seedling slots and the Hub are counters in `Capacity` until 5c, 5d and the Hub's step give them mechanics (5d has given the wild flower limit its: see Wild flowers). The levels bought go in the save, still version 9 (5a's v9 shipped on master, and the new field is optional): a 5a save, which has none, keeps its caps and reads them as the stem and generator upgrades bought (a second core link as the core track bought up to it). The Research panel is a window like the Almanac's (its header dragged, ✕ or the slot to close): the balance in its header ("1,600 genes"), then a card per track in its role's hue (stems green, generators yellow, the core a light neutral grey, Jeremy's pick), each with a glyph of its part (a stem's node and links, a generator's pentagon, the ringed core) and only the next upgrade ("+1 stem", "+1 wild flower", "+1 core link", "+1 seedling slot", "Hub"), its cost beside a gene dot, and **Buy**, filled with the hue. While the balance falls short the button is dim and says how many more genes it needs ("300 more"), over a fill in the hue that grows left to right as the balance nears the cost; beside each title an (i) shows, the moment the pointer is on it (no tooltip delay), a hint of what the next upgrade does ("Increases the total number of stems you can add to your garden", "Lets special, rare wild flowers grow instead of normal stems or flowers": `Upgrade.Does`); a card the balance covers glows softly, breathing. A finished track reads "All bought", its glyph ticked. No caps or counts show (Jeremy, Oct 30: the garden card has those). No alert yet: that waits on the alerts design.
+**Built in 5b** (`Garden.Buy`, `Garden.Next`; the costs are data in `Tuning`, Research). Buying spends the balance and raises the cap at once; the core ripples in the genes' purple. The wild flower limit, seedling slots and the Hub were counters in `Capacity` until 5c, 5d and the Hub's step give them mechanics (5d gave the wild flower limit its, 5c the seedling slots theirs). The levels bought go in the save, still version 9 (5a's v9 shipped on master, and the new field is optional): a 5a save, which has none, keeps its caps and reads them as the stem and generator upgrades bought (a second core link as the core track bought up to it). The Research panel is a window like the Almanac's (its header dragged, ✕ or the slot to close): the balance in its header ("1,600 genes"), then a card per track in its role's hue (stems green, generators yellow, the core a light neutral grey, Jeremy's pick), each with a glyph of its part (a stem's node and links, a generator's pentagon, the ringed core) and only the next upgrade ("+1 stem", "+1 wild flower", "+1 core link", "+1 seedling slot", "Hub"), its cost beside a gene dot, and **Buy**, filled with the hue. While the balance falls short the button is dim and says how many more genes it needs ("300 more"), over a fill in the hue that grows left to right as the balance nears the cost; beside each title an (i) shows, the moment the pointer is on it (no tooltip delay), a hint of what the next upgrade does ("Increases the total number of stems you can add to your garden", "Lets special, rare wild flowers grow instead of normal stems or flowers": `Upgrade.Does`); a card the balance covers glows softly, breathing. A finished track reads "All bought", its glyph ticked. No caps or counts show (Jeremy, Oct 30: the garden card has those). No alert yet: that waits on the alerts design.
 
 All three tracks share one gene income, and the stem and generator tracks will probably need trimming in playtesting.
 
@@ -380,27 +380,60 @@ All three tracks share one gene income, and the stem and generator tracks will p
 
 ### Seedlings and evolutions (5c)
 
-- **Slots.** A garden starts with 1 seedling slot; more are bought in the core track. A slot stays used after its seedling blooms (counted by the marker fruits on the core), so each slot is exactly one evolution.
+- **Slots.** A garden starts with 1 seedling slot; more are bought in the core track. A slot stays used after its seedling blooms (counted in the garden's data, from the evolutions chosen), so each slot is exactly one evolution.
 - **Planting.** Seedlings never grow passively. The player plants them from the toolbar, like a bud.
-- **Filling.** A seedling fills with **power**, not genes: 200 before the choice. Selecting a growing seedling opens a radial menu with **3 random evolutions**. Choosing one raises its target to 1,000 for the first bloom, then ×5 each time (5,000, 25,000 and so on). Consider capping a seedling's intake so early blooms don't finish in seconds.
-- **Marker fruit.** On choosing, a marker fruit grows on the core: a unique shape per evolution, coloured by its theme's role hue. Core fruit shows evolutions chosen.
-- **Bloom.** The effect applies immediately and permanently, and the seedling becomes the evolution's wild flower, which also adds +1 to the wild flower limit and +1 to its base type's cap (so the flower, which takes both slots, costs nothing). Pruning the flower removes only the flower, never the effect or the marker. All effects, including bundled changes, are net positives with mild drawbacks, so no choice is regretted.
-- **Repeats.** Evolutions can be taken again ("Build your Core II"). Each has its own repeat limit and per-level values, kept in data. No repeats are offered until the garden has 5 evolutions. Smart Particles is one-off.
+- **Filling.** A seedling fills with **power**, not genes, and its fill is simply its power against its store (Jeremy, Oct 31: no separate intake parameter). It has no upkeep, a heavy power weight (so its neighbours favour it) and no transfer rate (it never sends power on): it only takes power in. Its store is 200 before the choice; full, selecting it opens a radial menu with **3 random evolutions**. Choosing one raises its store to the target, 1,000 for the first bloom, then ×5 each time (5,000, 25,000 and so on); full again, it blooms.
+- **Evolution record** (Jeremy, Oct 31). The Almanac lists the garden's evolutions, each with its current level and when it was chosen. Nothing shows on the core for now: marker fruits read as flowers bare and as UI buttons in bubbles, and gems set into the core's rim didn't read well either. To revisit if needed.
+- **Bloom.** The effect applies immediately and permanently, and the seedling becomes the evolution's wild flower with a flashy effect, which also adds +1 to the wild flower limit and +1 to its base type's cap (so the flower, which takes both slots, costs nothing). Pruning the flower removes only the flower, never the effect. All effects, including bundled changes, are net positives with mild drawbacks, so no choice is regretted.
+- **Repeats.** Evolutions can be taken again ("Build your Core II"). Levels II, III and later give exactly the same effect as level I, never diminished, and stack additively: each level adds the same share of the base (Build your Core ×1.5, ×2.0, ×2.5; Rapid Evolution genes ×2, ×3, ×4 with upkeep ×1.8, ×2.6, ×3.4). Repeats unlock once the garden has 5 evolutions; each evolution's repeat limit is set in data (Jeremy, Oct 31).
 - **Unlock evolutions** (Pulsar Power, Twin Stars, Big Stem) also give a small boost to their base type and add their kind to the wild flower pool (no per-kind cap).
 - The original skill tree (see [ORIGINAL_SYSTEMS.md §9](ORIGINAL_SYSTEMS.md)) stays the content pool for later evolutions.
 
 | Evolution | Effect | Becomes |
 | --- | --- | --- |
 | Build your Core | Core power ×1.5 | Ember |
-| Second Path | Core link +1, core transfer ×1.5 | Tendril |
-| Long Stemmed | Stem transfer ×3 | Amplifier |
-| Smart Particles | Blobs never wander into dead ends | Resistor |
-| Rapid Evolution | Labs ×2 genes, ×1.25 upkeep | Wild Lab |
+| Second Path | Core link +1, core transfer ×1.5 | Amplifier |
+| Long Stemmed | Stem transfer ×3; only offered once repeats unlock (after 5 evolutions) | Tendril |
+| Smart Particles | Blobs avoid dead ends: 50% of the time at level I, always at level II (max level II) | Resistor |
+| Rapid Evolution | Labs ×2 genes, ×1.8 upkeep | Wild Lab |
 | More Power | Generator cap +2 | Lichen |
-| Pulsar Power | Generators make more; unlocks Pulsar | Pulsar |
-| Twin Stars | Generator transfer up; unlocks Twin Star | Twin Star |
+| Pulsar Power | Generators +10% output; unlocks Pulsar | Pulsar |
+| Twin Stars | Generator transfer rate up; unlocks Twin Star | Twin Star |
 | Big Stem | Stems hold +1 leaf; unlocks Big Stem | Big Stem |
 | Wild Bloom | Wild flower limit +2 | Moonflower |
+
+(Balance update, Jeremy, Oct 31: Second Path and Long Stemmed swapped flowers; Long Stemmed held back; Smart Particles in two levels; Rapid Evolution's upkeep ×1.8; Pulsar Power +10%. Watch More Power and Pulsar Power in play as likely default picks.)
+
+**Built in 5c** (Oct 31; the rules in `godot/src/Core/Evolutions.cs` and `Garden.cs` (Seedlings and evolutions), every number a placeholder in `Tuning` (Seedlings) or the evolution table's data). Details settled in the build, for Jeremy to review:
+- **Planting.** The Seedling is a fifth bud button in a part's toolbar (a pale green sprout: a round seed with two pointed leaves), greyed while no slot is free. It forms as a bud (never growing wild) and emerges as a small one-link flower at the end of its branch. Slots used are the evolutions chosen, plus seedlings yet to choose and seedling buds forming.
+- **Filling** (revised by Jeremy, Oct 31; the first build took power in as an upkeep capped at 3 a second): the seedling's own spec has no upkeep, a power weight of 1.5 (the core's) and a transfer rate of 0, so it never sends power on. Its store is 200 (the spec's), then its evolution's target (`PlantNode.Store`), and its card's Power line ("Power: 640 / 1000") is its progress. A part sends it power as it would any neighbour less full than itself, so it fills as fast as its neighbours send and, like any part (and as in the TS game), only as full as they are: a garden running at 80% leaves it short of its choice or bloom. Kept so for now (Jeremy, Oct 31); if playtesting shows seedlings stalling, the TS game's Weight spell priority (a node below full takes power from any sender above 25%) or weight counting in the "less full" test are the options. Full at 200, it rolls its 3 offers then, from the garden's own dice, so tapping again shows the same three and a catch-up rolls alike; full of its target, it blooms. A seedling's power isn't counted in the garden card's Power, the history's stored power or the away note's dip.
+- **Nebula Bloom** now works: power reaching a seedling within 5 links of one counts twice (not stacking).
+- **The choice.** Tapping a waiting seedling opens a half ring of three discs under it (over it if the ring and its card don't fit below; the seedling's toolbar then goes below), in the core menu's look. Each shows the shape of the flower it blooms into, in its role hue (a repeat marked II or III); the one under the pointer shows a small card: the name ("More Power II"), the level's effect ("Generator cap +2") and "Blooms into a Lichen" ("; Pulsars can then grow wild" for an unlock). No signal that a choice waits (alerts are still open).
+- **Targets** count the evolutions chosen before (1,000 × 5^n), so two seedlings growing at once get 1,000 and 5,000 in the order chosen.
+- **Evolution record** (Oct 31; three looks on the core were tried and dropped: marker fruits in the flowers' own shapes, the same in pale bubbles, and round gems set into the core's rim). The **Almanac's Evolutions tab** shows every level chosen, in the order chosen, as cards two to a row (Jeremy, Oct 31): "Pulsar Power" and then "Pulsar Power II" each get one. A card holds the shape of the flower it blooms into and the name, in its theme's role hue (power yellow: Build your Core, More Power, Pulsar Power, Twin Stars; structure green: Second Path, Long Stemmed, Big Stem; genes purple: Rapid Evolution; white: Smart Particles, Wild Bloom), its effect in all at that level ("Generators' power ×1.2"), and "Chosen day 2, 14:03". Seedling slots are counted from `Garden.Evolved`. Each evolution keeps when it was chosen (`ChosenAt`, saved).
+- **Bloom.** The effect applies at once, the journal says "Second Path bloomed into an Amplifier", and the seedling is swapped for the flower where it stands, full from the power it held. The flashy effect (first pass, 2.4 s): a white flash swelling off the flower, twelve rays turning out from it, and three rings in its hue widening to six times its size, one after another. A catch-up shows none. The wild flower limit rises by 1, and the base cap by 1 where the flower takes that slot (stems for a Tendril or Big Stem, generators for an Ember, Pulsar or Twin Star); the Amplifier, Resistor, Wild Lab, Lichen and Moonflower take only a wild flower slot, so they add only that.
+- **Effects** (each level adds level I's effect again, `EvolutionLevel.At`; different evolutions multiply; multipliers touch the basic kind only, so a Tendril, Big Stem or Pulsar keeps its own numbers). Repeat limits are this build's placeholders:
+
+| Evolution | Level I | Limit |
+| --- | --- | --- |
+| Build your Core | Core power ×1.5 (×2, ×2.5) | III |
+| Second Path | Core link +1, core transfer ×1.5 | II |
+| Long Stemmed | Stem transfer ×3 (offered from 5 evolutions) | II |
+| Smart Particles | Blobs avoid dead ends 50% of the time (always at II) | II |
+| Rapid Evolution | Labs' genes ×2 at ×1.8 upkeep (×3 at ×2.6, ×4 at ×3.4) | III |
+| More Power | Generator cap +2 | III |
+| Pulsar Power | Generators' power ×1.1 (its boost) | III |
+| Twin Stars | Generator transfer ×1.5 (its boost) | II |
+| Big Stem | Stems hold +1 leaf (its boost) | II |
+| Wild Bloom | Wild flower limit +2 | III |
+
+- **Repeats** are offered only once the garden has chosen 5 evolutions; a level's count includes those still growing, so two seedlings can't take the same level. The choice menu and the Almanac show an evolution's effect in all at its level ("Core power ×2").
+- **Smart Particles:** at each step, half the time at level I and always at level II, a blob doesn't step into a dead end (a part with nowhere to go on but back) unless it could be taken in there: for a gene blob only the core, for a growth blob a part with something forming or room to start something, for a buff blob a part not yet buffed. With nowhere else to go it turns back as before. The garden card's gene reach follows the same rule, at the same odds.
+- **Pruning a seedling.** Before its choice, its slot frees. After, its evolution waits (its slot stays, and the core's card says "Next seedling: Second Path"): the next seedling to emerge takes it up, starting empty like any new part (an undo brings the pruned one back with its power). Pruning the bloomed flower takes only the flower.
+- **Away note:** "A seedling bloomed: Second Path, now an Amplifier." first (several on one line), before the parts grown. **Journal:** "Evolution chosen: Second Path" and the bloom, in the seedling's pale green. **Export:** `evolutions_chosen`, `seedlings_bloomed`, `seedling_slots`.
+- **Save:** still version 9, with optional fields: the evolutions chosen (kind, level, target, bloomed and when) and each seedling's offers and evolution (its power is saved as any part's). A loaded garden works its multipliers out again; its caps are in the saved capacity.
+- **Dev aids:** `--evolve=NAME[,NAME]` (chosen and bloomed at once, the flower on the deepest free link), `--seedling`, `--seedfill=N` (its power), `--choose=N` (each waiting seedling takes its Nth offer), `--bloom` (each chosen seedling filled, so it blooms and its burst shows) and `--tap=seedling` (the choice menu open, its first card showing). Shots: `--fresh --grove --seedfill=200 --tap=seedling` for the menu, `--seedfill=200 --choose=0 --bloom --at=12,40,90` for the burst, `--evolve=` with some and `--almanac=evolutions` for the Almanac's list.
+
 
 ### The Hub
 
@@ -451,15 +484,16 @@ Step 3b, revised in step 3d (Jeremy's decisions, Oct 29). The plant is stupid an
 | Kind | Lines |
 | --- | --- |
 | Core | Power, Gen X/s (sends Y/s), Connections |
-| Stem | Power, Drain X/s, Connections |
+| Stem | Power, Drain X/s (sends Y/s), Connections |
 | Generator | Power, Gen X/s (sends Y/s) |
 | Grove | Power, Drain X/s, Growth X/min |
 | Lab | Power, Drain X/s, Genes X/min |
 
-- **Power** is held against its store. **Sends** is how fast it can send power on (its transfer rate).
+- **Power** is held against its store. **Sends** is how fast it can send power on (its transfer rate), beside Gen or Drain on every power maker and every part that can have 2 or more links (a stem, the core, the inline wild flowers; Oct 31).
 - **Growth** (growth blobs a minute) and **Genes** (genes a minute) are what the flower makes, not what arrives: many of a far lab's genes never find the core.
 - **Connections** (links against the most it can have, the core's from Capacity) shows only on a node with 2 or more.
 - **Forming** ("Forming: Lab bud 60%", "Forming: Leaf 40%") shows only while a fruit or bud is forming in the node.
+- **Buffed** (Oct 31): while a buff blob's boost runs on a part (from a Buffer or a glow fruit), a small glow fruit, its shape and colour, sits beside the card's heading.
 
 **The garden card**, in the same style:
 
@@ -477,7 +511,7 @@ Wild flowers: 1 / 2
 Groves: 4, Labs: 9
 ```
 
-Gen and Drain are what the garden makes and costs now; Gen's value is coloured by how it compares with Drain (see below). Since 5b, Genes is the balance left to spend and Next names the cheapest next upgrade across the three tracks, its cost and its ETA, or "(in Research)" once the balance covers it; with every upgrade bought it reads "Next: every upgrade bought". (Through step 4 it was the total against the next unlock's threshold.) The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
+While seedlings grow, a "Seedling: 234 / 1,000" line sits right under Power (Oct 31): every seedling's power against its store, summed (their power is kept out of the Power line, as it goes to their evolutions). Gen and Drain are what the garden makes and costs now; Gen's value is coloured by how it compares with Drain (see below). Since 5b, Genes is the balance left to spend and Next names the cheapest next upgrade across the three tracks, its cost and its ETA, or "(in Research)" once the balance covers it; with every upgrade bought it reads "Next: every upgrade bought". (Through step 4 it was the total against the next unlock's threshold.) The ETA is at the current rate of genes reaching the core, expected rather than measured: each lab's blob rate times the chance its blob finds the core before it fades (`GardenStats.GeneReach`, the blob's random walk worked out as odds). "(plant a lab)" stands in for it with no labs.
 
 **Colour coding** (Jeremy, Oct 29): only the value, or a fraction's numerator, is tinted; labels and denominators stay white.
 - **Power** (a part's, and the garden's total): white when full, shading to yellow above full (all yellow at 125%) and to red below it (all red at 50% and under).
@@ -519,7 +553,7 @@ Each step should leave the game playable. The garden alone, before crawlers, sho
 | 3d | UI revision (done) | Hovering shows only the ring; a part's card in a fixed spot, with the garden's above it while Info is on, in the original game's "Label: value" style; a half-ring menu under the core (Info, Build, Ambient, Minimise, Settings); the core clickable in Ambient to wake the garden; settings trimmed, with a Developer submenu in debug builds; pinning removed. See Information display |
 | 3e | Manual planting (done) | A manual bud starts at once and forms like a passive one; every node bud grows on its own at its parent's fill (about 2 minutes at full), growth blobs hurry it, and fruit still grows only from blobs. Planting stays free, and a garden with no grove needs no special case. See Growth and pruning |
 | 4 | Information and tracking (done) | Lifetime totals and four time series with tiered history (save v8), a debug-only export, the Almanac as a journal of moments, a "while you were away" note, power visuals at the top of the range, a light balance pass. See Step 4 below |
-| 5 | Progression (decided Oct 30; 5a, 5b and 5d done) | 5a (done): prep work (the passive growth rename in the game's text, gene spending and save v9 groundwork). 5b (done): three gene-spending upgrade tracks (stems, generators, core) behind the core menu's Research slot, shaping tools from garden size. 5c: seedlings and evolutions with marker fruits. 5d (done, built before 5c): wild flowers (wild growth, 15 kinds, one limit), the Codex, their journal moments and away-note lines. The Hub, the Codex, journal and away-note additions, save v9. The real-week tuning check (moved from step 4) is postponed until step 5 is built. See Step 5 below |
+| 5 | Progression (decided Oct 30; 5a, 5b, 5c and 5d done) | 5a (done): prep work (the passive growth rename in the game's text, gene spending and save v9 groundwork). 5b (done): three gene-spending upgrade tracks (stems, generators, core) behind the core menu's Research slot, shaping tools from garden size. 5c (done): seedlings and evolutions, and the Almanac's evolutions list. 5d (done, built before 5c): wild flowers (wild growth, 15 kinds, one limit), the Codex, their journal moments and away-note lines. The Hub, the Codex, journal and away-note additions, save v9. The real-week tuning check (moved from step 4) is postponed until step 5 is built. See Step 5 below |
 | 6 | Polish → public beta | Garden-only proof of concept, polished, with onboarding (its first hint: plant a grove, since nothing grows passively without one). Revisit idle CPU against the benchmarks before release. Achievements: Steam achievements only, with no in-game toast or list; test whether Steam's overlay toast shows over the transparent window, and keep a clean path without Steam. End of step = public beta candidate |
 | 7+ | Post-beta | Crawlers (when they unlock in a garden: placeholder, decided here) and everything after |
 
@@ -596,7 +630,7 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 | --- | --- |
 | 5a (done) | Prep: the passive growth rename in the game's text, the gene balance (spent apart from genes earned), the garden size counter, the wild chance tuning variables, save v9. See Review decisions, 2 |
 | 5b (done) | Upgrade tracks: spending genes on stems, generators and the core, the Research panel, shaping tools from garden size |
-| 5c | Seedlings and evolutions, marker fruits, repeats |
+| 5c (done) | Seedlings and evolutions, the evolution record (the Almanac's list), repeats (see Seedlings and evolutions, Built in 5c) |
 | 5d (done) | Wild flowers: the 15 kinds, the chance and limit, shapes. Built before 5c, since a bloomed seedling becomes its evolution's wild flower (see Wild flowers, Built in 5d) |
 | Hub | Planted by hand, its own pool, points and per-kind panel |
 
@@ -605,7 +639,7 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 - **Journal:** each kind's first appearance, each evolution chosen and bloomed, the first Hub planted, core links bought and the Hub bought. These replace the old unlock moments (a core link or the Hub still reads as a moment; stems and generators bought do not).
 - **While you were away:** seedlings bloomed, new wild flowers (discoveries highlighted), Hub points earned, Embers burned out. This replaces the old "unlocks reached".
 - **Display text that named unlocks** got new wording in 5b: the garden card's "Next" line and Genes colouring (the cheapest next upgrade and the balance), the away note's "unlocks reached" and the journal's unlock moments (shaping tools gained, core links and the Hub bought), the build bar's tool captions (garden size), and the Step 4 totals' "unlocks reached" (upgrades bought). See Upgrade tracks, Wording.
-- **Save version 9.** Older saves are set aside, not migrated. It adds gene spending and track levels, seedlings and marker fruits, wild flowers and their state (an Ember's dimness, a Comet Bloom's age), the Hub (pool, points, levels, dormancy), discovered kinds, and the peak main-node count. 5a opened version 9 with the gene balance and the peak main-node count; 5b to 5d add their own fields as they're built.
+- **Save version 9.** Older saves are set aside, not migrated. It adds gene spending and track levels, seedlings and evolutions, wild flowers and their state (an Ember's dimness, a Comet Bloom's age), the Hub (pool, points, levels, dormancy), discovered kinds, and the peak main-node count. 5a opened version 9 with the gene balance and the peak main-node count; 5b to 5d add their own fields as they're built.
 - **Crawlers'** starting assumption moves to around week two, after the Hub.
 - **The real-week tuning check is postponed until step 5 is built.** Then: run a real week on the new tracks, retune costs, and check the gene income ceiling (whether flat gene income, with labs needing to sit near the core, is a real problem).
 
@@ -619,6 +653,7 @@ Jeremy settled the design with a chat agent on Oct 30. The rules live in Progres
 
 **Open for step 5**
 - **Alerts.** How the garden tells the player that something waits: an upgrade affordable, a seedling's choice, a bloom, a discovery. Red dots are distracting (the core's dot was dropped in 3d), so look for a different way, for example a lit or pulsing Research slot, a glint on the core, a journal moment, or the away note. 5b shipped the Research panel with no signal (the garden card's Next line says "(in Research)" once the cheapest upgrade is affordable, when Info is on); the alert is still to design.
+- **To check in the next notification / UI pass** (Jeremy, Oct 31): the away note lists a bloomed seedling twice, in "A seedling bloomed: Second Path, now an Amplifier." and again under "Wild flowers grew: …". Trim one when the alerts and away note are next looked at.
 
 ## Parked ideas
 
@@ -653,9 +688,9 @@ Design layers still to work through:
 - [x] Specialist effects: Resistor, Amplifier, Buffer (step 5): in the wild flower table; numbers are placeholders
 - [ ] Long-term pacing beyond week one
 - [x] Choice-based core levels and seedling slot timing (step 5): replaced by the three gene-spending tracks, with seedling slots in the core track
-- [x] Which basic node each evolution becomes, and its fruit (step 5): the evolution table and marker fruits
+- [x] Which basic node each evolution becomes, and its fruit (step 5): the evolution table and its record in the Almanac
 - [ ] Step 5 open points (destruction exception, 5a, rename scope, planted buds growing wild, Research dot, content batching, gene totals)
-- [ ] Build step 5 (5a prep and 5b tracks done; 5c, 5d, Hub), then the real-week tuning check
+- [ ] Build step 5 (5a prep, 5b tracks, 5c seedlings and 5d wild flowers done; the Hub), then the real-week tuning check
 - [ ] Alerts: how the garden signals that something waits, without red dots (5b shipped the Research panel without one; still open)
 - [ ] Hub details: N for the points curve, milestone levels, upkeep per upgrade, respec
 - [ ] Onboarding over the first days (step 6), starting with planting the first grove

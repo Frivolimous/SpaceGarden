@@ -87,6 +87,7 @@ public sealed class Garden
     readonly List<PlantNode> sending = new(); // flowers with a blob ready, this economy step
     readonly List<PlantNode> budding = new(); // parts whose bud grew whole on its own, this economy step
     readonly List<PlantNode> ending = new(); // wild flowers whose life cycle ends this economy step
+    readonly List<PlantNode> blooming = new(); // seedlings that bloom this economy step
     readonly List<(PlantNode From, PlantNode To, float Power)> transfers = new(); // clumps of power moving, this economy step
     readonly Random looks = new(); // for what's only shown (when a flash shows), so the garden's own dice match a catch-up
     long ticks;
@@ -175,7 +176,9 @@ public sealed class Garden
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
         if (!CanSproutFrom(node, kind)) return false;
-        node.Forming = NodeSpecs.All[kind].IsWild ? kind : GrowsWild(node, kind, passive: false, CountKinds());
+        // (A seedling never grows wild: it blooms into one.)
+        node.Forming = NodeSpecs.All[kind].IsWild || kind == NodeKind.Seedling ? kind
+            : GrowsWild(node, kind, passive: false, CountKinds());
         node.Growth = 0;
         node.FormingLook = 0;
         return true;
@@ -263,7 +266,13 @@ public sealed class Garden
             var root = nodes[0];
             var parent = root.Parent!;
             if (!Nodes.Contains(parent) || Nodes.Count + nodes.Count > Tuning.MaxNodes) return false;
-            if (root.Spec.IsFruit ? parent.Fruits.Count >= parent.Spec.MaxFruits : !parent.CanBranch) return false;
+            if (root.Spec.IsFruit ? parent.Fruits.Count >= parent.MaxFruits : !parent.CanBranch) return false;
+            // A seedling comes back with its slot (its evolution's, if it was waiting for it and no other seedling has
+            // taken it up since).
+            if (nodes.Any(n => n.Evolution is { } e && (!Evolved.Contains(e) || Nodes.Any(o => o.Evolution == e))))
+                return false;
+            int seedlings = nodes.Count(n => n.IsSeedling || n.Forming == NodeKind.Seedling);
+            if (seedlings > 0 && SeedlingsUsed + seedlings > Capacity.Seedlings) return false;
             var counts = CountKinds();
             var (stems, generators, wild) = (counts.Stems, counts.Generators, counts.Wild);
             stems += nodes.Count(n => SlotOf(n.Spec.Kind) == NodeKind.Stem);
@@ -527,6 +536,7 @@ public sealed class Garden
     // whether their kind can grow yet (see CanGrowWild), and their base's cap if they take its slot.
     bool HasRoomFor(NodeKind kind, Counts counts)
     {
+        if (kind == NodeKind.Seedling) return SeedlingsUsed < Capacity.Seedlings;
         if (NodeSpecs.All[kind].IsWild && (counts.Wild >= Capacity.WildFlowers || !CanGrowWild(kind))) return false;
         return SlotOf(kind) switch
         {
@@ -599,17 +609,22 @@ public sealed class Garden
 
     // A new bud may grow wild (DESIGN.md, Wild flowers): the chance is the passive or planted one per free wild flower
     // slot (none free, no chance, and no dice thrown, so a garden without slots grows exactly as before), raised near a
-    // Moonflower. If it does, its kind is one of those that can stand in for its base kind (and, for a passive bud, a
-    // passive-only kind), alike, among those that can grow now. Returns the bud's kind.
+    // Moonflower. If it does, its kind is one of those that can stand in for its base kind, among those that can grow
+    // now; a passive bud may also become a passive-only kind, but leans to its base's own (Tuning.PassiveBaseShare).
+    // Alike within each group. Returns the bud's kind.
     NodeKind GrowsWild(PlantNode parent, NodeKind kind, bool passive, Counts counts)
     {
         int free = Capacity.WildFlowers - counts.Wild;
         if (free <= 0) return kind;
         double chance = (passive ? Tuning.PassiveWildChance : Tuning.PlantedWildChance) * free * WildBoostAt(parent);
         if (rng.NextDouble() >= chance) return kind;
-        var pool = NodeSpecs.Wild.Where(s => (s.Wild!.Base == kind || (passive && s.Wild.PassiveOnly)) && CanGrowWild(s.Kind))
-            .Select(s => s.Kind).ToList();
-        return pool.Count == 0 ? kind : pool[rng.Next(pool.Count)];
+        var own = NodeSpecs.Wild.Where(s => s.Wild!.Base == kind && CanGrowWild(s.Kind)).Select(s => s.Kind).ToList();
+        var passiveOnly = passive
+            ? NodeSpecs.Wild.Where(s => s.Wild!.PassiveOnly && CanGrowWild(s.Kind)).Select(s => s.Kind).ToList()
+            : [];
+        if (own.Count == 0 && passiveOnly.Count == 0) return kind;
+        var pool = own.Count == 0 || (passiveOnly.Count > 0 && rng.NextDouble() >= Tuning.PassiveBaseShare) ? passiveOnly : own;
+        return pool[rng.Next(pool.Count)];
     }
 
     // The same for tests: what a bud of this kind starting on parent now would be.
@@ -710,9 +725,12 @@ public sealed class Garden
         {
             Rotation = (float)(rng.NextDouble() * Math.Tau - Math.PI),
             Spin = Tuning.SpinSpeed * (rng.Next(2) == 0 ? 1 : -1),
+            Boost = boosts.GetValueOrDefault(spec.Kind, Boost.None),
         };
         if (parent == null) node.MaxLinks = Capacity.CoreLinks;
         Nodes.Add(node);
+        // A new seedling takes up an evolution left waiting by one pruned before it bloomed.
+        if (spec.Kind == NodeKind.Seedling && !loading) node.Evolution = Waiting.FirstOrDefault();
         if (parent != null && !loading) Tracking.Grew(spec, Nodes.Count);
         // A Comet Bloom bursts every kind of blob as it appears.
         if (spec.EmergeBurst > 0 && !loading) node.Blob = spec.EmergeBurst;
@@ -755,6 +773,7 @@ public sealed class Garden
         float dt = (float)seconds, hours = (float)(seconds / 3600);
         float stored = 0, production = 0, upkeep = 0; // for the history, as the step starts
         MarkMoonlit();
+        MarkNebulous();
         foreach (var node in Nodes)
         {
             if (node.Spec.IsFruit)
@@ -764,7 +783,7 @@ public sealed class Garden
                 continue;
             }
             float made = ProductionPerSecond(node), cost = UpkeepPerSecond(node);
-            stored += node.Power;
+            if (node.HoldsGardenPower) stored += node.Power;
             production += made;
             upkeep += cost;
             node.Life += seconds;
@@ -831,12 +850,13 @@ public sealed class Garden
         foreach (var (from, to, clump) in transfers)
         {
             from.Power -= clump;
-            to.Power += clump;
+            to.Power += clump * to.SeedBoost; // (power reaching a seedling near a Nebula Bloom counts double)
             if (!ShowBlobs) continue;
             var link = linkToParent[to.Parent == from ? to : from];
             link.FlowsToTarget = link.Target == to;
             link.FlashIn = (float)(looks.NextDouble() * seconds);
         }
+        CheckSeedlings();
         Tracking.Age += seconds;
         Tracking.History.Record(Tracking.Age, seconds, stored, production, upkeep);
         return grew;
@@ -852,10 +872,11 @@ public sealed class Garden
 
     // Where a part sends a clump of power this step, if anywhere (the original's attemptTransferPower): once it's
     // fuller than SendFill and has a whole clump to spare, to the neighbour (not fruit) with the lowest fill for its
-    // weight among those less full than itself (fills past full count as full).
+    // weight among those less full than itself (fills past full count as full). A part with no transfer rate (a
+    // seedling) sends nothing.
     PlantNode? SendTo(PlantNode node, float spare)
     {
-        if (node.Fill <= Tuning.SendFill || spare < Clump(node)) return null;
+        if (node.Fill <= Tuning.SendFill || Clump(node) <= 0 || spare < Clump(node)) return null;
         float fill = Math.Min(1, node.Fill);
         PlantNode? best = null;
         float bestWeighed = float.MaxValue;
@@ -874,8 +895,10 @@ public sealed class Garden
 
     // The clump of power a part sends in one transfer: its transfer rate times the step's length, so the rate holds
     // whatever the step (a longer step sends bigger, rarer clumps).
-    public static float Clump(PlantNode node) =>
-        node.Spec.PowerTransferPerSecond * (float)Tuning.EconomyStepSeconds;
+    public static float Clump(PlantNode node) => TransferPerSecond(node) * (float)Tuning.EconomyStepSeconds;
+
+    // How fast a part can send power on: its kind's rate, raised by evolutions (Long Stemmed, Twin Stars, Second Path).
+    public static float TransferPerSecond(PlantNode node) => node.Spec.PowerTransferPerSecond * node.Boost.Transfer;
 
     // Which fruit a part feeds this step, if any (the original's powerFruits): once it's at least FeedFruitFill full,
     // its emptiest fruit, while that's less full than the part and not yet full. Fruit costs nothing to keep, so it
@@ -907,9 +930,9 @@ public sealed class Garden
         node.Power >= node.Store ? FullProductionPerSecond(node) : ProductionPerSecond(node);
 
     // What a part makes per second when full (its fruit adding a little each: see FruitBonus; an Ember less as it
-    // dims).
+    // dims; evolutions more: see Boosts).
     public static float FullProductionPerSecond(PlantNode node) =>
-        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node) * Boosted(node);
+        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node) * Boosted(node) * node.Boost.Gen;
 
     // A part's own fruit raise its output, each by its FlowerBonus (times the part's FruitBonusScale: a Wild Lab's
     // count double).
@@ -928,10 +951,11 @@ public sealed class Garden
     // Power a part costs per second now: its full upkeep times its fill (past full, more).
     public static float UpkeepPerSecond(PlantNode node) => FullUpkeepPerSecond(node) * Math.Max(0, node.Fill);
 
-    // What a part costs per second when full: times 1 plus its fruits' FlowerPowerFactor (each leaf takes off a quarter).
+    // What a part costs per second when full: times 1 plus its fruits' FlowerPowerFactor (each leaf takes off a quarter),
+    // and any evolution's change (Rapid Evolution's labs).
     public static float FullUpkeepPerSecond(PlantNode node)
     {
-        float upkeep = Math.Max(0, -node.Spec.PowerPerSecond);
+        float upkeep = Math.Max(0, -node.Spec.PowerPerSecond) * node.Boost.Upkeep;
         float factor = 1;
         foreach (var fruit in node.Fruits)
             factor += fruit.Spec.FlowerPowerFactor;
@@ -943,7 +967,8 @@ public sealed class Garden
     public static float BlobsPerHour(PlantNode node) => FullBlobsPerHour(node) * Output(node);
 
     // The same when full.
-    public static float FullBlobsPerHour(PlantNode node) => node.Spec.BlobsPerHour * FruitBonus(node) * Boosted(node);
+    public static float FullBlobsPerHour(PlantNode node) =>
+        node.Spec.BlobsPerHour * FruitBonus(node) * Boosted(node) * node.Boost.Blobs;
 
     // A part a Buffer'"'"'s buff blob passed lately makes BuffBonus more.
     static float Boosted(PlantNode node) => (node.Buff > 0 ? 1 + Tuning.BuffBonus : 1) * (node.Moonlit ? 1 + Tuning.MoonlitBonus : 1);
@@ -965,7 +990,8 @@ public sealed class Garden
         var at = from;
         for (int hop = 0; hop < hops; hop++)
         {
-            if (StepFrom(at, cameFrom) is not { } next) return null; // a lone core, or walled in by Resistors
+            if (StepFrom(at, cameFrom, genes ? BlobKind.Genes : BlobKind.Growth) is not { } next)
+                return null; // a lone core, or walled in by Resistors
             cameFrom = at;
             at = next;
             route?.Add(at);
@@ -980,31 +1006,60 @@ public sealed class Garden
     (PlantNode At, PlantNode From, int Hops)? Doubled;
 
     // One link of a blob's walk, from at (having come from cameFrom): a link at random, never into a Resistor, and
-    // never straight back unless at a dead end. Null if there's nowhere to go.
-    PlantNode? StepFrom(PlantNode at, PlantNode? cameFrom)
+    // never straight back unless at a dead end. With Smart Particles, SmartChance of the steps, never into a dead end
+    // either, unless the blob could be taken in there (see Wanders), or there's nowhere else to go. Null if there's
+    // nowhere to go.
+    PlantNode? StepFrom(PlantNode at, PlantNode? cameFrom, BlobKind kind)
     {
-        int open = Open(at, null);
+        bool smart = SmartAt(at, kind) && (SmartChance >= 1 || rng.NextDouble() < SmartChance);
+        int open = Open(at, null, kind, smart);
         if (open == 0) return null;
         var skip = open > 1 ? cameFrom : null;
-        return Option(at, rng.Next(skip != null ? Open(at, skip) : open), skip);
+        return Option(at, rng.Next(skip != null ? Open(at, skip, kind, smart) : open), skip, kind, smart);
     }
 
-    // How many links a blob could take from a part, passing over skip and any Resistor.
-    static int Open(PlantNode at, PlantNode? skip)
+    // Whether Smart Particles can steer a blob at this part: bloomed, and with somewhere to go that isn't a dead end.
+    public bool SmartAt(PlantNode at, BlobKind kind) => SmartChance > 0 && Open(at, null, kind, true) > 0;
+
+    // Whether a blob at one part may step onto a neighbour: never a Resistor; with smart on, never a dead end (a part
+    // with no other link a blob could take) that wouldn't take it in: a gene blob's only taker is the core, a growth
+    // blob's a part with something forming or room to start something, and a buff blob's a part not buffed already.
+    public bool Wanders(PlantNode at, PlantNode to, BlobKind kind, bool smart)
+    {
+        if (to.Spec.BlocksBlobs) return false;
+        if (!smart || !DeadEnd(to, at)) return true;
+        return kind switch
+        {
+            BlobKind.Genes => to == Core,
+            BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && lastPrune == null && to.CanBranch),
+            _ => to.Buff <= 0,
+        };
+    }
+
+    // A part with nowhere for a blob to go on but back where it came from.
+    static bool DeadEnd(PlantNode part, PlantNode from)
+    {
+        foreach (var branch in part.Branches)
+            if (branch != from && !branch.Spec.BlocksBlobs) return false;
+        return part.Parent is not { } parent || parent == from || parent.Spec.BlocksBlobs;
+    }
+
+    // How many links a blob could take from a part, passing over skip and any Resistor (or dead end: see Wanders).
+    int Open(PlantNode at, PlantNode? skip, BlobKind kind, bool smart)
     {
         int open = 0;
         foreach (var branch in at.Branches)
-            if (branch != skip && !branch.Spec.BlocksBlobs) open++;
-        if (at.Parent is { } parent && parent != skip && !parent.Spec.BlocksBlobs) open++;
+            if (branch != skip && Wanders(at, branch, kind, smart)) open++;
+        if (at.Parent is { } parent && parent != skip && Wanders(at, parent, kind, smart)) open++;
         return open;
     }
 
     // The pick-th of those: a part's branches and then its parent.
-    static PlantNode Option(PlantNode at, int pick, PlantNode? skip)
+    PlantNode Option(PlantNode at, int pick, PlantNode? skip, BlobKind kind, bool smart)
     {
         foreach (var branch in at.Branches)
         {
-            if (branch == skip || branch.Spec.BlocksBlobs) continue;
+            if (branch == skip || !Wanders(at, branch, kind, smart)) continue;
             if (pick-- == 0) return branch;
         }
         return at.Parent!;
@@ -1113,7 +1168,7 @@ public sealed class Garden
         bool amplified = false;
         for (int hop = 0; hop < reach; hop++)
         {
-            if (StepFrom(at, cameFrom) is not { } next) break;
+            if (StepFrom(at, cameFrom, BlobKind.Buff) is not { } next) break;
             cameFrom = at;
             at = next;
             route?.Add(at);
@@ -1198,6 +1253,249 @@ public sealed class Garden
             AddBranch(node, kind, emerge: true);
         }
         return budding.Count;
+    }
+
+    // ==== SEEDLINGS AND EVOLUTIONS ==== \\
+    // DESIGN.md, Seedlings and evolutions. A seedling is planted by hand (never passively) where a seedling slot is
+    // free. It only takes power in, from its neighbours (no upkeep, no transfer of its own). Full, it waits for the
+    // player to choose one of the evolutions it offers; that raises its store to the evolution's target, and full again
+    // it blooms: the effect applies for good and the seedling becomes the evolution's wild flower (the Almanac lists
+    // the evolutions from Evolved). A slot stays used once its evolution is chosen, so each slot is one evolution:
+    // the slots are counted from Evolved.
+
+    // The evolutions chosen, in the order chosen, bloomed or still growing: the garden's record of them (the
+    // Almanac's list) and its seedling slots used.
+    public readonly List<Evolution> Evolved = new();
+    // Smart Particles' level: how often a blob's step avoids a dead end (see Wanders): 0 until it blooms.
+    public float SmartChance { get; private set; }
+    // The bloomed evolutions' effects on each basic kind (see UpdateBoosts): every part of the kind carries its Boost.
+    readonly Dictionary<NodeKind, Boost> boosts = new();
+
+    public int Blooms => Evolved.Count(e => e.Bloomed);
+
+    // Evolutions chosen whose seedling was pruned before it bloomed: the next seedling to emerge takes one up, starting
+    // empty (see Add).
+    public IEnumerable<Evolution> Waiting => Evolved.Where(e => !e.Bloomed && !Nodes.Any(n => n.Evolution == e));
+
+    // Seedling slots used: every evolution chosen, every seedling yet to choose, and every
+    // seedling bud forming; less the evolutions waiting, whose slots the next seedlings planted take up.
+    public int SeedlingsUsed
+    {
+        get
+        {
+            int used = Evolved.Count - Waiting.Count();
+            foreach (var n in Nodes)
+            {
+                if (n.IsSeedling && n.Evolution == null) used++;
+                if (n.Forming == NodeKind.Seedling) used++;
+            }
+            return used;
+        }
+    }
+
+    public int FreeSeedlingSlots => Math.Max(0, Capacity.Seedlings - SeedlingsUsed);
+
+    // How many times an evolution has been chosen (bloomed or not): its next level is one more.
+    public int Taken(EvolutionKind kind) => Evolved.Count(e => e.Kind == kind);
+
+    // The target the next evolution chosen will have: FirstBloom for the garden's first, BloomGrowth times as much for
+    // each one chosen before it (1,000, 5,000, 25,000 ...).
+    public double NextTarget => Tuning.FirstBloom * Math.Pow(Tuning.BloomGrowth, Evolved.Count);
+
+    // The evolutions a seedling can offer now: each up to its repeat limit (counting those still growing), and none a
+    // second time until the garden has RepeatsAfter evolutions; a Late one (Long Stemmed) not at all until then.
+    public List<EvolutionKind> Offerable()
+    {
+        bool repeats = Evolved.Count >= Tuning.RepeatsAfter;
+        return Enum.GetValues<EvolutionKind>().Where(k =>
+        {
+            var spec = Evolutions.All[k];
+            int taken = Taken(k);
+            return taken < spec.MaxLevel && (repeats || (taken == 0 && !spec.Late));
+        }).ToList();
+    }
+
+    // Up to ChoiceCount of them, at random (the garden's own dice, so a catch-up rolls the same).
+    List<EvolutionKind> RollOffers()
+    {
+        var pool = Offerable();
+        var offers = new List<EvolutionKind>();
+        while (offers.Count < Tuning.ChoiceCount && pool.Count > 0)
+        {
+            int i = rng.Next(pool.Count);
+            offers.Add(pool[i]);
+            pool.RemoveAt(i);
+        }
+        return offers;
+    }
+
+    // Each economy step: the seedlings within NebulaReach links of a Nebula Bloom take in power at its SeedlingBoost.
+    void MarkNebulous()
+    {
+        bool any = false;
+        foreach (var n in Nodes)
+        {
+            if (n.IsSeedling) n.SeedBoost = 1;
+            any |= n.Spec.SeedlingBoost > 0;
+        }
+        if (!any) return;
+        foreach (var nebula in Nodes.Where(n => n.Spec.SeedlingBoost > 0).ToList())
+            foreach (var n in Within(nebula, Tuning.NebulaReach))
+                if (n.IsSeedling) n.SeedBoost = Math.Max(n.SeedBoost, nebula.Spec.SeedlingBoost);
+    }
+
+    // After each economy step's transfers: a seedling that's full (its power at its store) rolls the evolutions it offers,
+    // the first time, and waits for the player's choice; one full of its chosen evolution's target blooms.
+    void CheckSeedlings()
+    {
+        foreach (var node in Nodes)
+        {
+            if (!node.IsSeedling || node.Power < node.Store - 1e-3f) continue;
+            if (node.Evolution != null) blooming.Add(node);
+            else node.Offers ??= RollOffers();
+        }
+        if (blooming.Count == 0) return;
+        foreach (var node in blooming) Bloom(node);
+        blooming.Clear();
+    }
+
+    // The player picks one of a waiting seedling's offers (DESIGN.md, Tending commands: "Select evolution"): its store
+    // rises to NextTarget (so it fills on from where it is), and the journal notes it. Returns whether it was chosen.
+    public bool Choose(PlantNode seedling, EvolutionKind kind)
+    {
+        if (!seedling.Choosing || !seedling.Offers!.Contains(kind) || !Nodes.Contains(seedling)
+            || Taken(kind) >= Evolutions.All[kind].MaxLevel)
+            return false;
+        var evolution = new Evolution { Kind = kind, Level = Taken(kind) + 1, Target = NextTarget, ChosenAt = Tracking.Age };
+        Evolved.Add(evolution);
+        seedling.Evolution = evolution;
+        seedling.Offers = null;
+        Tracking.Log(JournalKind.Chosen, $"Evolution chosen: {evolution.Name}");
+        return true;
+    }
+
+
+    // The flowers that bloomed since the view last looked, for its flash (it empties this; a catch-up shows none).
+    public readonly List<PlantNode> JustBloomed = new();
+
+    // A seedling full of its evolution's target blooms (see Apply): it becomes the evolution's wild flower where it
+    // stands (full, from the power it held).
+    void Bloom(PlantNode seedling)
+    {
+        var evolution = seedling.Evolution!;
+        Apply(evolution);
+        Tracking.Log(JournalKind.Bloomed, BloomedText(evolution));
+        var flower = Replace(seedling, evolution.Spec.Becomes);
+        if (ShowBlobs) JustBloomed.Add(flower);
+    }
+
+    // "Second Path bloomed into a Tendril".
+    static string BloomedText(Evolution evolution)
+    {
+        string flower = NodeSpecs.All[evolution.Spec.Becomes].Name;
+        return $"{evolution.Name} bloomed into {Tracking.Article(flower).ToLowerInvariant()} {flower}";
+    }
+
+    // An evolution blooms: its effect applies now and for good. Its caps rise at once (a core link, generators, the
+    // wild flower limit), plus 1 on the wild flower limit for its flower, and 1 on its flower's base cap where the
+    // flower takes that slot too (a Tendril a stem's, an Ember a generator's), so the flower costs nothing; an unlock
+    // evolution's kind joins the pool; its multipliers join the boosts.
+    void Apply(Evolution evolution)
+    {
+        evolution.Bloomed = true;
+        evolution.BloomedAt = Tracking.Age;
+        var effect = evolution.Effect;
+        var becomes = evolution.Spec.Becomes;
+        var caps = Capacity with
+        {
+            CoreLinks = Capacity.Add(Capacity.CoreLinks, effect.CoreLinks),
+            Generators = Capacity.Add(Capacity.Generators, effect.Generators),
+            WildFlowers = Capacity.Add(Capacity.WildFlowers, effect.WildFlowers + 1),
+        };
+        Capacity = SlotOf(becomes) switch
+        {
+            NodeKind.Stem => caps with { Stems = Capacity.Add(caps.Stems, 1) },
+            NodeKind.Generator => caps with { Generators = Capacity.Add(caps.Generators, 1) },
+            _ => caps,
+        };
+        if (evolution.Spec.Unlocks) UnlockWild(becomes);
+        UpdateBoosts();
+    }
+
+    // The bloomed evolutions' effects on each basic kind: each evolution at its bloomed level (its levels adding up: see
+    // EvolutionLevel.At), different evolutions multiplied together; and Smart Particles' chance. Every part takes its
+    // kind's.
+    void UpdateBoosts()
+    {
+        boosts.Clear();
+        SmartChance = 0;
+        void Raise(NodeKind kind, Func<Boost, Boost> by) => boosts[kind] = by(boosts.GetValueOrDefault(kind, Boost.None));
+        foreach (var bloomed in Evolved.Where(e => e.Bloomed).GroupBy(e => e.Kind))
+        {
+            var x = Evolutions.All[bloomed.Key].Effect.At(bloomed.Count());
+            Raise(NodeKind.Core, b => b with { Gen = b.Gen * x.CoreGen, Transfer = b.Transfer * x.CoreTransfer });
+            Raise(NodeKind.Stem, b => b with { Transfer = b.Transfer * x.StemTransfer, Fruits = b.Fruits + x.StemFruits });
+            Raise(NodeKind.Lab, b => b with { Blobs = b.Blobs * x.LabGenes, Upkeep = b.Upkeep * x.LabUpkeep });
+            Raise(NodeKind.Generator, b => b with { Gen = b.Gen * x.GeneratorGen, Transfer = b.Transfer * x.GeneratorTransfer });
+            SmartChance = Math.Max(SmartChance, x.SmartChance);
+        }
+        foreach (var node in Nodes) node.Boost = boosts.GetValueOrDefault(node.Spec.Kind, Boost.None);
+    }
+
+    // Swaps a part for one of another kind where it stands (a seedling blooming): the same parent, place, motion,
+    // power (up to the new store) and tie. (A seedling has nothing growing from it to carry over.)
+    PlantNode Replace(PlantNode old, NodeKind kind)
+    {
+        var parent = old.Parent!;
+        parent.Branches.Remove(old);
+        Nodes.Remove(old);
+        Links.RemoveAll(l => l.Target == old);
+        linkToParent.Remove(old);
+        Motes.RemoveAll(m => m.Route.Contains(old));
+        if (Held == old) LetGo();
+        var node = Add(NodeSpecs.All[kind], parent, old.Position);
+        node.PreviousPosition = old.PreviousPosition;
+        node.Velocity = old.Velocity;
+        node.Rotation = old.Rotation;
+        node.Power = Math.Min(old.Power, node.Store);
+        node.FillLook = old.FillLook;
+        node.TiedTo = old.TiedTo;
+        return node;
+    }
+
+    // Dev aid (--seedling) and screenshots: a seedling grown at once on the deepest part with a free link, a slot added
+    // if none is free. Null if no part has room.
+    public PlantNode? PlantSeedling()
+    {
+        var parent = Nodes.Where(n => n.CanBranch && !n.Spec.IsFruit).MaxBy(n => n.Depth);
+        if (parent == null || Nodes.Count >= Tuning.MaxNodes) return null;
+        if (FreeSeedlingSlots == 0) Capacity = Capacity with { Seedlings = SeedlingsUsed + 1 };
+        return AddBranch(parent, NodeKind.Seedling);
+    }
+
+    // Dev aid (--seedfill=N): a seedling's power set to N (up to its store): full, it offers its evolutions, or with one
+    // chosen it blooms now.
+    public void FillSeedling(PlantNode seedling, float power)
+    {
+        seedling.Power = Math.Min(power, seedling.Store);
+        CheckSeedlings();
+    }
+
+    // Dev aid (--evolve=NAME): an evolution chosen and bloomed at once, as a seedling's would be (its effect and
+    // caps, a slot added if none is free), its flower grown on the deepest part with a free link, if one has. Returns
+    // the evolution, or null if it's at its repeat limit.
+    public Evolution? EvolveNow(EvolutionKind kind)
+    {
+        if (Taken(kind) >= Evolutions.All[kind].MaxLevel) return null;
+        if (FreeSeedlingSlots == 0) Capacity = Capacity with { Seedlings = SeedlingsUsed + 1 };
+        var evolution = new Evolution { Kind = kind, Level = Taken(kind) + 1, Target = NextTarget, ChosenAt = Tracking.Age };
+        Evolved.Add(evolution);
+        Tracking.Log(JournalKind.Chosen, $"Evolution chosen: {evolution.Name}");
+        Apply(evolution);
+        Tracking.Log(JournalKind.Bloomed, BloomedText(evolution));
+        if (Nodes.Where(n => n.CanBranch && !n.Spec.IsFruit).MaxBy(n => n.Depth) is { } parent && Nodes.Count < Tuning.MaxNodes)
+            AddBranch(parent, evolution.Spec.Becomes);
+        return evolution;
     }
 
     // ==== GENES AND UPGRADES ==== \\
@@ -1747,11 +2045,13 @@ public sealed class Garden
     public GardenSave ToSave() => new(
         Layout, EconomyClock, Capacity,
         Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
-            n.Power, n.Blob, n.Forming, n.Growth, n.Life, n.Charge)).ToList(),
+            n.Power, n.Blob, n.Forming, n.Growth, n.Life, n.Charge,
+            n.Evolution is { } e ? Evolved.IndexOf(e) : -1, n.Offers?.ToList())).ToList(),
         Genes,
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
-        Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought), WildUnlocked.ToList(), new(WildCaps));
+        Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought), WildUnlocked.ToList(), new(WildCaps),
+        Evolved.Select(e => new EvolutionSave(e.Kind, e.Level, e.Target, e.Bloomed, e.BloomedAt, e.ChosenAt)).ToList());
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -1770,6 +2070,14 @@ public sealed class Garden
         else garden.ReadOldTrack();
         garden.WildUnlocked.UnionWith(save.WildUnlocked ?? []);
         foreach (var (kind, cap) in save.WildCaps ?? []) garden.WildCaps[kind] = cap;
+        // (Their caps are in the saved Capacity already: only the boosts are worked out again.)
+        foreach (var e in save.Evolutions ?? [])
+            garden.Evolved.Add(new Evolution
+            {
+                Kind = e.Kind, Level = e.Level, Target = e.Target, Bloomed = e.Bloomed, BloomedAt = e.BloomedAt,
+                ChosenAt = e.ChosenAt,
+            });
+        garden.UpdateBoosts();
         garden.GainTools(log: false);
         var byId = new Dictionary<int, PlantNode>();
         foreach (var n in save.Nodes)
@@ -1784,6 +2092,8 @@ public sealed class Garden
             node.Growth = n.Growth;
             node.Life = n.Life;
             node.Charge = n.Charge;
+            node.Offers = n.Offers?.ToList();
+            if (n.Evolution >= 0 && n.Evolution < garden.Evolved.Count) node.Evolution = garden.Evolved[n.Evolution];
             byId[n.Id] = node;
         }
         foreach (var s in save.Shaping ?? [])
@@ -1817,8 +2127,8 @@ public sealed class Garden
 
 // The limits on growth (DESIGN.md, Capacity): how many stems and generators the garden may have, how many links the
 // core has, and how many of each shaping tool may be placed. Labs and other flowers are uncapped; free links and power
-// limit them. The wild flower limit, seedling slots and Hubs are counters for now (their mechanics come in 5c, 5d and
-// the Hub's step). Upgrades bought raise these, and the garden's size the shaping tools.
+// limit them. The wild flower limit (5d) and seedling slots (5c) have their mechanics; Hubs are a counter until the
+// Hub's step. Upgrades bought and evolutions bloomed raise these, and the garden's size the shaping tools.
 public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots = Tuning.StartPotCap, int Trellises = 0,
     int Wells = 0, int WildFlowers = Tuning.StartWildFlowers, int Seedlings = Tuning.StartSeedlings, int Hubs = 0)
 {
@@ -1843,7 +2153,7 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots
         _ => Wells,
     };
 
-    static int Add(int a, int b) => (int)Math.Min(int.MaxValue, (long)a + b);
+    internal static int Add(int a, int b) => (int)Math.Min(int.MaxValue, (long)a + b);
 }
 
 // The three upgrade tracks of the Research panel (DESIGN.md, Upgrade tracks), and what an upgrade raises by 1.
@@ -1881,11 +2191,15 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
 public sealed record ResearchSave(int Stems, int Generators, int Core);
 
 // (Saves from before step 3d also carry Pinned, from when parts could be pinned; it's ignored.)
-// (Life and Charge since step 5d: a wild flower's life cycle.)
+// (Life and Charge since step 5d: a wild flower's life cycle. Evolution and Offers since 5c: a seedling's evolution
+// (an index into GardenSave.Evolutions, or -1), which sets its store, and what it offers.)
 public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, float Power,
-    float Blob = 0, NodeKind? Forming = null, float Growth = 0, double Life = 0, float Charge = 0);
+    float Blob = 0, NodeKind? Forming = null, float Growth = 0, double Life = 0, float Charge = 0,
+    int Evolution = -1, List<EvolutionKind>? Offers = null);
 
-// (WildUnlocked and WildCaps since step 5d: the Evolution kinds unlocked, and any per-kind caps; see Garden.WildUnlocked.)
+// (WildUnlocked and WildCaps since step 5d: the Evolution kinds unlocked, and any per-kind caps; see Garden.WildUnlocked.
+// Evolutions since 5c: those chosen, in order; see Garden.Evolved.)
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
     double Genes = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null, double GeneBalance = 0,
-    ResearchSave? Research = null, List<NodeKind>? WildUnlocked = null, Dictionary<NodeKind, int>? WildCaps = null);
+    ResearchSave? Research = null, List<NodeKind>? WildUnlocked = null, Dictionary<NodeKind, int>? WildCaps = null,
+    List<EvolutionSave>? Evolutions = null);
