@@ -970,6 +970,8 @@ public static class Textures
             SpaceGarden.Core.Shape.Rose => p => R(p) <= Mathf.Abs(Mathf.Cos(3 * A(p))) || R(p) <= 0.3f,
             // Nebula Bloom: three arms curling round a heart (once the Tendril's).
             SpaceGarden.Core.Shape.Swirl => p => R(p) <= 0.3f + 0.7f * Mathf.Pow(Lobes(A(p) + 2.4f * R(p), 3), 2),
+            // Seedling (5c, first pass): a round seed with two pointed leaves opening from it.
+            SpaceGarden.Core.Shape.Sprout => p => R(p) <= 0.5f || R(p) <= 0.35f + 0.65f * Mathf.Pow(Lobes(A(p), 2), 6),
             _ => p => R(p) <= 1,
         };
     }
@@ -995,21 +997,23 @@ public static class Textures
         return inside;
     }
 
+    // (A wild flower's shape too, on its own: the toolbar's and the evolution menu's icons draw them.)
     static Texture2D MakeShape(Shape shape)
     {
         var corners = GardenView.UnitPolygon(shape);
+        Func<Vector2, bool> inside = InAtlas(shape) ? WildShape(shape) : p => Inside(shape, corners, p);
         var image = Image.CreateEmpty(ShapeSize, ShapeSize, false, Image.Format.Rgba8);
         for (int y = 0; y < ShapeSize; y++)
             for (int x = 0; x < ShapeSize; x++)
             {
-                int inside = 0;
+                int count = 0;
                 for (int sy = 0; sy < Supersample; sy++)
                     for (int sx = 0; sx < Supersample; sx++)
                     {
                         var p = new Vector2(x + (sx + 0.5f) / Supersample, y + (sy + 0.5f) / Supersample) / ShapeSize * 2 - Vector2.One;
-                        if (Inside(shape, corners, p / ShapeFill)) inside++;
+                        if (inside(p / ShapeFill)) count++;
                     }
-                image.SetPixel(x, y, new Color(1, 1, 1, inside / (float)(Supersample * Supersample)));
+                image.SetPixel(x, y, new Color(1, 1, 1, count / (float)(Supersample * Supersample)));
             }
         image.GenerateMipmaps();
         return ImageTexture.CreateFromImage(image);

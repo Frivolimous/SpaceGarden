@@ -8,7 +8,7 @@ namespace SpaceGarden;
 // Ambient, Minimised and the settings.
 public enum Tool
 {
-    Stem, Generator, Lab, Grove, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
+    Stem, Generator, Lab, Grove, Seedling, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
     Info, Almanac, Research, Build, Ambient, Minimise, Settings,
 }
 
@@ -30,6 +30,7 @@ public partial class Toolbar : PanelContainer
         Tool.Generator => NodeKind.Generator,
         Tool.Lab => NodeKind.Lab,
         Tool.Grove => NodeKind.Grove,
+        Tool.Seedling => NodeKind.Seedling,
         _ => null,
     };
 
@@ -80,7 +81,8 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, tip) in new[]
         {
             (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
-            (Tool.Grove, "Grow a grove"), (Tool.Unhook, "Take it off its pot or trellis"),
+            (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Plant a seedling (it uses a seedling slot)"),
+            (Tool.Unhook, "Take it off its pot or trellis"),
             (Tool.Prune, "Prune"), (Tool.Remove, "Take this away"),
         })
         {
@@ -207,6 +209,13 @@ public partial class ToolButton : Control
         if (IsVisibleInTree()) QueueRedraw(); // Enabled/Active change from outside
     }
 
+    // Any part's shape, centred at c with this radius, in a colour (from its texture, so a wild flower's too).
+    public static void DrawShape(CanvasItem on, Vector2 c, Shape shape, float radius, Color colour)
+    {
+        float d = Textures.ShapeDiameter(radius);
+        on.DrawTextureRect(Textures.Shape(shape), new Rect2(c - new Vector2(d, d) / 2, new Vector2(d, d)), false, colour);
+    }
+
     public override void _Draw()
     {
         var c = Size / 2;
@@ -228,6 +237,17 @@ public partial class ToolButton : Control
             // While its bud grows on the part, it keeps its colour (the part has no room for another just then) and
             // a pulsing outline in it rings it.
             if (!Enabled && !Forming) colour = new Color(1, 1, 1, 0.25f);
+            if (Textures.InAtlas(spec.Shape))
+            {
+                // A seedling's sprout, drawn from its texture (its ring a circle).
+                DrawShape(this, c, spec.Shape, 8, colour);
+                if (Forming)
+                {
+                    float beat = 0.5f + 0.5f * Mathf.Sin((float)Time.GetTicksMsec() / 1000 * Mathf.Tau / FormingPulseSeconds);
+                    DrawArc(c, 11 + 1.5f * beat, 0, Mathf.Tau, 32, colour with { A = 0.35f + 0.55f * beat }, 1.4f, true);
+                }
+                return;
+            }
             var points = GardenView.UnitPolygon(spec.Shape);
             for (int i = 0; i < points.Length; i++) points[i] = c + points[i].Rotated(-Mathf.Pi / 2) * 7;
             DrawColoredPolygon(points, colour);

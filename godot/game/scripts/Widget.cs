@@ -89,6 +89,7 @@ public partial class Widget : Node
     readonly ResearchPanel research = new(); // its own window too (see SetResearch)
     readonly UndoPill undo = new();
     readonly CoreMenu coreMenu = new();
+    readonly EvolutionMenu evolutionMenu = new(); // a seedling's choice (see Tap)
     readonly StatusIndicator tray = new();
     readonly ShapingBar shapingBar = new();
 
@@ -171,6 +172,8 @@ public partial class Widget : Node
         research.CloseRequested += () => SetResearch(false);
         research.BuyPressed += Buy;
         coreMenu.Picked += PickFromCoreMenu;
+        toolbarLayer.AddChild(evolutionMenu);
+        evolutionMenu.Picked += ChooseEvolution;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
         toolbarLayer.AddChild(shapingBar);
         shapingBar.Started += TakeFromBar;
@@ -182,6 +185,7 @@ public partial class Widget : Node
             if (menu.Visible || devMenu.Visible || confirmNew.Visible) return;
             toolbar.HideAway();
             coreMenu.Close();
+            evolutionMenu.Close();
             Select(null);
         };
 
@@ -215,6 +219,7 @@ public partial class Widget : Node
         {
             toolbar.HideAway();
             coreMenu.Close();
+            evolutionMenu.Close();
             Select(null);
             main.NewGarden();
         };
@@ -264,6 +269,7 @@ public partial class Widget : Node
             SetBuilding(false);
             toolbar.HideAway();
             coreMenu.Close();
+            evolutionMenu.Close();
             Select(null);
             menu.Hide();
             if (Garden.Held != null) Garden.LetGo();
@@ -501,7 +507,7 @@ public partial class Widget : Node
         if (selected != null && !Garden.Nodes.Contains(selected)) Select(null); // pruned, or a new garden
         bool overToolbar = toolbar.Visible && toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool overUndo = undo.Catches(pointer / Dpi);
-        bool overMenu = coreMenu.Over(pointer / Dpi);
+        bool overMenu = coreMenu.Over(pointer / Dpi) || evolutionMenu.Over(pointer / Dpi);
         bool overBar = shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool overAlmanac = almanac.Catches(pointer / Dpi);
         bool overResearch = research.Catches(pointer / Dpi);
@@ -530,6 +536,13 @@ public partial class Widget : Node
         coreMenu.SetActive(Tool.Build, Building);
         PlaceCard();
         if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * plantScale, viewport);
+        // A seedling's choice follows it, and goes once it's chosen, bloomed or pruned.
+        if (evolutionMenu.IsOpen)
+        {
+            if (evolutionMenu.Seedling is { } seedling && Garden.Nodes.Contains(seedling) && seedling.Choosing)
+                evolutionMenu.Follow(ToViewport(seedling.Position) / Dpi, seedling.Spec.Radius * plantScale, viewport);
+            else evolutionMenu.Close();
+        }
 
         if (pressed && !Input.IsMouseButtonPressed(MouseButton.Left)) Release();
 
@@ -545,7 +558,8 @@ public partial class Widget : Node
             if (!Garden.Nodes.Contains(target)) toolbar.HideAway();
             else
             {
-                bool below = target == Garden.Core && coreMenu.IsOpen && coreMenu.Above;
+                bool below = (target == Garden.Core && coreMenu.IsOpen && coreMenu.Above)
+                    || (target == evolutionMenu.Seedling && evolutionMenu.IsOpen && evolutionMenu.Above);
                 toolbar.Follow(ToViewport(target.Position) / Dpi, target.Spec.Radius * plantScale, viewport, below);
                 toolbar.Refresh();
             }
@@ -566,7 +580,7 @@ public partial class Widget : Node
             || overResearch || research.Dragging;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
-        bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || Garden.Held != null
+        bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || evolutionMenu.Visible || Garden.Held != null
             || Garden.Speed > SettledSpeed;
         activeTime = active ? SettleSeconds : activeTime - delta;
         SetIdle(activeTime <= 0);
@@ -687,7 +701,8 @@ public partial class Widget : Node
     // Dev aids for --screenshot runs, once the garden is set up: --inspect (a lab's card, or the core's if it has
     // none), --inspect=core or --inspect=garden; --coremenu opens the core's menu (--coremenu=settings with that
     // slot's name showing); --tap=full or --tap=forming taps a stem with every link taken, or a part forming a bud
-    // (starting a lab bud on a stem if none is), its toolbar staying open; --almanac opens the Almanac, --research the
+    // (starting a lab bud on a stem if none is), its toolbar staying open, or --tap=seedling a seedling (its evolutions
+    // open if it waits for its choice, the first one's card showing); --almanac opens the Almanac, --research the
     // Research panel (--research=hint with the Stems card's hint showing); --ambient starts in Ambient, and
     // --corehover acts as if the pointer were on the core.
     void DevFlags()
@@ -715,6 +730,7 @@ public partial class Widget : Node
         PlantNode? tapped = Value("tap") switch
         {
             "full" => Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Stem && n.Links >= n.MaxLinks && !n.FormingBud),
+            "seedling" => Garden.Nodes.FirstOrDefault(n => n.Choosing) ?? Garden.Nodes.FirstOrDefault(n => n.IsSeedling),
             "forming" => Garden.Nodes.FirstOrDefault(n => n != Garden.Core && n.FormingBud)
                 ?? Garden.Nodes.FirstOrDefault(n => n.Spec.Kind == NodeKind.Stem && Garden.SproutFrom(n, NodeKind.Lab)),
             _ => null,
@@ -723,6 +739,7 @@ public partial class Widget : Node
         {
             Tap(tapped);
             devTapped = true; // its toolbar stays, with no pointer to keep it
+            if (evolutionMenu.IsOpen) evolutionMenu.Labelled = 0; // the first evolution's card showing
         }
         if (Value("almanac") is { } page)
         {
@@ -762,7 +779,8 @@ public partial class Widget : Node
         // Escape closes one thing at a time: the core's menu, then build mode, then the card.
         if (e is InputEventKey { Pressed: true, Keycode: Key.Escape })
         {
-            if (coreMenu.IsOpen) CloseCoreMenu();
+            if (evolutionMenu.IsOpen) evolutionMenu.Close();
+            else if (coreMenu.IsOpen) CloseCoreMenu();
             else if (Building) SetBuilding(false);
             else if (partCard.IsOpen || gardenCard.IsOpen) Select(null);
             else return;
@@ -788,6 +806,7 @@ public partial class Widget : Node
                 pressNode = handle == null ? Garden.NodeAt(at, HoverSlop) : null;
                 // A press anywhere but the core (its own buttons take their clicks first) closes its menu.
                 if (pressNode != Garden.Core) CloseCoreMenu();
+                if (pressNode != evolutionMenu.Seedling) evolutionMenu.Close();
                 // A potted part is locked: taking it takes its pot, in build mode or not (a tap still opens the part's
                 // toolbar).
                 if (pressNode?.TiedTo is { Kind: ShapingKind.Pot } held)
@@ -850,13 +869,14 @@ public partial class Widget : Node
     }
 
     // A tapped part is selected (its card shows) and its toolbar opens. Tapping the selected part again closes both
-    // (the core: its menu too).
+    // (the core: its menu too). A seedling waiting for its choice opens its evolutions too (see EvolutionMenu).
     void Tap(PlantNode node)
     {
         bool again = node == Garden.Core ? coreMenu.IsOpen : selected == node && partCard.Part == node;
         if (again)
         {
             CloseCoreMenu();
+            evolutionMenu.Close();
             if (toolbar.Target == node) toolbar.HideAway();
             Select(null);
         }
@@ -865,7 +885,17 @@ public partial class Widget : Node
         {
             Select(node);
             toolbar.ShowFor(node);
+            if (node.Choosing) evolutionMenu.Open(Garden, node);
         }
+    }
+
+    // A pick from a seedling's evolutions: chosen (its marker grows on the core), and the menu goes.
+    void ChooseEvolution(EvolutionKind kind)
+    {
+        if (evolutionMenu.Seedling is { } seedling) Garden.Choose(seedling, kind);
+        evolutionMenu.Close();
+        partCard.RefreshNow();
+        gardenCard.RefreshNow();
     }
 
     void OpenCoreMenu()

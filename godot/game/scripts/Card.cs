@@ -83,12 +83,12 @@ public partial class Card : PanelContainer
         if (!IsOpen || (refreshTimer -= delta) > 0) return;
         refreshTimer = RefreshSeconds;
         int used = 0;
-        if (Part is { } node) ShowNode(node, growthSpeed, ref used);
+        if (Part is { } node) ShowNode(node, garden, growthSpeed, ref used);
         else ShowGardenLines(GardenStats.Of(garden), growthSpeed, ref used);
         for (int i = used; i < rows.Count; i++) rows[i].Visible = false;
     }
 
-    void ShowNode(PlantNode node, double speed, ref int used)
+    void ShowNode(PlantNode node, Garden garden, double speed, ref int used)
     {
         var spec = node.Spec;
         var stats = NodeStats.Of(node);
@@ -103,9 +103,20 @@ public partial class Card : PanelContainer
         if (spec.Sends == BlobKind.Growth) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
         if (spec.Sends == BlobKind.Genes) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
         if (stats.Links >= 2) Line(ref used, $"Connections: {stats.Links} / {stats.MaxLinks}");
+        // A seedling: its evolution once chosen, and the power it has taken in against its target (the choice's 200,
+        // then the bloom's).
+        if (node.IsSeedling)
+        {
+            if (stats.Evolution is { } evolution)
+                Line(ref used, ("Evolution: ", Ink), (evolution.Name, GardenView.Rgb(evolution.Spec.Rgb).Lightened(0.3f)));
+            Line(ref used, $"Grown: {Math.Floor(stats.Grown):#,0} / {stats.GrowTarget:#,0}");
+        }
         // A wild flower that ends itself: how long it has left (an Ember burns out, a Comet Bloom withers).
         if (spec.LifeSeconds > 0)
             Line(ref used, $"{(spec.Dims ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, spec.LifeSeconds - node.Life) / speed)}");
+        // On the core: an evolution whose seedling was pruned before it bloomed, which the next one planted takes up.
+        if (node == garden.Core && garden.Waiting.FirstOrDefault() is { } waiting)
+            Line(ref used, $"Next seedling: {waiting.Name}");
         if (stats.Forming is { } kind)
         {
             var forming = NodeSpecs.All[kind];

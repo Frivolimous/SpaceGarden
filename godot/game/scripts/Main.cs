@@ -15,7 +15,10 @@ namespace SpaceGarden;
 // core), --build to open in build mode, --shaping to place one of each shaping tool (or --shaping=N at physics
 // tick N, with --screenshot), --pausetest=AT,FOR to act as if hidden for FOR seconds
 // from AT seconds after start (to test the pause), --awaynote[=HOURS] to catch up that long (8 h) at once and show its
-// note, --export=PATH (debug builds) to write the tracking as CSV and quit (see ExportTracking), plus Screenshot's
+// note, --export=PATH (debug builds) to write the tracking as CSV and quit (see ExportTracking), --evolve=NAME[,NAME]
+// to choose and bloom evolutions at once, --seedling to plant a seedling at once, --seedfill=N to set what it has
+// taken in (planting one if needed; 200 brings its choice, with --tap=seedling to show it), --choose=N to take its
+// Nth offer, plus Screenshot's
 // options and the widget's (--inspect[=core|garden], --coremenu[=SLOT], --almanac, --research, --ambient, --corehover: see
 // Widget.DevFlags). --screenshot runs never touch the real save.
 //
@@ -120,6 +123,29 @@ public partial class Main : Node2D
                 if (unlock == "" || unlock.Split(',').Any(k => k.Equals(spec.Kind.ToString(), StringComparison.OrdinalIgnoreCase)))
                     Garden.UnlockWild(spec.Kind);
         if (args.TryGetValue("wild", out var wild)) GrowWild(wild);
+        // Dev aids (step 5c): evolutions chosen and bloomed at once (by name, "SecondPath" or "second-path"), a seedling
+        // planted, and the power it has taken in (at 200 it offers its evolutions; past its target it blooms).
+        if (args.TryGetValue("evolve", out var evolve))
+            foreach (var name in evolve.Split(','))
+                if (Evolutions.Parse(name) is { } kind) Garden.EvolveNow(kind);
+                else GD.PrintErr($"--evolve: no evolution called {name}");
+        if (args.ContainsKey("seedling") || (args.ContainsKey("seedfill") && !Garden.Nodes.Any(n => n.IsSeedling)))
+            Garden.PlantSeedling();
+        if (args.TryGetValue("seedfill", out var fill))
+            foreach (var seedling in Garden.Nodes.Where(n => n.IsSeedling).ToList())
+                Garden.FillSeedling(seedling, double.Parse(fill));
+        // --choose=N: each seedling waiting for its choice takes its Nth offer (from 0).
+        if (args.TryGetValue("choose", out var choose))
+            foreach (var seedling in Garden.Nodes.Where(n => n.Choosing).ToList())
+                if (int.TryParse(choose == "" ? "0" : choose, out int i) && i < seedling.Offers!.Count)
+                    Garden.Choose(seedling, seedling.Offers[i]);
+        if (args.ContainsKey("evolve") || args.ContainsKey("seedling") || args.ContainsKey("seedfill"))
+        {
+            foreach (var node in Garden.Nodes) node.Power = node.Store;
+            Garden.SettleLooks();
+            for (int i = 0; i < 600; i++) Garden.Step(); // ten seconds' settling
+            foreach (var node in Garden.Nodes) node.Age = Math.Max(node.Age, 10);
+        }
         if (args.TryGetValue("shaping", out var shaping) && shaping == "") PlaceShaping(); // else Screenshot does
         if (args.ContainsKey("build")) widget.SetBuilding(true);
         // Dev aid: time away now (HOURS, 8 by default), on whatever garden was loaded or planted, to see its note.

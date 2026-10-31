@@ -19,6 +19,7 @@ public partial class Almanac : FloatingWindow
     static readonly Color GeneInk = new(0.82f, 0.74f, 1f); // the genes' purple, lightened
     // A wild flower discovered: a pale gold, in the Journal and the away note.
     public static readonly Color DiscoveryInk = new(1f, 0.93f, 0.68f);
+    static readonly Color EvolutionInk = GardenView.Rgb(NodeSpecs.All[NodeKind.Seedling].Rgb).Lightened(0.3f); // a seedling's green
 
     readonly VBoxContainer list, codex;
     readonly ScrollContainer scroll;
@@ -260,6 +261,7 @@ public partial class Almanac : FloatingWindow
         JournalKind.Tool => ShapingLook.Tint,
         JournalKind.Discovery => DiscoveryInk,
         JournalKind.Ended => Dim,
+        JournalKind.Chosen or JournalKind.Bloomed => EvolutionInk,
         _ => Ink,
     };
 }
