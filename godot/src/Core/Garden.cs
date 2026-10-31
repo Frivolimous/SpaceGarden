@@ -1135,8 +1135,9 @@ public sealed class Garden
         return Walk(lab, genes: true, ref counts, null) == Core;
     }
 
-    // The parts that take gene blobs in: the core, and the Hub (into its own pool, or the core's once complete).
-    public bool CatchesGenes(PlantNode part) => part == Core || part.IsHub;
+    // The parts that take gene blobs in: the core, and the Hub (into its own pool) until every path is complete; then
+    // gene blobs pass through it as through any part.
+    public bool CatchesGenes(PlantNode part) => part == Core || (part.IsHub && !HubComplete);
 
     // A lab's gene blob leaves (from the lab, or carries on from an Amplifier that doubled it, its walk shown delay
     // seconds later). Only the core absorbs it, or the Hub; its genes count at the core (or in the Hub's pool) in this
@@ -1148,8 +1149,7 @@ public sealed class Garden
         var catcher = Walk(from, genes: true, ref counts, route, cameFrom, hops, canDouble);
         bool found = catcher != null;
         var doubled = Doubled;
-        // (A Hub with every path complete passes what it catches on to the core.)
-        if (catcher == Core || (catcher != null && HubComplete)) Deliver(Tuning.BlobGenes);
+        if (catcher == Core) Deliver(Tuning.BlobGenes);
         else if (catcher != null) CatchAtHub(Tuning.BlobGenes);
         if (Show(route, lab, delay) is { } mote) mote.Absorbed = found;
         if (doubled is not { } d) return;
@@ -1611,7 +1611,9 @@ public sealed class Garden
     public bool HubPlanted => Nodes.Any(n => n.IsHub);
     public int HubLevelsBought => HubLevels.Values.Sum();
     public int HubLevel(NodeKind kind) => HubLevels.GetValueOrDefault(kind);
-    // Every path at its top level: the Hub passes the genes it catches on to the core (worked out in UpdateBoosts).
+    // Whether a Hub can be planted now: bought, and none planted or forming.
+    public bool CanPlantHub => CountOf(NodeKind.Hub) < Capacity.Hubs;
+    // Every path at its top level: gene blobs pass through the Hub, as through any part (worked out in UpdateBoosts).
     public bool HubComplete { get; private set; }
     // A Hub planted as the boosts were last worked out, and its levels' share of the Amplifier's chance.
     bool hubAwake;

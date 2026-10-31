@@ -179,7 +179,12 @@ public partial class Widget : Node
         toolbarLayer.AddChild(evolutionMenu);
         evolutionMenu.Picked += ChooseEvolution;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
-        toolbar.Offered = kind => kind != NodeKind.Hub || Garden.Capacity.Hubs > 0; // once bought
+        toolbar.Offered = kind => kind switch
+        {
+            NodeKind.Seedling => Garden.FreeSeedlingSlots > 0,
+            NodeKind.Hub => Garden.CanPlantHub,
+            _ => true,
+        };
         toolbarLayer.AddChild(shapingBar);
         shapingBar.Started += TakeFromBar;
         shapingBar.Done += () => SetBuilding(false);

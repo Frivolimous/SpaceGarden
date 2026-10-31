@@ -131,7 +131,7 @@ public class HubTests
     }
 
     [Fact]
-    public void ACompleteHubPassesTheGenesItCatchesToTheCore()
+    public void GeneBlobsPassThroughACompleteHub()
     {
         var garden = Garden.New(Layout.Radial, 5);
         garden.PassiveGrowth = false;
@@ -143,9 +143,10 @@ public class HubTests
         garden.HubPoints = 2;
         Assert.True(garden.BuyHubLevel(NodeKind.Hub));
         Assert.True(garden.HubComplete);
+        Assert.False(garden.CatchesGenes(hub)); // it takes no more in
         GrowFull(garden, 600);
         Assert.True(garden.Genes > 50);
-        Assert.Equal(0, garden.HubGenes);
+        Assert.Equal(0, garden.HubGenes); // they went on to the core
     }
 
     [Fact]

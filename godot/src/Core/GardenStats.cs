@@ -124,9 +124,9 @@ public sealed record GardenStats(
             void Go(PlantNode to)
             {
                 if (to == skip || !garden.Wanders(at, to, BlobKind.Genes, smart)) return; // (an Amplifier's doubling isn't counted)
-                // (The Hub keeps what it catches, unless every path is complete: then it passes it on.)
-                if (to == core || (to.IsHub && garden.HubComplete)) reached += each;
-                else if (!to.IsHub) next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
+                // (The Hub keeps what it catches, until every path is complete: then blobs pass through it.)
+                if (to == core) reached += each;
+                else if (!garden.CatchesGenes(to)) next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
             }
             foreach (var branch in at.Branches) Go(branch);
             if (at.Parent != null) Go(at.Parent);

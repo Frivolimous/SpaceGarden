@@ -22,7 +22,7 @@ public partial class Toolbar : PanelContainer
     public ShapingTool? TargetTool { get; private set; }
     // Whether a part has room to grow a bud of a kind (its links, and the garden's capacity).
     public Func<PlantNode, NodeKind, bool> CanGrow = (_, _) => true;
-    // Whether a bud tool shows at all (the Hub's, once it's bought).
+    // Whether a bud tool shows at all: the seedling's while a seedling slot is free, the Hub's while one can be planted.
     public Func<NodeKind, bool> Offered = _ => true;
 
     // The kind each bud tool grows.
@@ -140,10 +140,11 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, button) in buttons)
             if (KindOf(tool) is { } kind)
             {
-                button.Visible = buds && Offered(kind);
-                button.Enabled = CanGrow(Target, kind);
                 // Its bud is growing here now (or a wild flower standing in for it).
                 button.Forming = Target.Forming is { } forming && (forming == kind || NodeSpecs.All[forming].Wild?.Base == kind);
+                // (A seedling's or the Hub's shows only while one could be planted, or one forms here.)
+                button.Visible = buds && (Offered(kind) || button.Forming);
+                button.Enabled = CanGrow(Target, kind);
             }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
         // Every link taken (a bud forming holds one, but then its button shows it growing instead).

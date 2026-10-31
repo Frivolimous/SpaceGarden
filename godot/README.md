@@ -18,7 +18,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   when it's shown again. Its taskbar button, Ctrl+Alt+G or the tray icon bring it back in Active. Only one running
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
-  (grow a stem, generator, lab or grove from it, or plant a seedling, or the Hub once bought, on parts with room for branches; the kind growing there now has a
+  (grow a stem, generator, lab or grove from it, or plant a seedling or the Hub, their buttons shown only while one can be planted, on parts with room for branches; the kind growing there now has a
   pulsing outline, and a part with every link taken shows "3/3 Connections Used" in their place; prune it and everything beyond
   it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
   ("Drain: 6/s", "Genes: 12/min", what's
@@ -144,7 +144,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   Basic kinds have 5 levels (+20% a level, milestones at 3 and 5), wild flowers and the Hub 3 (+30% or their own
   effect, and their family: stems, generators, groves, labs or the core's power; a milestone at 3), 96 points in
   all (the paths and milestones are data in `Hubs.Paths`). Every level adds 0.5/s to the Hub's upkeep. Complete,
-  the Hub passes the genes it catches on to the core. Pruned, its levels go dormant until another is planted.
+  gene blobs pass through the Hub instead of being caught. Pruned, its levels go dormant until another is planted.
   Its card shows its points, its pool and the genes to its next point; the journal its first planting; the away
   note the points it earned. Saved in `GardenSave.Hub`.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
