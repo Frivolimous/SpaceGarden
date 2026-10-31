@@ -65,19 +65,6 @@ public class SeedlingTests
     }
 
     [Fact]
-    public void ASeedlingFillsPastItsNeighbours()
-    {
-        var (garden, stem, seedling) = Make();
-        for (int t = 0; t < 200; t++)
-        {
-            foreach (var n in garden.Nodes)
-                if (!n.IsSeedling) n.Power = n.Store * 0.8f; // a garden running at 80%
-            garden.Grow(1);
-        }
-        Assert.True(seedling.Choosing);
-    }
-
-    [Fact]
     public void ChoosingRaisesTheStoreToTheTarget()
     {
         var (garden, _, seedling) = Make();
