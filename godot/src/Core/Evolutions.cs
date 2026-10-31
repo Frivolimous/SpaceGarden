@@ -115,13 +115,13 @@ public static class Evolutions
             .FirstOrDefault(k => k.ToString()!.Equals(plain, StringComparison.OrdinalIgnoreCase));
     }
 
-    // The marker fruits, one kind per evolution: for now each takes the shape of the wild flower its seedling becomes,
-    // in its theme's role hue (first pass, for Jeremy's review). Not tappable, like all fruit; they hold power as fruit
-    // does, fed by the core.
+    // The marker fruits, one kind per evolution: a pale bubble (see GardenView.AddMarker) with the shape of the wild
+    // flower its seedling becomes small inside it, in its theme's role hue (first pass, for Jeremy's review). Not
+    // tappable, like all fruit; they hold power as fruit does, fed by the core.
     internal static IEnumerable<NodeSpec> Markers(IReadOnlyDictionary<NodeKind, NodeSpec> specs) => All.Values.Select(e => new NodeSpec(e.Marker)
     {
         Name = $"{e.Name} marker", Description = $"Grew on the core as {e.Name} was chosen.",
-        Radius = 6, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = specs[e.Becomes].Shape, Rgb = e.Rgb,
+        Radius = 8, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = specs[e.Becomes].Shape, Rgb = e.Rgb,
         PowerStore = NodeBase.FruitStore, IsMarker = true,
     });
 }

@@ -436,7 +436,11 @@ public partial class GardenView : Node2D
         if (atlas) wildShapes.Begin();
         else foreach (var batch in shapes.Values) batch.Begin();
         foreach (var node in garden.Nodes)
-            if (Textures.InAtlas(node.Spec.Shape) == atlas) AddPart(node, 1);
+        {
+            // A marker fruit: its bubble with the parts, its mark (an atlas shape) over it.
+            if (node.Spec.IsMarker) AddMarker(node, atlas);
+            else if (Textures.InAtlas(node.Spec.Shape) == atlas) AddPart(node, 1);
+        }
         foreach (var cut in garden.Cut)
             foreach (var node in cut.Nodes)
                 if (Textures.InAtlas(node.Spec.Shape) == atlas) AddPart(node, cut.FadeOf(node));
@@ -466,6 +470,34 @@ public partial class GardenView : Node2D
         batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), cos, sin, edge, cell);
         batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, outline, cell);
         batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), cos, sin, fill, cell);
+    }
+
+    // A marker fruit on the core (step 5c; Jeremy's pick, Oct 31, as the first look read as tiny wild flowers): a
+    // plain pale bubble, lit by its fill like any part, with its evolution's shape small inside it in the theme's hue,
+    // solid so it reads at a glance.
+    static readonly Color MarkerBubble = new(0.86f, 0.9f, 0.94f);
+    const float MarkScale = 0.55f;
+
+    void AddMarker(PlantNode node, bool atlas)
+    {
+        float size = Size(node);
+        if (size < 0.2f) return;
+        var at = At(node);
+        if (!atlas)
+        {
+            float level = Level(node);
+            var batch = shapes[Shape.Circle];
+            batch.AddTurned(at, Textures.ShapeDiameter(size + EdgeWidth), 1, 0, Edge, default);
+            batch.AddTurned(at, Textures.ShapeDiameter(size), 1, 0, Shade(MarkerBubble, OutlineDim + OutlineLit * level), default);
+            batch.AddTurned(at, Textures.ShapeDiameter(Mathf.Max(0.1f, size - OutlineWidth(node.Spec.Radius))), 1, 0,
+                Shade(MarkerBubble, 0.2f + 0.25f * level), default);
+            return;
+        }
+        var (sin, cos) = MathF.SinCos(node.Rotation);
+        var cell = Textures.CellOf(node.Spec.Shape);
+        float mark = size * MarkScale;
+        wildShapes.AddTurned(at, Textures.ShapeDiameter(mark + 1), cos, sin, Edge, cell);
+        wildShapes.AddTurned(at, Textures.ShapeDiameter(mark), cos, sin, ColourOf(node.Spec), cell);
     }
 
     // The batch a shape is drawn in (a wild flower's: the atlas's), and its cell there.
