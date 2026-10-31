@@ -103,14 +103,9 @@ public partial class Card : PanelContainer
         if (spec.Sends == BlobKind.Growth) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
         if (spec.Sends == BlobKind.Genes) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
         if (stats.Links >= 2) Line(ref used, $"Connections: {stats.Links} / {stats.MaxLinks}");
-        // A seedling: its evolution once chosen, and the power it has taken in against its target (the choice's 200,
-        // then the bloom's).
-        if (node.IsSeedling)
-        {
-            if (stats.Evolution is { } evolution)
-                Line(ref used, ("Evolution: ", Ink), (evolution.Name, GardenView.Rgb(evolution.Spec.Rgb).Lightened(0.3f)));
-            Line(ref used, $"Grown: {Math.Floor(stats.Grown):#,0} / {stats.GrowTarget:#,0}");
-        }
+        // A seedling's evolution, once chosen (its Power line is its progress: its store is the evolution's target).
+        if (stats.Evolution is { } evolution)
+            Line(ref used, ("Evolution: ", Ink), (evolution.Name, GardenView.Rgb(evolution.Spec.Rgb).Lightened(0.3f)));
         // A wild flower that ends itself: how long it has left (an Ember burns out, a Comet Bloom withers).
         if (spec.LifeSeconds > 0)
             Line(ref used, $"{(spec.Dims ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, spec.LifeSeconds - node.Life) / speed)}");

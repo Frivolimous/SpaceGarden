@@ -215,13 +215,12 @@ public static class Tuning
     public const double PassiveBaseShare = 2.0 / 3;
 
     // ==== SEEDLINGS ==== \\
-    // Placeholders (DESIGN.md, Seedlings and evolutions). A seedling takes in power as its upkeep, SeedlingIntake a
-    // second when full (less as it runs lower, as all upkeep): the cap that keeps early blooms from finishing in
-    // seconds (the first, 1,000, takes about 6 minutes at full; the fifth, 625,000, about 2.4 days). At SeedChoice it
-    // stops and offers ChoiceCount evolutions; choosing one sets its target to FirstBloom, times BloomGrowth for each
-    // evolution chosen before. Repeats are offered only once the garden has RepeatsAfter evolutions.
-    public const float SeedlingIntake = 3;
-    public const double SeedChoice = 200, FirstBloom = 1_000, BloomGrowth = 5;
+    // Placeholders (DESIGN.md, Seedlings and evolutions). A seedling's fill is its power (its own numbers are in its
+    // NodeSpec: its store, the choice's 200, no upkeep, a heavy power weight, and no transfer, so it only takes power
+    // in). Full, it offers ChoiceCount evolutions; choosing one raises its store to its target, FirstBloom times
+    // BloomGrowth for each evolution chosen before; full again, it blooms. Repeats are offered only once the garden has
+    // RepeatsAfter evolutions.
+    public const double FirstBloom = 1_000, BloomGrowth = 5;
     public const int ChoiceCount = 3, RepeatsAfter = 5;
 
     // ==== RESEARCH ==== \\

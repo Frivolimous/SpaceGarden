@@ -38,8 +38,11 @@ public sealed record GardenStats(
                 fruit++;
                 continue;
             }
-            held += n.Power;
-            store += n.Store;
+            if (n.HoldsGardenPower) // (a seedling's power goes to its evolution)
+            {
+                held += n.Power;
+                store += n.Store;
+            }
             fruitRoom += n.MaxFruits;
             if (n.FormingBud) buds[n.Forming!.Value] = buds.GetValueOrDefault(n.Forming!.Value) + 1;
             switch (n.Spec.Kind)
@@ -112,12 +115,10 @@ public sealed record GardenStats(
 // leave (production, not what reaches the core: see GardenStats.GeneReach). Links counts the parent's, against
 // MaxLinks (the core's is Capacity.CoreLinks). Forming is the fruit or bud forming in it, if any, and how far along
 // it is, 0-1. A full core or generator makes nothing, so its card shows Makes at its full rate instead. A seedling's
-// Grown is the power it has taken in, against GrowTarget (the choice's 200, then its evolution's target), and
-// Evolution the one chosen, if any.
+// Evolution is the one chosen, if any (its Store is then the evolution's target).
 public sealed record NodeStats(
     float Power, float Store, float Makes, float Sends, float Upkeep, float GrowthBlobsPerHour, float GenesPerHour,
-    int Links, int MaxLinks, NodeKind? Forming, float FormingProgress, double Grown = 0, double GrowTarget = 0,
-    Evolution? Evolution = null)
+    int Links, int MaxLinks, NodeKind? Forming, float FormingProgress, Evolution? Evolution = null)
 {
     public static NodeStats Of(PlantNode node)
     {
@@ -130,7 +131,6 @@ public sealed record NodeStats(
             Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : Garden.TransferPerSecond(node),
             Garden.UpkeepPerSecond(node),
             spec.Sends == BlobKind.Growth ? blobs : 0, spec.Sends == BlobKind.Genes ? blobs * Tuning.BlobGenes : 0,
-            node.Links, node.MaxLinks, node.Forming, progress,
-            node.Evolution?.Fed ?? node.Fed, node.Evolution?.Target ?? Tuning.SeedChoice, node.Evolution);
+            node.Links, node.MaxLinks, node.Forming, progress, node.Evolution);
     }
 }

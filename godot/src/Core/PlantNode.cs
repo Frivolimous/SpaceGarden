@@ -56,11 +56,9 @@ public sealed class PlantNode
     // The garden's evolutions' effect on its kind (see Garden.Boosts): set as it's added, and again as one blooms.
     public Boost Boost = Boost.None;
 
-    // A seedling (step 5c): the power it has taken in towards its choice (up to Tuning.SeedChoice), the evolutions it
-    // offers once there (rolled then, so tapping again shows the same), and the one chosen, which holds its progress
-    // from then on. SeedBoost: how many times the power it takes in counts (a Nebula Bloom within reach: worked out
-    // each economy step).
-    public double Fed;
+    // A seedling (step 5c) fills with power like any part: full, it offers its evolutions (rolled then, so tapping again
+    // shows the same), and the one chosen sets its store (its target), which it blooms at. SeedBoost: how many times the
+    // power reaching it counts (a Nebula Bloom within reach: worked out each economy step).
     public List<EvolutionKind>? Offers;
     public Evolution? Evolution;
     public float SeedBoost = 1;
@@ -103,7 +101,11 @@ public sealed class PlantNode
     }
 
     // How much power it holds (none for fruit), and how full it is.
-    public float Store => Spec.PowerStore;
+    // (A seedling's, once its evolution is chosen, is the evolution's target.)
+    public float Store => Evolution is { } evolution ? (float)evolution.Target : Spec.PowerStore;
+    // Whether its power counts as the garden's (the cards' and the history's): not fruit, nor a seedling's, which is
+    // spent on its evolution.
+    public bool HoldsGardenPower => !Spec.IsFruit && !IsSeedling;
     public float Fill => Store == 0 ? 0 : Power / Store;
 
     public int Links => Branches.Count + (Parent == null ? 0 : 1);

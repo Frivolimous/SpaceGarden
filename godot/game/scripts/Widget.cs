@@ -581,7 +581,7 @@ public partial class Widget : Node
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || evolutionMenu.Visible || Garden.Held != null
-            || Garden.Speed > SettledSpeed;
+            || Garden.Speed > SettledSpeed || main.View.Blooming;
         activeTime = active ? SettleSeconds : activeTime - delta;
         SetIdle(activeTime <= 0);
     }

@@ -299,7 +299,7 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
 
     public static Mark MarkNow(Garden garden) =>
         new(garden.Tracking.Age, garden.Tracking.Journal.Count, new(garden.Tracking.Grown), garden.Genes,
-            garden.Nodes.Where(n => !n.Spec.IsFruit).Sum(n => n.Power), new(garden.Tracking.EndedCount));
+            garden.Nodes.Where(n => n.HoldsGardenPower).Sum(n => n.Power), new(garden.Tracking.EndedCount));
 
     public static AwayNote Since(Garden garden, Mark mark)
     {

@@ -207,13 +207,14 @@ public static class NodeSpecs
         };
         foreach (var spec in WildFlowers.All(all)) all[spec.Kind] = spec;
         // A seedling (DESIGN.md, Seedlings and evolutions): a small flower at the end of a branch, planted by hand, that
-        // takes in power (its upkeep, Tuning.SeedlingIntake when full) towards its evolution.
+        // only takes power in (no upkeep, and no transfer to send any on), heavy so its neighbours favour it. Its store
+        // is the choice's; once an evolution is chosen, the evolution's target (see PlantNode.Store).
         all[NodeKind.Seedling] = new(NodeKind.Seedling)
         {
             Name = "Seedling", Description = "Takes in power, then blooms into its chosen evolution's wild flower.",
             Radius = 11, Mass = 1.5f, Force = 1.5f, MaxLinks = 1, Shape = Shape.Sprout, Rgb = 0xB4F08C,
-            PowerStore = NodeBase.PowerStore, PowerPerSecond = -Tuning.SeedlingIntake,
-            PowerTransferPerSecond = NodeBase.PowerTransferSub,
+            PowerStore = NodeBase.PowerStore, PowerPerSecond = 0, PowerWeight = 1.5f,
+            PowerTransferPerSecond = 0,
         };
         foreach (var spec in Evolutions.Markers(all)) all[spec.Kind] = spec;
         return all;

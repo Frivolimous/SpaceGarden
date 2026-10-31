@@ -75,6 +75,11 @@ public partial class GardenView : Node2D
     static readonly Color RippleTint = new(0.82f, 0.74f, 1f); // the genes' purple, lightened
     readonly List<float> ripples = new();
     int boughtSeen;
+    // A seedling's bloom (step 5c): a burst off the wild flower it became, seconds since it began.
+    const float BloomSeconds = 2.4f;
+    readonly List<(PlantNode Flower, float Age)> blooms = new();
+    // Whether a bloom's burst is showing (the widget runs at full frame rate meanwhile).
+    public bool Blooming => blooms.Count > 0;
     readonly HashSet<PlantNode> restored = new(); // put back by an undo: they grow in again, with no moment
 
     public void Restored(IEnumerable<PlantNode> nodes) => restored.UnionWith(nodes);
@@ -133,6 +138,13 @@ public partial class GardenView : Node2D
         boughtSeen = garden.Bought;
         for (int i = ripples.Count - 1; i >= 0; i--)
             if ((ripples[i] += dt) >= RippleSeconds + RippleGap) ripples.RemoveAt(i);
+        foreach (var flower in garden.JustBloomed) blooms.Add((flower, 0));
+        garden.JustBloomed.Clear();
+        for (int i = blooms.Count - 1; i >= 0; i--)
+        {
+            blooms[i] = (blooms[i].Flower, blooms[i].Age + dt);
+            if (blooms[i].Age >= BloomSeconds || !garden.Nodes.Contains(blooms[i].Flower)) blooms.RemoveAt(i);
+        }
         blend = (float)Engine.GetPhysicsInterpolationFraction();
         toolsAlpha = Mathf.MoveToward(toolsAlpha, ToolsWanted, dt * 3);
         backdropAlpha = Mathf.MoveToward(backdropAlpha, Building ? 1 : 0, dt * 3);
@@ -628,6 +640,45 @@ public partial class GardenView : Node2D
                 float r = core.Spec.Radius * (1.05f + 0.45f * EaseOut(t)); // out to half again the core's size
                 Ring(At(core), r, 0.5f + 2f * (1 - t), RippleTint, 0.75f * (1 - t));
             }
+
+        foreach (var (flower, age) in blooms) DrawBloom(flower, age / BloomSeconds);
+    }
+
+    // A seedling blooming into its wild flower, the garden's biggest moment: a bright flash that swells and fades, twelve
+    // long rays turning out from it, and three rings in the flower's hue, one after another, widening to six times its
+    // size. (Its marker fruit glints on the core at the same time.)
+    void DrawBloom(PlantNode flower, float t)
+    {
+        var at = At(flower);
+        float r = flower.Spec.Radius;
+        var hue = ColourOf(flower.Spec).Lightened(0.35f);
+        float fade = 1 - t;
+
+        float flash = Mathf.Clamp(1 - t * 3, 0, 1); // the first third
+        if (flash > 0)
+        {
+            markLayer.DrawCircle(at, r * (1.2f + 1.8f * EaseOut(t * 3)), hue.Lightened(0.6f) with { A = 0.55f * flash * flash });
+            markLayer.DrawCircle(at, r * (0.9f + 0.6f * EaseOut(t * 3)), new Color(1, 1, 1, 0.8f * flash));
+        }
+
+        float reach = r * (1.5f + 3.5f * EaseOut(t));
+        float turn = t * 0.8f;
+        for (int i = 0; i < 12; i++)
+        {
+            var dir = Vector2.FromAngle(turn + i * Mathf.Tau / 12);
+            float length = reach * (i % 2 == 0 ? 1 : 0.6f);
+            var from = at + dir * r * (0.8f + t);
+            var to = at + dir * length;
+            markLayer.DrawLine(from, to, new Color(0, 0, 0, 0.3f * fade), 3.5f, true);
+            markLayer.DrawLine(from, to, hue.Lightened(0.4f) with { A = fade * fade }, 1.6f, true);
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            float u = (t - i * 0.12f) / 0.76f;
+            if (u <= 0 || u >= 1) continue;
+            Ring(at, r * (1.2f + 4.8f * EaseOut(u)), 0.5f + 2.5f * (1 - u), hue, 0.85f * (1 - u));
+        }
     }
 
     void Ring(Vector2 at, float radius, float width, Color colour, float alpha)

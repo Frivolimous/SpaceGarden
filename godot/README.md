@@ -125,15 +125,16 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   1 / 2" line once there's a limit. All wild flowers draw from one atlas texture in one batch per layer.
 - **Seedlings and evolutions** (step 5c, `src/Core/Evolutions.cs` and `Garden.cs`, numbers in `Tuning` under
   Seedlings; DESIGN.md, Seedlings and evolutions): plant a seedling from a part's toolbar while a seedling slot is
-  free (1 to start, more in the Core track). It takes in power as its upkeep (3/s when full) up to 200, then waits:
-  tap it for a half ring of three evolutions (each its marker's shape in its role hue; the one under the pointer
-  says what it does and the wild flower it blooms into). Choosing grows a marker fruit on the core and sets the
-  target: 1,000 for the first, then ×5 for each later one. At its target it blooms: the effect applies for good, the
-  wild flower limit (and its flower's base cap, where it takes that slot) rises by 1, and the seedling becomes its
-  wild flower. The ten evolutions and their levels are data (`Evolutions.All`); repeats ("More Power II") come once
-  the garden has five; Smart Particles is one-off. A seedling within 5 links of a Nebula Bloom fills twice as fast.
-  Pruning a seedling after its choice leaves the evolution waiting for the next one planted. The card shows a
-  seedling's evolution and "Grown: 640 / 1,000"; the journal its choice and bloom; the away note its bloom.
+  free (1 to start, more in the Core track). It only takes power in (no upkeep, no transfer, a heavy power weight),
+  and its fill is its progress: full at 200, it waits: tap it for a half ring of three evolutions (each its marker's
+  shape in its role hue; the one under the pointer says what it does and the wild flower it blooms into). Choosing
+  raises its store to the target: 1,000 for the first, then ×5 for each later one. Full again, it blooms with a
+  burst of light: the effect applies for good, the wild flower limit (and its flower's base cap, where it takes that
+  slot) rises by 1, the seedling becomes its wild flower, and the evolution's marker fruit grows on the core. The ten
+  evolutions and their levels are data (`Evolutions.All`); repeats ("More Power II") come once the garden has five;
+  Smart Particles is one-off. Power reaching a seedling within 5 links of a Nebula Bloom counts twice. Pruning a
+  seedling after its choice leaves the evolution waiting for the next one planted. The card shows a seedling's
+  evolution and its power against its target; the journal its choice and bloom; the away note its bloom.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Tracking
@@ -183,8 +184,8 @@ wild flowers at once, each on a new stem from the core, whatever their lock and 
 `--wild=all` lays out one of each round the middle of the screen: with `--scale=2 --labels` it's the sheet of their
 looks), `--unlockwild[=KIND,...]` (unlock Big Stem, Pulsar and Twin Star, as their evolutions do), `--evolve=NAME[,NAME]`
 (choose and bloom those evolutions at once, by name: `SecondPath` or `second-path`), `--seedling` (plant a seedling at
-once), `--seedfill=N` (set what it has taken in, planting one if there is none: 200 brings its choice), `--choose=N`
-(each waiting seedling takes its Nth offer), `--tap=seedling` (tap it: its choice menu open, the first card showing), `--scale=N`
+once), `--seedfill=N` (set its power, planting one if there is none: full at 200 brings its choice), `--choose=N`
+(each waiting seedling takes its Nth offer), `--bloom` (fill each chosen seedling, so it blooms with its burst), `--tap=seedling` (tap it: its choice menu open, the first card showing), `--scale=N`
 (the plant's scale, past the Size setting's range), `--labels` (each wild flower's name beside it), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 

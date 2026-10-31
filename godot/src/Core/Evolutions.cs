@@ -126,16 +126,15 @@ public static class Evolutions
     });
 }
 
-// An evolution chosen for a seedling (DESIGN.md, Seedlings and evolutions): which, at what level, the power its
-// seedling has taken in (counting the 200 before the choice) against its target, and whether it has bloomed (and when,
-// in the garden's age). A seedling pruned before it blooms leaves its evolution waiting (its marker stays, and its
-// slot): the next seedling to emerge takes it up where it stopped (see Garden, Seedlings).
+// An evolution chosen for a seedling (DESIGN.md, Seedlings and evolutions): which, at what level, its target (the
+// seedling's store from then on), and whether it has bloomed (and when, in the garden's age). A seedling pruned before
+// it blooms leaves its evolution waiting (and its slot): the next seedling to emerge takes it up, starting empty as
+// every new part does (see Garden, Seedlings).
 public sealed class Evolution
 {
     public EvolutionKind Kind;
     public int Level = 1;
     public double Target;
-    public double Fed;
     public bool Bloomed;
     public double BloomedAt;
 
@@ -151,4 +150,4 @@ public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, 
     public static readonly Boost None = new();
 }
 
-public sealed record EvolutionSave(EvolutionKind Kind, int Level, double Target, double Fed, bool Bloomed, double BloomedAt);
+public sealed record EvolutionSave(EvolutionKind Kind, int Level, double Target, bool Bloomed, double BloomedAt);

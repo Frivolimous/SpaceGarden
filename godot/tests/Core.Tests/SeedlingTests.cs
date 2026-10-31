@@ -17,6 +17,9 @@ public class SeedlingTests
         Converters = { new JsonStringEnumConverter() },
     };
 
+    // A seedling's store before its choice: full, it offers its evolutions.
+    static float Choice => NodeSpecs.All[NodeKind.Seedling].PowerStore;
+
     // core - stem - seedling, the core with room for a second branch, nothing growing on its own.
     static (Garden Garden, PlantNode Stem, PlantNode Seedling) Make(int seed = 3)
     {
@@ -28,12 +31,13 @@ public class SeedlingTests
         return (garden, stem, seedling);
     }
 
-    // Keeps the parts full while time passes, so the seedling takes in its full intake.
+    // Keeps every part but the seedlings full while time passes, so they're fed as fast as their neighbours can send.
     static void GrowFull(Garden garden, double seconds)
     {
         for (double t = 0; t < seconds; t += 1)
         {
-            foreach (var n in garden.Nodes) n.Power = n.Store;
+            foreach (var n in garden.Nodes)
+                if (!n.IsSeedling) n.Power = n.Store;
             garden.Grow(1);
         }
     }
@@ -44,34 +48,35 @@ public class SeedlingTests
         var (garden, stem, seedling) = Make();
         Assert.Equal(1, garden.SeedlingsUsed);
         Assert.False(garden.CanSproutFrom(stem, NodeKind.Seedling)); // its one slot is taken
+        Assert.Equal(0, Garden.FullUpkeepPerSecond(seedling)); // it costs nothing
+        Assert.Equal(0, Garden.TransferPerSecond(seedling)); // and sends nothing on
 
-        GrowFull(garden, Tuning.SeedChoice / Tuning.SeedlingIntake - 10);
+        GrowFull(garden, 2);
+        Assert.True(seedling.Power > 0);
         Assert.False(seedling.Choosing);
-        Assert.True(Garden.UpkeepPerSecond(seedling) > 0);
-        GrowFull(garden, 20);
-        Assert.Equal(Tuning.SeedChoice, seedling.Fed, 6);
+        GrowFull(garden, 120);
+        Assert.True(seedling.Power >= Choice - 1e-3f);
         Assert.True(seedling.Choosing);
         Assert.Equal(Tuning.ChoiceCount, seedling.Offers!.Distinct().Count());
-        Assert.Equal(0, Garden.UpkeepPerSecond(seedling)); // waiting takes nothing in
+        var offers = seedling.Offers.ToList();
         GrowFull(garden, 60);
-        Assert.Equal(Tuning.SeedChoice, seedling.Fed, 6);
+        Assert.Equal(offers, seedling.Offers); // rolled once
+        Assert.True(seedling.Power <= Choice + Garden.Clump(stem)); // full, it takes no more
     }
 
     [Fact]
-    public void ChoosingSetsTheTargetAndGrowsAMarker()
+    public void ChoosingRaisesTheStoreToTheTarget()
     {
         var (garden, _, seedling) = Make();
-        garden.FillSeedling(seedling, Tuning.SeedChoice);
+        garden.FillSeedling(seedling, Choice);
         var kind = seedling.Offers![0];
         Assert.False(garden.Choose(seedling, Enum.GetValues<EvolutionKind>().First(k => !seedling.Offers.Contains(k))));
         Assert.True(garden.Choose(seedling, kind));
         Assert.Equal(Tuning.FirstBloom, seedling.Evolution!.Target);
-        Assert.Equal(Tuning.SeedChoice, seedling.Evolution.Fed);
-        var marker = Assert.Single(garden.Core.Fruits);
-        Assert.Equal(Evolutions.All[kind].Marker, marker.Spec.Kind);
+        Assert.Equal((float)Tuning.FirstBloom, seedling.Store);
+        Assert.Equal(Choice, seedling.Power); // so it's a fifth full
+        Assert.Empty(garden.Core.Fruits); // the marker grows at the bloom
         Assert.Equal(1, garden.SeedlingsUsed); // still its slot
-        seedling.Power = seedling.Store;
-        Assert.True(Garden.UpkeepPerSecond(seedling) > 0); // taking in again
         // Each later evolution's target five times the last.
         Assert.Equal(Tuning.FirstBloom * Tuning.BloomGrowth, garden.NextTarget);
         garden.EvolveNow(EvolutionKind.WildBloom);
@@ -79,19 +84,23 @@ public class SeedlingTests
     }
 
     [Fact]
-    public void ABloomBecomesItsWildFlowerAndRaisesTheLimits()
+    public void ABloomBecomesItsWildFlowerGrowsItsMarkerAndRaisesTheLimits()
     {
         var (garden, stem, seedling) = Make();
-        garden.FillSeedling(seedling, Tuning.SeedChoice);
+        garden.FillSeedling(seedling, Choice);
         seedling.Offers = [EvolutionKind.BuildYourCore];
         Assert.True(garden.Choose(seedling, EvolutionKind.BuildYourCore));
         var before = garden.Capacity;
         float coreGen = Garden.FullProductionPerSecond(garden.Core);
 
-        garden.FillSeedling(seedling, Tuning.FirstBloom);
+        garden.FillSeedling(seedling, (float)Tuning.FirstBloom);
         Assert.DoesNotContain(seedling, garden.Nodes);
         var ember = Assert.Single(stem.Branches);
         Assert.Equal(NodeKind.Ember, ember.Spec.Kind);
+        Assert.Equal(ember.Store, ember.Power); // full, from what the seedling held
+        Assert.Contains(ember, garden.JustBloomed); // for the view's burst
+        var marker = Assert.Single(garden.Core.Fruits);
+        Assert.Equal(NodeKind.MarkCore, marker.Spec.Kind);
         Assert.Equal(before.WildFlowers + 1, garden.Capacity.WildFlowers);
         Assert.Equal(before.Generators + 1, garden.Capacity.Generators); // an Ember takes a generator slot: it costs nothing
         Assert.Equal(1, garden.WildCount);
@@ -142,7 +151,7 @@ public class SeedlingTests
     public void APrunedSeedlingLeavesItsEvolutionForTheNext()
     {
         var (garden, stem, seedling) = Make();
-        garden.FillSeedling(seedling, Tuning.SeedChoice);
+        garden.FillSeedling(seedling, Choice);
         var kind = seedling.Offers![0];
         garden.Choose(seedling, kind);
         garden.FillSeedling(seedling, 600);
@@ -152,7 +161,8 @@ public class SeedlingTests
         Assert.Equal(0, garden.SeedlingsUsed);
         var next = Add(garden, stem, NodeKind.Seedling);
         Assert.Equal(kind, next.Evolution!.Kind);
-        Assert.Equal(600, next.Evolution.Fed);
+        Assert.Equal(0, next.Power); // a new part starts empty
+        Assert.Equal((float)Tuning.FirstBloom, next.Store);
         Assert.Equal(1, garden.SeedlingsUsed);
     }
 
@@ -162,10 +172,10 @@ public class SeedlingTests
         var (garden, stem, seedling) = Make();
         garden.EvolveNow(EvolutionKind.BigStem);
         garden.Capacity = garden.Capacity with { Seedlings = 3 };
-        garden.FillSeedling(seedling, Tuning.SeedChoice);
+        garden.FillSeedling(seedling, Choice);
         var offers = seedling.Offers!.ToList();
         var other = Add(garden, garden.Core, NodeKind.Seedling); // (the Big Stem took the stem's last link)
-        garden.FillSeedling(other, Tuning.SeedChoice);
+        garden.FillSeedling(other, Choice);
         garden.Choose(other, other.Offers![1]);
         garden.FillSeedling(other, 700);
 
@@ -174,12 +184,13 @@ public class SeedlingTests
         Assert.Equal(garden.Evolved.Count, loaded.Evolved.Count);
         var seedlings = loaded.Nodes.Where(n => n.IsSeedling).ToList();
         Assert.Equal(offers, seedlings[0].Offers);
-        Assert.Equal(Tuning.SeedChoice, seedlings[0].Fed);
+        Assert.True(seedlings[0].Choosing);
         Assert.Equal(other.Evolution!.Kind, seedlings[1].Evolution!.Kind);
-        Assert.Equal(700, seedlings[1].Evolution!.Fed);
+        Assert.Equal(700, seedlings[1].Power);
+        Assert.Equal(other.Store, seedlings[1].Store);
         Assert.Same(loaded.Evolved[1], seedlings[1].Evolution);
         Assert.Equal(garden.SeedlingsUsed, loaded.SeedlingsUsed);
-        Assert.Equal(2, loaded.Core.Fruits.Count);
+        Assert.Single(loaded.Core.Fruits); // Big Stem's marker (the other hasn't bloomed)
         // Big Stem's boost is worked out again: a stem holds a third leaf.
         Assert.Equal(3, loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Stem).MaxFruits);
         Assert.Contains(NodeKind.BigStem, loaded.WildUnlocked);
