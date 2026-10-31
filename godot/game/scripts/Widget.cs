@@ -702,9 +702,9 @@ public partial class Widget : Node
     // none), --inspect=core or --inspect=garden; --coremenu opens the core's menu (--coremenu=settings with that
     // slot's name showing); --tap=full or --tap=forming taps a stem with every link taken, or a part forming a bud
     // (starting a lab bud on a stem if none is), its toolbar staying open, or --tap=seedling a seedling (its evolutions
-    // open if it waits for its choice, the first one's card showing); --almanac opens the Almanac, --research the
-    // Research panel (--research=hint with the Stems card's hint showing); --ambient starts in Ambient, and
-    // --corehover acts as if the pointer were on the core.
+    // open if it waits for its choice, the first one's card showing); --almanac opens the Almanac (--almanac=codex or
+    // =evolutions at that page), --research the Research panel (--research=hint with the Stems card's hint showing);
+    // --ambient starts in Ambient, and --corehover acts as if the pointer were on the core.
     void DevFlags()
     {
         devFlagsDone = true;
@@ -744,7 +744,8 @@ public partial class Widget : Node
         if (Value("almanac") is { } page)
         {
             SetAlmanac(true);
-            if (page == "codex") almanac.ShowCodex(true);
+            if (page == "codex") almanac.ShowPage(Almanac.Page.Codex);
+            else if (page == "evolutions") almanac.ShowPage(Almanac.Page.Evolutions);
         }
         if (Value("research") is { } shown)
         {
@@ -889,7 +890,7 @@ public partial class Widget : Node
         }
     }
 
-    // A pick from a seedling's evolutions: chosen (its marker grows on the core), and the menu goes.
+    // A pick from a seedling's evolutions: chosen (its store rises to the target), and the menu goes.
     void ChooseEvolution(EvolutionKind kind)
     {
         if (evolutionMenu.Seedling is { } seedling) Garden.Choose(seedling, kind);

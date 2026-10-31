@@ -75,7 +75,8 @@ public class SeedlingTests
         Assert.Equal(Tuning.FirstBloom, seedling.Evolution!.Target);
         Assert.Equal((float)Tuning.FirstBloom, seedling.Store);
         Assert.Equal(Choice, seedling.Power); // so it's a fifth full
-        Assert.Empty(garden.Core.Fruits); // the marker grows at the bloom
+        Assert.Equal(0, garden.Blooms); // its mark comes at the bloom
+        Assert.Equal(garden.Tracking.Age, seedling.Evolution.ChosenAt);
         Assert.Equal(1, garden.SeedlingsUsed); // still its slot
         // Each later evolution's target five times the last.
         Assert.Equal(Tuning.FirstBloom * Tuning.BloomGrowth, garden.NextTarget);
@@ -84,7 +85,7 @@ public class SeedlingTests
     }
 
     [Fact]
-    public void ABloomBecomesItsWildFlowerGrowsItsMarkerAndRaisesTheLimits()
+    public void ABloomBecomesItsWildFlowerAndRaisesTheLimits()
     {
         var (garden, stem, seedling) = Make();
         garden.FillSeedling(seedling, Choice);
@@ -99,8 +100,6 @@ public class SeedlingTests
         Assert.Equal(NodeKind.Ember, ember.Spec.Kind);
         Assert.Equal(ember.Store, ember.Power); // full, from what the seedling held
         Assert.Contains(ember, garden.JustBloomed); // for the view's burst
-        var marker = Assert.Single(garden.Core.Fruits);
-        Assert.Equal(NodeKind.MarkCore, marker.Spec.Kind);
         Assert.Equal(before.WildFlowers + 1, garden.Capacity.WildFlowers);
         Assert.Equal(before.Generators + 1, garden.Capacity.Generators); // an Ember takes a generator slot: it costs nothing
         Assert.Equal(1, garden.WildCount);
@@ -112,7 +111,8 @@ public class SeedlingTests
         // Pruning the flower takes only the flower.
         garden.Prune(ember);
         Assert.Equal(coreGen * 1.5f, Garden.FullProductionPerSecond(garden.Core), 3);
-        Assert.Single(garden.Core.Fruits);
+        Assert.Empty(garden.Core.Fruits); // the record is data, nothing on the core
+        Assert.Equal(1, garden.Blooms);
         Assert.Equal(1, garden.SeedlingsUsed);
     }
 
@@ -190,7 +190,8 @@ public class SeedlingTests
         Assert.Equal(other.Store, seedlings[1].Store);
         Assert.Same(loaded.Evolved[1], seedlings[1].Evolution);
         Assert.Equal(garden.SeedlingsUsed, loaded.SeedlingsUsed);
-        Assert.Single(loaded.Core.Fruits); // Big Stem's marker (the other hasn't bloomed)
+        Assert.Equal(1, loaded.Blooms); // Big Stem (the other hasn't bloomed)
+        Assert.Equal(garden.Evolved[1].ChosenAt, loaded.Evolved[1].ChosenAt);
         // Big Stem's boost is worked out again: a stem holds a third leaf.
         Assert.Equal(3, loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Stem).MaxFruits);
         Assert.Contains(NodeKind.BigStem, loaded.WildUnlocked);

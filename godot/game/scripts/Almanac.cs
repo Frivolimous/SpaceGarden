@@ -6,10 +6,11 @@ namespace SpaceGarden;
 // slot in the core's menu or its ✕, moved by dragging its header and resized by the grip in its corner. It keeps its
 // place and size until the garden quits.
 //
-// Tabs across the top: the Journal and the Codex (step 5d), Stats if player-facing graphs come. The Journal is the
+// Tabs across the top: the Journal, the Codex (step 5d) and Evolutions (5c), Stats if player-facing graphs come. The Journal is the
 // garden's moments, newest first, under a heading for each day of its life ("Day 2"), each with the time on that day.
 // The Codex lists the kinds the garden has discovered (only those: a kind is discovered the first time it grows), each
-// with what it does and when it was first found, under Parts, Wild flowers and Fruit. The page scrolls under the wheel.
+// with what it does and when it was first found, under Parts, Wild flowers and Fruit. Evolutions lists the garden's
+// evolutions (see RefreshEvolutions). The page scrolls under the wheel.
 public partial class Almanac : FloatingWindow
 {
     const double RefreshSeconds = 1;
@@ -21,9 +22,9 @@ public partial class Almanac : FloatingWindow
     public static readonly Color DiscoveryInk = new(1f, 0.93f, 0.68f);
     static readonly Color EvolutionInk = GardenView.Rgb(NodeSpecs.All[NodeKind.Seedling].Rgb).Lightened(0.3f); // a seedling's green
 
-    readonly VBoxContainer list, codex;
+    readonly VBoxContainer list, codex, evolutions;
     readonly ScrollContainer scroll;
-    readonly Button journalTab, codexTab;
+    readonly Button journalTab, codexTab, evolutionsTab;
     Tracking? shownFor; // whose journal it shows (a new garden has a new one), and how much of it
     int shownEntries, shownKinds = -1;
     double refreshTimer;
@@ -42,8 +43,9 @@ public partial class Almanac : FloatingWindow
         tabs.AddThemeConstantOverride("separation", 2);
         Column.AddChild(tabs);
         var group = new ButtonGroup();
-        tabs.AddChild(journalTab = Tab("Journal", group, () => ShowCodex(false)));
-        tabs.AddChild(codexTab = Tab("Codex", group, () => ShowCodex(true)));
+        tabs.AddChild(journalTab = Tab("Journal", group, () => ShowPage(Page.Journal)));
+        tabs.AddChild(codexTab = Tab("Codex", group, () => ShowPage(Page.Codex)));
+        tabs.AddChild(evolutionsTab = Tab("Evolutions", group, () => ShowPage(Page.Evolutions)));
         journalTab.SetPressedNoSignal(true);
         Column.AddChild(new HSeparator { MouseFilter = MouseFilterEnum.Ignore, Modulate = new Color(1, 1, 1, 0.3f) });
         scroll = new ScrollContainer
@@ -61,6 +63,9 @@ public partial class Almanac : FloatingWindow
         codex = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
         codex.AddThemeConstantOverride("separation", 4);
         pages.AddChild(codex);
+        evolutions = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
+        evolutions.AddThemeConstantOverride("separation", 4);
+        pages.AddChild(evolutions);
 
         // The resize grip, in the bottom right corner.
         var grip = new AlmanacGrip { SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
@@ -73,12 +78,18 @@ public partial class Almanac : FloatingWindow
         Column.AddChild(grip);
     }
 
-    // Shows the Codex's page (or the Journal's), its tab chosen.
-    public void ShowCodex(bool shown)
+    public enum Page { Journal, Codex, Evolutions }
+
+    // Shows a page, its tab chosen.
+    public void ShowPage(Page page)
     {
-        codex.Visible = shown;
-        list.Visible = !shown;
-        (shown ? codexTab : journalTab).SetPressedNoSignal(true);
+        list.Visible = page == Page.Journal;
+        codex.Visible = page == Page.Codex;
+        evolutions.Visible = page == Page.Evolutions;
+        // (Set quietly, so the others are let go by hand: the group only does that for a click.)
+        journalTab.SetPressedNoSignal(page == Page.Journal);
+        codexTab.SetPressedNoSignal(page == Page.Codex);
+        evolutionsTab.SetPressedNoSignal(page == Page.Evolutions);
         scroll.ScrollVertical = 0;
         refreshTimer = 0;
     }
@@ -148,6 +159,11 @@ public partial class Almanac : FloatingWindow
         if (codex.Visible)
         {
             RefreshCodex(tracking);
+            return;
+        }
+        if (evolutions.Visible)
+        {
+            RefreshEvolutions(garden);
             return;
         }
         if (tracking == shownFor && tracking.Journal.Count == shownEntries) return;
@@ -252,6 +268,74 @@ public partial class Almanac : FloatingWindow
     }
 
     Tracking? codexFor;
+
+    // Evolutions (step 5c; Jeremy, Oct 31): each evolution the garden has taken, in the order first chosen: its name at
+    // its current level in its role hue, when that level was chosen, its level against its limit and the flower it
+    // blooms into (or that its latest level is still growing, or waiting for a seedling), then what each level does.
+    void RefreshEvolutions(Garden garden)
+    {
+        var shown = (garden, garden.Evolved.Count, garden.Blooms, garden.Waiting.Count());
+        if (shown == evolutionsShown) return;
+        evolutionsShown = shown;
+        foreach (var child in evolutions.GetChildren()) child.QueueFree();
+        if (garden.Evolved.Count == 0)
+        {
+            evolutions.AddChild(new Label
+            {
+                Text = "None yet. Plant a seedling, fill it with power, and choose its evolution.",
+                AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                MouseFilter = MouseFilterEnum.Pass,
+                LabelSettings = new LabelSettings { FontSize = 13, FontColor = Dim },
+            });
+            return;
+        }
+        var waiting = garden.Waiting.ToHashSet();
+        foreach (var taken in garden.Evolved.GroupBy(e => e.Kind))
+        {
+            var latest = taken.MaxBy(e => e.Level)!;
+            var spec = latest.Spec;
+            var entry = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+            entry.AddThemeConstantOverride("separation", 0);
+            var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+            top.AddChild(new Label
+            {
+                Text = latest.Name,
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                MouseFilter = MouseFilterEnum.Pass,
+                LabelSettings = new LabelSettings { FontSize = 14, FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f) },
+            });
+            top.AddChild(new Label
+            {
+                Text = $"Chosen day {Tracking.DayOf(latest.ChosenAt)}, {Tracking.ClockOf(latest.ChosenAt)}",
+                MouseFilter = MouseFilterEnum.Pass,
+                LabelSettings = new LabelSettings { FontSize = 12, FontColor = Dim },
+            });
+            entry.AddChild(top);
+            string flower = NodeSpecs.All[spec.Becomes].Name;
+            string state = latest.Bloomed ? $"bloomed into {Tracking.Article(flower).ToLowerInvariant()} {flower}"
+                : waiting.Contains(latest) ? "waiting for a seedling" : "growing in a seedling";
+            entry.AddChild(new Label
+            {
+                Text = $"Level {latest.Level} of {spec.MaxLevel}, {state}",
+                MouseFilter = MouseFilterEnum.Pass,
+                LabelSettings = new LabelSettings { FontSize = 12, FontColor = Dim },
+            });
+            // Each level's effect in turn ("Core power ×1.5; then Core power ×1.25"), or once if they're alike.
+            var levels = spec.Levels.Take(latest.Level).Select(l => l.Text).ToList();
+            entry.AddChild(new Label
+            {
+                Text = levels.Count > 1 && levels.Distinct().Count() == 1 ? $"{levels[0]} a level."
+                    : string.Join("; then ", levels) + ".",
+                AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                MouseFilter = MouseFilterEnum.Pass,
+                LabelSettings = new LabelSettings { FontSize = 13, FontColor = Ink },
+            });
+            evolutions.AddChild(entry);
+        }
+    }
+
+    (Garden, int, int, int)? evolutionsShown;
 
     // A moment's colour: upgrades bought (and the old track's unlocks) in the genes' purple, shaping tools gained in
     // the tools' blue, wild flowers discovered in a pale gold.

@@ -58,9 +58,9 @@ public sealed record EvolutionLevel
     }
 }
 
-// An evolution: its name, the wild flower its seedling becomes, its marker fruit on the core (and the role hue that
-// colours it), and its effect at each level it can be taken to (Levels.Length is its repeat limit: 1, one-off).
-public sealed record EvolutionSpec(EvolutionKind Kind, string Name, NodeKind Becomes, NodeKind Marker, uint Rgb,
+// An evolution: its name, the wild flower its seedling becomes, its theme's role hue (its mark on the core's rim and
+// its slot in the menu), and its effect at each level it can be taken to (Levels.Length is its repeat limit: 1, one-off).
+public sealed record EvolutionSpec(EvolutionKind Kind, string Name, NodeKind Becomes, uint Rgb,
     EvolutionLevel[] Levels)
 {
     public int MaxLevel => Levels.Length;
@@ -78,26 +78,26 @@ public static class Evolutions
 
     public static readonly IReadOnlyDictionary<EvolutionKind, EvolutionSpec> All = new Dictionary<EvolutionKind, EvolutionSpec>
     {
-        [EvolutionKind.BuildYourCore] = new(EvolutionKind.BuildYourCore, "Build your Core", NodeKind.Ember, NodeKind.MarkCore,
+        [EvolutionKind.BuildYourCore] = new(EvolutionKind.BuildYourCore, "Build your Core", NodeKind.Ember,
             Power, [new() { CoreGen = 1.5f }, new() { CoreGen = 1.25f }, new() { CoreGen = 1.2f }]),
-        [EvolutionKind.SecondPath] = new(EvolutionKind.SecondPath, "Second Path", NodeKind.Tendril, NodeKind.MarkPath,
+        [EvolutionKind.SecondPath] = new(EvolutionKind.SecondPath, "Second Path", NodeKind.Tendril,
             Structure, [new() { CoreLinks = 1, CoreTransfer = 1.5f }, new() { CoreLinks = 1, CoreTransfer = 1.25f }]),
-        [EvolutionKind.LongStemmed] = new(EvolutionKind.LongStemmed, "Long Stemmed", NodeKind.Amplifier, NodeKind.MarkStemmed,
+        [EvolutionKind.LongStemmed] = new(EvolutionKind.LongStemmed, "Long Stemmed", NodeKind.Amplifier,
             Structure, [new() { StemTransfer = 3 }, new() { StemTransfer = 1.5f }]),
         [EvolutionKind.SmartParticles] = new(EvolutionKind.SmartParticles, "Smart Particles", NodeKind.Resistor,
-            NodeKind.MarkSmart, Specialist, [new() { SmartBlobs = true }]),
+            Specialist, [new() { SmartBlobs = true }]),
         [EvolutionKind.RapidEvolution] = new(EvolutionKind.RapidEvolution, "Rapid Evolution", NodeKind.WildLab,
-            NodeKind.MarkRapid, Genes,
+            Genes,
             [new() { LabGenes = 2, LabUpkeep = 1.25f }, new() { LabGenes = 1.5f, LabUpkeep = 1.25f }]),
-        [EvolutionKind.MorePower] = new(EvolutionKind.MorePower, "More Power", NodeKind.Lichen, NodeKind.MarkPower, Power,
+        [EvolutionKind.MorePower] = new(EvolutionKind.MorePower, "More Power", NodeKind.Lichen, Power,
             [new() { Generators = 2 }, new() { Generators = 2 }, new() { Generators = 2 }]),
-        [EvolutionKind.PulsarPower] = new(EvolutionKind.PulsarPower, "Pulsar Power", NodeKind.Pulsar, NodeKind.MarkPulsar,
+        [EvolutionKind.PulsarPower] = new(EvolutionKind.PulsarPower, "Pulsar Power", NodeKind.Pulsar,
             Power, [new() { GeneratorGen = 1.2f }, new() { GeneratorGen = 1.1f }]),
-        [EvolutionKind.TwinStars] = new(EvolutionKind.TwinStars, "Twin Stars", NodeKind.TwinStar, NodeKind.MarkTwin, Power,
+        [EvolutionKind.TwinStars] = new(EvolutionKind.TwinStars, "Twin Stars", NodeKind.TwinStar, Power,
             [new() { GeneratorTransfer = 1.5f }, new() { GeneratorTransfer = 1.25f }]),
-        [EvolutionKind.BigStem] = new(EvolutionKind.BigStem, "Big Stem", NodeKind.BigStem, NodeKind.MarkBigStem, Structure,
+        [EvolutionKind.BigStem] = new(EvolutionKind.BigStem, "Big Stem", NodeKind.BigStem, Structure,
             [new() { StemFruits = 1 }, new() { StemFruits = 1 }]),
-        [EvolutionKind.WildBloom] = new(EvolutionKind.WildBloom, "Wild Bloom", NodeKind.Moonflower, NodeKind.MarkWild,
+        [EvolutionKind.WildBloom] = new(EvolutionKind.WildBloom, "Wild Bloom", NodeKind.Moonflower,
             Specialist, [new() { WildFlowers = 2 }, new() { WildFlowers = 2 }, new() { WildFlowers = 2 }]),
     };
 
@@ -114,27 +114,18 @@ public static class Evolutions
         return Enum.GetValues<EvolutionKind>().Cast<EvolutionKind?>()
             .FirstOrDefault(k => k.ToString()!.Equals(plain, StringComparison.OrdinalIgnoreCase));
     }
-
-    // The marker fruits, one kind per evolution: a pale bubble (see GardenView.AddMarker) with the shape of the wild
-    // flower its seedling becomes small inside it, in its theme's role hue (first pass, for Jeremy's review). Not
-    // tappable, like all fruit; they hold power as fruit does, fed by the core.
-    internal static IEnumerable<NodeSpec> Markers(IReadOnlyDictionary<NodeKind, NodeSpec> specs) => All.Values.Select(e => new NodeSpec(e.Marker)
-    {
-        Name = $"{e.Name} marker", Description = $"Grew on the core as {e.Name} was chosen.",
-        Radius = 8, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = specs[e.Becomes].Shape, Rgb = e.Rgb,
-        PowerStore = NodeBase.FruitStore, IsMarker = true,
-    });
 }
 
 // An evolution chosen for a seedling (DESIGN.md, Seedlings and evolutions): which, at what level, its target (the
-// seedling's store from then on), and whether it has bloomed (and when, in the garden's age). A seedling pruned before
-// it blooms leaves its evolution waiting (and its slot): the next seedling to emerge takes it up, starting empty as
-// every new part does (see Garden, Seedlings).
+// seedling's store from then on), when it was chosen, and whether it has bloomed and when (in the garden's age). A
+// seedling pruned before it blooms leaves its evolution waiting (and its slot): the next seedling to emerge takes it
+// up, starting empty as every new part does (see Garden, Seedlings).
 public sealed class Evolution
 {
     public EvolutionKind Kind;
     public int Level = 1;
     public double Target;
+    public double ChosenAt;
     public bool Bloomed;
     public double BloomedAt;
 
@@ -150,4 +141,5 @@ public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, 
     public static readonly Boost None = new();
 }
 
-public sealed record EvolutionSave(EvolutionKind Kind, int Level, double Target, bool Bloomed, double BloomedAt);
+public sealed record EvolutionSave(EvolutionKind Kind, int Level, double Target, bool Bloomed, double BloomedAt,
+    double ChosenAt = 0);

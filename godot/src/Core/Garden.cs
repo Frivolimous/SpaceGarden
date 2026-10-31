@@ -703,7 +703,7 @@ public sealed class Garden
     // Places a new part just off its parent, heading away from the grandparent (and upward when upright), and the way
     // a pot pushes there, if one does (passive growth respects pots). A bud that formed inside its parent (emerge)
     // starts deep inside it and pops out, its link extending.
-    PlantNode AddNear(NodeSpec spec, PlantNode parent, bool emerge = false, bool track = true)
+    PlantNode AddNear(NodeSpec spec, PlantNode parent, bool emerge = false)
     {
         Vector2 away = parent.Parent == null
             ? (Layout == Layout.Upright ? -Vector2.UnitY : RandomDirection())
@@ -714,13 +714,12 @@ public sealed class Garden
         float angle = (float)(rng.NextDouble() - 0.5) * 1.6f;
         var dir = Vector2.Transform(away, Matrix3x2.CreateRotation(angle));
         float distance = (parent.Spec.Radius + spec.Radius) * (emerge ? Tuning.EmergeStart : 0.8f);
-        var node = Add(spec, parent, parent.Position + dir * distance, track);
+        var node = Add(spec, parent, parent.Position + dir * distance);
         node.Velocity = dir * (emerge ? Tuning.EmergeSpeed : 0.3f);
         return node;
     }
 
-    // (Off track, it isn't counted as grown or discovered: a marker fruit.)
-    PlantNode Add(NodeSpec spec, PlantNode? parent, Vector2 position, bool track = true)
+    PlantNode Add(NodeSpec spec, PlantNode? parent, Vector2 position)
     {
         var node = new PlantNode(nextId++, spec, parent, position)
         {
@@ -732,7 +731,7 @@ public sealed class Garden
         Nodes.Add(node);
         // A new seedling takes up an evolution left waiting by one pruned before it bloomed.
         if (spec.Kind == NodeKind.Seedling && !loading) node.Evolution = Waiting.FirstOrDefault();
-        if (parent != null && !loading && track) Tracking.Grew(spec, Nodes.Count);
+        if (parent != null && !loading) Tracking.Grew(spec, Nodes.Count);
         // A Comet Bloom bursts every kind of blob as it appears.
         if (spec.EmergeBurst > 0 && !loading) node.Blob = spec.EmergeBurst;
         if (!spec.IsFruit && !loading)
@@ -1260,9 +1259,11 @@ public sealed class Garden
     // free. It only takes power in, from its neighbours (no upkeep, no transfer of its own). Full, it waits for the
     // player to choose one of the evolutions it offers; that raises its store to the evolution's target, and full again
     // it blooms: the effect applies for good, the seedling becomes the evolution's wild flower, and the evolution's
-    // marker fruit grows on the core. A slot stays used once its evolution is chosen, so each slot is one evolution.
+    // mark is set in the core's rim (drawn by the view from Evolved). A slot stays used once its evolution is chosen,
+    // so each slot is one evolution: the slots are counted from Evolved, never from anything drawn.
 
-    // The evolutions chosen, in the order chosen (each with its marker fruit on the core), bloomed or still growing.
+    // The evolutions chosen, in the order chosen, bloomed or still growing: the garden's record of them (the core's
+    // rim marks, the Almanac's list) and its seedling slots used.
     public readonly List<Evolution> Evolved = new();
     // Smart Particles has bloomed: blobs never wander into dead ends (see Wanders).
     public bool SmartBlobs { get; private set; }
@@ -1271,11 +1272,11 @@ public sealed class Garden
 
     public int Blooms => Evolved.Count(e => e.Bloomed);
 
-    // Evolutions chosen whose seedling was pruned before it bloomed: the next seedling to emerge takes one up, where it
-    // stopped (see Add).
+    // Evolutions chosen whose seedling was pruned before it bloomed: the next seedling to emerge takes one up, starting
+    // empty (see Add).
     public IEnumerable<Evolution> Waiting => Evolved.Where(e => !e.Bloomed && !Nodes.Any(n => n.Evolution == e));
 
-    // Seedling slots used: every evolution chosen (its marker on the core), every seedling yet to choose, and every
+    // Seedling slots used: every evolution chosen, every seedling yet to choose, and every
     // seedling bud forming; less the evolutions waiting, whose slots the next seedlings planted take up.
     public int SeedlingsUsed
     {
@@ -1357,7 +1358,7 @@ public sealed class Garden
         if (!seedling.Choosing || !seedling.Offers!.Contains(kind) || !Nodes.Contains(seedling)
             || Taken(kind) >= Evolutions.All[kind].MaxLevel)
             return false;
-        var evolution = new Evolution { Kind = kind, Level = Taken(kind) + 1, Target = NextTarget };
+        var evolution = new Evolution { Kind = kind, Level = Taken(kind) + 1, Target = NextTarget, ChosenAt = Tracking.Age };
         Evolved.Add(evolution);
         seedling.Evolution = evolution;
         seedling.Offers = null;
@@ -1365,21 +1366,18 @@ public sealed class Garden
         return true;
     }
 
-    // An evolution's marker fruit, on the core. Fruit, but not counted as grown or discovered.
-    void AddMarker(EvolutionKind kind) => AddNear(NodeSpecs.All[Evolutions.All[kind].Marker], Core, track: false);
 
     // The flowers that bloomed since the view last looked, for its flash (it empties this; a catch-up shows none).
     public readonly List<PlantNode> JustBloomed = new();
 
     // A seedling full of its evolution's target blooms (see Apply): it becomes the evolution's wild flower where it
-    // stands (full, from the power it held), and the evolution's marker fruit grows on the core.
+    // stands (full, from the power it held), and its mark appears in the core's rim.
     void Bloom(PlantNode seedling)
     {
         var evolution = seedling.Evolution!;
         Apply(evolution);
         Tracking.Log(JournalKind.Bloomed, BloomedText(evolution));
         var flower = Replace(seedling, evolution.Spec.Becomes);
-        AddMarker(evolution.Kind);
         if (ShowBlobs) JustBloomed.Add(flower);
     }
 
@@ -1474,16 +1472,15 @@ public sealed class Garden
         CheckSeedlings();
     }
 
-    // Dev aid (--evolve=NAME): an evolution chosen and bloomed at once, as a seedling's would be (its marker, effect and
+    // Dev aid (--evolve=NAME): an evolution chosen and bloomed at once, as a seedling's would be (its mark, effect and
     // caps, a slot added if none is free), its flower grown on the deepest part with a free link, if one has. Returns
     // the evolution, or null if it's at its repeat limit.
     public Evolution? EvolveNow(EvolutionKind kind)
     {
         if (Taken(kind) >= Evolutions.All[kind].MaxLevel) return null;
         if (FreeSeedlingSlots == 0) Capacity = Capacity with { Seedlings = SeedlingsUsed + 1 };
-        var evolution = new Evolution { Kind = kind, Level = Taken(kind) + 1, Target = NextTarget };
+        var evolution = new Evolution { Kind = kind, Level = Taken(kind) + 1, Target = NextTarget, ChosenAt = Tracking.Age };
         Evolved.Add(evolution);
-        AddMarker(kind);
         Tracking.Log(JournalKind.Chosen, $"Evolution chosen: {evolution.Name}");
         Apply(evolution);
         Tracking.Log(JournalKind.Bloomed, BloomedText(evolution));
@@ -2045,7 +2042,7 @@ public sealed class Garden
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
         Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought), WildUnlocked.ToList(), new(WildCaps),
-        Evolved.Select(e => new EvolutionSave(e.Kind, e.Level, e.Target, e.Bloomed, e.BloomedAt)).ToList());
+        Evolved.Select(e => new EvolutionSave(e.Kind, e.Level, e.Target, e.Bloomed, e.BloomedAt, e.ChosenAt)).ToList());
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -2069,6 +2066,7 @@ public sealed class Garden
             garden.Evolved.Add(new Evolution
             {
                 Kind = e.Kind, Level = e.Level, Target = e.Target, Bloomed = e.Bloomed, BloomedAt = e.BloomedAt,
+                ChosenAt = e.ChosenAt,
             });
         garden.UpdateBoosts();
         garden.GainTools(log: false);

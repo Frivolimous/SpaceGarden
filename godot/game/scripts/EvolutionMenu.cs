@@ -4,9 +4,9 @@ namespace SpaceGarden;
 
 // A seedling's choice (DESIGN.md, Tending commands: "Select evolution"): once it has taken in 200, tapping it opens a
 // half ring of round buttons under it (over it if there's no room below), in the core menu's look, one for each
-// evolution it offers, each showing its marker fruit's shape in its role hue. The one under the pointer shows a small
-// card beside the ring: its name, what it does, and the wild flower it blooms into. A pick chooses it; another tap, a
-// tap elsewhere or Escape closes it (the widget sees to those).
+// evolution it offers, each showing the shape of the flower it blooms into, in its role hue. The one under the pointer
+// shows a small card beside the ring: its name, what it does, and the wild flower it blooms into. A pick chooses it;
+// another tap, a tap elsewhere or Escape closes it (the widget sees to those).
 public partial class EvolutionMenu : Control
 {
     public event Action<EvolutionKind>? Picked;
@@ -133,7 +133,7 @@ public partial class EvolutionMenu : Control
     }
 }
 
-// One evolution's slot: a disc in the core menu's look, its marker fruit's shape in its hue.
+// One evolution's slot: a disc in the core menu's look, the shape of its flower in its role hue.
 public partial class EvolutionButton : Control
 {
     public event Action? Pressed;
@@ -169,7 +169,7 @@ public partial class EvolutionButton : Control
         DrawCircle(c, Radius + 1, new Color(0, 0, 0, 0.25f));
         DrawCircle(c, Radius, DiscFill);
         DrawArc(c, Radius, 0, Mathf.Tau, 40, hue with { A = Hover ? 0.75f : 0.35f }, Hover ? 1.6f : 1, true);
-        ToolButton.DrawShape(this, c, NodeSpecs.All[spec.Marker].Shape, 9, hue);
+        ToolButton.DrawShape(this, c, NodeSpecs.All[spec.Becomes].Shape, 9, hue);
         // A repeat's level, small in the corner.
         if (Level > 1)
             DrawString(ThemeDB.FallbackFont, c + new Vector2(7, 15), Level == 2 ? "II" : Level == 3 ? "III" : $"{Level}",
