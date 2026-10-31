@@ -63,6 +63,7 @@ public sealed class PlantNode
     public Evolution? Evolution;
     public float SeedBoost = 1;
     public bool IsSeedling => Spec.Kind == NodeKind.Seedling;
+    public bool IsHub => Spec.Kind == NodeKind.Hub;
     // Waiting for the player to choose its evolution.
     public bool Choosing => IsSeedling && Evolution == null && Offers != null;
 

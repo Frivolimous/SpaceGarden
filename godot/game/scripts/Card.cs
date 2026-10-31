@@ -15,6 +15,7 @@ public partial class Card : PanelContainer
     static readonly Color HighInk = new(1, 0.88f, 0.35f), LowInk = new(1, 0.38f, 0.33f), GeneInk = new(0.62f, 0.45f, 1f);
     static readonly Color RoomGreen = new(0.4f, 0.95f, 0.45f);
     static readonly Color QuirkInk = new(1, 1, 1, 0.6f);
+    static readonly Color HubInk = GardenView.Rgb(NodeSpecs.All[NodeKind.Hub].Rgb).Lightened(0.3f);
     static readonly Color GardenTint = GardenView.Rgb(NodeSpecs.All[NodeKind.Core].Rgb);
 
     readonly Label heading;
@@ -122,6 +123,14 @@ public partial class Card : PanelContainer
         // A wild flower that ends itself: how long it has left (an Ember burns out, a Comet Bloom withers).
         if (spec.LifeSeconds > 0)
             Line(ref used, $"{(spec.Dims ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, spec.LifeSeconds - node.Life) / speed)}");
+        // The Hub: its points to spend, the genes in its pool and those its next point still needs (tapping it opens its
+        // panel).
+        if (node.IsHub)
+        {
+            Line(ref used, ("Hub points: ", Ink), ($"{garden.HubPoints}", HubInk));
+            Line(ref used, $"Pool: {Math.Floor(garden.HubPool):#,0} genes");
+            Line(ref used, $"Next point: {Math.Ceiling(garden.NextPointCost - garden.HubPool):#,0} more genes");
+        }
         // On the core: an evolution whose seedling was pruned before it bloomed, which the next one planted takes up.
         if (node == garden.Core && garden.Waiting.FirstOrDefault() is { } waiting)
             Line(ref used, $"Next seedling: {waiting.Name}");

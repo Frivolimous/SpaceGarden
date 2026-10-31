@@ -1026,6 +1026,9 @@ public static class Textures
             SpaceGarden.Core.Shape.Swirl => p => R(p) <= 0.3f + 0.7f * Mathf.Pow(Lobes(A(p) + 2.4f * R(p), 3), 2),
             // Seedling (5c, first pass): a round seed with two pointed leaves opening from it.
             SpaceGarden.Core.Shape.Sprout => p => R(p) <= 0.5f || R(p) <= 0.35f + 0.65f * Mathf.Pow(Lobes(A(p), 2), 6),
+            // Hub (first pass): a wheel, its hub and rim joined by six spokes.
+            SpaceGarden.Core.Shape.Wheel => p => R(p) <= 0.4f || (R(p) >= 0.74f && R(p) <= 1)
+                || (R(p) <= 1 && R(p) * Mathf.Abs(Mathf.Sin(A(p) - Mathf.Round(A(p) / (Mathf.Tau / 6)) * (Mathf.Tau / 6))) <= 0.12f),
             _ => p => R(p) <= 1,
         };
     }

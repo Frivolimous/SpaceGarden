@@ -8,7 +8,7 @@ namespace SpaceGarden;
 // Ambient, Minimised and the settings.
 public enum Tool
 {
-    Stem, Generator, Lab, Grove, Seedling, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
+    Stem, Generator, Lab, Grove, Seedling, Hub, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
     Info, Almanac, Research, Build, Ambient, Minimise, Settings,
 }
 
@@ -22,6 +22,8 @@ public partial class Toolbar : PanelContainer
     public ShapingTool? TargetTool { get; private set; }
     // Whether a part has room to grow a bud of a kind (its links, and the garden's capacity).
     public Func<PlantNode, NodeKind, bool> CanGrow = (_, _) => true;
+    // Whether a bud tool shows at all (the Hub's, once it's bought).
+    public Func<NodeKind, bool> Offered = _ => true;
 
     // The kind each bud tool grows.
     public static NodeKind? KindOf(Tool tool) => tool switch
@@ -31,6 +33,7 @@ public partial class Toolbar : PanelContainer
         Tool.Lab => NodeKind.Lab,
         Tool.Grove => NodeKind.Grove,
         Tool.Seedling => NodeKind.Seedling,
+        Tool.Hub => NodeKind.Hub,
         _ => null,
     };
 
@@ -82,6 +85,7 @@ public partial class Toolbar : PanelContainer
         {
             (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
             (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Plant a seedling (it uses a seedling slot)"),
+            (Tool.Hub, "Plant the Hub (one at a time)"),
             (Tool.Unhook, "Take it off its pot or trellis"),
             (Tool.Prune, "Prune"), (Tool.Remove, "Take this away"),
         })
@@ -136,7 +140,7 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, button) in buttons)
             if (KindOf(tool) is { } kind)
             {
-                button.Visible = buds;
+                button.Visible = buds && Offered(kind);
                 button.Enabled = CanGrow(Target, kind);
                 // Its bud is growing here now (or a wild flower standing in for it).
                 button.Forming = Target.Forming is { } forming && (forming == kind || NodeSpecs.All[forming].Wild?.Base == kind);

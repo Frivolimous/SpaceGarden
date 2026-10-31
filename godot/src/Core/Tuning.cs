@@ -223,6 +223,17 @@ public static class Tuning
     public const double FirstBloom = 1_000, BloomGrowth = 5;
     public const int ChoiceCount = 3, RepeatsAfter = 5;
 
+    // ==== THE HUB ==== \\
+    // Placeholders (DESIGN.md, The Hub; its details are an open topic). Gene blobs it catches fill its pool, which turns
+    // into hub points: the first at HubFirstPoint genes, each after HubPointStep more than the last (250, 300, 350 ...).
+    // Each level on a kind's path gives HubBoost more of its main effect (adding up), up to HubMaxLevel; a level costs a
+    // point, a milestone its own (see Hubs.Paths). The Hub's upkeep is HubUpkeep a second, plus HubUpkeepPerLevel for
+    // every level bought.
+    public const double HubFirstPoint = 250, HubPointStep = 50;
+    public const float HubBoost = 0.1f;
+    public const int HubMaxLevel = 10;
+    public const float HubUpkeep = 3, HubUpkeepPerLevel = 0.5f;
+
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in
     // order. Placeholders for playtesting. Stems and generators each raise their cap by 1 (to 30 stems and 10

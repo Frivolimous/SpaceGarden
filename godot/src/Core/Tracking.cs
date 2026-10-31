@@ -59,6 +59,7 @@ public sealed class Tracking
         {
             if (found) Log(JournalKind.Discovery, $"Wild flower discovered: {spec.Name}");
         }
+        else if (spec.Kind == NodeKind.Hub) First("grew:Hub", "First Hub planted");
         else First($"grew:{spec.Kind}", $"First {spec.Name.ToLowerInvariant()} {(spec.IsFruit ? "grew" : "emerged")}");
         if (parts <= MostParts) return;
         foreach (var milestone in PartMilestones)
@@ -148,6 +149,9 @@ public sealed class Tracking
         Row("evolutions_chosen", garden.Evolved.Count);
         Row("seedlings_bloomed", garden.Blooms);
         Row("seedling_slots", garden.Capacity.Seedlings);
+        Row("hub_genes", garden.HubGenes);
+        Row("hub_points_earned", garden.HubPointsEarned);
+        Row("hub_levels", garden.HubLevelsBought);
         foreach (var kind in Enum.GetValues<NodeKind>())
             if (Grown.TryGetValue(kind, out var count)) Row($"grown_{kind.ToString().ToLowerInvariant()}", count);
         return csv.ToString();
@@ -295,11 +299,12 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
     public bool Any => Lines.Count > 0;
 
     public sealed record Mark(double Age, int JournalCount, Dictionary<NodeKind, int> Grown, double Genes, float Power,
-        Dictionary<NodeKind, int> Ended);
+        Dictionary<NodeKind, int> Ended, int HubPoints = 0);
 
     public static Mark MarkNow(Garden garden) =>
         new(garden.Tracking.Age, garden.Tracking.Journal.Count, new(garden.Tracking.Grown), garden.Genes,
-            garden.Nodes.Where(n => n.HoldsGardenPower).Sum(n => n.Power), new(garden.Tracking.EndedCount));
+            garden.Nodes.Where(n => n.HoldsGardenPower).Sum(n => n.Power), new(garden.Tracking.EndedCount),
+            garden.HubPointsEarned);
 
     public static AwayNote Since(Garden garden, Mark mark)
     {
@@ -349,6 +354,9 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
 
         double genes = garden.Genes - mark.Genes;
         if (genes >= 1) lines.Add($"{genes:#,0} genes reached the core.");
+        // Hub points earned: "The Hub earned 3 points (5 to spend)."
+        int points = garden.HubPointsEarned - mark.HubPoints;
+        if (points > 0) lines.Add($"The Hub earned {(points == 1 ? "a point" : $"{points} points")} ({garden.HubPoints} to spend).");
 
         // (Blooms, discoveries and endings have their own lines above.)
         var moments = tracking.Journal.Skip(mark.JournalCount)

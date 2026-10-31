@@ -153,9 +153,10 @@ public sealed class Evolution
     public EvolutionLevel Effect => Spec.Effect;
 }
 
-// A garden's evolutions' effect on one basic kind: its power made, its upkeep, how fast it sends power on, its blobs,
-// and fruit it can hold beyond its spec's (see Garden.Boosts).
-public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, float Blobs = 1, int Fruits = 0)
+// A garden's evolutions' and Hub's effect on one kind: its power made, its upkeep, how fast it sends power on, its
+// blobs, fruit it can hold beyond its spec's, and its own quirk (Effect: see HubAxis) (see Garden.UpdateBoosts).
+public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, float Blobs = 1, int Fruits = 0,
+    float Effect = 1)
 {
     public static readonly Boost None = new();
 }

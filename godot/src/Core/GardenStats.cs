@@ -124,7 +124,7 @@ public sealed record GardenStats(
             {
                 if (to == skip || !garden.Wanders(at, to, BlobKind.Genes, smart)) return; // (an Amplifier's doubling isn't counted)
                 if (to == core) reached += each;
-                else next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
+                else if (!to.IsHub) next[(to, at)] = next.GetValueOrDefault((to, at)) + each; // (the Hub keeps what it catches)
             }
             foreach (var branch in at.Branches) Go(branch);
             if (at.Parent != null) Go(at.Parent);

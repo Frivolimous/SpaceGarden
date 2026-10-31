@@ -176,8 +176,8 @@ public sealed class Garden
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
         if (!CanSproutFrom(node, kind)) return false;
-        // (A seedling never grows wild: it blooms into one.)
-        node.Forming = NodeSpecs.All[kind].IsWild || kind == NodeKind.Seedling ? kind
+        // (A seedling never grows wild: it blooms into one. Nor does the Hub.)
+        node.Forming = NodeSpecs.All[kind].IsWild || kind is NodeKind.Seedling or NodeKind.Hub ? kind
             : GrowsWild(node, kind, passive: false, CountKinds());
         node.Growth = 0;
         node.FormingLook = 0;
@@ -248,6 +248,7 @@ public sealed class Garden
         Motes.RemoveAll(m => m.Route.Any(gone.Contains));
         foreach (var n in removed) linkToParent.Remove(n);
         if (Held != null && gone.Contains(Held)) LetGo();
+        if (removed.Any(n => n.IsHub)) UpdateBoosts(); // its levels go dormant
         return removed;
     }
 
@@ -273,6 +274,9 @@ public sealed class Garden
                 return false;
             int seedlings = nodes.Count(n => n.IsSeedling || n.Forming == NodeKind.Seedling);
             if (seedlings > 0 && SeedlingsUsed + seedlings > Capacity.Seedlings) return false;
+            // A Hub comes back only if no other has been planted since.
+            int hubs = nodes.Count(n => n.IsHub || n.Forming == NodeKind.Hub);
+            if (hubs > 0 && CountOf(NodeKind.Hub) + hubs > Capacity.Hubs) return false;
             var counts = CountKinds();
             var (stems, generators, wild) = (counts.Stems, counts.Generators, counts.Wild);
             stems += nodes.Count(n => SlotOf(n.Spec.Kind) == NodeKind.Stem);
@@ -311,6 +315,7 @@ public sealed class Garden
             Links.Add(link);
             linkToParent[node] = link;
         }
+        if (nodes.Any(n => n.IsHub)) UpdateBoosts(); // its levels wake
         return nodes;
     }
 
@@ -537,6 +542,7 @@ public sealed class Garden
     bool HasRoomFor(NodeKind kind, Counts counts)
     {
         if (kind == NodeKind.Seedling) return SeedlingsUsed < Capacity.Seedlings;
+        if (kind == NodeKind.Hub) return CountOf(NodeKind.Hub) < Capacity.Hubs; // one at a time, once bought
         if (NodeSpecs.All[kind].IsWild && (counts.Wild >= Capacity.WildFlowers || !CanGrowWild(kind))) return false;
         return SlotOf(kind) switch
         {
@@ -636,7 +642,7 @@ public sealed class Garden
     {
         float boost = 1;
         if (!Nodes.Any(n => n.Spec.WildBoost > 0)) return boost;
-        foreach (var n in Within(parent, Tuning.MoonflowerReach)) boost += n.Spec.WildBoost;
+        foreach (var n in Within(parent, Tuning.MoonflowerReach)) boost += n.Spec.WildBoost * n.Boost.Effect;
         return boost;
     }
 
@@ -732,8 +738,10 @@ public sealed class Garden
         // A new seedling takes up an evolution left waiting by one pruned before it bloomed.
         if (spec.Kind == NodeKind.Seedling && !loading) node.Evolution = Waiting.FirstOrDefault();
         if (parent != null && !loading) Tracking.Grew(spec, Nodes.Count);
-        // A Comet Bloom bursts every kind of blob as it appears.
-        if (spec.EmergeBurst > 0 && !loading) node.Blob = spec.EmergeBurst;
+        // A Comet Bloom bursts every kind of blob as it appears (more with its Hub levels).
+        if (spec.EmergeBurst > 0 && !loading) node.Blob = MathF.Round(spec.EmergeBurst * node.Boost.Effect);
+        // A new Hub wakes the levels bought on the last one.
+        if (spec.Kind == NodeKind.Hub && !loading) UpdateBoosts();
         if (!spec.IsFruit && !loading)
         {
             Tracking.Reached(Nodes.Count(n => !n.Spec.IsFruit));
@@ -995,8 +1003,8 @@ public sealed class Garden
             cameFrom = at;
             at = next;
             route?.Add(at);
-            if (genes ? at == Core : Absorbs(at, counts)) return at;
-            if (canDouble && Doubled == null && at.Spec.DoublesBlobs && rng.NextDouble() < Tuning.AmplifyChance)
+            if (genes ? CatchesGenes(at) : Absorbs(at, counts)) return at;
+            if (canDouble && Doubled == null && at.Spec.DoublesBlobs && rng.NextDouble() < Tuning.AmplifyChance * at.Boost.Effect)
                 Doubled = (at, cameFrom, hop + 1);
         }
         return null;
@@ -1030,7 +1038,7 @@ public sealed class Garden
         if (!smart || !DeadEnd(to, at)) return true;
         return kind switch
         {
-            BlobKind.Genes => to == Core,
+            BlobKind.Genes => CatchesGenes(to),
             BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && lastPrune == null && to.CanBranch),
             _ => to.Buff <= 0,
         };
@@ -1100,19 +1108,24 @@ public sealed class Garden
     internal bool WalkGene(PlantNode lab)
     {
         var counts = CountKinds();
-        return Walk(lab, genes: true, ref counts, null) != null;
+        return Walk(lab, genes: true, ref counts, null) == Core;
     }
 
+    // The parts that take gene blobs in: the core, and the Hub (into its own pool).
+    public bool CatchesGenes(PlantNode part) => part == Core || part.IsHub;
+
     // A lab's gene blob leaves (from the lab, or carries on from an Amplifier that doubled it, its walk shown delay
-    // seconds later). Only the core absorbs it; its genes count at the core in this same step, so a catch-up (which
-    // runs no physics) and a live session agree, and the blob shown is their journey made visible. A blob that never
-    // finds the core fades, its genes lost: labs near the core waste fewer.
+    // seconds later). Only the core absorbs it, or the Hub; its genes count at the core (or in the Hub's pool) in this
+    // same step, so a catch-up (which runs no physics) and a live session agree, and the blob shown is their journey
+    // made visible. A blob that never finds either fades, its genes lost: labs near the core waste fewer.
     void SendGenes(PlantNode lab, PlantNode from, ref Counts counts, PlantNode? cameFrom, int hops, float delay, bool canDouble)
     {
         var route = RouteIfShown();
-        bool found = Walk(from, genes: true, ref counts, route, cameFrom, hops, canDouble) != null;
+        var catcher = Walk(from, genes: true, ref counts, route, cameFrom, hops, canDouble);
+        bool found = catcher != null;
         var doubled = Doubled;
-        if (found) Deliver(Tuning.BlobGenes);
+        if (catcher == Core) Deliver(Tuning.BlobGenes);
+        else if (catcher != null) CatchAtHub(Tuning.BlobGenes);
         if (Show(route, lab, delay) is { } mote) mote.Absorbed = found;
         if (doubled is { } d)
             SendGenes(lab, d.At, ref counts, d.From, hops - d.Hops, delay + d.Hops * Tuning.MoteLinkSeconds, canDouble: false);
@@ -1341,7 +1354,7 @@ public sealed class Garden
         if (!any) return;
         foreach (var nebula in Nodes.Where(n => n.Spec.SeedlingBoost > 0).ToList())
             foreach (var n in Within(nebula, Tuning.NebulaReach))
-                if (n.IsSeedling) n.SeedBoost = Math.Max(n.SeedBoost, nebula.Spec.SeedlingBoost);
+                if (n.IsSeedling) n.SeedBoost = Math.Max(n.SeedBoost, nebula.Spec.SeedlingBoost * nebula.Boost.Effect);
     }
 
     // After each economy step's transfers: a seedling that's full (its power at its store) rolls the evolutions it offers,
@@ -1423,8 +1436,9 @@ public sealed class Garden
     }
 
     // The bloomed evolutions' effects on each basic kind: each evolution at its bloomed level (its levels adding up: see
-    // EvolutionLevel.At), different evolutions multiplied together; and Smart Particles' chance. Every part takes its
-    // kind's.
+    // EvolutionLevel.At), different evolutions multiplied together; and Smart Particles' chance. Then, while a Hub is
+    // planted, its levels (see Hub's section): each kind's main effect HubBoost more a level, adding up, and its
+    // milestones reached. The Hub's own upkeep rises with every level bought, dormant or not. Every part takes its kind's.
     void UpdateBoosts()
     {
         boosts.Clear();
@@ -1439,6 +1453,24 @@ public sealed class Garden
             Raise(NodeKind.Generator, b => b with { Gen = b.Gen * x.GeneratorGen, Transfer = b.Transfer * x.GeneratorTransfer });
             SmartChance = Math.Max(SmartChance, x.SmartChance);
         }
+        if (HubPlanted)
+            foreach (var (kind, level) in HubLevels)
+            {
+                if (level <= 0) continue;
+                var path = Hubs.Path(kind);
+                float by = 1 + Tuning.HubBoost * level;
+                Raise(kind, b => path.Axis switch
+                {
+                    HubAxis.Gen => b with { Gen = b.Gen * by },
+                    HubAxis.Blobs => b with { Blobs = b.Blobs * by },
+                    HubAxis.Transfer => b with { Transfer = b.Transfer * by },
+                    _ => b with { Effect = b.Effect * by },
+                });
+                foreach (var m in path.Milestones.Where(m => m.Level <= level))
+                    Raise(kind, b => b with { Fruits = b.Fruits + m.Fruits, Transfer = b.Transfer * m.Transfer, Upkeep = b.Upkeep * m.Upkeep });
+            }
+        int levels = HubLevelsBought;
+        if (levels > 0) Raise(NodeKind.Hub, b => b with { Upkeep = 1 + levels * Tuning.HubUpkeepPerLevel / Tuning.HubUpkeep });
         foreach (var node in Nodes) node.Boost = boosts.GetValueOrDefault(node.Spec.Kind, Boost.None);
     }
 
@@ -1496,6 +1528,72 @@ public sealed class Garden
         if (Nodes.Where(n => n.CanBranch && !n.Spec.IsFruit).MaxBy(n => n.Depth) is { } parent && Nodes.Count < Tuning.MaxNodes)
             AddBranch(parent, evolution.Spec.Becomes);
         return evolution;
+    }
+
+    // ==== THE HUB ==== \\
+    // DESIGN.md, The Hub. Bought in the core track (Capacity.Hubs), it's planted by hand from a part's toolbar, one at a
+    // time. It catches gene blobs as the core does, into its own pool (they never reach the gene balance), which turns
+    // into hub points: 1 every so many genes, more each time (NextPointCost). Its panel spends them on a level of a
+    // kind's path (Hubs.Paths), a kind found in the garden: each level raises the kind's main effect, and the Hub's
+    // upkeep. Pruned, its levels go dormant (their effects off, see UpdateBoosts) until a Hub is planted again; they're
+    // kept, as are its pool and points.
+
+    // Genes in the pool not yet a point; points to spend; points earned and genes caught over the garden's life.
+    public double HubPool;
+    public int HubPoints, HubPointsEarned;
+    public double HubGenes;
+    // The levels bought on each kind's path.
+    public readonly Dictionary<NodeKind, int> HubLevels = new();
+
+    public PlantNode? Hub => Nodes.FirstOrDefault(n => n.IsHub);
+    // Whether the levels work now: a Hub is planted (a bud forming doesn't count).
+    public bool HubPlanted => Nodes.Any(n => n.IsHub);
+    public int HubLevelsBought => HubLevels.Values.Sum();
+    public int HubLevel(NodeKind kind) => HubLevels.GetValueOrDefault(kind);
+
+    // The genes the next point takes: HubFirstPoint, then HubPointStep more for each point earned before.
+    public double NextPointCost => Tuning.HubFirstPoint + Tuning.HubPointStep * HubPointsEarned;
+
+    // Gene blobs the Hub caught: into its pool, and a point for each NextPointCost the pool holds.
+    void CatchAtHub(double genes)
+    {
+        HubGenes += genes;
+        HubPool += genes;
+        while (HubPool >= NextPointCost)
+        {
+            HubPool -= NextPointCost;
+            HubPoints++;
+            HubPointsEarned++;
+        }
+    }
+
+    // Whether a kind's next level can be bought now: a Hub planted, the kind found in the garden, below the top level,
+    // and the points to cover it.
+    public bool CanBuyHubLevel(NodeKind kind) =>
+        HubPlanted && Hubs.HasPath(kind) && Tracking.Discovered.ContainsKey(kind) && HubLevel(kind) < Tuning.HubMaxLevel
+        && HubPoints >= Hubs.Path(kind).Cost(HubLevel(kind) + 1);
+
+    // Buys a kind's next level with the Hub's points: its effect, and the Hub's upkeep, rise at once. Returns whether it
+    // bought.
+    public bool BuyHubLevel(NodeKind kind)
+    {
+        if (!CanBuyHubLevel(kind)) return false;
+        int level = HubLevel(kind) + 1;
+        HubPoints -= Hubs.Path(kind).Cost(level);
+        HubLevels[kind] = level;
+        UpdateBoosts();
+        return true;
+    }
+
+    // Dev aid (--hub) and screenshots: a Hub grown at once on the deepest part with a free link, a Hub slot added if
+    // none is free (as if bought). Null if one is planted already or no part has room.
+    public PlantNode? PlantHub()
+    {
+        if (HubPlanted || Nodes.Count >= Tuning.MaxNodes) return null;
+        var parent = Nodes.Where(n => n.CanBranch && !n.Spec.IsFruit && n.Spec.MaxLinks > 1).MaxBy(n => n.Depth);
+        if (parent == null) return null;
+        if (CountOf(NodeKind.Hub) >= Capacity.Hubs) Capacity = Capacity with { Hubs = CountOf(NodeKind.Hub) + 1 };
+        return AddBranch(parent, NodeKind.Hub);
     }
 
     // ==== GENES AND UPGRADES ==== \\
@@ -2051,7 +2149,8 @@ public sealed class Garden
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
         Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought), WildUnlocked.ToList(), new(WildCaps),
-        Evolved.Select(e => new EvolutionSave(e.Kind, e.Level, e.Target, e.Bloomed, e.BloomedAt, e.ChosenAt)).ToList());
+        Evolved.Select(e => new EvolutionSave(e.Kind, e.Level, e.Target, e.Bloomed, e.BloomedAt, e.ChosenAt)).ToList(),
+        new HubSave(HubPool, HubPoints, HubPointsEarned, HubGenes, new(HubLevels)));
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -2077,6 +2176,11 @@ public sealed class Garden
                 Kind = e.Kind, Level = e.Level, Target = e.Target, Bloomed = e.Bloomed, BloomedAt = e.BloomedAt,
                 ChosenAt = e.ChosenAt,
             });
+        if (save.Hub is { } hub)
+        {
+            (garden.HubPool, garden.HubPoints, garden.HubPointsEarned, garden.HubGenes) = (hub.Pool, hub.Points, hub.Earned, hub.Genes);
+            foreach (var (kind, level) in hub.Levels) garden.HubLevels[kind] = level;
+        }
         garden.UpdateBoosts();
         garden.GainTools(log: false);
         var byId = new Dictionary<int, PlantNode>();
@@ -2104,6 +2208,7 @@ public sealed class Garden
                 if (byId.TryGetValue(id, out var node)) node.TiedTo = tool;
         }
         garden.loading = false;
+        if (garden.HubPlanted) garden.UpdateBoosts(); // its levels work: they needed the Hub in the garden
         garden.SettleLooks();
         return garden;
     }
@@ -2127,8 +2232,8 @@ public sealed class Garden
 
 // The limits on growth (DESIGN.md, Capacity): how many stems and generators the garden may have, how many links the
 // core has, and how many of each shaping tool may be placed. Labs and other flowers are uncapped; free links and power
-// limit them. The wild flower limit (5d) and seedling slots (5c) have their mechanics; Hubs are a counter until the
-// Hub's step. Upgrades bought and evolutions bloomed raise these, and the garden's size the shaping tools.
+// limit them. The wild flower limit (5d), seedling slots (5c) and Hubs (one planted at a time once bought) have their
+// mechanics. Upgrades bought and evolutions bloomed raise these, and the garden's size the shaping tools.
 public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots = Tuning.StartPotCap, int Trellises = 0,
     int Wells = 0, int WildFlowers = Tuning.StartWildFlowers, int Seedlings = Tuning.StartSeedlings, int Hubs = 0)
 {
@@ -2198,8 +2303,9 @@ public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, floa
     int Evolution = -1, List<EvolutionKind>? Offers = null);
 
 // (WildUnlocked and WildCaps since step 5d: the Evolution kinds unlocked, and any per-kind caps; see Garden.WildUnlocked.
-// Evolutions since 5c: those chosen, in order; see Garden.Evolved.)
+// Evolutions since 5c: those chosen, in order; see Garden.Evolved. Hub since the Hub's step: its pool, points and
+// levels.)
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
     double Genes = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null, double GeneBalance = 0,
     ResearchSave? Research = null, List<NodeKind>? WildUnlocked = null, Dictionary<NodeKind, int>? WildCaps = null,
-    List<EvolutionSave>? Evolutions = null);
+    List<EvolutionSave>? Evolutions = null, HubSave? Hub = null);

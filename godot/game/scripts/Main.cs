@@ -18,8 +18,9 @@ namespace SpaceGarden;
 // note, --export=PATH (debug builds) to write the tracking as CSV and quit (see ExportTracking), --evolve=NAME[,NAME]
 // to choose and bloom evolutions at once, --seedling to plant a seedling at once, --seedfill=N to set its power
 // (planting one if needed; full at 200 brings its choice, with --tap=seedling to show it), --choose=N to take its
-// Nth offer, --bloom to fill a chosen one so it blooms (its burst showing), plus Screenshot's
-// options and the widget's (--inspect[=core|garden], --coremenu[=SLOT], --almanac, --research, --ambient, --corehover: see
+// Nth offer, --bloom to fill a chosen one so it blooms (its burst showing), --hub to plant the Hub at once,
+// --hubpoints=N to give it N points to spend, --hubbuy=KIND[,KIND] to buy levels with them, plus Screenshot's
+// options and the widget's (--inspect[=core|garden], --coremenu[=SLOT], --almanac, --research, --hubpanel, --ambient, --corehover: see
 // Widget.DevFlags). --screenshot runs never touch the real save.
 //
 // While nobody can see the garden (screen locked, display off, a full-screen app on its monitor: see Visibility) it
@@ -132,7 +133,15 @@ public partial class Main : Node2D
                 else GD.PrintErr($"--evolve: no evolution called {name}");
         if (args.ContainsKey("seedling") || (args.ContainsKey("seedfill") && !Garden.Nodes.Any(n => n.IsSeedling)))
             Garden.PlantSeedling();
-        if (args.ContainsKey("evolve") || args.ContainsKey("seedling") || args.ContainsKey("seedfill"))
+        // Dev aids (the Hub): one planted at once (bought if it wasn't), its points to spend, and levels bought with
+        // them by kind (--hubbuy=Lab,Lab,Stem: one level each time a kind is named).
+        if (args.ContainsKey("hub")) Garden.PlantHub();
+        if (args.TryGetValue("hubpoints", out var hubPoints)) Garden.HubPoints = int.Parse(hubPoints);
+        if (args.TryGetValue("hubbuy", out var hubBuy))
+            foreach (var name in hubBuy.Split(','))
+                if (!Enum.TryParse<NodeKind>(name, true, out var kind) || !Garden.BuyHubLevel(kind))
+                    GD.PrintErr($"--hubbuy: can't buy a level of {name}");
+        if (args.ContainsKey("evolve") || args.ContainsKey("seedling") || args.ContainsKey("seedfill") || args.ContainsKey("hub"))
         {
             foreach (var node in Garden.Nodes)
                 if (!node.IsSeedling) node.Power = node.Store;
