@@ -18,7 +18,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   when it's shown again. Its taskbar button, Ctrl+Alt+G or the tray icon bring it back in Active. Only one running
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
-  (grow a stem, generator, lab or grove from it, on parts with room for branches; the kind growing there now has a
+  (grow a stem, generator, lab or grove from it, or plant a seedling, on parts with room for branches; the kind growing there now has a
   pulsing outline, and a part with every link taken shows "3/3 Connections Used" in their place; prune it and everything beyond
   it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
   ("Drain: 6/s", "Genes: 12/min", what's
@@ -117,12 +117,23 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   Amplifier and the Resistor don't. Pruning frees the slots. Fifteen kinds, each with its own shape: Amplifier,
   Resistor, Tendril, Big Stem, Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen, Buffer, Comet
   Bloom, Moonflower, Nebula Bloom. Big Stem, Pulsar and Twin Star join the pool only through `Garden.UnlockWild`
-  (their evolutions, step 5c). An Amplifier doubles half the blobs passing it; blobs never step onto a Resistor. An
+  (their evolutions, step 5c; a passive bud that grows wild leans two to one to its base's own kinds). An Amplifier doubles half the blobs passing it; blobs never step onto a Resistor. An
   Ember fades from twice a generator to nothing over 3 days and a Comet Bloom withers after one: the only parts the
   garden ever loses on its own, drifting off like a prune; the journal and the away note say so. Their fruit
   includes two new kinds: glow (white, sending buff blobs at a quarter of a Buffer's rate) and wood. The part's card
   shows its quirk under its name (and how long an Ember or Comet Bloom has left); the garden card a "Wild flowers:
   1 / 2" line once there's a limit. All wild flowers draw from one atlas texture in one batch per layer.
+- **Seedlings and evolutions** (step 5c, `src/Core/Evolutions.cs` and `Garden.cs`, numbers in `Tuning` under
+  Seedlings; DESIGN.md, Seedlings and evolutions): plant a seedling from a part's toolbar while a seedling slot is
+  free (1 to start, more in the Core track). It takes in power as its upkeep (3/s when full) up to 200, then waits:
+  tap it for a half ring of three evolutions (each its marker's shape in its role hue; the one under the pointer
+  says what it does and the wild flower it blooms into). Choosing grows a marker fruit on the core and sets the
+  target: 1,000 for the first, then ×5 for each later one. At its target it blooms: the effect applies for good, the
+  wild flower limit (and its flower's base cap, where it takes that slot) rises by 1, and the seedling becomes its
+  wild flower. The ten evolutions and their levels are data (`Evolutions.All`); repeats ("More Power II") come once
+  the garden has five; Smart Particles is one-off. A seedling within 5 links of a Nebula Bloom fills twice as fast.
+  Pruning a seedling after its choice leaves the evolution waiting for the next one planted. The card shows a
+  seedling's evolution and "Grown: 640 / 1,000"; the journal its choice and bloom; the away note its bloom.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.
 
 ## Tracking
@@ -170,7 +181,10 @@ Tracking, then quit unless screenshotting), `--ambient` (starts in Ambient) and
 up to N, as if they had reached the core), `--wildlimit=N` (set the wild flower limit), `--wild=KIND[,KIND...]` (grow those
 wild flowers at once, each on a new stem from the core, whatever their lock and the caps, every part full;
 `--wild=all` lays out one of each round the middle of the screen: with `--scale=2 --labels` it's the sheet of their
-looks), `--unlockwild[=KIND,...]` (unlock Big Stem, Pulsar and Twin Star, as their evolutions will), `--scale=N`
+looks), `--unlockwild[=KIND,...]` (unlock Big Stem, Pulsar and Twin Star, as their evolutions do), `--evolve=NAME[,NAME]`
+(choose and bloom those evolutions at once, by name: `SecondPath` or `second-path`), `--seedling` (plant a seedling at
+once), `--seedfill=N` (set what it has taken in, planting one if there is none: 200 brings its choice), `--choose=N`
+(each waiting seedling takes its Nth offer), `--tap=seedling` (tap it: its choice menu open, the first card showing), `--scale=N`
 (the plant's scale, past the Size setting's range), `--labels` (each wild flower's name beside it), `--fpslog` (prints
 the frame rate, per-frame process, physics and renderer CPU/GPU time, and draw calls four times a second).
 
