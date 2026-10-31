@@ -82,7 +82,8 @@ public sealed record GardenStats(
     // The chance a gene blob leaving this lab finds the core before it fades (DESIGN.md, Economy, Blobs): the blob's
     // walk (Garden.Walk) followed exactly, as odds instead of dice. At each part it takes any link but the one it came
     // by (that one too at a dead end), each alike, for up to BlobMaxHops links; never onto a Resistor, and with Smart
-    // Particles never into a dead end but the core (see Garden.Wanders). Depends only on the plant's shape.
+    // Particles, at their chance, never into a dead end but the core (see Garden.Wanders). Depends only on the plant's
+    // shape (and the evolutions bloomed).
     public static double GeneReach(Garden garden, PlantNode lab)
     {
         var core = garden.Core;
@@ -96,26 +97,38 @@ public sealed record GardenStats(
             next.Clear();
             foreach (var ((at, from), odds) in now)
             {
-                bool smart = garden.SmartAt(at, BlobKind.Genes);
-                int options = 0; // the links it could take
-                foreach (var branch in at.Branches) if (garden.Wanders(at, branch, BlobKind.Genes, smart)) options++;
-                if (at.Parent is { } parent && garden.Wanders(at, parent, BlobKind.Genes, smart)) options++;
-                if (options == 0) continue;
-                // (As Garden.StepFrom: the way it came is skipped when there's another, if it's an option at all.)
-                var skip = options > 1 && from != null && garden.Wanders(at, from, BlobKind.Genes, smart) ? from : null;
-                double each = odds / (skip != null ? options - 1 : options);
-                void Go(PlantNode to)
+                // Smart Particles steer SmartChance of the steps where they can; the rest go as before.
+                if (garden.SmartAt(at, BlobKind.Genes))
                 {
-                    if (to == skip || !garden.Wanders(at, to, BlobKind.Genes, smart)) return; // (an Amplifier's doubling isn't counted)
-                    if (to == core) reached += each;
-                    else next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
+                    Spread(at, from, odds * garden.SmartChance, smart: true);
+                    Spread(at, from, odds * (1 - garden.SmartChance), smart: false);
                 }
-                foreach (var branch in at.Branches) Go(branch);
-                if (at.Parent != null) Go(at.Parent);
+                else Spread(at, from, odds, smart: false);
             }
             (now, next) = (next, now);
         }
         return reached;
+
+        // These odds of being at a part, having come from another, spread over its next links.
+        void Spread(PlantNode at, PlantNode? from, double odds, bool smart)
+        {
+            if (odds <= 0) return;
+            int options = 0; // the links it could take
+            foreach (var branch in at.Branches) if (garden.Wanders(at, branch, BlobKind.Genes, smart)) options++;
+            if (at.Parent is { } parent && garden.Wanders(at, parent, BlobKind.Genes, smart)) options++;
+            if (options == 0) return;
+            // (As Garden.StepFrom: the way it came is skipped when there's another, if it's an option at all.)
+            var skip = options > 1 && from != null && garden.Wanders(at, from, BlobKind.Genes, smart) ? from : null;
+            double each = odds / (skip != null ? options - 1 : options);
+            void Go(PlantNode to)
+            {
+                if (to == skip || !garden.Wanders(at, to, BlobKind.Genes, smart)) return; // (an Amplifier's doubling isn't counted)
+                if (to == core) reached += each;
+                else next[(to, at)] = next.GetValueOrDefault((to, at)) + each;
+            }
+            foreach (var branch in at.Branches) Go(branch);
+            if (at.Parent != null) Go(at.Parent);
+        }
     }
 }
 

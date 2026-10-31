@@ -120,7 +120,7 @@ public partial class EvolutionMenu : Control
         var spec = Evolutions.All[hovered.Kind];
         name.Text = Evolutions.Name(hovered.Kind, hovered.Level);
         name.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.3f);
-        does.Text = spec.Levels[hovered.Level - 1].Text;
+        does.Text = spec.Effect.At(hovered.Level).Text; // in all, at that level (a repeat adds level I's again)
         string flower = NodeSpecs.All[spec.Becomes].Name;
         becomes.Text = $"Blooms into {Tracking.Article(flower).ToLowerInvariant()} {flower}"
             + (spec.Unlocks && hovered.Level == 1 ? $"; {flower}s can then grow wild" : "");

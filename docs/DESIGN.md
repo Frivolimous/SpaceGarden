@@ -384,10 +384,25 @@ All three tracks share one gene income, and the stem and generator tracks will p
 - **Planting.** Seedlings never grow passively. The player plants them from the toolbar, like a bud.
 - **Filling.** A seedling fills with **power**, not genes, and its fill is simply its power against its store (Jeremy, Oct 31: no separate intake parameter). It has no upkeep, a heavy power weight (so its neighbours favour it) and no transfer rate (it never sends power on): it only takes power in. Its store is 200 before the choice; full, selecting it opens a radial menu with **3 random evolutions**. Choosing one raises its store to the target, 1,000 for the first bloom, then ×5 each time (5,000, 25,000 and so on); full again, it blooms.
 - **Evolution record** (Jeremy, Oct 31). The Almanac lists the garden's evolutions, each with its current level and when it was chosen. Nothing shows on the core for now: marker fruits read as flowers bare and as UI buttons in bubbles, and gems set into the core's rim didn't read well either. To revisit if needed.
-- **Bloom.** The effect applies immediately and permanently, and the seedling becomes the evolution's wild flower with a flashy effect, which also adds +1 to the wild flower limit and +1 to its base type's cap (so the flower, which takes both slots, costs nothing). Pruning the flower removes only the flower, never the effect or the marker. All effects, including bundled changes, are net positives with mild drawbacks, so no choice is regretted.
-- **Repeats.** Evolutions can be taken again ("Build your Core II"). Each has its own repeat limit and per-level values, kept in data. No repeats are offered until the garden has 5 evolutions. Smart Particles is one-off.
+- **Bloom.** The effect applies immediately and permanently, and the seedling becomes the evolution's wild flower with a flashy effect, which also adds +1 to the wild flower limit and +1 to its base type's cap (so the flower, which takes both slots, costs nothing). Pruning the flower removes only the flower, never the effect. All effects, including bundled changes, are net positives with mild drawbacks, so no choice is regretted.
+- **Repeats.** Evolutions can be taken again ("Build your Core II"). Levels II, III and later give exactly the same effect as level I, never diminished, and stack additively: each level adds the same share of the base (Build your Core ×1.5, ×2.0, ×2.5; Rapid Evolution genes ×2, ×3, ×4 with upkeep ×1.8, ×2.6, ×3.4). Repeats unlock once the garden has 5 evolutions; each evolution's repeat limit is set in data (Jeremy, Oct 31).
 - **Unlock evolutions** (Pulsar Power, Twin Stars, Big Stem) also give a small boost to their base type and add their kind to the wild flower pool (no per-kind cap).
 - The original skill tree (see [ORIGINAL_SYSTEMS.md §9](ORIGINAL_SYSTEMS.md)) stays the content pool for later evolutions.
+
+| Evolution | Effect | Becomes |
+| --- | --- | --- |
+| Build your Core | Core power ×1.5 | Ember |
+| Second Path | Core link +1, core transfer ×1.5 | Amplifier |
+| Long Stemmed | Stem transfer ×3; only offered once repeats unlock (after 5 evolutions) | Tendril |
+| Smart Particles | Blobs avoid dead ends: 50% of the time at level I, always at level II (max level II) | Resistor |
+| Rapid Evolution | Labs ×2 genes, ×1.8 upkeep | Wild Lab |
+| More Power | Generator cap +2 | Lichen |
+| Pulsar Power | Generators +10% output; unlocks Pulsar | Pulsar |
+| Twin Stars | Generator transfer rate up; unlocks Twin Star | Twin Star |
+| Big Stem | Stems hold +1 leaf; unlocks Big Stem | Big Stem |
+| Wild Bloom | Wild flower limit +2 | Moonflower |
+
+(Balance update, Jeremy, Oct 31: Second Path and Long Stemmed swapped flowers; Long Stemmed held back; Smart Particles in two levels; Rapid Evolution's upkeep ×1.8; Pulsar Power +10%. Watch More Power and Pulsar Power in play as likely default picks.)
 
 **Built in 5c** (Oct 31; the rules in `godot/src/Core/Evolutions.cs` and `Garden.cs` (Seedlings and evolutions), every number a placeholder in `Tuning` (Seedlings) or the evolution table's data). Details settled in the build, for Jeremy to review:
 - **Planting.** The Seedling is a fifth bud button in a part's toolbar (a pale green sprout: a round seed with two pointed leaves), greyed while no slot is free. It forms as a bud (never growing wild) and emerges as a small one-link flower at the end of its branch. Slots used are the evolutions chosen, plus seedlings yet to choose and seedling buds forming.
@@ -395,42 +410,30 @@ All three tracks share one gene income, and the stem and generator tracks will p
 - **Nebula Bloom** now works: power reaching a seedling within 5 links of one counts twice (not stacking).
 - **The choice.** Tapping a waiting seedling opens a half ring of three discs under it (over it if the ring and its card don't fit below; the seedling's toolbar then goes below), in the core menu's look. Each shows the shape of the flower it blooms into, in its role hue (a repeat marked II or III); the one under the pointer shows a small card: the name ("More Power II"), the level's effect ("Generator cap +2") and "Blooms into a Lichen" ("; Pulsars can then grow wild" for an unlock). No signal that a choice waits (alerts are still open).
 - **Targets** count the evolutions chosen before (1,000 × 5^n), so two seedlings growing at once get 1,000 and 5,000 in the order chosen.
-- **Evolution record** (Oct 31; three looks on the core were tried and dropped: marker fruits in the flowers' own shapes, the same in pale bubbles, and round gems set into the core's rim). The **Almanac's Evolutions tab** lists each evolution taken in the order first chosen: its name at its current level in its theme's role hue (power yellow: Build your Core, More Power, Pulsar Power, Twin Stars; structure green: Second Path, Long Stemmed, Big Stem; genes purple: Rapid Evolution; white: Smart Particles, Wild Bloom), "Chosen day 2, 14:03" (its latest level), "Level 2 of 3, bloomed into a Lichen" (or still growing in a seedling, or waiting for one), and what each level does ("Core power ×1.5; then Core power ×1.25", or "Generator cap +2 a level"). Seedling slots are counted from `Garden.Evolved`. Each evolution keeps when it was chosen (`ChosenAt`, saved).
-- **Bloom.** The effect applies at once, the journal says "Second Path bloomed into a Tendril", and the seedling is swapped for the flower where it stands, full from the power it held. The flashy effect (first pass, 2.4 s): a white flash swelling off the flower, twelve rays turning out from it, and three rings in its hue widening to six times its size, one after another. A catch-up shows none. The wild flower limit rises by 1, and the base cap by 1 where the flower takes that slot (stems for a Tendril or Big Stem, generators for an Ember, Pulsar or Twin Star); the Amplifier, Resistor, Wild Lab, Lichen and Moonflower take only a wild flower slot, so they add only that.
-- **Effects** (each level multiplies the last; multipliers touch the basic kind only, so a Tendril, Big Stem or Pulsar keeps its own numbers):
+- **Evolution record** (Oct 31; three looks on the core were tried and dropped: marker fruits in the flowers' own shapes, the same in pale bubbles, and round gems set into the core's rim). The **Almanac's Evolutions tab** lists each evolution taken in the order first chosen: its name at its current level in its theme's role hue (power yellow: Build your Core, More Power, Pulsar Power, Twin Stars; structure green: Second Path, Long Stemmed, Big Stem; genes purple: Rapid Evolution; white: Smart Particles, Wild Bloom), "Chosen day 2, 14:03" (its latest level), "Level 2 of 3, bloomed into a Lichen" (or still growing in a seedling, or waiting for one), and its effect in all at that level ("Core power ×2"). Seedling slots are counted from `Garden.Evolved`. Each evolution keeps when it was chosen (`ChosenAt`, saved).
+- **Bloom.** The effect applies at once, the journal says "Second Path bloomed into an Amplifier", and the seedling is swapped for the flower where it stands, full from the power it held. The flashy effect (first pass, 2.4 s): a white flash swelling off the flower, twelve rays turning out from it, and three rings in its hue widening to six times its size, one after another. A catch-up shows none. The wild flower limit rises by 1, and the base cap by 1 where the flower takes that slot (stems for a Tendril or Big Stem, generators for an Ember, Pulsar or Twin Star); the Amplifier, Resistor, Wild Lab, Lichen and Moonflower take only a wild flower slot, so they add only that.
+- **Effects** (each level adds level I's effect again, `EvolutionLevel.At`; different evolutions multiply; multipliers touch the basic kind only, so a Tendril, Big Stem or Pulsar keeps its own numbers). Repeat limits are this build's placeholders:
 
-| Evolution | Levels |
-| --- | --- |
-| Build your Core | Core power ×1.5, then ×1.25, ×1.2 |
-| Second Path | Core link +1 and core transfer ×1.5, then +1 and ×1.25 |
-| Long Stemmed | Stem transfer ×3, then ×1.5 |
-| Smart Particles | One-off |
-| Rapid Evolution | Labs' genes ×2 at ×1.25 upkeep, then ×1.5 at ×1.25 |
-| More Power | Generator cap +2, three times |
-| Pulsar Power | Generators' power ×1.2 (its boost), then ×1.1 |
-| Twin Stars | Generator transfer ×1.5 (its boost), then ×1.25 |
-| Big Stem | Stems hold +1 leaf (its boost), twice |
-| Wild Bloom | Wild flower limit +2, three times |
+| Evolution | Level I | Limit |
+| --- | --- | --- |
+| Build your Core | Core power ×1.5 (×2, ×2.5) | III |
+| Second Path | Core link +1, core transfer ×1.5 | II |
+| Long Stemmed | Stem transfer ×3 (offered from 5 evolutions) | II |
+| Smart Particles | Blobs avoid dead ends 50% of the time (always at II) | II |
+| Rapid Evolution | Labs' genes ×2 at ×1.8 upkeep (×3 at ×2.6, ×4 at ×3.4) | III |
+| More Power | Generator cap +2 | III |
+| Pulsar Power | Generators' power ×1.1 (its boost) | III |
+| Twin Stars | Generator transfer ×1.5 (its boost) | II |
+| Big Stem | Stems hold +1 leaf (its boost) | II |
+| Wild Bloom | Wild flower limit +2 | III |
 
-- **Repeats** are offered only once the garden has chosen 5 evolutions; a level's count includes those still growing, so two seedlings can't both take a one-off.
-- **Smart Particles:** a blob never steps into a dead end (a part with nowhere to go on but back) unless it could be taken in there: for a gene blob only the core, for a growth blob a part with something forming or room to start something, for a buff blob a part not yet buffed. With nowhere else to go it turns back as before. The garden card's gene reach follows the same rule.
+- **Repeats** are offered only once the garden has chosen 5 evolutions; a level's count includes those still growing, so two seedlings can't take the same level. The choice menu and the Almanac show an evolution's effect in all at its level ("Core power ×2").
+- **Smart Particles:** at each step, half the time at level I and always at level II, a blob doesn't step into a dead end (a part with nowhere to go on but back) unless it could be taken in there: for a gene blob only the core, for a growth blob a part with something forming or room to start something, for a buff blob a part not yet buffed. With nowhere else to go it turns back as before. The garden card's gene reach follows the same rule, at the same odds.
 - **Pruning a seedling.** Before its choice, its slot frees. After, its evolution waits (its slot stays, and the core's card says "Next seedling: Second Path"): the next seedling to emerge takes it up, starting empty like any new part (an undo brings the pruned one back with its power). Pruning the bloomed flower takes only the flower.
-- **Away note:** "A seedling bloomed: Second Path, now a Tendril." first (several on one line), before the parts grown. **Journal:** "Evolution chosen: Second Path" and the bloom, in the seedling's pale green. **Export:** `evolutions_chosen`, `seedlings_bloomed`, `seedling_slots`.
+- **Away note:** "A seedling bloomed: Second Path, now an Amplifier." first (several on one line), before the parts grown. **Journal:** "Evolution chosen: Second Path" and the bloom, in the seedling's pale green. **Export:** `evolutions_chosen`, `seedlings_bloomed`, `seedling_slots`.
 - **Save:** still version 9, with optional fields: the evolutions chosen (kind, level, target, bloomed and when) and each seedling's offers and evolution (its power is saved as any part's). A loaded garden works its multipliers out again; its caps are in the saved capacity.
 - **Dev aids:** `--evolve=NAME[,NAME]` (chosen and bloomed at once, the flower on the deepest free link), `--seedling`, `--seedfill=N` (its power), `--choose=N` (each waiting seedling takes its Nth offer), `--bloom` (each chosen seedling filled, so it blooms and its burst shows) and `--tap=seedling` (the choice menu open, its first card showing). Shots: `--fresh --grove --seedfill=200 --tap=seedling` for the menu, `--seedfill=200 --choose=0 --bloom --at=12,40,90` for the burst, `--evolve=` with some and `--almanac=evolutions` for the Almanac's list.
 
-| Evolution | Effect | Becomes |
-| --- | --- | --- |
-| Build your Core | Core power ×1.5 | Ember |
-| Second Path | Core link +1, core transfer ×1.5 | Tendril |
-| Long Stemmed | Stem transfer ×3 | Amplifier |
-| Smart Particles | Blobs never wander into dead ends | Resistor |
-| Rapid Evolution | Labs ×2 genes, ×1.25 upkeep | Wild Lab |
-| More Power | Generator cap +2 | Lichen |
-| Pulsar Power | Generators make more; unlocks Pulsar | Pulsar |
-| Twin Stars | Generator transfer up; unlocks Twin Star | Twin Star |
-| Big Stem | Stems hold +1 leaf; unlocks Big Stem | Big Stem |
-| Wild Bloom | Wild flower limit +2 | Moonflower |
 
 ### The Hub
 

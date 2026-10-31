@@ -1006,19 +1006,20 @@ public sealed class Garden
     (PlantNode At, PlantNode From, int Hops)? Doubled;
 
     // One link of a blob's walk, from at (having come from cameFrom): a link at random, never into a Resistor, and
-    // never straight back unless at a dead end. With Smart Particles, never into a dead end either, unless the blob
-    // could be taken in there (see Wanders), or there's nowhere else to go. Null if there's nowhere to go.
+    // never straight back unless at a dead end. With Smart Particles, SmartChance of the steps, never into a dead end
+    // either, unless the blob could be taken in there (see Wanders), or there's nowhere else to go. Null if there's
+    // nowhere to go.
     PlantNode? StepFrom(PlantNode at, PlantNode? cameFrom, BlobKind kind)
     {
-        bool smart = SmartAt(at, kind);
+        bool smart = SmartAt(at, kind) && (SmartChance >= 1 || rng.NextDouble() < SmartChance);
         int open = Open(at, null, kind, smart);
         if (open == 0) return null;
         var skip = open > 1 ? cameFrom : null;
         return Option(at, rng.Next(skip != null ? Open(at, skip, kind, smart) : open), skip, kind, smart);
     }
 
-    // Whether Smart Particles steer a blob at this part: bloomed, and with somewhere to go that isn't a dead end.
-    public bool SmartAt(PlantNode at, BlobKind kind) => SmartBlobs && Open(at, null, kind, true) > 0;
+    // Whether Smart Particles can steer a blob at this part: bloomed, and with somewhere to go that isn't a dead end.
+    public bool SmartAt(PlantNode at, BlobKind kind) => SmartChance > 0 && Open(at, null, kind, true) > 0;
 
     // Whether a blob at one part may step onto a neighbour: never a Resistor; with smart on, never a dead end (a part
     // with no other link a blob could take) that wouldn't take it in: a gene blob's only taker is the core, a growth
@@ -1265,8 +1266,8 @@ public sealed class Garden
     // The evolutions chosen, in the order chosen, bloomed or still growing: the garden's record of them (the
     // Almanac's list) and its seedling slots used.
     public readonly List<Evolution> Evolved = new();
-    // Smart Particles has bloomed: blobs never wander into dead ends (see Wanders).
-    public bool SmartBlobs { get; private set; }
+    // Smart Particles' level: how often a blob's step avoids a dead end (see Wanders): 0 until it blooms.
+    public float SmartChance { get; private set; }
     // The bloomed evolutions' effects on each basic kind (see UpdateBoosts): every part of the kind carries its Boost.
     readonly Dictionary<NodeKind, Boost> boosts = new();
 
@@ -1302,10 +1303,17 @@ public sealed class Garden
     public double NextTarget => Tuning.FirstBloom * Math.Pow(Tuning.BloomGrowth, Evolved.Count);
 
     // The evolutions a seedling can offer now: each up to its repeat limit (counting those still growing), and none a
-    // second time until the garden has RepeatsAfter evolutions.
-    public List<EvolutionKind> Offerable() => Enum.GetValues<EvolutionKind>()
-        .Where(k => Taken(k) < Evolutions.All[k].MaxLevel && (Taken(k) == 0 || Evolved.Count >= Tuning.RepeatsAfter))
-        .ToList();
+    // second time until the garden has RepeatsAfter evolutions; a Late one (Long Stemmed) not at all until then.
+    public List<EvolutionKind> Offerable()
+    {
+        bool repeats = Evolved.Count >= Tuning.RepeatsAfter;
+        return Enum.GetValues<EvolutionKind>().Where(k =>
+        {
+            var spec = Evolutions.All[k];
+            int taken = Taken(k);
+            return taken < spec.MaxLevel && (repeats || (taken == 0 && !spec.Late));
+        }).ToList();
+    }
 
     // Up to ChoiceCount of them, at random (the garden's own dice, so a catch-up rolls the same).
     List<EvolutionKind> RollOffers()
@@ -1414,21 +1422,22 @@ public sealed class Garden
         UpdateBoosts();
     }
 
-    // The bloomed evolutions' effects on each basic kind, multiplied together, and whether Smart Particles has bloomed;
-    // every part takes its kind's.
+    // The bloomed evolutions' effects on each basic kind: each evolution at its bloomed level (its levels adding up: see
+    // EvolutionLevel.At), different evolutions multiplied together; and Smart Particles' chance. Every part takes its
+    // kind's.
     void UpdateBoosts()
     {
         boosts.Clear();
-        SmartBlobs = false;
+        SmartChance = 0;
         void Raise(NodeKind kind, Func<Boost, Boost> by) => boosts[kind] = by(boosts.GetValueOrDefault(kind, Boost.None));
-        foreach (var evolution in Evolved.Where(e => e.Bloomed))
+        foreach (var bloomed in Evolved.Where(e => e.Bloomed).GroupBy(e => e.Kind))
         {
-            var x = evolution.Effect;
+            var x = Evolutions.All[bloomed.Key].Effect.At(bloomed.Count());
             Raise(NodeKind.Core, b => b with { Gen = b.Gen * x.CoreGen, Transfer = b.Transfer * x.CoreTransfer });
             Raise(NodeKind.Stem, b => b with { Transfer = b.Transfer * x.StemTransfer, Fruits = b.Fruits + x.StemFruits });
             Raise(NodeKind.Lab, b => b with { Blobs = b.Blobs * x.LabGenes, Upkeep = b.Upkeep * x.LabUpkeep });
             Raise(NodeKind.Generator, b => b with { Gen = b.Gen * x.GeneratorGen, Transfer = b.Transfer * x.GeneratorTransfer });
-            SmartBlobs |= x.SmartBlobs;
+            SmartChance = Math.Max(SmartChance, x.SmartChance);
         }
         foreach (var node in Nodes) node.Boost = boosts.GetValueOrDefault(node.Spec.Kind, Boost.None);
     }

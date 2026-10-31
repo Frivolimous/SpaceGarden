@@ -7,9 +7,12 @@ public enum EvolutionKind
     WildBloom,
 }
 
-// One level of an evolution's effect, each field a change to the garden (1 or 0: none). Multipliers apply to the
-// basic kind only (a stem, not a Tendril or Big Stem; a generator, not a Pulsar): the wild flowers keep their quirks.
-// Caps (CoreLinks, Generators, WildFlowers) are raised once, as it blooms; the rest hold while it's bloomed.
+// An evolution's effect at level I, each field a change to the garden (1 or 0: none). Every later level gives the same
+// again, never less, adding up: a multiplier's share of the base (Build your Core: core power ×1.5, ×2, ×2.5; see At),
+// a cap's +2 each time, Smart Particles' chance 50% then always. Multipliers apply to the basic kind only (a stem, not a
+// Tendril or Big Stem; a generator, not a Pulsar): the wild flowers keep their quirks. Caps (CoreLinks, Generators,
+// WildFlowers) are raised as each level blooms; the rest hold while bloomed. SmartChance: how often a blob avoids a dead
+// end (see Garden.Wanders).
 public sealed record EvolutionLevel
 {
     public float CoreGen { get; init; } = 1;
@@ -17,7 +20,7 @@ public sealed record EvolutionLevel
     public int CoreLinks { get; init; }
     public float StemTransfer { get; init; } = 1;
     public int StemFruits { get; init; }
-    public bool SmartBlobs { get; init; }
+    public float SmartChance { get; init; }
     public float LabGenes { get; init; } = 1;
     public float LabUpkeep { get; init; } = 1;
     public int Generators { get; init; }
@@ -25,7 +28,22 @@ public sealed record EvolutionLevel
     public float GeneratorTransfer { get; init; } = 1;
     public int WildFlowers { get; init; }
 
-    // What it does, for the choice menu: "Core power ×1.5", "Core link +1, core transfer ×1.5".
+    // The effect in all at a level (Jeremy, Oct 31): each level adds level I's again.
+    public EvolutionLevel At(int level)
+    {
+        float Times(float by) => 1 + level * (by - 1);
+        return new EvolutionLevel
+        {
+            CoreGen = Times(CoreGen), CoreTransfer = Times(CoreTransfer), CoreLinks = CoreLinks * level,
+            StemTransfer = Times(StemTransfer), StemFruits = StemFruits * level,
+            SmartChance = Math.Min(1, SmartChance * level),
+            LabGenes = Times(LabGenes), LabUpkeep = Times(LabUpkeep), Generators = Generators * level,
+            GeneratorGen = Times(GeneratorGen), GeneratorTransfer = Times(GeneratorTransfer),
+            WildFlowers = WildFlowers * level,
+        };
+    }
+
+    // What it does, for the choice menu and the Almanac: "Core power ×1.5", "Core link +1, core transfer ×1.5".
     public string Text
     {
         get
@@ -44,7 +62,8 @@ public sealed record EvolutionLevel
             Times("core transfer", CoreTransfer);
             Times("Stem transfer", StemTransfer);
             if (StemFruits != 0) parts.Add($"Stems hold +{StemFruits} leaf");
-            if (SmartBlobs) parts.Add("Blobs never wander into dead ends");
+            if (SmartChance >= 1) parts.Add("Blobs always avoid dead ends");
+            else if (SmartChance > 0) parts.Add($"Blobs avoid dead ends {SmartChance * 100:0}% of the time");
             Times("Labs' genes", LabGenes);
             Times("their upkeep", LabUpkeep);
             Plus("Generator cap", Generators);
@@ -59,18 +78,18 @@ public sealed record EvolutionLevel
 }
 
 // An evolution: its name, the wild flower its seedling becomes, its theme's role hue (its slot in the choice menu, its
-// name in the Almanac), and its effect at each level it can be taken to (Levels.Length is its repeat limit: 1, one-off).
-public sealed record EvolutionSpec(EvolutionKind Kind, string Name, NodeKind Becomes, uint Rgb,
-    EvolutionLevel[] Levels)
+// name in the Almanac), its effect at level I, its repeat limit (1: one-off), and whether it's offered only once
+// repeats are (Late: Long Stemmed).
+public sealed record EvolutionSpec(EvolutionKind Kind, string Name, NodeKind Becomes, uint Rgb, EvolutionLevel Effect,
+    int MaxLevel, bool Late = false)
 {
-    public int MaxLevel => Levels.Length;
     // An unlock evolution's flower joins the wild flower pool as it blooms (Pulsar, Twin Star, Big Stem).
     public bool Unlocks => NodeSpecs.All[Becomes].Wild?.Unlock == WildUnlock.Evolution;
 }
 
-// The evolution table (DESIGN.md), every number a placeholder. Each level's values stand alone and multiply with the
-// levels before (Build your Core II: the core's power ×1.5 then ×1.25). The unlock evolutions' first level is the small
-// boost to their base type; repeating them adds a smaller one.
+// The evolution table (DESIGN.md, Jeremy's balance update of Oct 31), every number a placeholder; the repeat limits
+// are this build's. The unlock evolutions' effect is the small boost to their base type. Watch More Power and Pulsar
+// Power in play as likely default picks.
 public static class Evolutions
 {
     // The role hues: power, structure, genes, and the specialists' white.
@@ -78,27 +97,26 @@ public static class Evolutions
 
     public static readonly IReadOnlyDictionary<EvolutionKind, EvolutionSpec> All = new Dictionary<EvolutionKind, EvolutionSpec>
     {
-        [EvolutionKind.BuildYourCore] = new(EvolutionKind.BuildYourCore, "Build your Core", NodeKind.Ember,
-            Power, [new() { CoreGen = 1.5f }, new() { CoreGen = 1.25f }, new() { CoreGen = 1.2f }]),
-        [EvolutionKind.SecondPath] = new(EvolutionKind.SecondPath, "Second Path", NodeKind.Tendril,
-            Structure, [new() { CoreLinks = 1, CoreTransfer = 1.5f }, new() { CoreLinks = 1, CoreTransfer = 1.25f }]),
-        [EvolutionKind.LongStemmed] = new(EvolutionKind.LongStemmed, "Long Stemmed", NodeKind.Amplifier,
-            Structure, [new() { StemTransfer = 3 }, new() { StemTransfer = 1.5f }]),
-        [EvolutionKind.SmartParticles] = new(EvolutionKind.SmartParticles, "Smart Particles", NodeKind.Resistor,
-            Specialist, [new() { SmartBlobs = true }]),
-        [EvolutionKind.RapidEvolution] = new(EvolutionKind.RapidEvolution, "Rapid Evolution", NodeKind.WildLab,
-            Genes,
-            [new() { LabGenes = 2, LabUpkeep = 1.25f }, new() { LabGenes = 1.5f, LabUpkeep = 1.25f }]),
+        [EvolutionKind.BuildYourCore] = new(EvolutionKind.BuildYourCore, "Build your Core", NodeKind.Ember, Power,
+            new() { CoreGen = 1.5f }, MaxLevel: 3),
+        [EvolutionKind.SecondPath] = new(EvolutionKind.SecondPath, "Second Path", NodeKind.Amplifier, Structure,
+            new() { CoreLinks = 1, CoreTransfer = 1.5f }, MaxLevel: 2),
+        [EvolutionKind.LongStemmed] = new(EvolutionKind.LongStemmed, "Long Stemmed", NodeKind.Tendril, Structure,
+            new() { StemTransfer = 3 }, MaxLevel: 2, Late: true),
+        [EvolutionKind.SmartParticles] = new(EvolutionKind.SmartParticles, "Smart Particles", NodeKind.Resistor, Specialist,
+            new() { SmartChance = 0.5f }, MaxLevel: 2),
+        [EvolutionKind.RapidEvolution] = new(EvolutionKind.RapidEvolution, "Rapid Evolution", NodeKind.WildLab, Genes,
+            new() { LabGenes = 2, LabUpkeep = 1.8f }, MaxLevel: 3),
         [EvolutionKind.MorePower] = new(EvolutionKind.MorePower, "More Power", NodeKind.Lichen, Power,
-            [new() { Generators = 2 }, new() { Generators = 2 }, new() { Generators = 2 }]),
-        [EvolutionKind.PulsarPower] = new(EvolutionKind.PulsarPower, "Pulsar Power", NodeKind.Pulsar,
-            Power, [new() { GeneratorGen = 1.2f }, new() { GeneratorGen = 1.1f }]),
+            new() { Generators = 2 }, MaxLevel: 3),
+        [EvolutionKind.PulsarPower] = new(EvolutionKind.PulsarPower, "Pulsar Power", NodeKind.Pulsar, Power,
+            new() { GeneratorGen = 1.1f }, MaxLevel: 3),
         [EvolutionKind.TwinStars] = new(EvolutionKind.TwinStars, "Twin Stars", NodeKind.TwinStar, Power,
-            [new() { GeneratorTransfer = 1.5f }, new() { GeneratorTransfer = 1.25f }]),
+            new() { GeneratorTransfer = 1.5f }, MaxLevel: 2),
         [EvolutionKind.BigStem] = new(EvolutionKind.BigStem, "Big Stem", NodeKind.BigStem, Structure,
-            [new() { StemFruits = 1 }, new() { StemFruits = 1 }]),
-        [EvolutionKind.WildBloom] = new(EvolutionKind.WildBloom, "Wild Bloom", NodeKind.Moonflower,
-            Specialist, [new() { WildFlowers = 2 }, new() { WildFlowers = 2 }, new() { WildFlowers = 2 }]),
+            new() { StemFruits = 1 }, MaxLevel: 2),
+        [EvolutionKind.WildBloom] = new(EvolutionKind.WildBloom, "Wild Bloom", NodeKind.Moonflower, Specialist,
+            new() { WildFlowers = 2 }, MaxLevel: 3),
     };
 
     // An evolution's name at a level: "Build your Core", then "Build your Core II".
@@ -131,7 +149,8 @@ public sealed class Evolution
 
     public EvolutionSpec Spec => Evolutions.All[Kind];
     public string Name => Evolutions.Name(Kind, Level);
-    public EvolutionLevel Effect => Spec.Levels[Level - 1];
+    // What this level adds: level I's effect again, every time.
+    public EvolutionLevel Effect => Spec.Effect;
 }
 
 // A garden's evolutions' effect on one basic kind: its power made, its upkeep, how fast it sends power on, its blobs,

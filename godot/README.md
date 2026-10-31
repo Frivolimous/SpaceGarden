@@ -132,8 +132,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   burst of light: the effect applies for good, the wild flower limit (and its flower's base cap, where it takes that
   slot) rises by 1, the seedling becomes its wild flower (the Almanac's Evolutions tab lists them
   all, with their levels and when each was chosen). The ten
-  evolutions and their levels are data (`Evolutions.All`); repeats ("More Power II") come once the garden has five;
-  Smart Particles is one-off. Power reaching a seedling within 5 links of a Nebula Bloom counts twice. Pruning a
+  evolutions and their levels are data (`Evolutions.All`); repeats ("More Power II") come once the garden has five,
+  each adding level I's effect again (Build your Core ×1.5, ×2, ×2.5); Long Stemmed is offered only then. Power reaching a seedling within 5 links of a Nebula Bloom counts twice. Pruning a
   seedling after its choice leaves the evolution waiting for the next one planted. The card shows a seedling's
   evolution and its power against its target; the journal its choice and bloom; the away note its bloom.
 - Everything that shapes the feel is in `src/Core/Tuning.cs`.

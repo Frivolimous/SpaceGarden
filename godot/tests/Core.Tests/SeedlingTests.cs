@@ -130,21 +130,31 @@ public class SeedlingTests
     }
 
     [Fact]
-    public void RepeatsWaitForFiveEvolutionsAndSmartParticlesIsOneOff()
+    public void RepeatsWaitForFiveEvolutionsAndAddUp()
     {
         var garden = Garden.New(Layout.Radial, seed: 3);
+        float coreGen = Garden.FullProductionPerSecond(garden.Core);
+        Assert.DoesNotContain(EvolutionKind.LongStemmed, garden.Offerable()); // held back until repeats come
         garden.EvolveNow(EvolutionKind.SmartParticles);
-        garden.EvolveNow(EvolutionKind.MorePower);
-        Assert.DoesNotContain(EvolutionKind.MorePower, garden.Offerable());
+        Assert.Equal(0.5f, garden.SmartChance);
+        garden.EvolveNow(EvolutionKind.BuildYourCore);
+        Assert.DoesNotContain(EvolutionKind.BuildYourCore, garden.Offerable());
         garden.EvolveNow(EvolutionKind.WildBloom);
-        garden.EvolveNow(EvolutionKind.LongStemmed);
+        garden.EvolveNow(EvolutionKind.MorePower);
         garden.EvolveNow(EvolutionKind.TwinStars);
         Assert.Equal(5, garden.Evolved.Count);
-        Assert.Contains(EvolutionKind.MorePower, garden.Offerable());
+        Assert.Contains(EvolutionKind.BuildYourCore, garden.Offerable());
+        Assert.Contains(EvolutionKind.LongStemmed, garden.Offerable());
+
+        // Each level adds level I's effect again: core power ×1.5, then ×2.
+        Assert.Equal(coreGen * 1.5f, Garden.FullProductionPerSecond(garden.Core), 3);
+        var repeat = garden.EvolveNow(EvolutionKind.BuildYourCore)!;
+        Assert.Equal("Build your Core II", repeat.Name);
+        Assert.Equal(coreGen * 2f, Garden.FullProductionPerSecond(garden.Core), 3);
+        // Smart Particles II: always; then at its limit.
+        garden.EvolveNow(EvolutionKind.SmartParticles);
+        Assert.Equal(1f, garden.SmartChance);
         Assert.DoesNotContain(EvolutionKind.SmartParticles, garden.Offerable());
-        var repeat = garden.EvolveNow(EvolutionKind.MorePower)!;
-        Assert.Equal(2, repeat.Level);
-        Assert.Equal("More Power II", repeat.Name);
     }
 
     [Fact]

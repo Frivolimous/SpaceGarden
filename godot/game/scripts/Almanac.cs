@@ -271,7 +271,8 @@ public partial class Almanac : FloatingWindow
 
     // Evolutions (step 5c; Jeremy, Oct 31): each evolution the garden has taken, in the order first chosen: its name at
     // its current level in its role hue, when that level was chosen, its level against its limit and the flower it
-    // blooms into (or that its latest level is still growing, or waiting for a seedling), then what each level does.
+    // blooms into (or that its latest level is still growing, or waiting for a seedling), then its effect in all at that
+    // level.
     void RefreshEvolutions(Garden garden)
     {
         var shown = (garden, garden.Evolved.Count, garden.Blooms, garden.Waiting.Count());
@@ -320,12 +321,9 @@ public partial class Almanac : FloatingWindow
                 MouseFilter = MouseFilterEnum.Pass,
                 LabelSettings = new LabelSettings { FontSize = 12, FontColor = Dim },
             });
-            // Each level's effect in turn ("Core power ×1.5; then Core power ×1.25"), or once if they're alike.
-            var levels = spec.Levels.Take(latest.Level).Select(l => l.Text).ToList();
             entry.AddChild(new Label
             {
-                Text = levels.Count > 1 && levels.Distinct().Count() == 1 ? $"{levels[0]} a level."
-                    : string.Join("; then ", levels) + ".",
+                Text = spec.Effect.At(latest.Level).Text + ".", // in all, at its level ("Core power ×2")
                 AutowrapMode = TextServer.AutowrapMode.WordSmart,
                 SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 MouseFilter = MouseFilterEnum.Pass,
