@@ -2,8 +2,8 @@ using Godot;
 
 namespace SpaceGarden;
 
-// The Hub's panel (DESIGN.md, The Hub): a window of its own (see FloatingWindow), opened by tapping the Hub and closed
-// by its ✕ (or the Hub pruned). Its header shows the points to spend; under it, the pool's progress to the next point.
+// The Hub's panel (DESIGN.md, The Hub): a window of its own (see FloatingWindow), opened by the upgrades button on the
+// Hub's toolbar and closed by it or its ✕ (or the Hub pruned). Its header shows the points to spend; under it, the pool's progress to the next point.
 // Then a row for every kind's path (Hubs.Paths), the basic parts, the wild flowers and the Hub's own, in two columns: the
 // kind's shape and name in its hue, what its next level gives ("Next: +20% genes", or its milestone), its levels as pips (a milestone's ringed), and a
 // button to buy the next, its cost in points. A kind the garden hasn't grown yet shows "???". Buying is the rules'

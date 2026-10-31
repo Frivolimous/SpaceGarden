@@ -123,8 +123,8 @@ public partial class Card : PanelContainer
         // A wild flower that ends itself: how long it has left (an Ember burns out, a Comet Bloom withers).
         if (spec.LifeSeconds > 0)
             Line(ref used, $"{(spec.Dims ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, Garden.LifeOf(node) - node.Life) / speed)}");
-        // The Hub: its points to spend, the genes in its pool and those its next point still needs (tapping it opens its
-        // panel).
+        // The Hub: its points to spend, the genes in its pool and those its next point still needs (its toolbar's
+        // upgrades button opens its panel).
         if (node.IsHub)
         {
             Line(ref used, ("Hub points: ", Ink), ($"{garden.HubPoints}", HubInk));

@@ -139,7 +139,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 - **The Hub** (`src/Core/Hubs.cs` and `Garden.cs`, numbers in `Tuning` under The Hub; DESIGN.md, The Hub): once
   bought in the Core track, plant it from a part's toolbar (one at a time; it never grows wild). A teal-green wheel
   that takes no stem slot, it catches gene blobs as the core does, into its own pool (they never reach the gene
-  balance): the first hub point at 3,000 genes, each later one 400 more. Tapping it opens its panel: 20 paths, one
+  balance): the first hub point at 3,000 genes, each later one 400 more. The upgrades button on its toolbar opens its panel: 20 paths, one
   for each kind, basic and wild ("???" until the garden grows one), and the Hub's own (+1 link a level, up to 6).
   Basic kinds have 5 levels (+20% a level, milestones at 3 and 5), wild flowers and the Hub 3 (+30% or their own
   effect, and their family: stems, generators, groves, labs or the core's power; a milestone at 3), 96 points in

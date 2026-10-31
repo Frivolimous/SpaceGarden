@@ -87,7 +87,7 @@ public partial class Widget : Node
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
     readonly Almanac almanac = new(); // its own window, open until its slot or ✕ closes it (see SetAlmanac)
     readonly ResearchPanel research = new(); // its own window too (see SetResearch)
-    readonly HubPanel hubPanel = new(); // the Hub's, opened by tapping it (see Tap)
+    readonly HubPanel hubPanel = new(); // the Hub's, opened from its toolbar (see Use)
     readonly UndoPill undo = new();
     readonly CoreMenu coreMenu = new();
     readonly EvolutionMenu evolutionMenu = new(); // a seedling's choice (see Tap)
@@ -179,6 +179,7 @@ public partial class Widget : Node
         toolbarLayer.AddChild(evolutionMenu);
         evolutionMenu.Picked += ChooseEvolution;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
+        toolbar.HubPanelOpen = () => hubPanel.IsOpen;
         toolbar.Offered = kind => kind switch
         {
             NodeKind.Seedling => Garden.FreeSeedlingSlots > 0,
@@ -767,11 +768,12 @@ public partial class Widget : Node
             SetResearch(true);
             if (shown == "hint") research.Hinting = Track.Stems; // as if the pointer were on its (i)
         }
-        // As if the Hub were tapped: its card, toolbar and panel.
+        // As if the Hub were tapped and its upgrades button pressed: its card, toolbar and panel.
         if (Value("hubpanel") != null && Garden.Hub is { } hub)
         {
             Tap(hub);
             devTapped = true;
+            OpenHubPanel();
         }
         if (Value("ambient") != null)
         {
@@ -908,12 +910,11 @@ public partial class Widget : Node
             Select(node);
             toolbar.ShowFor(node);
             if (node.Choosing) evolutionMenu.Open(Garden, node);
-            if (node.IsHub) OpenHubPanel();
         }
     }
 
-    // The Hub's panel opens as the Hub is tapped and stays until its ✕ (or the Hub is pruned): the first time beside the
-    // plant, like the Research panel, then wherever it was left.
+    // The Hub's panel opens from the upgrades button on the Hub's toolbar and stays until that button or its ✕ closes it
+    // (or the Hub is pruned): the first time beside the plant, like the Research panel, then wherever it was left.
     void OpenHubPanel()
     {
         var size = hubPanel.GetCombinedMinimumSize();
@@ -1059,6 +1060,13 @@ public partial class Widget : Node
             return;
         }
         if (toolbar.Target is not { } node) return;
+        // The Hub's upgrades button opens or closes its panel, its toolbar staying (as the core menu's Research slot).
+        if (tool == Tool.HubPanel)
+        {
+            if (hubPanel.IsOpen) hubPanel.Close();
+            else OpenHubPanel();
+            return;
+        }
         if (Toolbar.KindOf(tool) is { } kind) Garden.SproutFrom(node, kind);
         switch (tool)
         {
