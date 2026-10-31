@@ -46,8 +46,16 @@ public partial class Card : PanelContainer
             MouseFilter = MouseFilterEnum.Ignore,
             LabelSettings = new LabelSettings { FontSize = 16 },
         };
-        column.AddChild(heading);
+        // The heading, with the buff mark after it while the part is buffed.
+        var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        top.AddThemeConstantOverride("separation", 6);
+        top.AddChild(heading);
+        top.AddChild(buffed);
+        column.AddChild(top);
     }
+
+    // A small glow fruit beside the heading while a buff blob's boost is running on the part (a Buffer's or a glow's).
+    readonly BuffMark buffed = new() { Visible = false };
 
     public void ShowPart(PlantNode node) => Open(node, false);
 
@@ -93,6 +101,7 @@ public partial class Card : PanelContainer
         var spec = node.Spec;
         var stats = NodeStats.Of(node);
         heading.Text = spec.Name;
+        buffed.Visible = node.Buff > 0;
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
         // A wild flower's quirk, under its name: what it trades for its effect.
         if (spec.Wild is { } wild) Line(ref used, (wild.Quirk, QuirkInk));
@@ -126,6 +135,7 @@ public partial class Card : PanelContainer
     void ShowGardenLines(GardenStats stats, double speed, ref int used)
     {
         heading.Text = "Garden";
+        buffed.Visible = false;
         heading.LabelSettings.FontColor = GardenTint.Lightened(0.35f);
         Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0}", PowerInk(stats.PowerHeld, stats.PowerStore)),
             ($" / {stats.PowerStore:0}", Ink));
@@ -220,6 +230,23 @@ public partial class Card : PanelContainer
         double hours = Math.Floor(minutes / 60);
         if (hours < 24) return $"{hours:0}h {minutes % 60:0}m";
         return $"{Math.Floor(hours / 24):0}d {hours % 24:0}h";
+    }
+}
+
+// The buff mark on a part's card: a glow fruit's shape and colour, small, centred on the heading's line.
+public partial class BuffMark : Control
+{
+    public BuffMark()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        CustomMinimumSize = new Vector2(14, 14);
+        SizeFlagsVertical = SizeFlags.ShrinkCenter;
+    }
+
+    public override void _Draw()
+    {
+        var glow = NodeSpecs.All[NodeKind.Glow];
+        ToolButton.DrawShape(this, Size / 2, glow.Shape, 6, GardenView.Rgb(glow.Rgb));
     }
 }
 
