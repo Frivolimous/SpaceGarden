@@ -158,26 +158,21 @@ public class PruneTests
     }
 
     [Fact]
-    public void PassiveGrowthWaitsOutTheWindow()
+    public void PassiveGrowthDoesntWaitForTheWindow()
     {
-        // A grove beside the fork: once the fork is cut, its blobs start no bud and no fruit on the trunk while the
-        // prune can be undone, so the room it freed stays free.
+        // A grove beside the fork: once the fork is cut, its blobs start buds and fruit on the trunk at once, within
+        // the undo window (Jeremy, balance pass: the freeze stalled all growth while he rerolled wild flowers). A bud
+        // in the freed room ends the chance to undo, as a planted one does.
         var (garden, trunk, fork) = Branched();
         garden.Capacity = garden.Capacity with { Stems = 4 };
-        var grove = Add(garden, trunk, NodeKind.Grove);
+        Add(garden, trunk, NodeKind.Grove);
         garden.PassiveGrowth = true;
         garden.Prune(fork);
         // Hours of growth (as at a fast growth speed) within the window.
         garden.Grow(6 * 3600);
-        Assert.Equal([grove], trunk.Branches);
-        Assert.Empty(trunk.Fruits);
-        Assert.Null(trunk.Forming);
-        Assert.DoesNotContain(garden.Nodes, n => n.FormingBud);
-        Assert.True(garden.CanUndoPrune);
-
-        for (int i = 0; i < UndoTicks + 1; i++) garden.Step();
-        garden.Grow(12 * 3600);
+        Assert.True(garden.UndoSecondsLeft > 0);
         Assert.True(trunk.Fruits.Count > 0 || trunk.Forming != null || trunk.Branches.Count > 1);
+        if (trunk.Branches.Count > 1 || trunk.FormingBud) Assert.False(garden.CanUndoPrune);
     }
 
     [Fact]

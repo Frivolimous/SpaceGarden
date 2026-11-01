@@ -1065,7 +1065,7 @@ public sealed class Garden
         return kind switch
         {
             BlobKind.Genes => CatchesGenes(to),
-            BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && lastPrune == null && to.CanBranch),
+            BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && to.CanBranch),
             _ => to.Buff <= 0,
         };
     }
@@ -1241,15 +1241,14 @@ public sealed class Garden
         return (CanStartFruit(node) || CanBud(node, counts)) && rng.NextDouble() < Tuning.AbsorbChance;
     }
 
-    // While a prune can be undone, nothing new starts on the pruned branch's parent, and no bud anywhere (it would
-    // take a cap slot the undo needs). Passive buds wait for PassiveGrowth too.
-    bool CanStartFruit(PlantNode node) =>
-        node.CanFruit && Nodes.Count < Tuning.MaxNodes && lastPrune?.Nodes[0].Parent != node;
+    // Growth doesn't wait for an undo: a fruit or bud that takes the room a prune freed just ends the chance to undo it
+    // (see CanUndoPrune), as a planted bud does. Passive buds wait for PassiveGrowth.
+    bool CanStartFruit(PlantNode node) => node.CanFruit && Nodes.Count < Tuning.MaxNodes;
 
     // Whether BranchKinds has anything for this part, without listing them: the core grows only stems, any other part
     // a lab at least (labs are uncapped).
     bool CanBud(PlantNode node, Counts counts) =>
-        PassiveGrowth && lastPrune == null && Nodes.Count < Tuning.MaxNodes && node.CanBranch
+        PassiveGrowth && Nodes.Count < Tuning.MaxNodes && node.CanBranch
         && (node.Depth >= 1 || HasRoomFor(NodeKind.Stem, counts));
 
     // A growth blob absorbed: a part with nothing forming starts something (a bud BudChance of the time where a

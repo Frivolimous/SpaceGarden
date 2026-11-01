@@ -185,7 +185,7 @@ Once it has a grove, the garden grows passively until it fills its capacity; att
 
 **Pruning gives nothing back.** Its rewards are built in: it frees stem and generator capacity for deliberate growth, lowers power upkeep, reshapes the garden, and lets a new bud roll for a wild flower. With no return, passive growth can't be farmed. The cut itself must feel satisfying: every link in the pruned branch is cut, and its loose parts drift off as the plant's push (and their own) sends them away, fading out from the moment of the cut over a few seconds (`Tuning.CutFadeSeconds`, 5 s).
 
-**Undo and passive growth.** While a prune can be undone, growth blobs start no new buds anywhere and no new fruit on the pruned branch's parent (they still feed what's already forming), so an undo always has room to restore the branch. A manual bud may still take the freed room (it holds the slot at once), which ends the chance to undo.
+**Undo and passive growth.** Growth doesn't wait for an undo (Jeremy, Nov 1: the old freeze, no new passive buds anywhere while a prune could be undone, stalled all growth while he rerolled wild flowers). A bud or fruit, passive or planted, that takes the room a prune freed ends the chance to undo it.
 
 Settled Oct 29 (Jeremy, step 3e), ruled out for manual planting:
 - **No mote store or spending:** manual buds stay free; attention is the cost.
@@ -205,7 +205,7 @@ The player has eight basic commands.
 7. **Display mode:** Active (full opacity, controls visible, clickable, the default), Ambient (faded and click-through, except the core: it brightens and is ringed under the pointer, and a tap wakes the garden to Active with the core's menu open), or Minimised (to the taskbar and tray). Ambient and Minimise are slots in the core's menu; a hotkey toggles Active and Ambient, and brings a minimised garden back.
 8. **Drag:** click and drag any node to tug the plant around on a spring. Purely tactile, no economy effect.
 
-Undo covers only the most recent prune. Passive growth leaves the freed capacity alone until the undo window passes (see Growth and pruning).
+Undo covers only the most recent prune, and only while its room is still free: passive growth may take it (see Growth and pruning).
 
 ## Shaping the garden
 
