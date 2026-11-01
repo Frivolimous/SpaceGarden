@@ -1650,6 +1650,9 @@ public sealed class Garden
         HubPlanted && Hubs.HasPath(kind) && Tracking.Discovered.ContainsKey(kind) && HubLevel(kind) < Hubs.Path(kind).MaxLevel
         && HubPoints >= Hubs.Path(kind).Cost(HubLevel(kind) + 1);
 
+    // Whether the Hub's points cover any kind's next level.
+    public bool HubLevelAffordable => Hubs.Paths.Any(p => CanBuyHubLevel(p.Kind));
+
     // Buys a kind's next level with the Hub's points: its effect, and the Hub's upkeep, rise at once. Returns whether it
     // bought.
     public bool BuyHubLevel(NodeKind kind)
@@ -1702,6 +1705,9 @@ public sealed class Garden
 
     // The cheapest next upgrade across the three tracks (null: every one bought).
     public Upgrade? Cheapest => Enum.GetValues<Track>().Select(Next).Where(u => u != null).MinBy(u => u!.Cost);
+
+    // Whether the balance covers the cheapest next upgrade: one waits in Research.
+    public bool UpgradeAffordable => Cheapest is { } next && GeneBalance >= next.Cost;
 
     // Buys a track's next upgrade from the balance, if it covers the cost: the caps rise at once. A core link or the
     // Hub is a moment in the journal (stems, generators and the core's counters aren't). Returns whether it bought.
