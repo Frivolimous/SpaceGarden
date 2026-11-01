@@ -188,7 +188,8 @@ e.g. `--fresh --grove --genes=1200 --research`),
 `--awaynote[=HOURS]` (catch up that long at once, 8 h by default, on the garden loaded or planted, and show the away
 note; with `--grove` a new garden has something to grow), `--export=PATH` (debug builds: write the tracking CSVs, see
 Tracking, then quit unless screenshotting), `--ambient` (starts in Ambient) and
-`--corehover` (as if the pointer were on the core there),
+`--corehover` (as if the pointer were on the core there), `--alerts=off` (no alert rings or Research dot),
+`--alertgap=SECONDS` (the pause between an alert's rings, 1.2 by default),
 `--parts=N` (grow a new garden to N parts at once, past the usual 500 limit and the caps, for stress tests),
 `--drain` (start with every part but the core empty, to watch power flow back), `--genes=N` (bring the gene balance
 up to N, as if they had reached the core), `--wildlimit=N` (set the wild flower limit), `--wild=KIND[,KIND...]` (grow those

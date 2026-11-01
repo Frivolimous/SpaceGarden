@@ -82,7 +82,7 @@ public partial class CoreMenu : Control
             if (button.Tool == tool) button.Active = on;
     }
 
-    // Alerts prototype: a small red dot on a slot whose panel has something waiting (Research, an upgrade affordable).
+    // An alert: a small red dot on a slot whose panel has something waiting (Research, an upgrade affordable).
     public void SetDot(Tool tool, bool on)
     {
         foreach (var button in buttons)

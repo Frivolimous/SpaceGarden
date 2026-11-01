@@ -186,7 +186,7 @@ public partial class ToolButton : Control
     public bool Enabled = true;
     public bool Active;
     public bool Forming; // a bud tool whose kind is growing on the part now: outlined, pulsing
-    public bool Dot; // alerts prototype: a small red dot on the disc's rim, top right (something waits behind it)
+    public bool Dot; // an alert: a small red dot on the disc's rim, top right (something waits behind it)
     public string? Badge; // a small count in the corner (how many more of a shaping tool can be placed)
     public readonly Tool Tool;
     // Drawn on a disc of its own, in the pill's look (the core's menu, where the buttons stand apart).
