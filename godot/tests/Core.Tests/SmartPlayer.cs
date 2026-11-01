@@ -49,15 +49,19 @@ public static class SmartPlayer
     // generator it may have is grown, the next generator comes first: bought if the balance covers it, saved for if
     // not (more stems would only cost more upkeep). Otherwise the cheapest next upgrade across the three tracks, while
     // the balance covers it: the cheap early stems first, then generators and the core's track by turns as their costs
-    // climb past the stems'. (The core's wild flower and seedling slots do nothing yet, but stand in the core link's
-    // and the Hub's way, so they're bought as they come.)
+    // climb past the stems'. But when the next core upgrade costs at most twice the next stem, it saves for that
+    // instead (Jeremy, Nov 1), so the core track isn't left behind the stems. (The core's seedling slots go unused
+    // here, but stand in the core link's and the Hub's way, so they're bought as they come.)
     static void Research(Garden garden)
     {
         while (true)
         {
             bool shortOfPower = Spare(garden) < -NodeSpecs.All[NodeKind.Lab].PowerPerSecond + Reserve
                 && Count(garden, NodeKind.Generator) >= garden.Capacity.Generators;
-            var next = shortOfPower && garden.Next(Track.Generators) is { } generator ? generator : garden.Cheapest;
+            var core = garden.Next(Track.Core);
+            var next = shortOfPower && garden.Next(Track.Generators) is { } generator ? generator
+                : core != null && garden.Next(Track.Stems) is { } stem && core.Cost <= 2 * stem.Cost ? core
+                : garden.Cheapest;
             if (next == null || !garden.Buy(next.Track)) return;
         }
     }
