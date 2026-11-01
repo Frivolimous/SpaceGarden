@@ -174,8 +174,8 @@ public static class Tuning
     // Big Stem: 4 links, sending power on at BigStemTransfer (a stem 30).
     public const float BigStemTransfer = 15;
     // Pulsar: makes PulsarGen a second (1.5 generators) while below full and holds PulsarStore; it sends nothing until
-    // it's full, then PulsarBurst of its power at once (Jeremy, Nov 1; it was built up unseen and released every 20 s).
-    // PulsarTransfer is only what its card shows.
+    // it's full, then PulsarBurst of its power at once (Jeremy, Nov 1; it was built up unseen and released every 20 s),
+    // which its card shows. PulsarTransfer is unused for now (the Hub's and Twin Stars' transfer boosts touch it).
     public const float PulsarGen = 18, PulsarStore = 400, PulsarTransfer = 24, PulsarBurst = 0.5f;
     // Twin Star: a generator with 2 links, making TwinStarGen (80% of a generator's 12).
     public const float TwinStarGen = 9.6f;
