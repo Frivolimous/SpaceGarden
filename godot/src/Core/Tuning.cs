@@ -243,26 +243,65 @@ public static class Tuning
     // ends: the core's last six (alternating seedling slots and the wild flower limit) are placeholders set in 5b.
     public static readonly double[] StemCosts =
     [
-        100, 150, 200, 300, 450, 650, 950, 1_350, 1_850, 2_450, 3_150, 3_950, 4_850, 5_850, 6_950, 8_150, 9_450,
-        10_850, 12_350, 13_950, 15_700, 17_600, 19_650, 21_850, 24_200, 26_700,
+        100, 150, 200, 300, 450, 650, 950, 1_350, 1_850, 2_450, 3_200, 4_100, 5_200, 6_600, 8_400, 10_650, 13_400,
+        16_750, 20_800, 25_650, 31_400, 38_150, 46_100, 55_350, 66_000, 78_150, 91_900, 107_350, 124_600, 143_750,
+        164_900, 188_150, 213_600, 241_350, 271_500, 304_150, 339_400, 377_350, 418_100, 461_750, 508_400, 558_150,
+        611_100,
     ];
 
-    public static readonly double[] GeneratorCosts = [1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000];
+    public static readonly double[] GeneratorCosts =
+    [
+        1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 42_000, 55_000, 69_000, 84_000, 100_000,
+        117_000, 135_000, 154_000, 174_000, 195_000, 217_000, 240_000, 264_000, 289_000, 315_000, 342_000, 370_000,
+        398_000, 426_000, 454_000, 482_000, 510_000, 538_000, 566_000, 594_000, 622_000, 650_000, 678_000, 706_000,
+        734_000, 762_000, 790_000, 818_000, 846_000,
+    ];
 
     public static readonly (UpgradeKind Kind, double Cost)[] CoreCosts =
     [
         (UpgradeKind.WildFlower, 1_500),
-        (UpgradeKind.CoreLink, 4_000),
-        (UpgradeKind.WildFlower, 10_000),
-        (UpgradeKind.Seedling, 20_000),
-        (UpgradeKind.WildFlower, 35_000),
-        (UpgradeKind.Hub, 60_000),
-        (UpgradeKind.Seedling, 90_000),
-        (UpgradeKind.WildFlower, 120_000),
-        (UpgradeKind.Seedling, 160_000),
-        (UpgradeKind.WildFlower, 210_000),
-        (UpgradeKind.Seedling, 270_000),
-        (UpgradeKind.WildFlower, 340_000),
+        (UpgradeKind.CoreLink, 2_500),
+        (UpgradeKind.Seedling, 3_500),
+        (UpgradeKind.WildFlower, 6_000),
+        (UpgradeKind.Seedling, 12_000),
+        (UpgradeKind.WildFlower, 21_000),
+        (UpgradeKind.Seedling, 32_000),
+        (UpgradeKind.WildFlower, 43_000),
+        (UpgradeKind.Hub, 54_000),
+        (UpgradeKind.Seedling, 75_000),
+        (UpgradeKind.WildFlower, 97_000),
+        (UpgradeKind.Seedling, 120_000),
+        (UpgradeKind.WildFlower, 144_000),
+        (UpgradeKind.Seedling, 169_000),
+        (UpgradeKind.WildFlower, 195_000),
+        (UpgradeKind.Seedling, 225_000),
+        (UpgradeKind.WildFlower, 265_000),
+        (UpgradeKind.Seedling, 315_000),
+        (UpgradeKind.WildFlower, 375_000),
+        (UpgradeKind.Seedling, 445_000),
+        (UpgradeKind.WildFlower, 525_000),
+        (UpgradeKind.Seedling, 615_000),
+        (UpgradeKind.WildFlower, 715_000),
+        (UpgradeKind.Seedling, 835_000),
+        (UpgradeKind.WildFlower, 975_000),
+        (UpgradeKind.Seedling, 1_125_000),
+        (UpgradeKind.WildFlower, 1_275_000),
+        (UpgradeKind.Seedling, 1_425_000),
+        (UpgradeKind.WildFlower, 1_575_000),
+        (UpgradeKind.Seedling, 1_725_000),
+        (UpgradeKind.WildFlower, 1_875_000),
+        (UpgradeKind.Seedling, 2_025_000),
+        (UpgradeKind.WildFlower, 2_175_000),
+        (UpgradeKind.Seedling, 2_325_000),
+        (UpgradeKind.WildFlower, 2_475_000),
+        (UpgradeKind.Seedling, 2_625_000),
+        (UpgradeKind.WildFlower, 2_775_000),
+        (UpgradeKind.Seedling, 2_925_000),
+        (UpgradeKind.WildFlower, 3_075_000),
+        (UpgradeKind.Seedling, 3_225_000),
+        (UpgradeKind.WildFlower, 3_375_000),
+        (UpgradeKind.Seedling, 3_525_000),
+        (UpgradeKind.WildFlower, 3_675_000),
     ];
 
     // Shaping tools come from the garden's size, the most main nodes it has had (DESIGN.md, Upgrade tracks): a Gravity

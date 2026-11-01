@@ -44,17 +44,20 @@ public class ResearchTests
     {
         var garden = NewGarden();
         var stems = BuyAll(garden, Track.Stems);
-        Assert.Equal(26, stems.Count);
+        Assert.Equal(43, stems.Count);
         Assert.Equal([100, 150, 200, 300, 450], stems.Take(5).Select(u => u.Cost));
-        Assert.Equal(26_700, stems[^1].Cost);
-        Assert.Equal(213_650, stems.Sum(u => u.Cost));
+        Assert.Equal(611_100, stems[^1].Cost);
+        Assert.Equal(5_563_850, stems.Sum(u => u.Cost));
         Assert.All(stems, u => Assert.Equal(UpgradeKind.Stem, u.Kind));
-        Assert.Equal(30, garden.Capacity.Stems);
+        Assert.Equal(47, garden.Capacity.Stems);
 
         var generators = BuyAll(garden, Track.Generators);
-        Assert.Equal([1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000], generators.Select(u => u.Cost));
-        Assert.Equal(111_000, generators.Sum(u => u.Cost));
-        Assert.Equal(10, garden.Capacity.Generators);
+        Assert.Equal(43, generators.Count);
+        Assert.Equal([1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 42_000],
+            generators.Take(10).Select(u => u.Cost));
+        Assert.Equal(846_000, generators[^1].Cost);
+        Assert.Equal(13_847_000, generators.Sum(u => u.Cost));
+        Assert.Equal(44, garden.Capacity.Generators);
     }
 
     [Fact]
@@ -62,13 +65,15 @@ public class ResearchTests
     {
         var garden = NewGarden();
         var core = BuyAll(garden, Track.Core);
-        Assert.Equal([(UpgradeKind.WildFlower, 1_500.0), (UpgradeKind.CoreLink, 4_000), (UpgradeKind.WildFlower, 10_000),
-                (UpgradeKind.Seedling, 20_000), (UpgradeKind.WildFlower, 35_000), (UpgradeKind.Hub, 60_000)],
-            core.Take(6).Select(u => (u.Kind, u.Cost)));
-        Assert.Equal(130_500, core.Take(6).Sum(u => u.Cost)); // the core to the Hub (Review decisions, 6)
-        // Then seedling slots and the wild flower limit, by turns, each dearer than the last.
-        var rest = core.Skip(6).ToList();
-        Assert.NotEmpty(rest);
+        Assert.Equal([(UpgradeKind.WildFlower, 1_500.0), (UpgradeKind.CoreLink, 2_500), (UpgradeKind.Seedling, 3_500),
+                (UpgradeKind.WildFlower, 6_000), (UpgradeKind.Seedling, 12_000), (UpgradeKind.WildFlower, 21_000),
+                (UpgradeKind.Seedling, 32_000), (UpgradeKind.WildFlower, 43_000), (UpgradeKind.Hub, 54_000)],
+            core.Take(9).Select(u => (u.Kind, u.Cost)));
+        Assert.Equal(175_500, core.Take(9).Sum(u => u.Cost)); // the core to the Hub
+        // After the core link, seedling slots and the wild flower limit by turns (the Hub in among them), each dearer
+        // than the last.
+        var rest = core.Skip(2).Where(u => u.Kind != UpgradeKind.Hub).ToList();
+        Assert.Equal(40, rest.Count);
         for (int i = 0; i < rest.Count; i++)
             Assert.Equal(i % 2 == 0 ? UpgradeKind.Seedling : UpgradeKind.WildFlower, rest[i].Kind);
         for (int i = 1; i < core.Count; i++) Assert.True(core[i].Cost > core[i - 1].Cost);
@@ -167,7 +172,7 @@ public class ResearchTests
         var garden = NewGarden();
         garden.Grow(60);
         BuyAll(garden, Track.Stems);
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 9; i++)
         {
             garden.Deliver(garden.Next(Track.Core)!.Cost);
             garden.Buy(Track.Core);
@@ -213,7 +218,7 @@ public class ResearchTests
         Assert.Equal(garden.GeneBalance, loaded.GeneBalance);
         Assert.Equal(2, loaded.Core.MaxLinks);
         Assert.Equal(garden.Next(Track.Stems), loaded.Next(Track.Stems));
-        Assert.Equal(new Upgrade(Track.Core, UpgradeKind.WildFlower, 10_000), loaded.Next(Track.Core));
+        Assert.Equal(new Upgrade(Track.Core, UpgradeKind.Seedling, 3_500), loaded.Next(Track.Core));
     }
 
     // A version 9 save from step 5a has no levels: its caps (raised by the old unlock track) are kept and read as the
@@ -230,6 +235,6 @@ public class ResearchTests
         Assert.Equal(new Capacity(16, 5, 2, Pots: 2, Trellises: 1, Wells: 1, WildFlowers: 1, Seedlings: 1, Hubs: 0),
             loaded.Capacity);
         Assert.Equal(Tuning.StemCosts[12], loaded.Next(Track.Stems)!.Cost);
-        Assert.Equal(UpgradeKind.WildFlower, loaded.Next(Track.Core)!.Kind);
+        Assert.Equal(UpgradeKind.Seedling, loaded.Next(Track.Core)!.Kind); // the wild flower slot and core link read as bought
     }
 }

@@ -232,18 +232,25 @@ public class PacingTests
     // The moments the pacing run times (DESIGN.md, Upgrade tracks): the first of each track, the core link, the Hub,
     // the last stem and generator, and the genes for all of that (stems 213,650 + generators 111,000 + the core to the
     // Hub 130,500 = 455,150) earned.
+    // Where in the core track the nth upgrade of a kind is (n from 1).
+    static int CoreAt(UpgradeKind kind, int n = 1) =>
+        Tuning.CoreCosts.Select((c, i) => (c.Kind, i)).Where(c => c.Kind == kind).ElementAt(n - 1).i;
+
     static readonly (string Name, Func<Garden, bool> Reached)[] Milestones =
     [
         ("first stem", g => g.StemsBought >= 1),
         ("first generator", g => g.GeneratorsBought >= 1),
         ("first wild flower slot", g => g.CoreBought >= 1),
-        ("core link", g => g.CoreBought >= 2),
+        ("core link", g => g.CoreBought > CoreAt(UpgradeKind.CoreLink)),
         ("10 stems", g => g.StemsBought >= 6),
         ("5 generators", g => g.GeneratorsBought >= 4),
         ("20 stems", g => g.StemsBought >= 16),
-        ("Hub", g => g.CoreBought >= 6),
-        ("last generator", g => g.GeneratorsBought >= Tuning.GeneratorCosts.Length),
-        ("last stem", g => g.StemsBought >= Tuning.StemCosts.Length),
+        ("Hub", g => g.CoreBought > CoreAt(UpgradeKind.Hub)),
+        ("10 generators", g => g.GeneratorsBought >= 9),
+        ("30 stems", g => g.StemsBought >= 26),
+        ("15 generators", g => g.GeneratorsBought >= 14),
+        ("40 stems", g => g.StemsBought >= 36),
+        ("third seedling slot", g => g.CoreBought > CoreAt(UpgradeKind.Seedling, 2)),
         ("455,150 genes earned", g => g.Genes >= 455_150),
     ];
 
@@ -256,7 +263,9 @@ public class PacingTests
             + $"core track {garden.CoreBought}, size {garden.Tracking.MostMainNodes}, "
             + $"{garden.Nodes.Count(n => !n.Spec.IsFruit)} main, {garden.Nodes.Count(n => n.Spec.IsFruit)} fruit, "
             + $"labs at {Fills(garden, NodeKind.Lab)}, groves at {Fills(garden, NodeKind.Grove)}, "
-            + $"genes {garden.Genes:0} (balance {garden.GeneBalance:0}), +{production:0.0}/s -{upkeep:0.0}/s";
+            + $"genes {garden.Genes:0} (balance {garden.GeneBalance:0}), +{production:0.0}/s -{upkeep:0.0}/s"
+            + $", wild {garden.WildCount}/{garden.Capacity.WildFlowers}: "
+            + string.Join(", ", garden.Nodes.Where(n => n.Spec.IsWild).GroupBy(n => n.Spec.Name).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}"));
     }
 
     // The average fill of a kind of part, as a percentage.
@@ -278,6 +287,7 @@ public class PacingTests
         const double step = 600;
         // The seeds run side by side (each garden is its own), their lines kept in seed order.
         var lines = seeds.Select(_ => new List<string>()).ToArray();
+        var chosen = new List<string>();
         Parallel.For(0, seeds.Length, s =>
         {
             var garden = Planted(seeds[s]);
@@ -305,8 +315,14 @@ public class PacingTests
                 run.GenesByDay[s, day - 1] = garden.Genes;
                 if (shownDays.Contains(day)) lines[s].Add($"  day {day,2}: {Describe(garden)}");
             }
+            // The evolutions the player chose (at random), when, and when each bloomed.
+            lines[s].Add("  evolutions: " + (garden.Evolved.Count == 0 ? "none" : string.Join("; ", garden.Evolved.Select(e =>
+                $"{e.Name} chosen {Hours(e.ChosenAt / Hour)}" + (e.Bloomed ? $", bloomed {Hours(e.BloomedAt / Hour)}" : ", growing")))));
+            lock (chosen) chosen.AddRange(garden.Evolved.Select(e => e.Name));
         });
         foreach (var line in lines.SelectMany(l => l)) log?.Invoke(line);
+        log?.Invoke("evolutions chosen, all seeds: " + string.Join(", ", chosen.GroupBy(n => n).OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}")));
         return run;
     }
 
