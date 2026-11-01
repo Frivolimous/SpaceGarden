@@ -510,7 +510,7 @@ public partial class Widget : Node
             main.View.Highlight = overCore ? Garden.Core : null; // ringed, as a part is in Active
             if (ClickThrough.Supported) ClickThrough.Set(!overCore);
             else UpdateRegion(delta, coreOnly: true);
-            activeTime = fading || overCore || Garden.Speed > SettledSpeed ? SettleSeconds : activeTime - delta;
+            activeTime = fading || overCore || Garden.Speed > SettledSpeed || main.View.Moving ? SettleSeconds : activeTime - delta;
             SetIdle(activeTime <= 0);
             return;
         }
@@ -548,6 +548,7 @@ public partial class Widget : Node
         coreMenu.SetActive(Tool.Info, gardenInfo);
         coreMenu.SetActive(Tool.Almanac, almanac.IsOpen);
         coreMenu.SetActive(Tool.Research, research.IsOpen);
+        coreMenu.SetDot(Tool.Research, main.View.Alerts && Garden.UpgradeAffordable && !research.IsOpen);
         coreMenu.SetActive(Tool.Build, Building);
         PlaceCard();
         if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * plantScale, viewport);
@@ -596,7 +597,7 @@ public partial class Widget : Node
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || evolutionMenu.Visible || Garden.Held != null
-            || Garden.Speed > SettledSpeed || main.View.Blooming;
+            || Garden.Speed > SettledSpeed || main.View.Moving;
         activeTime = active ? SettleSeconds : activeTime - delta;
         SetIdle(activeTime <= 0);
     }

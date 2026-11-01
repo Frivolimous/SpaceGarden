@@ -186,6 +186,7 @@ public partial class ToolButton : Control
     public bool Enabled = true;
     public bool Active;
     public bool Forming; // a bud tool whose kind is growing on the part now: outlined, pulsing
+    public bool Dot; // an alert: a small red dot on the disc's rim, top right (something waits behind it)
     public string? Badge; // a small count in the corner (how many more of a shaping tool can be placed)
     public readonly Tool Tool;
     // Drawn on a disc of its own, in the pill's look (the core's menu, where the buttons stand apart).
@@ -339,6 +340,12 @@ public partial class ToolButton : Control
                 DrawLine(c + new Vector2(-2, 2.5f), c + new Vector2(4, -7), ink, w, true);
                 DrawLine(c + new Vector2(2, 2.5f), c + new Vector2(-4, -7), ink, w, true);
                 break;
+        }
+        if (Dot)
+        {
+            var dot = c + Vector2.FromAngle(-Mathf.Pi / 4) * (Disc ? DiscRadius - 2 : 11);
+            DrawCircle(dot, 4.5f, DiscFill);
+            DrawCircle(dot, 3.5f, new Color(0.95f, 0.3f, 0.28f));
         }
     }
 }

@@ -19,7 +19,8 @@ namespace SpaceGarden;
 // to choose and bloom evolutions at once, --seedling to plant a seedling at once, --seedfill=N to set its power
 // (planting one if needed; full at 200 brings its choice, with --tap=seedling to show it), --choose=N to take its
 // Nth offer, --bloom to fill a chosen one so it blooms (its burst showing), --hub to plant the Hub at once,
-// --hubpoints=N to give it N points to spend, --hubbuy=KIND[,KIND] to buy levels with them, plus Screenshot's
+// --hubpoints=N to give it N points to spend, --hubbuy=KIND[,KIND] to buy levels with them, --alerts=off to turn
+// off the alerts (see GardenView.Alerts; --alertgap=SECONDS of pause between a waiting part's rings, 1.2 by default), plus Screenshot's
 // options and the widget's (--inspect[=core|garden], --coremenu[=SLOT], --almanac, --research, --hubpanel, --ambient, --corehover: see
 // Widget.DevFlags). --screenshot runs never touch the real save.
 //
@@ -286,6 +287,8 @@ public partial class Main : Node2D
     {
         View?.QueueFree();
         View = new GardenView(Garden) { Name = "GardenView", Frozen = HiddenReason != null, Labels = args.ContainsKey("labels") };
+        if (args.TryGetValue("alerts", out var alerts)) View.Alerts = alerts != "off";
+        if (args.TryGetValue("alertgap", out var gap)) View.AlertGapSeconds = float.Parse(gap);
         AddChild(View);
     }
 

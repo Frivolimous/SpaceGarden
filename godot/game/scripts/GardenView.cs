@@ -78,8 +78,17 @@ public partial class GardenView : Node2D
     // A seedling's bloom (step 5c): a burst off the wild flower it became, seconds since it began.
     const float BloomSeconds = 2.4f;
     readonly List<(PlantNode Flower, float Age)> blooms = new();
+    // Alerts (DESIGN.md, Information display; --alerts=off turns them off): while something waits on the player, a ring
+    // in its hue closes in on the part it waits at, faint and close, over and over with a short pause between (AlertGapSeconds):
+    // an upgrade affordable in Research (the genes' purple, on the core), Hub points to spend (the Hub's green, on the
+    // Hub), a seedling's choice (its own hue). It's constant while something waits, so it plays at the idle frame rate.
+    public bool Alerts = true;
+    public float AlertGapSeconds = 1.2f;
+    const float InwardSeconds = 2.4f;
+    readonly Dictionary<PlantNode, float> nextAlert = new(); // seconds till each waiting part's next ring
+    readonly List<(PlantNode At, Color Tint, float Age)> inward = new();
     // Whether a bloom's burst is showing (the widget runs at full frame rate meanwhile).
-    public bool Blooming => blooms.Count > 0;
+    public bool Moving => blooms.Count > 0;
     readonly HashSet<PlantNode> restored = new(); // put back by an undo: they grow in again, with no moment
 
     public void Restored(IEnumerable<PlantNode> nodes) => restored.UnionWith(nodes);
@@ -145,6 +154,7 @@ public partial class GardenView : Node2D
             blooms[i] = (blooms[i].Flower, blooms[i].Age + dt);
             if (blooms[i].Age >= BloomSeconds || !garden.Nodes.Contains(blooms[i].Flower)) blooms.RemoveAt(i);
         }
+        if (Alerts) FollowAlerts(dt);
         blend = (float)Engine.GetPhysicsInterpolationFraction();
         toolsAlpha = Mathf.MoveToward(toolsAlpha, ToolsWanted, dt * 3);
         backdropAlpha = Mathf.MoveToward(backdropAlpha, Building ? 1 : 0, dt * 3);
@@ -645,6 +655,47 @@ public partial class GardenView : Node2D
             }
 
         foreach (var (flower, age) in blooms) DrawBloom(flower, age / BloomSeconds);
+
+        // An alert: a thin ring closing in from just outside the part to its edge, fading in, then out as it touches.
+        foreach (var (node, tint, age) in inward)
+        {
+            float t = age / InwardSeconds;
+            float edge = node.Spec.Radius * 1.05f;
+            float r = edge + (node.Spec.Radius * 0.6f + 6) * (1 - EaseOut(t));
+            float alpha = 0.4f * Mathf.SmoothStep(0, 0.3f, t) * (1 - Mathf.SmoothStep(0.6f, 1, t));
+            Ring(At(node), r, 0.5f + 1f * t, tint, alpha);
+        }
+    }
+
+    // What waits on the player, each at its part and in its hue (see Alerts).
+    IEnumerable<(PlantNode At, Color Tint)> Waiting()
+    {
+        if (garden.UpgradeAffordable) yield return (garden.Core, RippleTint);
+        if (garden.HubLevelAffordable && garden.Nodes.FirstOrDefault(n => n.IsHub) is { } hub)
+            yield return (hub, ColourOf(hub.Spec).Lightened(0.3f));
+        foreach (var node in garden.Nodes)
+            if (node.Choosing) yield return (node, ColourOf(node.Spec).Lightened(0.3f));
+    }
+
+    void FollowAlerts(float dt)
+    {
+        var now = Waiting().ToList();
+        foreach (var gone in nextAlert.Keys.Where(n => !now.Any(w => w.At == n)).ToList()) nextAlert.Remove(gone);
+        foreach (var (node, tint) in now)
+        {
+            float left = nextAlert.GetValueOrDefault(node, 0) - dt; // a part just starting to wait rings at once
+            if (left <= 0)
+            {
+                inward.Add((node, tint, 0));
+                left = InwardSeconds + AlertGapSeconds;
+            }
+            nextAlert[node] = left;
+        }
+        for (int i = inward.Count - 1; i >= 0; i--)
+        {
+            inward[i] = (inward[i].At, inward[i].Tint, inward[i].Age + dt);
+            if (inward[i].Age >= InwardSeconds ||!garden.Nodes.Contains(inward[i].At)) inward.RemoveAt(i);
+        }
     }
 
     // A seedling blooming into its wild flower, the garden's biggest moment: a bright flash that swells and fades, twelve

@@ -82,6 +82,13 @@ public partial class CoreMenu : Control
             if (button.Tool == tool) button.Active = on;
     }
 
+    // An alert: a small red dot on a slot whose panel has something waiting (Research, an upgrade affordable).
+    public void SetDot(Tool tool, bool on)
+    {
+        foreach (var button in buttons)
+            if (button.Tool == tool) button.Dot = on;
+    }
+
     // Where its slots are while it's open (in the menu's layer's units), to keep the cards clear of it.
     public Rect2? Extent()
     {
