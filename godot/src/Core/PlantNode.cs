@@ -44,10 +44,9 @@ public sealed class PlantNode
     public float Blob;
 
     // Growth seconds since it grew (a wild flower's life cycle runs on it: an Ember's dimming, a Comet Bloom's
-    // withering, a Pulsar's bursts). A Pulsar's power built up and not yet released (see Garden.EconomyStep). Seconds
-    // left of a buff (from a Buffer or a glow fruit), which raises what it makes (not saved: it's brief).
+    // withering). Seconds left of a buff (from a Buffer or a glow fruit), which raises what it makes (not saved: it's
+    // brief).
     public double Life;
-    public float Charge;
     public float Buff;
     // How much more a buff makes it make (Tuning.BuffBonus, stronger with the Buffer's Hub milestone), set as it's buffed.
     public float BuffBonus = Tuning.BuffBonus;

@@ -88,13 +88,38 @@ public class WildTests
     }
 
     [Fact]
+    public void AnEmbersPowerIsCappedByTheLifeItHasLeft()
+    {
+        // Halfway through its life it can hold half its store: no more is fed to it, what it holds past that goes on,
+        // and as it makes power for its fill it makes at most half its rate. Its store and rate stay.
+        var (garden, stem) = Make(wildLimit: 1);
+        var ember = Add(garden, stem, NodeKind.Ember);
+        ember.Life = Tuning.EmberLifeSeconds / 2;
+        Assert.Equal(ember.Spec.PowerStore, ember.Store);
+        Assert.Equal(ember.Store / 2, Garden.PowerCap(ember), 0.5f);
+        Assert.Equal(Tuning.EmberGen, Garden.FullProductionPerSecond(ember), 1e-3f);
+        ember.Power = Garden.PowerCap(ember);
+        Assert.Equal(0, Garden.ProductionPerSecond(ember)); // at its cap, as a full generator
+        ember.Power = ember.Store; // over its cap: it sends on
+        stem.Power = 0;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.True(ember.Power < ember.Store);
+        // A stem fuller than it (for its cap) sends it nothing.
+        ember.Power = Garden.PowerCap(ember);
+        stem.Power = stem.Store * 0.9f;
+        float before = ember.Power;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.True(ember.Power <= before + 0.01f);
+    }
+
+    [Fact]
     public void AnEmberBurnsOutAndFreesItsSlot()
     {
         var (garden, stem) = Make(wildLimit: 1);
         var ember = Add(garden, stem, NodeKind.Ember);
         Assert.Equal(0, garden.FreeWildSlots);
         ember.Life = Tuning.EmberLifeSeconds - 1;
-        Assert.True(Garden.Brightness(ember) < 0.3f); // dim near its end
+        Assert.True(Garden.PowerCap(ember) < 0.01f * ember.Store); // near its end it can hold almost nothing
         garden.Grow(2);
         Assert.DoesNotContain(ember, garden.Nodes);
         Assert.Equal(1, garden.FreeWildSlots);
@@ -144,17 +169,21 @@ public class WildTests
     }
 
     [Fact]
-    public void APulsarReleasesItsPowerInBursts()
+    public void APulsarSendsHalfItsPowerAtOnceWhenFull()
     {
         var (garden, stem) = Make(wildLimit: 1);
         garden.UnlockWild(NodeKind.Pulsar);
         var pulsar = Add(garden, stem, NodeKind.Pulsar);
-        pulsar.Power = pulsar.Store / 2;
-        garden.Grow(Tuning.PulsarSeconds * 0.9);
-        Assert.True(pulsar.Charge > 0); // built up, not yet in its store
-        float charge = pulsar.Charge;
-        garden.Grow(Tuning.PulsarSeconds * 0.2);
-        Assert.True(pulsar.Charge < charge / 2); // released
+        // Below full it sends nothing, whatever its fill.
+        pulsar.Power = pulsar.Store * 0.9f;
+        stem.Power = 0;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.True(pulsar.Power >= pulsar.Store * 0.9f);
+        // Full, it sends PulsarBurst of its power to its emptiest neighbour in one step.
+        pulsar.Power = pulsar.Store;
+        stem.Power = 0;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.Equal(pulsar.Store * (1 - Tuning.PulsarBurst), pulsar.Power, 1f);
     }
 
     [Fact]

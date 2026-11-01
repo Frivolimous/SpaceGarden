@@ -83,7 +83,7 @@ static class WildFlowers
         yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Evolution,
             "1.5 times a generator's power, released in bursts.", "Uneven supply; takes a generator slot too.") with
         {
-            PowerPerSecond = Tuning.PulsarGen, PulseSeconds = Tuning.PulsarSeconds, PowerStore = Tuning.PulsarStore,
+            PowerPerSecond = Tuning.PulsarGen, BurstShare = Tuning.PulsarBurst, PowerStore = Tuning.PulsarStore,
             PowerTransferPerSecond = Tuning.PulsarTransfer,
         };
         yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Evolution,

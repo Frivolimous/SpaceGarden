@@ -466,8 +466,6 @@ public partial class GardenView : Node2D
         if (size < 0.2f) return;
         float level = Level(node);
         var colour = ColourOf(node.Spec);
-        // An Ember dims as its life runs out.
-        if (node.Spec.Dims) colour = Shade(colour, 0.35f + 0.65f * Garden.Brightness(node));
         var outline = Shade(colour, OutlineDim + OutlineLit * level);
         var fill = Shade(colour, FillDim + FillLit * level);
         var edge = Edge;

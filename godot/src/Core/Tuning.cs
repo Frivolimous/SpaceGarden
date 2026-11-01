@@ -167,22 +167,24 @@ public static class Tuning
     // it AmplifyChance of the time, once a blob at most (50% larger on average, the blobs still whole).
     public const float AmplifyChance = 0.5f;
     // Resistor: blobs never step onto it, from either side; it sends power on at ResistorTransfer a second (a stem 30).
-    public const float ResistorTransfer = 15;
+    public const float ResistorTransfer = 12;
     // Tendril: its link TendrilLink times as long and TendrilSpring as springy; holds TendrilStore (a stem 150) and
     // sends on at TendrilTransfer.
-    public const float TendrilLink = 2.5f, TendrilSpring = 0.3f, TendrilStore = 600, TendrilTransfer = 20;
+    public const float TendrilLink = 2.5f, TendrilSpring = 0.3f, TendrilStore = 600, TendrilTransfer = 40;
     // Big Stem: 4 links, sending power on at BigStemTransfer (a stem 30).
     public const float BigStemTransfer = 15;
-    // Pulsar: makes PulsarGen a second (1.5 generators) while below full, built up unseen and released into its store
-    // every PulsarSeconds, swelling it past full; it holds PulsarStore and sends on at PulsarTransfer (a generator 18).
-    public const float PulsarGen = 18, PulsarSeconds = 20, PulsarStore = 300, PulsarTransfer = 24;
+    // Pulsar: makes PulsarGen a second (1.5 generators) while below full and holds PulsarStore; it sends nothing until
+    // it's full, then PulsarBurst of its power at once (Jeremy, Nov 1; it was built up unseen and released every 20 s).
+    // PulsarTransfer is only what its card shows.
+    public const float PulsarGen = 18, PulsarStore = 400, PulsarTransfer = 24, PulsarBurst = 0.5f;
     // Twin Star: a generator with 2 links, making TwinStarGen (80% of a generator's 12).
     public const float TwinStarGen = 9.6f;
-    // Ember: starts at EmberGen (twice a generator), falling in a straight line to nothing over EmberLifeSeconds (level
-    // with a generator halfway, at a day and a half), then burns out.
+    // Ember: makes EmberGen (twice a generator) for its fill, but the power it can hold falls in a straight line from
+    // its store to nothing over EmberLifeSeconds (Jeremy, Nov 1), so it dims and makes less as it goes (level with a
+    // generator about halfway, at a day and a half), then burns out.
     public const float EmberGen = 24, EmberLifeSeconds = 3 * 86400;
     // Lumber Grove: LumberBlobs growth blobs an hour (2 groves) at LumberUpkeep a second (1.5 groves).
-    public const float LumberBlobs = 2400, LumberUpkeep = 6;
+    public const float LumberBlobs = 2400, LumberUpkeep = 8;
     // Seed Pod: SeedPodBlobs an hour (1.5 groves), but they leave SeedPodBurst at once (every 2 minutes at full fill).
     public const float SeedPodBlobs = 1800;
     public const int SeedPodBurst = 60;

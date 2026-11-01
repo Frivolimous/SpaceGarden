@@ -275,9 +275,9 @@ A new bud can turn into a special kind. That is **wild growth**, and the results
 | Resistor | 2 links; blobs bounce off it from both sides; low transfer | 1 wild | Stem | Start | 1 glow |
 | Tendril | 3 links; long springy link, large power store, medium transfer | 1 wild, 1 stem | Stem | Start | 3 leaf |
 | Big Stem | 4 links; slow transfer | 1 wild, 1 stem | Stem | Evolution | 2 leaf |
-| Pulsar | 1.5× a generator's power, released in bursts | 1 wild, 1 generator | Generator | Evolution | 2 burr |
+| Pulsar | 1.5× a generator's power; sends nothing until full, then half its power at once (`Tuning.PulsarBurst`, Jeremy, Nov 1) | 1 wild, 1 generator | Generator | Evolution | 2 burr |
 | Twin Star | 2 links; 80% of a generator's power | 1 wild, 1 generator | Generator | Evolution | 2 berry |
-| Ember | Starts at 2× a generator, 1× at 1.5 days, keeps fading and burns out at 3 days unless pruned earlier | 1 wild, 1 generator | Generator | Start | None |
+| Ember | 2× a generator's rate, but the power it can hold falls from its store to nothing over its life, so its fill, look and output fall with it (about 1× at 1.5 days; Jeremy, Nov 1); burns out at 3 days unless pruned earlier | 1 wild, 1 generator | Generator | Start | None |
 | Lumber Grove | 2× a grove's growth blobs at 1.5× upkeep | 1 wild | Grove | Start | 5 wood |
 | Seed Pod | 1.5× a grove's growth blobs, in bursts | 1 wild | Grove | Start | 3 berry |
 | Wild Lab | A lab's genes; its fruit bonus is doubled (+20% each), up to 2× with all 5 | 1 wild | Lab | Start | 5 research |

@@ -88,12 +88,12 @@ public sealed record NodeSpec(NodeKind Kind)
     public float FlowerBonus { get; init; }
     public float FruitBonusScale { get; init; } = 1;
 
-    // Wild flowers' quirks (see Garden, Wild flowers). PulseSeconds: what it makes builds up unseen and goes into
-    // its store all at once, every so many seconds (0: as it's made). LifeSeconds: it ends itself after so long (0:
-    // never), its output falling to nothing as it goes if Dims. DoublesBlobs: a blob passing through may become two
+    // Wild flowers' quirks (see Garden, Wild flowers). BurstShare: it sends nothing until it's full, then that share of
+    // its power at once (0: clumps as usual). LifeSeconds: it ends itself after so long (0: never); if Dims, the power
+    // it can hold falls with it to nothing (its store, and so its look and rate, stay: see Garden.PowerCap). DoublesBlobs: a blob passing through may become two
     // (AmplifyChance, once a blob); BlocksBlobs: no blob steps onto it. EmergeBurst: blobs it sends at once as it
     // appears. WildBoost: buds near it are this much likelier to grow wild, and wild flowers near it Moonlit.
-    public float PulseSeconds { get; init; }
+    public float BurstShare { get; init; }
     public float LifeSeconds { get; init; }
     public bool Dims { get; init; }
     public bool DoublesBlobs { get; init; }

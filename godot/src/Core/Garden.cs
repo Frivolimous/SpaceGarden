@@ -798,18 +798,6 @@ public sealed class Garden
             production += made;
             upkeep += cost;
             node.Life += seconds;
-            if (node.Spec.PulseSeconds > 0)
-            {
-                // A Pulsar: what it makes builds up unseen, and goes into its store all at once each PulseSeconds of
-                // its life (swelling it past full, until it has sent it on).
-                node.Charge += made * dt;
-                made = 0;
-                if (Math.Floor(node.Life / node.Spec.PulseSeconds) > Math.Floor((node.Life - seconds) / node.Spec.PulseSeconds))
-                {
-                    made = node.Charge / dt;
-                    node.Charge = 0;
-                }
-            }
             node.Power = Math.Max(0, node.Power + (made - cost) * dt);
             node.Blob += BlobsPerHour(node) * hours;
             node.Buff = Math.Max(0, node.Buff - dt);
@@ -856,7 +844,13 @@ public sealed class Garden
                 fed = Math.Min(node.Power, FruitClump(node));
                 transfers.Add((node, fruit, fed));
             }
-            if (SendTo(node, node.Power - fed) is { } to) transfers.Add((node, to, Clump(node)));
+            if (node.Spec.BurstShare > 0)
+            {
+                // A Pulsar: nothing until it's full, then its BurstShare at once.
+                if (node.Power >= node.Store && SendTo(node, node.Power - fed, burst: true) is { } to)
+                    transfers.Add((node, to, (node.Power - fed) * node.Spec.BurstShare));
+            }
+            else if (SendTo(node, node.Power - fed) is { } to) transfers.Add((node, to, Clump(node)));
         }
         foreach (var (from, to, clump) in transfers)
         {
@@ -883,12 +877,13 @@ public sealed class Garden
 
     // Where a part sends a clump of power this step, if anywhere (the original's attemptTransferPower): once it's
     // fuller than SendFill and has a whole clump to spare, to the neighbour (not fruit) with the lowest fill for its
-    // weight among those less full than itself (fills past full count as full). A part with no transfer rate (a
-    // seedling) sends nothing.
-    PlantNode? SendTo(PlantNode node, float spare)
+    // weight among those less full than itself (fills past full count as full; an Ember's counted against its PowerCap,
+    // so it isn't fed past it and sends on what's over it). A part with no transfer rate (a seedling) sends nothing. A
+    // Pulsar's burst (see EconomyStep) needs only somewhere to go.
+    PlantNode? SendTo(PlantNode node, float spare, bool burst = false)
     {
-        if (node.Fill <= Tuning.SendFill || Clump(node) <= 0 || spare < Clump(node)) return null;
-        float fill = Math.Min(1, node.Fill);
+        if (!burst && (FlowFill(node) <= Tuning.SendFill || Clump(node) <= 0 || spare < Clump(node))) return null;
+        float fill = Math.Min(1, FlowFill(node));
         PlantNode? best = null;
         float bestWeighed = float.MaxValue;
         if (node.Parent != null) Consider(node.Parent);
@@ -897,7 +892,7 @@ public sealed class Garden
 
         void Consider(PlantNode other)
         {
-            float otherFill = other.Fill, weighed = otherFill / other.Spec.PowerWeight;
+            float otherFill = FlowFill(other), weighed = otherFill / other.Spec.PowerWeight;
             if (Math.Min(1, otherFill) >= fill || weighed >= bestWeighed) return;
             best = other;
             bestWeighed = weighed;
@@ -933,7 +928,14 @@ public sealed class Garden
 
     // Power a part makes per second now: in proportion to its fill, nothing once full.
     public static float ProductionPerSecond(PlantNode node) =>
-        node.Power >= node.Store ? 0 : FullProductionPerSecond(node) * PowerOutput(node);
+        node.Power >= PowerCap(node) ? 0 : FullProductionPerSecond(node) * PowerOutput(node);
+
+    // The most power a part can hold: its store, but for one that dims (an Ember) its store times its Brightness, so
+    // as its life runs out its fill, and with it its look and what it makes, fall in proportion (Jeremy, Nov 1).
+    public static float PowerCap(PlantNode node) => node.Spec.Dims ? node.Store * Brightness(node) : node.Store;
+
+    // A part's fill against its PowerCap, for where power flows (past it counts as full).
+    static float FlowFill(PlantNode node) => PowerCap(node) is var cap && cap > 0 ? node.Power / cap : node.Power > 0 ? 2 : 1;
 
     // A power maker's share of its full rate: its Output, or with a floor (the generators' Hub milestone) that share of
     // its full rate whatever its fill, the rest following its fill (50-100%).
@@ -943,12 +945,12 @@ public sealed class Garden
     // What the cards show it making: its full rate once full (when it makes nothing, idling, not starved), else
     // what it makes now.
     public static float ShownProductionPerSecond(PlantNode node) =>
-        node.Power >= node.Store ? FullProductionPerSecond(node) : ProductionPerSecond(node);
+        node.Power >= PowerCap(node) ? FullProductionPerSecond(node) : ProductionPerSecond(node);
 
-    // What a part makes per second when full (its fruit adding a little each: see FruitBonus; an Ember less as it
-    // dims; evolutions more: see Boosts).
+    // What a part makes per second when full (its fruit adding a little each: see FruitBonus; evolutions more: see
+    // Boosts). An Ember's rate stays: it makes less as it dims because it can hold less (see PowerCap).
     public static float FullProductionPerSecond(PlantNode node) =>
-        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Brightness(node) * Boosted(node) * node.Boost.Gen;
+        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Boosted(node) * node.Boost.Gen;
 
     // A part's own fruit raise its output, each by its FlowerBonus (times the part's FruitBonusScale: a Wild Lab's
     // count double).
@@ -963,8 +965,8 @@ public sealed class Garden
         return bonus;
     }
 
-    // How bright a wild flower that dims (an Ember) still is: 1 as it grows, falling in a straight line to 0 as its life
-    // ends (an Ember's rate is twice a generator's, so it's level with one halfway). Others: 1.
+    // How much of its store a wild flower that dims (an Ember) can still hold: 1 as it grows, falling in a straight line
+    // to 0 as its life ends (see PowerCap). Others: 1.
     public static float Brightness(PlantNode node) => !node.Spec.Dims ? 1
         : 1 - (float)Math.Clamp(node.Life / LifeOf(node), 0, 1);
 
@@ -2234,7 +2236,7 @@ public sealed class Garden
     public GardenSave ToSave() => new(
         Layout, EconomyClock, Capacity,
         Nodes.Select(n => new NodeSave(n.Id, n.Spec.Kind, n.Parent?.Id ?? -1, n.Position.X, n.Position.Y,
-            n.Power, n.Blob, n.Forming, n.Growth, n.Life, n.Charge,
+            n.Power, n.Blob, n.Forming, n.Growth, n.Life,
             n.Evolution is { } e ? Evolved.IndexOf(e) : -1, n.Offers?.ToList())).ToList(),
         Genes,
         Shaping.Select(t => new ShapingSave(t.Kind, t.Position.X, t.Position.Y, t.Angle, t.Length,
@@ -2286,7 +2288,6 @@ public sealed class Garden
             node.Forming = n.Forming;
             node.Growth = n.Growth;
             node.Life = n.Life;
-            node.Charge = n.Charge;
             node.Offers = n.Offers?.ToList();
             if (n.Evolution >= 0 && n.Evolution < garden.Evolved.Count) node.Evolution = garden.Evolved[n.Evolution];
             byId[n.Id] = node;
@@ -2387,10 +2388,11 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
 public sealed record ResearchSave(int Stems, int Generators, int Core);
 
 // (Saves from before step 3d also carry Pinned, from when parts could be pinned; it's ignored.)
-// (Life and Charge since step 5d: a wild flower's life cycle. Evolution and Offers since 5c: a seedling's evolution
-// (an index into GardenSave.Evolutions, or -1), which sets its store, and what it offers.)
+// (Life since step 5d: a wild flower's life cycle; saves from 5d to Nov 1 also carry a Pulsar's Charge, ignored.
+// Evolution and Offers since 5c: a seedling's evolution (an index into GardenSave.Evolutions, or -1), which sets its
+// store, and what it offers.)
 public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, float Y, float Power,
-    float Blob = 0, NodeKind? Forming = null, float Growth = 0, double Life = 0, float Charge = 0,
+    float Blob = 0, NodeKind? Forming = null, float Growth = 0, double Life = 0,
     int Evolution = -1, List<EvolutionKind>? Offers = null);
 
 // (WildUnlocked and WildCaps since step 5d: the Evolution kinds unlocked, and any per-kind caps; see Garden.WildUnlocked.
