@@ -45,18 +45,18 @@ public class ResearchTests
         var garden = NewGarden();
         var stems = BuyAll(garden, Track.Stems);
         Assert.Equal(43, stems.Count);
-        Assert.Equal([100, 150, 200, 300, 450], stems.Take(5).Select(u => u.Cost));
-        Assert.Equal(611_100, stems[^1].Cost);
-        Assert.Equal(5_563_850, stems.Sum(u => u.Cost));
+        Assert.Equal([100, 150, 250, 450, 750], stems.Take(5).Select(u => u.Cost));
+        Assert.Equal(508_050, stems[^1].Cost);
+        Assert.Equal(5_353_050, stems.Sum(u => u.Cost));
         Assert.All(stems, u => Assert.Equal(UpgradeKind.Stem, u.Kind));
         Assert.Equal(47, garden.Capacity.Stems);
 
         var generators = BuyAll(garden, Track.Generators);
         Assert.Equal(43, generators.Count);
-        Assert.Equal([1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 42_000],
+        Assert.Equal([1_000, 2_000, 3_000, 5_000, 9_000, 15_000, 25_000, 40_000, 60_000, 85_000],
             generators.Take(10).Select(u => u.Cost));
-        Assert.Equal(846_000, generators[^1].Cost);
-        Assert.Equal(13_847_000, generators.Sum(u => u.Cost));
+        Assert.Equal(2_515_000, generators[^1].Cost);
+        Assert.Equal(39_400_000, generators.Sum(u => u.Cost));
         Assert.Equal(44, garden.Capacity.Generators);
     }
 

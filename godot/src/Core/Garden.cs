@@ -1471,11 +1471,16 @@ public sealed class Garden
         UpdateBoosts();
     }
 
-    // The bloomed evolutions' effects on each basic kind: each evolution at its bloomed level (its levels adding up: see
-    // EvolutionLevel.At), different evolutions multiplied together; and Smart Particles' chance. Then, while a Hub is
-    // planted, its levels (see The Hub): every path's shares a level, summed by kind and axis (a wild flower's family
-    // too), multiplied in, and the milestones reached. The Hub's own upkeep rises with every level bought, dormant or
-    // not. Every part takes its kind's, and its links beyond its spec's.
+    // A basic kind and the wild flowers grown from it (a lab's: the Wild Lab and the Lichen).
+    static IEnumerable<NodeKind> Family(NodeKind basic) =>
+        NodeSpecs.All.Values.Where(s => s.Kind == basic || s.Wild?.Base == basic).Select(s => s.Kind);
+
+    // The bloomed evolutions' effects on each basic kind (the lab's and the generator's on their wild flowers too):
+    // each evolution at its bloomed level (its levels adding up: see EvolutionLevel.At), different evolutions
+    // multiplied together; and Smart Particles' chance. Then, while a Hub is planted, its levels (see The Hub): every
+    // path's shares a level, summed by kind and axis (a wild flower's family too), multiplied in, and the milestones
+    // reached. The Hub's own upkeep rises with every level bought, dormant or not. Every part takes its kind's, and its
+    // links beyond its spec's.
     void UpdateBoosts()
     {
         boosts.Clear();
@@ -1486,8 +1491,11 @@ public sealed class Garden
             var x = Evolutions.All[bloomed.Key].Effect.At(bloomed.Count());
             Raise(NodeKind.Core, b => b with { Gen = b.Gen * x.CoreGen, Transfer = b.Transfer * x.CoreTransfer });
             Raise(NodeKind.Stem, b => b with { Transfer = b.Transfer * x.StemTransfer, Fruits = b.Fruits + x.StemFruits });
-            Raise(NodeKind.Lab, b => b with { Blobs = b.Blobs * x.LabGenes, Upkeep = b.Upkeep * x.LabUpkeep });
-            Raise(NodeKind.Generator, b => b with { Gen = b.Gen * x.GeneratorGen, Transfer = b.Transfer * x.GeneratorTransfer });
+            // Rapid Evolution reaches every lab kind, Pulsar Power and Twin Stars every generator kind (Jeremy, Nov 1).
+            foreach (var lab in Family(NodeKind.Lab))
+                Raise(lab, b => b with { Blobs = b.Blobs * x.LabGenes, Upkeep = b.Upkeep * x.LabUpkeep });
+            foreach (var generator in Family(NodeKind.Generator))
+                Raise(generator, b => b with { Gen = b.Gen * x.GeneratorGen, Transfer = b.Transfer * x.GeneratorTransfer });
             SmartChance = Math.Max(SmartChance, x.SmartChance);
         }
         hubAwake = HubPlanted;

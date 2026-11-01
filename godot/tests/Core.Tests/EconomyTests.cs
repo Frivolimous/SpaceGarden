@@ -52,7 +52,7 @@ public class EconomyTests
         Assert.Equal(4, Garden.FullUpkeepPerSecond(grove), Tolerance);
         Assert.Equal((800f, 150f, 200f), (garden.Core.Store, stem.Store, lab.Store));
         // What each can send on a second (in a clump each economy step).
-        Assert.Equal((24 * 1.2f, 30f, 18f, 15f, 15f), (garden.Core.Spec.PowerTransferPerSecond, stem.Spec.PowerTransferPerSecond,
+        Assert.Equal((24 * 1.8f, 30f, 12 * 2.15f, 15f, 15f), (garden.Core.Spec.PowerTransferPerSecond, stem.Spec.PowerTransferPerSecond,
             generator.Spec.PowerTransferPerSecond, lab.Spec.PowerTransferPerSecond, grove.Spec.PowerTransferPerSecond));
         var (production, upkeep) = garden.FullPowerBalance();
         Assert.Equal(36, production, Tolerance);

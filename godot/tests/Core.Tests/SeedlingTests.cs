@@ -158,6 +158,27 @@ public class SeedlingTests
     }
 
     [Fact]
+    public void LabAndGeneratorEvolutionsReachTheirWildFlowers()
+    {
+        // Rapid Evolution every lab kind, Pulsar Power and Twin Stars every generator kind (Jeremy, Nov 1); the stem's
+        // and the core's stay with the basic kind.
+        var (garden, stem, _) = Make();
+        garden.Capacity = garden.Capacity with { WildFlowers = 2 };
+        garden.UnlockWild(NodeKind.Pulsar);
+        var lichen = Add(garden, stem, NodeKind.Lichen);
+        var pulsar = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Pulsar);
+        foreach (var n in garden.Nodes) n.Power = n.Store;
+        float genes = Garden.FullBlobsPerHour(lichen), power = Garden.FullProductionPerSecond(pulsar);
+        float transfer = Garden.TransferPerSecond(pulsar);
+        garden.EvolveNow(EvolutionKind.RapidEvolution);
+        garden.EvolveNow(EvolutionKind.PulsarPower);
+        garden.EvolveNow(EvolutionKind.TwinStars);
+        Assert.Equal(genes * 2, Garden.FullBlobsPerHour(lichen), 3);
+        Assert.Equal(power * 1.1f, Garden.FullProductionPerSecond(pulsar), 3);
+        Assert.Equal(transfer * 1.5f, Garden.TransferPerSecond(pulsar), 3);
+    }
+
+    [Fact]
     public void APrunedSeedlingLeavesItsEvolutionForTheNext()
     {
         var (garden, stem, seedling) = Make();

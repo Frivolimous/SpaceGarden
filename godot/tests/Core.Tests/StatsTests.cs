@@ -132,15 +132,15 @@ public class StatsTests
     {
         var garden = NewGarden(Capacity.Start);
         garden.Deliver(400);
-        garden.Buy(Track.Stems); // 300 left; the next stem costs 150, generators and the core 1,500
-        garden.Buy(Track.Stems); // 150 left; the next stem 200
+        garden.Buy(Track.Stems); // 300 left; the next stem costs 150, generators 1,000 and the core 1,500
+        garden.Buy(Track.Stems); // 150 left; the next stem 250
         garden.Spend(50);
         var stats = GardenStats.Of(garden) with { GenesPerHour = 600 };
-        Assert.Equal(new Upgrade(Track.Stems, UpgradeKind.Stem, 200), stats.Cheapest);
+        Assert.Equal(new Upgrade(Track.Stems, UpgradeKind.Stem, 250), stats.Cheapest);
         Assert.Equal(100, stats.GeneBalance, 9);
         Assert.Equal(400, stats.Genes, 9);
-        Assert.Equal(100, stats.GenesToNext, 9);
-        Assert.Equal(600, stats.SecondsToNext!.Value, 9); // 100 genes at 10 a minute
+        Assert.Equal(150, stats.GenesToNext, 9);
+        Assert.Equal(900, stats.SecondsToNext!.Value, 9); // 150 genes at 10 a minute
 
         Assert.Null((stats with { GenesPerHour = 0 }).SecondsToNext); // no labs: never
         Assert.Equal(0, (stats with { GeneBalance = 250 }).SecondsToNext); // it can be bought now
@@ -158,7 +158,7 @@ public class StatsTests
         var core = NodeStats.Of(garden.Core);
         Assert.Equal((300f, 800f), (core.Power, core.Store));
         Assert.Equal(24 * 300f / 800, core.Makes, 4); // in proportion to its fill
-        Assert.Equal(28.8f, core.Sends, 4);
+        Assert.Equal(NodeSpecs.All[NodeKind.Core].PowerTransferPerSecond, core.Sends, 4);
         Assert.Equal(0, core.Upkeep);
         garden.Core.Power = 800;
         Assert.Equal(24, NodeStats.Of(garden.Core).Makes, 4); // full, it makes nothing: the card shows its full rate

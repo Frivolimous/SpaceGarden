@@ -142,7 +142,7 @@ public static class NodeSpecs
                 Name = "Core", Description = "The heart: makes the most power, and takes in genes.",
                 Radius = 30, Mass = 30, Force = 30, MaxLinks = Tuning.StartCoreLinks, Shape = Shape.Circle, Rgb = 0xE5E570,
                 PowerStore = NodeBase.PowerStore * 4, PowerPerSecond = NodeBase.CoreGen, PowerWeight = 1.5f,
-                PowerTransferPerSecond = NodeBase.CoreGen * 1.2f,
+                PowerTransferPerSecond = NodeBase.CoreGen * 1.8f,
             },
             [NodeKind.Stem] = new(NodeKind.Stem)
             {
@@ -158,7 +158,7 @@ public static class NodeSpecs
                 Radius = 15, Mass = 3, Force = 3, MaxLinks = 1, Shape = Shape.Pentagon, Rgb = 0xE5E570,
                 Fruit = NodeKind.Burr, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.SmallGen,
-                PowerTransferPerSecond = NodeBase.SmallGen * 1.5f,
+                PowerTransferPerSecond = NodeBase.SmallGen * 2.15f,
             },
             [NodeKind.Lab] = new(NodeKind.Lab)
             {

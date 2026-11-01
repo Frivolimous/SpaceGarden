@@ -167,7 +167,7 @@ public static class Tuning
     // it AmplifyChance of the time, once a blob at most (50% larger on average, the blobs still whole).
     public const float AmplifyChance = 0.5f;
     // Resistor: blobs never step onto it, from either side; it sends power on at ResistorTransfer a second (a stem 30).
-    public const float ResistorTransfer = 6;
+    public const float ResistorTransfer = 15;
     // Tendril: its link TendrilLink times as long and TendrilSpring as springy; holds TendrilStore (a stem 150) and
     // sends on at TendrilTransfer.
     public const float TendrilLink = 2.5f, TendrilSpring = 0.3f, TendrilStore = 600, TendrilTransfer = 20;
@@ -220,7 +220,7 @@ public static class Tuning
     // in). Full, it offers ChoiceCount evolutions; choosing one raises its store to its target, FirstBloom times
     // BloomGrowth for each evolution chosen before; full again, it blooms. Repeats are offered only once the garden has
     // RepeatsAfter evolutions.
-    public const double FirstBloom = 1_000, BloomGrowth = 5;
+    public const double FirstBloom = 10_000, BloomGrowth = 3; // Jeremy, Nov 1 (were 1,000 and 5: blooms took minutes)
     public const int ChoiceCount = 3, RepeatsAfter = 5;
 
     // ==== THE HUB ==== \\
@@ -238,23 +238,23 @@ public static class Tuning
 
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in
-    // order. Placeholders for playtesting. Stems and generators each raise their cap by 1 (to 30 stems and 10
-    // generators); the core's track is its own list. Past week one is long-term pacing, not designed yet, so each track
-    // ends: the core's last six (alternating seedling slots and the wild flower limit) are placeholders set in 5b.
+    // order. Placeholders for playtesting (Jeremy's balance pass, Nov 1: dearer overall than 5b's, the early steps
+    // most). Stems and generators each raise their cap by 1 (to 47 stems and 44 generators); the core's track is its
+    // own list, the Hub ninth. Past these each track ends, as long-term pacing isn't designed yet.
     public static readonly double[] StemCosts =
     [
-        100, 150, 200, 300, 450, 650, 950, 1_350, 1_850, 2_450, 3_200, 4_100, 5_200, 6_600, 8_400, 10_650, 13_400,
-        16_750, 20_800, 25_650, 31_400, 38_150, 46_100, 55_350, 66_000, 78_150, 91_900, 107_350, 124_600, 143_750,
-        164_900, 188_150, 213_600, 241_350, 271_500, 304_150, 339_400, 377_350, 418_100, 461_750, 508_400, 558_150,
-        611_100,
+        100, 150, 250, 450, 750, 1_150, 1_650, 2_300, 3_150, 4_250, 5_650, 7_400, 9_550, 12_150, 15_250, 18_900, 23_150,
+        28_050, 33_650, 40_000, 47_150, 55_150, 64_050, 73_900, 84_750, 96_650, 109_650, 123_800, 139_150, 155_750,
+        173_650, 192_900, 213_550, 235_650, 259_250, 284_400, 311_150, 339_550, 369_650, 401_500, 435_150, 470_650,
+        508_050,
     ];
 
     public static readonly double[] GeneratorCosts =
     [
-        1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 42_000, 55_000, 69_000, 84_000, 100_000,
-        117_000, 135_000, 154_000, 174_000, 195_000, 217_000, 240_000, 264_000, 289_000, 315_000, 342_000, 370_000,
-        398_000, 426_000, 454_000, 482_000, 510_000, 538_000, 566_000, 594_000, 622_000, 650_000, 678_000, 706_000,
-        734_000, 762_000, 790_000, 818_000, 846_000,
+        1_000, 2_000, 3_000, 5_000, 9_000, 15_000, 25_000, 40_000, 60_000, 85_000, 115_000, 150_000, 190_000, 235_000,
+        285_000, 340_000, 400_000, 465_000, 535_000, 606_000, 678_000, 751_000, 825_000, 900_000, 976_000, 1_053_000,
+        1_131_000, 1_210_000, 1_290_000, 1_371_000, 1_453_000, 1_536_000, 1_620_000, 1_705_000, 1_791_000, 1_878_000,
+        1_966_000, 2_055_000, 2_145_000, 2_236_000, 2_328_000, 2_421_000, 2_515_000,
     ];
 
     public static readonly (UpgradeKind Kind, double Cost)[] CoreCosts =
@@ -268,40 +268,40 @@ public static class Tuning
         (UpgradeKind.Seedling, 32_000),
         (UpgradeKind.WildFlower, 43_000),
         (UpgradeKind.Hub, 54_000),
-        (UpgradeKind.Seedling, 75_000),
-        (UpgradeKind.WildFlower, 97_000),
-        (UpgradeKind.Seedling, 120_000),
-        (UpgradeKind.WildFlower, 144_000),
-        (UpgradeKind.Seedling, 169_000),
-        (UpgradeKind.WildFlower, 195_000),
-        (UpgradeKind.Seedling, 225_000),
-        (UpgradeKind.WildFlower, 265_000),
-        (UpgradeKind.Seedling, 315_000),
-        (UpgradeKind.WildFlower, 375_000),
-        (UpgradeKind.Seedling, 445_000),
-        (UpgradeKind.WildFlower, 525_000),
-        (UpgradeKind.Seedling, 615_000),
-        (UpgradeKind.WildFlower, 715_000),
-        (UpgradeKind.Seedling, 835_000),
-        (UpgradeKind.WildFlower, 975_000),
-        (UpgradeKind.Seedling, 1_125_000),
-        (UpgradeKind.WildFlower, 1_275_000),
-        (UpgradeKind.Seedling, 1_425_000),
-        (UpgradeKind.WildFlower, 1_575_000),
-        (UpgradeKind.Seedling, 1_725_000),
-        (UpgradeKind.WildFlower, 1_875_000),
-        (UpgradeKind.Seedling, 2_025_000),
-        (UpgradeKind.WildFlower, 2_175_000),
-        (UpgradeKind.Seedling, 2_325_000),
-        (UpgradeKind.WildFlower, 2_475_000),
-        (UpgradeKind.Seedling, 2_625_000),
-        (UpgradeKind.WildFlower, 2_775_000),
-        (UpgradeKind.Seedling, 2_925_000),
-        (UpgradeKind.WildFlower, 3_075_000),
-        (UpgradeKind.Seedling, 3_225_000),
-        (UpgradeKind.WildFlower, 3_375_000),
-        (UpgradeKind.Seedling, 3_525_000),
-        (UpgradeKind.WildFlower, 3_675_000),
+        (UpgradeKind.Seedling, 165_000),
+        (UpgradeKind.WildFlower, 286_000),
+        (UpgradeKind.Seedling, 417_000),
+        (UpgradeKind.WildFlower, 558_000),
+        (UpgradeKind.Seedling, 709_000),
+        (UpgradeKind.WildFlower, 870_000),
+        (UpgradeKind.Seedling, 1_041_000),
+        (UpgradeKind.WildFlower, 1_222_000),
+        (UpgradeKind.Seedling, 1_413_000),
+        (UpgradeKind.WildFlower, 1_614_000),
+        (UpgradeKind.Seedling, 1_825_000),
+        (UpgradeKind.WildFlower, 2_046_000),
+        (UpgradeKind.Seedling, 2_277_000),
+        (UpgradeKind.WildFlower, 2_518_000),
+        (UpgradeKind.Seedling, 2_769_000),
+        (UpgradeKind.WildFlower, 3_030_000),
+        (UpgradeKind.Seedling, 3_301_000),
+        (UpgradeKind.WildFlower, 3_582_000),
+        (UpgradeKind.Seedling, 3_873_000),
+        (UpgradeKind.WildFlower, 4_174_000),
+        (UpgradeKind.Seedling, 4_485_000),
+        (UpgradeKind.WildFlower, 4_806_000),
+        (UpgradeKind.Seedling, 5_137_000),
+        (UpgradeKind.WildFlower, 5_478_000),
+        (UpgradeKind.Seedling, 5_829_000),
+        (UpgradeKind.WildFlower, 6_190_000),
+        (UpgradeKind.Seedling, 6_561_000),
+        (UpgradeKind.WildFlower, 6_942_000),
+        (UpgradeKind.Seedling, 7_333_000),
+        (UpgradeKind.WildFlower, 7_734_000),
+        (UpgradeKind.Seedling, 8_145_000),
+        (UpgradeKind.WildFlower, 8_566_000),
+        (UpgradeKind.Seedling, 8_997_000),
+        (UpgradeKind.WildFlower, 9_438_000),
     ];
 
     // Shaping tools come from the garden's size, the most main nodes it has had (DESIGN.md, Upgrade tracks): a Gravity
