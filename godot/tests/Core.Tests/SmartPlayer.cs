@@ -5,6 +5,7 @@ namespace SpaceGarden.Core.Tests;
 //   - spends its genes on the cheapest next upgrade it can afford, again and again, saving for a generator when short
 //     of power or for the next core upgrade when it costs at most twice the next stem (Research);
 //   - plants a seedling in every free seedling slot and picks each seedling's evolution at random (Seedlings);
+//   - prunes wild flowers that don't pay for their link (PruneWild);
 //   - prunes passive groves past the ones it wants (the farthest first);
 //   - prunes drains: while the garden would cost more than it makes at full power, the lab furthest from the core
 //     goes (passive ones are usually far out), then any lab too far out for its genes to find the core;
@@ -40,7 +41,7 @@ public static class SmartPlayer
         while (Spare(garden) >= -NodeSpecs.All[NodeKind.Lab].PowerPerSecond + Reserve && FreeLinks(garden) > 1
             && Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth)) { }
         while (Bud(garden, NodeKind.Generator, nearFirst: false, hungriest: true)) { }
-        while (Count(garden, NodeKind.Grove) < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
+        while (garden.Nodes.Count(IsGrove) < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
         // The player doesn't undo, and the 30 s undo window passes (counted in physics ticks, which a pacing run
         // doesn't run; left open, it would hold off passive buds for good).
         garden.ForgetPrune();
@@ -121,15 +122,44 @@ public static class SmartPlayer
 
     static void PruneDrains(Garden garden)
     {
-        // Passive groves past the one-per-GroveEvery-stems the garden needs only drain it and take slots: the farthest go.
-        while (Count(garden, NodeKind.Grove) > GrovesWanted(garden)
-            && garden.Nodes.Where(n => n.Spec.Kind == NodeKind.Grove).MaxBy(n => n.Depth) is { } grove) garden.Prune(grove);
+        PruneWild(garden);
+        // Groves past the one-per-GroveEvery-stems the garden needs only drain it and take slots: plain groves go before
+        // the wild ones (a Seed Pod, then a Lumber Grove last), the farthest first.
+        while (garden.Nodes.Count(IsGrove) > GrovesWanted(garden)
+            && garden.Nodes.Where(IsGrove).OrderBy(n => GroveRank(n.Spec.Kind)).ThenByDescending(n => n.Depth).FirstOrDefault()
+                is { } grove)
+            garden.Prune(grove);
         while (Spare(garden) < 0 && FarthestLab(garden, _ => true) is { } lab) garden.Prune(lab);
         while (FarthestLab(garden, n => n.Depth > MaxLabDepth) is { } lab) garden.Prune(lab);
     }
 
     static PlantNode? FarthestLab(Garden garden, Func<PlantNode, bool> which) => garden.Nodes
-        .Where(n => n.Spec.Kind == NodeKind.Lab && which(n)).MaxBy(n => n.Depth);
+        .Where(n => IsLab(n) && which(n)).MaxBy(n => n.Depth);
+
+    // Wild Labs and Lichens are labs and Lumber Groves and Seed Pods groves, to the player's rules.
+    static bool IsLab(PlantNode n) => n.Spec.Kind is NodeKind.Lab or NodeKind.WildLab or NodeKind.Lichen;
+    static bool IsGrove(PlantNode n) => n.Spec.Kind is NodeKind.Grove or NodeKind.SeedPod or NodeKind.LumberGrove;
+    static int GroveRank(NodeKind kind) => kind switch { NodeKind.Grove => 0, NodeKind.SeedPod => 1, _ => 2 };
+
+    // Wild flowers (passive, or bloomed from a seedling: pruning one takes only the flower, never its effect) that don't
+    // pay for their link go, and a new one may grow elsewhere in the freed slot (a reroll, which the player wants):
+    //   - a Resistor (it bounces blobs, genes too), a Moonflower, a Nebula Bloom or a Buffer, always;
+    //   - an Amplifier too far out for genes to pass it on their way to the core (past MaxLabDepth);
+    //   - an Ember once it has faded below a generator (halfway through its life), so a generator takes its slot.
+    // Only at a branch's end: an Amplifier or Resistor with parts grown past it would take them all with it.
+    // Wild Labs and Lichens follow the labs' rules, Lumber Groves and Seed Pods the groves'; Pulsars, Twin Stars,
+    // Tendrils, Big Stems and Comet Blooms (which wither on their own) stay.
+    static void PruneWild(Garden garden)
+    {
+        foreach (var flower in garden.Nodes.Where(n => n.Branches.Count == 0 && n.Spec.Kind switch
+            {
+                NodeKind.Resistor or NodeKind.Moonflower or NodeKind.NebulaBloom or NodeKind.Buffer => true,
+                NodeKind.Amplifier => n.Depth > MaxLabDepth,
+                NodeKind.Ember => n.Age > Tuning.EmberLifeSeconds / 2,
+                _ => false,
+            }).ToList())
+            if (garden.Nodes.Contains(flower)) garden.Prune(flower);
+    }
 
     // A bud of this kind at a free link: the nearest the core, the furthest, or the one in the middle (by depth).
     // Only stems grow on the core. Returns whether one started (it forms, then emerges).

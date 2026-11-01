@@ -272,8 +272,30 @@ public class PacingTests
     static string Fills(Garden garden, NodeKind kind) =>
         garden.Nodes.Where(n => n.Spec.Kind == kind).Select(n => n.Fill).DefaultIfEmpty(0).Average().ToString("0%");
 
-    // When each milestone was reached (hours from planting; infinity if not), and the genes earned by each day's end.
-    sealed record Run(double[,] Reached, double[,] GenesByDay);
+    // When each milestone was reached (hours from planting; infinity if not), the genes earned by each day's end, the
+    // longest wait between upgrades each day (awake hours) and the upgrades bought at each day's first check-in, after
+    // the night.
+    sealed record Run(double[,] Reached, double[,] GenesByDay, double[,] LongestWait, double[,] AfterSleep);
+
+    // Awake hours from planting to this many hours in (the player sleeps the last 8 of each day: see SmartPlayer.Awake).
+    static double AwakeHours(double hours) => Math.Floor(hours / 24) * 16 + Math.Min(hours % 24, 16);
+
+    // The longest awake wait each day: between two upgrades bought, the later on that day, or from the last upgrade to
+    // the day's end if that's longer (a day with none bought waits all day).
+    static double[] LongestWaits(List<double> boughtAt, int days)
+    {
+        var waits = new double[days];
+        for (int d = 1; d <= days; d++)
+        {
+            double start = (d - 1) * 24, end = d * 24, longest = 0;
+            for (int i = 1; i < boughtAt.Count; i++)
+                if (boughtAt[i] >= start && boughtAt[i] < end)
+                    longest = Math.Max(longest, AwakeHours(boughtAt[i]) - AwakeHours(boughtAt[i - 1]));
+            double last = boughtAt.Where(b => b < end).DefaultIfEmpty(0).Max();
+            waits[d - 1] = Math.Max(longest, AwakeHours(end) - AwakeHours(last));
+        }
+        return waits;
+    }
 
     // Some days from planting for a few seeds, a smart player tending and buying (see SmartPlayer): when each milestone
     // was reached, and the garden on some days.
@@ -281,7 +303,8 @@ public class PacingTests
     {
         var seeds = new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         var shownDays = new[] { 1, 3, 7, 10, 14, 21, 30 }.Where(d => d <= days).Append(days).ToHashSet();
-        var run = new Run(new double[seeds.Length, Milestones.Length], new double[seeds.Length, days]);
+        var run = new Run(new double[seeds.Length, Milestones.Length], new double[seeds.Length, days],
+            new double[seeds.Length, days], new double[seeds.Length, days]);
         for (int s = 0; s < seeds.Length; s++)
             for (int m = 0; m < Milestones.Length; m++) run.Reached[s, m] = double.PositiveInfinity;
         const double step = 600;
@@ -291,6 +314,7 @@ public class PacingTests
         Parallel.For(0, seeds.Length, s =>
         {
             var garden = Planted(seeds[s]);
+            var boughtAt = new List<double>();
             double t = 0;
             lines[s].Add($"seed {seeds[s]}:");
             void Check(double hours)
@@ -306,7 +330,10 @@ public class PacingTests
                     dt = t < Hour ? 60 : step;
                     if (SmartPlayer.CheckIn(t))
                     {
+                        int before = garden.Bought;
                         SmartPlayer.Tend(garden);
+                        if (garden.Bought > before) boughtAt.Add(t / Hour);
+                        if (day > 1 && Math.Abs(t - (day - 1) * Day) < 1) run.AfterSleep[s, day - 1] = garden.Bought - before;
                         Check(t / Hour); // bought at the check-in
                     }
                     garden.Grow(dt);
@@ -315,6 +342,8 @@ public class PacingTests
                 run.GenesByDay[s, day - 1] = garden.Genes;
                 if (shownDays.Contains(day)) lines[s].Add($"  day {day,2}: {Describe(garden)}");
             }
+            var waits = LongestWaits(boughtAt, days);
+            for (int d = 0; d < days; d++) run.LongestWait[s, d] = waits[d];
             // The evolutions the player chose (at random), when, and when each bloomed.
             lines[s].Add("  evolutions: " + (garden.Evolved.Count == 0 ? "none" : string.Join("; ", garden.Evolved.Select(e =>
                 $"{e.Name} chosen {Hours(e.ChosenAt / Hour)}" + (e.Bloomed ? $", bloomed {Hours(e.BloomedAt / Hour)}" : ", growing")))));
@@ -356,8 +385,21 @@ public class PacingTests
             var hours = Enumerable.Range(0, run.Reached.GetLength(0)).Select(s => run.Reached[s, m]).Order().ToList();
             Log($"{Milestones[m].Name,-22} median {Hours(Median(run.Reached, m)),-10} range {Hours(hours[0])} to {Hours(hours[^1])}");
         }
+        // The Hub's mean (Jeremy, Nov 1: after day 5, so at least 120 h), over the gardens that reached it.
+        int hub = Array.FindIndex(Milestones, m => m.Name == "Hub");
+        var hubs = Enumerable.Range(0, run.Reached.GetLength(0)).Select(s => run.Reached[s, hub]).ToList();
+        var reached = hubs.Where(h => !double.IsPositiveInfinity(h)).ToList();
+        Log($"Hub mean               {(reached.Count > 0 ? Hours(reached.Average()) : "not yet")} over {reached.Count} of {hubs.Count} gardens "
+            + $"(target: after day 5, {(reached.Count > 0 && reached.Average() > 120 ? "met" : "not met")})");
         for (int day = 1; day <= days; day++)
-            Log($"genes earned by the end of day {day,2}: median {Median(run.GenesByDay, day - 1):#,0}");
+        {
+            var waits = Enumerable.Range(0, run.LongestWait.GetLength(0)).Select(s => run.LongestWait[s, day - 1]).ToList();
+            Log($"day {day,2}: genes earned by its end median {Median(run.GenesByDay, day - 1):#,0}; longest awake wait between "
+                + $"upgrades median {Median(run.LongestWait, day - 1):0.#} h, worst {waits.Max():0.#} h"
+                + (day > 1 ? $"; bought after the night median {Median(run.AfterSleep, day - 1):0}, range "
+                    + $"{Enumerable.Range(0, run.AfterSleep.GetLength(0)).Min(s => run.AfterSleep[s, day - 1]):0}-"
+                    + $"{Enumerable.Range(0, run.AfterSleep.GetLength(0)).Max(s => run.AfterSleep[s, day - 1]):0}" : ""));
+        }
         for (int s = 0; s < run.Reached.GetLength(0); s++)
             Assert.True(run.Reached[s, 0] <= 1, $"seed {s + 1} bought its first stem at {run.Reached[s, 0]:0.#} h\n{text}");
         Assert.Skip(text.ToString());

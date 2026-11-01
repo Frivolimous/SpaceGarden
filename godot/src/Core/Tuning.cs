@@ -107,7 +107,7 @@ public static class Tuning
     public const int StartGeneratorCap = 1;
     public const int StartCoreLinks = 1;
     public const int StartPotCap = 1;
-    public const int StartSeedlings = 1;
+    public const int StartSeedlings = 0;
     public const int StartWildFlowers = 0;
 
     // ==== SHAPING ==== \\

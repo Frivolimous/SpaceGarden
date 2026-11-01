@@ -25,7 +25,7 @@ public class SeedlingTests
     {
         var garden = Garden.New(Layout.Radial, seed);
         garden.PassiveGrowth = false;
-        garden.Capacity = new Capacity(10, 4, 2);
+        garden.Capacity = new Capacity(10, 4, 2, Seedlings: 1); // a slot bought (a new garden has none)
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         var seedling = Add(garden, stem, NodeKind.Seedling);
         return (garden, stem, seedling);

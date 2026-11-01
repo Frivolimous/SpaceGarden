@@ -34,9 +34,9 @@ public class ResearchTests
     [Fact]
     public void ANewGardenStartsAsTheDocsSay()
     {
-        // DESIGN.md: the core at 1 link, 4 stems, 1 generator, 1 seedling slot, no wild flowers, 1 Gravity Pot.
+        // DESIGN.md: the core at 1 link, 4 stems, 1 generator, no seedling slots or wild flowers, 1 Gravity Pot.
         var caps = NewGarden().Capacity;
-        Assert.Equal(new Capacity(4, 1, 1, Pots: 1, Trellises: 0, Wells: 0, WildFlowers: 0, Seedlings: 1, Hubs: 0), caps);
+        Assert.Equal(new Capacity(4, 1, 1, Pots: 1, Trellises: 0, Wells: 0, WildFlowers: 0, Seedlings: 0, Hubs: 0), caps);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class ResearchTests
         Assert.Equal(2, garden.Core.MaxLinks);
         Assert.Equal(1, caps.Hubs);
         Assert.Equal(core.Count(u => u.Kind == UpgradeKind.WildFlower), caps.WildFlowers);
-        Assert.Equal(1 + core.Count(u => u.Kind == UpgradeKind.Seedling), caps.Seedlings);
+        Assert.Equal(core.Count(u => u.Kind == UpgradeKind.Seedling), caps.Seedlings);
     }
 
     [Fact]
@@ -232,7 +232,7 @@ public class ResearchTests
         Assert.DoesNotContain("Research", json);
         var loaded = Garden.FromSave(JsonSerializer.Deserialize<GardenSave>(json, Json)!, seed: 7);
         Assert.Equal((12, 4, 2), (loaded.StemsBought, loaded.GeneratorsBought, loaded.CoreBought));
-        Assert.Equal(new Capacity(16, 5, 2, Pots: 2, Trellises: 1, Wells: 1, WildFlowers: 1, Seedlings: 1, Hubs: 0),
+        Assert.Equal(new Capacity(16, 5, 2, Pots: 2, Trellises: 1, Wells: 1, WildFlowers: 1, Seedlings: 0, Hubs: 0),
             loaded.Capacity);
         Assert.Equal(Tuning.StemCosts[12], loaded.Next(Track.Stems)!.Cost);
         Assert.Equal(UpgradeKind.Seedling, loaded.Next(Track.Core)!.Kind); // the wild flower slot and core link read as bought
