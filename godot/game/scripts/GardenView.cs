@@ -78,10 +78,11 @@ public partial class GardenView : Node2D
     // A seedling's bloom (step 5c): a burst off the wild flower it became, seconds since it began.
     const float BloomSeconds = 2.4f;
     readonly List<(PlantNode Flower, float Age)> blooms = new();
-    // Alerts prototype (--alerts=inward): while something waits on the player, a ring in its hue closes in on the part
-    // it waits at, once as it starts waiting and every AlertEverySeconds after: an upgrade affordable in Research (the
-    // genes' purple, on the core), Hub points to spend (the Hub's green, on the Hub), a seedling's choice (its own hue).
-    public bool Alerts;
+    // Alerts prototype (on by default; --alerts=off turns them off): while something waits on the player, a ring in its
+    // hue closes in on the part it waits at, once as it starts waiting and every AlertEverySeconds after: an upgrade
+    // affordable in Research (the genes' purple, on the core), Hub points to spend (the Hub's green, on the Hub), a
+    // seedling's choice (its own hue).
+    public bool Alerts = true;
     public float AlertEverySeconds = 240;
     const float InwardSeconds = 3f, InwardGap = 0.5f;
     readonly Dictionary<PlantNode, float> nextAlert = new(); // seconds till each waiting part's next ring
