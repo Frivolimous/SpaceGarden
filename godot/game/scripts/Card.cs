@@ -108,13 +108,15 @@ public partial class Card : PanelContainer
         fade.TweenCallback(Callable.From(() => Visible = false));
     }
 
-    // The tutorial's beckon on the Forming line (Wait for the Grove, Wait for the Stem), while it shows.
+    // A gold frame on the Forming line while it shows: the tutorial's beckon (Wait for the Grove, Wait for the Stem),
+    // and while a bud button asks "Tap again to cancel" or "to switch types" (its growth would be lost).
     public bool BeckonForming;
     readonly BeckonFrame formingFrame = new();
+    bool formingShown;
 
     public void Update(Garden garden, double growthSpeed, double delta)
     {
-        if (!BeckonForming) formingFrame.Visible = false;
+        formingFrame.Visible = BeckonForming && formingShown;
         if (!IsOpen || (refreshTimer -= delta) > 0) return;
         refreshTimer = RefreshSeconds;
         int used = 0;
@@ -178,8 +180,9 @@ public partial class Card : PanelContainer
                 label.AddChild(formingFrame);
             }
             formingFrame.Visible = BeckonForming;
+            formingShown = true;
         }
-        else formingFrame.Visible = false;
+        else formingFrame.Visible = formingShown = false;
     }
 
     void ShowGardenLines(GardenStats stats, double speed, ref int used)

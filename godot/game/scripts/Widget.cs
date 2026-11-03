@@ -1315,6 +1315,10 @@ public partial class Widget : Node
         askAction = action;
         askPill.Visible = true;
         askPill.Size = Vector2.Zero; // (shrinks to the new text)
+        // Its card shows, with the Forming line framed (see Beckon): the growth a second tap would lose.
+        if (selected != part) Select(part);
+        partCard.BeckonForming = true;
+        partCard.RefreshNow();
     }
 
     // Moves the tutorial on as its steps are done (in any mode: they're checks on the garden), and shows the step in
@@ -1447,7 +1451,8 @@ public partial class Widget : Node
         toolbar.SetBeckon(bud);
         coreMenu.SetBeckon(slot);
         shapingBar.SetBeckon(shaping, closeBuild);
-        partCard.BeckonForming = forming;
+        // (Also while a bud button asks to be tapped again, on the part it asks about: not the tutorial's alone.)
+        partCard.BeckonForming = forming || (askPill.Visible && askFor != null && partCard.Part == askFor);
         research.Beckon(buy);
     }
 
