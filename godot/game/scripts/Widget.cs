@@ -473,9 +473,11 @@ public partial class Widget : Node
             pressed = dragging = false;
             pressNode = null;
         }
-        // A real minimise, so the taskbar button brings it back (see FollowWindow).
+        // On Windows the widget has no taskbar button (see TrayOnly), so Minimise hides it and the tray icon (or the
+        // hotkey) brings it back. Elsewhere, a real minimise, so the taskbar button brings it back (see FollowWindow).
         var window = GetWindow();
-        if (mode == DisplayMode.Minimised) window.Mode = Window.ModeEnum.Minimized;
+        if (TrayOnly.Supported) TrayOnly.Hide(mode == DisplayMode.Minimised);
+        else if (mode == DisplayMode.Minimised) window.Mode = Window.ModeEnum.Minimized;
         else if (window.Mode == Window.ModeEnum.Minimized)
         {
             window.Mode = Window.ModeEnum.Windowed;
@@ -654,6 +656,7 @@ public partial class Widget : Node
     {
         Garden.FruitBorrowsPush = fruitBorrowsPush; // every frame, so it carries over to a new garden too
         FollowWindow();
+        TrayOnly.Keep();
         if (Hotkey.TakePress()) SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
         // Every frame (a new garden gets a new view). While nobody can see the garden (a full-screen app over it, too)
         // nothing of it shows: it's hidden, not left frozen on top (Jeremy, Nov 3).

@@ -14,8 +14,10 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   (the core's menu, or **Ctrl+Alt+G** from anywhere; Windows) fades it (Settings > Ambient sets its opacity, its size as a share of Size, and its idle frame rate), and every click falls through to the
   desktop except on the core: it brightens and is ringed under the pointer, and a tap brings the garden back to Active with the
   core's menu open (so does Ctrl+Alt+G again). **Minimised** (the core's menu, a click on the yellow tray icon, or
-  minimising the window any other way) minimises the window and pauses the garden like a locked screen, catching up
-  when it's shown again. Its taskbar button, Ctrl+Alt+G or the tray icon bring it back in Active. Only one running
+  minimising the window any other way) hides the window and pauses the garden like a locked screen, catching up
+  when it's shown again. Ctrl+Alt+G or the tray icon bring it back in Active. On Windows the widget has no taskbar
+  button or Alt+Tab entry (a tool window: `TrayOnly.cs`), only its tray icon; elsewhere Minimised is a real minimise.
+  No Godot splash at launch (`application/boot_splash/show_image` off, its background transparent). Only one running
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
   (grow a stem, generator, lab or grove from it, or plant a seedling or the Hub, their buttons shown only while one can be planted, on parts with room for branches; the kind growing there now has a
@@ -238,5 +240,4 @@ Tried on the way: fruit only meeting its own family (no borrowed push) was as ch
 overlaps); adding a push from nearby stems to that was tidy but slower than the grid (0.24 ms).
 
 ## Not in the prototype
-No crawlers, skills, player-facing graphs, or sound; no launch-on-startup; it still shows in
-the taskbar.
+No crawlers, skills, player-facing graphs, or sound; no launch-on-startup.
