@@ -113,6 +113,10 @@ public partial class Widget : Node
     readonly PanelContainer info = new() { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.Move };
     readonly ColorRect infoDivider = new() { Color = new Color(1, 1, 1, 0.12f), CustomMinimumSize = new Vector2(0, 1), MouseFilter = Control.MouseFilterEnum.Ignore };
     Vector2? infoGrab; // while held: where on the panel the pointer took it
+    // Build mode's Move garden: on, a drag on the backdrop moves the whole garden (gardenGrab: where it was taken, in
+    // garden units, updated as it moves).
+    bool movingGarden;
+    Num.Vector2? gardenGrab;
     bool infoMoved;
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
     readonly Almanac almanac = new(); // its own window, open until its slot or ✕ closes it (see SetAlmanac)
@@ -263,6 +267,11 @@ public partial class Widget : Node
         toolbarLayer.AddChild(shapingBar);
         shapingBar.Started += TakeFromBar;
         shapingBar.Done += () => SetBuilding(false);
+        shapingBar.MoveToggled += on =>
+        {
+            movingGarden = on;
+            gardenGrab = null;
+        };
         shapingBar.HeatPicked += view =>
         {
             main.View.Heat = view;
@@ -406,6 +415,8 @@ public partial class Widget : Node
         shapingBar.Appear(on);
         if (!on)
         {
+            movingGarden = false;
+            gardenGrab = null;
             main.View.Heat = HeatView.None;
             Garden.TrackTraffic = false;
         }
@@ -632,6 +643,7 @@ public partial class Widget : Node
         var under = free && handle == null ? Garden.NodeAt(world, HoverSlop) : null;
         var underTool = handle ?? (Building && free && under == null ? Garden.ShapingAt(world, HoverSlop) : null);
         bool onBackdrop = Building && inWindow && main.View.OnBackdrop(world);
+        MoveGarden();
         var viewport = GetViewport().GetVisibleRect().Size / Dpi;
         if (Building)
         {
@@ -702,7 +714,7 @@ public partial class Widget : Node
             : underTool?.Handle ?? ShapingHandle.Body;
 
         bool catchMouse = pressed || overToolbar || overUndo || overMenu || under != null || overBar || onBackdrop
-            || underTool != null || movingTool != null || overAlmanac || almanac.Dragging
+            || underTool != null || movingTool != null || gardenGrab != null || overAlmanac || almanac.Dragging
             || overResearch || research.Dragging || overHub || hubPanel.Dragging || overInfo || infoGrab != null;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
@@ -710,6 +722,21 @@ public partial class Widget : Node
             || Garden.Speed > SettledSpeed || main.View.Moving;
         activeTime = active ? SettleSeconds : activeTime - delta;
         SetIdle(activeTime <= 0);
+    }
+
+    // While Move garden's drag is held: the whole garden follows the pointer, by the pointer's movement since last
+    // frame (no fling: Garden.Translate moves the parts' last positions too).
+    void MoveGarden()
+    {
+        if (gardenGrab is not { } from) return;
+        if (!Building || !Input.IsMouseButtonPressed(MouseButton.Left))
+        {
+            gardenGrab = null;
+            return;
+        }
+        var to = ToSim(ToWorld(PointerInViewport()));
+        Garden.Translate(to - from);
+        gardenGrab = to;
     }
 
     // The window minimised or brought back from outside (its taskbar button, Win+D) changes the mode to match.
@@ -944,6 +971,13 @@ public partial class Widget : Node
         if (Mode != DisplayMode.Active) return;
         if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left } button)
         {
+            if (button.Pressed && Building && movingGarden && main.View.OnBackdrop(ToSim(ToWorld(button.Position))))
+            {
+                // Move garden: the drag takes the whole garden (see MoveGarden).
+                gardenGrab = ToSim(ToWorld(button.Position));
+                GetViewport().SetInputAsHandled();
+                return;
+            }
             if (button.Pressed)
             {
                 var at = ToSim(ToWorld(button.Position));
