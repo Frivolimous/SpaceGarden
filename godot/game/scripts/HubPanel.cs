@@ -54,6 +54,8 @@ public partial class HubPanel : FloatingWindow
         pool.AddChild(poolText);
         respec = new ConfirmButton("Reset levels", "Confirm reset",
             $"Every path back to level 0, its points refunded but {Tuning.HubRespecCost} (a level's worth)");
+        respec.Outlined();
+        respec.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         respec.Confirmed += () => RespecPressed?.Invoke();
         pool.AddChild(respec);
         Column.AddChild(pool);

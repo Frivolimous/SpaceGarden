@@ -209,6 +209,26 @@ public partial class ConfirmButton : Button
         };
     }
 
+    // As a quiet button: a faint rounded outline, a touch brighter under the pointer (the Hub's Reset levels).
+    public void Outlined()
+    {
+        Flat = false;
+        StyleBoxFlat Box(float border, float back)
+        {
+            var box = new StyleBoxFlat
+            {
+                BgColor = new Color(1, 1, 1, back), BorderColor = new Color(1, 1, 1, border),
+                ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 2, ContentMarginBottom = 3,
+            };
+            box.SetBorderWidthAll(1);
+            box.SetCornerRadiusAll(10);
+            return box;
+        }
+        AddThemeStyleboxOverride("normal", Box(0.22f, 0.02f));
+        AddThemeStyleboxOverride("hover", Box(0.4f, 0.06f));
+        AddThemeStyleboxOverride("pressed", Box(0.5f, 0.1f));
+    }
+
     void Paint(Color colour)
     {
         foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color" })
