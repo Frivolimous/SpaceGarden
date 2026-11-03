@@ -160,13 +160,17 @@ public partial class Toolbar : PanelContainer
         buttons[Tool.HubPanel].Active = Target.IsHub && HubPanelOpen();
         // A part with room for only its parent's link (a generator, lab or grove) can't grow anything: no buds.
         bool buds = Target.MaxLinks > 1;
+        // The core grows only stems (DESIGN.md): its toolbar offers the stem's button alone, and even at one link, so
+        // a garden that pruned its last stem can grow one again (Jeremy, Nov 3).
+        bool core = Target.Parent == null;
+        if (core) buds = buds || Target.CanBranch || Target.FormingBud;
         foreach (var (tool, button) in buttons)
             if (KindOf(tool) is { } kind)
             {
                 // Its bud is growing here now (or a wild flower standing in for it).
                 button.Forming = Target.Forming is { } forming && Target.FormingBud && Garden.IsBudOf(forming, kind);
                 // (A seedling's or the Hub's shows only while one could be planted, or one forms here.)
-                button.Visible = buds && (Offered(kind) || button.Forming);
+                button.Visible = buds && (Offered(kind) || button.Forming) && (!core || kind == NodeKind.Stem);
                 // (While a bud forms: its own button cancels it, another changes it, starting over.)
                 button.Enabled = button.Forming || Target.FormingBud ? Allows(TutorialAction.CancelBud, kind) && (button.Forming || CanChange(Target, kind))
                     : CanGrow(Target, kind) && Allows(TutorialAction.Bud, kind);
