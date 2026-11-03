@@ -206,6 +206,19 @@ public partial class Widget : Node
         research.BuyPressed += Buy;
         hubPanel.CloseRequested += () => hubPanel.Close();
         hubPanel.BuyPressed += BuyHubLevel;
+        hubPanel.RespecPressed += () =>
+        {
+            if (!Garden.RespecHub()) return;
+            hubPanel.RefreshNow();
+            partCard.RefreshNow();
+            gardenCard.RefreshNow();
+        };
+        almanac.RespecPressed += evolution =>
+        {
+            if (!Garden.Respec(evolution)) return;
+            partCard.RefreshNow();
+            gardenCard.RefreshNow();
+        };
         coreMenu.Picked += PickFromCoreMenu;
         toolbarLayer.AddChild(evolutionMenu);
         evolutionMenu.Picked += ChooseEvolution;

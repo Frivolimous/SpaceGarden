@@ -201,4 +201,23 @@ public class HubTests
         Assert.Equal(1.2f, stem.Boost.Transfer, 3); // working again, with the Hub loaded
         Assert.True(loaded.HubPlanted);
     }
+
+    // Respec (Nov 3): every path back to 0, the points refunded but HubRespecCost.
+    [Fact]
+    public void ARespecResetsEveryPathForAPointLess()
+    {
+        var (garden, _, _, _) = Make();
+        garden.Tracking.Discovered[NodeKind.Lab] = 0;
+        garden.Tracking.Discovered[NodeKind.Stem] = 0;
+        garden.HubPoints = 10;
+        Assert.True(garden.BuyHubLevel(NodeKind.Lab));
+        Assert.True(garden.BuyHubLevel(NodeKind.Lab));
+        Assert.True(garden.BuyHubLevel(NodeKind.Stem));
+        int left = garden.HubPoints;
+        Assert.True(garden.RespecHub());
+        Assert.Equal(0, garden.HubLevelsBought);
+        Assert.Equal(10 - Tuning.HubRespecCost, garden.HubPoints);
+        Assert.True(left < garden.HubPoints);
+        Assert.False(garden.RespecHub()); // nothing to take back
+    }
 }

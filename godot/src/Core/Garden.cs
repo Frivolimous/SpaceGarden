@@ -1510,6 +1510,38 @@ public sealed class Garden
         UpdateBoosts();
     }
 
+    // Respec (Jeremy, Nov 3): a bloomed evolution taken back. Its effect and the caps it raised go (Apply in reverse;
+    // the garden may be left over a cap, and stays so until the player prunes), an unlock goes if no other bloomed
+    // evolution of its kind remains, and it leaves the record, freeing its seedling slot for a new seedling (whose
+    // bloom target falls back a step, as the record is shorter). Later levels of its kind step down a level. Its
+    // flower stays as it is. Returns whether it was taken back.
+    public bool Respec(Evolution evolution)
+    {
+        if (!evolution.Bloomed || !Evolved.Contains(evolution)) return false;
+        Evolved.Remove(evolution);
+        var effect = evolution.Effect;
+        var becomes = evolution.Spec.Becomes;
+        var caps = Capacity with
+        {
+            CoreLinks = Capacity.Less(Capacity.CoreLinks, effect.CoreLinks),
+            Generators = Capacity.Less(Capacity.Generators, effect.Generators),
+            WildFlowers = Capacity.Less(Capacity.WildFlowers, effect.WildFlowers + 1),
+        };
+        Capacity = SlotOf(becomes) switch
+        {
+            NodeKind.Stem => caps with { Stems = Capacity.Less(caps.Stems, 1) },
+            NodeKind.Generator => caps with { Generators = Capacity.Less(caps.Generators, 1) },
+            _ => caps,
+        };
+        if (evolution.Spec.Unlocks && !Evolved.Any(e => e.Bloomed && e.Spec.Unlocks && e.Spec.Becomes == becomes))
+            WildUnlocked.Remove(becomes);
+        int level = 1;
+        foreach (var e in Evolved.Where(e => e.Kind == evolution.Kind)) e.Level = level++;
+        Tracking.Log(JournalKind.Respec, $"Evolution taken back: {evolution.Name}");
+        UpdateBoosts();
+        return true;
+    }
+
     // A basic kind and the wild flowers grown from it (a lab's: the Wild Lab and the Lichen).
     static IEnumerable<NodeKind> Family(NodeKind basic) =>
         NodeSpecs.All.Values.Where(s => s.Kind == basic || s.Wild?.Base == basic).Select(s => s.Kind);
@@ -1708,6 +1740,19 @@ public sealed class Garden
         int level = HubLevel(kind) + 1;
         HubPoints -= Hubs.Path(kind).Cost(level);
         HubLevels[kind] = level;
+        UpdateBoosts();
+        return true;
+    }
+
+    // Respec (Jeremy, Nov 3): every path back to level 0, its points refunded but HubRespecCost (a level's worth: the
+    // cheapest level costs 1). Returns whether anything was bought to take back.
+    public bool RespecHub()
+    {
+        int spent = Hubs.Paths.Sum(p => Enumerable.Range(1, HubLevel(p.Kind)).Sum(p.Cost));
+        if (spent == 0) return false;
+        HubLevels.Clear();
+        HubPoints += Math.Max(0, spent - Tuning.HubRespecCost);
+        Tracking.Log(JournalKind.Respec, "The Hub's levels were reset");
         UpdateBoosts();
         return true;
     }
@@ -2388,6 +2433,8 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots
     };
 
     internal static int Add(int a, int b) => (int)Math.Min(int.MaxValue, (long)a + b);
+    // Takes b off (an unlimited cap stays so), never below 0.
+    internal static int Less(int a, int b) => a == int.MaxValue ? a : Math.Max(0, a - b);
 }
 
 // The three upgrade tracks of the Research panel (DESIGN.md, Upgrade tracks), and what an upgrade raises by 1.

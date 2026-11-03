@@ -248,6 +248,8 @@ public static class Tuning
     // How fast the Hub sends power on, a second (a stem 30; Jeremy, Nov 3: was 15).
     public const float HubTransfer = 20;
     public const int HubStemCap = 2, HubMoonflowerReach = 8;
+    // What resetting the Hub's levels costs, in points (Jeremy, Nov 3: "reduce total levels by 1"; a level is 1-3).
+    public const int HubRespecCost = 1;
     public const float HubTripleChance = 0.2f, HubBuffStrength = 1.1f, HubNebulaFill = 3;
 
     // ==== RESEARCH ==== \\

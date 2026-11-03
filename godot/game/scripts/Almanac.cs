@@ -249,9 +249,13 @@ public partial class Almanac : FloatingWindow
     // Evolutions (step 5c; Jeremy, Oct 31): every level the garden has chosen, in the order chosen ("Pulsar Power", then
     // "Pulsar Power II"), as cards two to a row: the shape of the flower it blooms into and its name in its role hue,
     // its effect in all at that level ("Core power ×2"), and when it was chosen.
+    // Respec (Jeremy, Nov 3): a bloomed evolution's card has Delete, which asks once more, then takes it back (see
+    // Garden.Respec).
+    public event Action<Evolution>? RespecPressed;
+
     void RefreshEvolutions(Garden garden)
     {
-        var shown = (garden, garden.Evolved.Count);
+        var shown = (garden, garden.Evolved.Count, garden.Blooms);
         if (shown == evolutionsShown) return;
         evolutionsShown = shown;
         foreach (var child in evolutions.GetChildren()) child.QueueFree();
@@ -270,14 +274,23 @@ public partial class Almanac : FloatingWindow
         foreach (var evolution in garden.Evolved)
         {
             var spec = evolution.Spec;
-            grid.AddChild(EntryCard(evolution.Name, NodeSpecs.All[spec.Becomes].Shape, GardenView.Rgb(spec.Rgb),
+            var card = EntryCard(evolution.Name, NodeSpecs.All[spec.Becomes].Shape, GardenView.Rgb(spec.Rgb),
                 spec.Effect.At(evolution.Level).Text + ".",
-                $"Chosen day {Tracking.DayOf(evolution.ChosenAt)}, {Tracking.ClockOf(evolution.ChosenAt)}"));
+                $"Chosen day {Tracking.DayOf(evolution.ChosenAt)}, {Tracking.ClockOf(evolution.ChosenAt)}");
+            if (evolution.Bloomed)
+            {
+                var delete = new ConfirmButton("Delete", "Confirm delete",
+                    "Take this evolution back: its effect and caps go (its flower stays), and its seedling slot is free for a new seedling")
+                { SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
+                delete.Confirmed += () => RespecPressed?.Invoke(evolution);
+                card.GetChild(0).AddChild(delete);
+            }
+            grid.AddChild(card);
         }
         evolutions.AddChild(grid);
     }
 
-    (Garden, int)? evolutionsShown;
+    (Garden, int, int)? evolutionsShown;
 
     // Cards two to a row, each half the page wide.
     static GridContainer Cards()

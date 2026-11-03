@@ -149,3 +149,59 @@ public partial class FloatingWindow : PanelContainer
         Position = Position.Clamp(new Vector2(4, 4), (screen - Size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
     }
 }
+
+// A small button that asks before it acts (Jeremy, Nov 3: "delete -> confirm delete"): the first click turns it into
+// its Confirm text, in red, for ConfirmSeconds; a second click in that time fires Confirmed; otherwise it goes back.
+public partial class ConfirmButton : Button
+{
+    public event Action? Confirmed;
+
+    const double ConfirmSeconds = 3;
+    static readonly Color Calm = new(1, 1, 1, 0.55f), Alarm = new(1, 0.45f, 0.4f);
+
+    readonly string label, confirm;
+    double armed;
+
+    public ConfirmButton(string label, string confirm, string tooltip)
+    {
+        this.label = label;
+        this.confirm = confirm;
+        Text = label;
+        TooltipText = tooltip;
+        Flat = true;
+        FocusMode = FocusModeEnum.None;
+        MouseDefaultCursorShape = CursorShape.PointingHand;
+        AddThemeFontSizeOverride("font_size", 11);
+        Paint(Calm);
+        Pressed += () =>
+        {
+            if (armed > 0)
+            {
+                Disarm();
+                Confirmed?.Invoke();
+                return;
+            }
+            armed = ConfirmSeconds;
+            Text = this.confirm;
+            Paint(Alarm);
+        };
+    }
+
+    void Paint(Color colour)
+    {
+        foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color" })
+            AddThemeColorOverride(state, state == "font_color" ? colour : colour.Lightened(0.25f));
+    }
+
+    void Disarm()
+    {
+        armed = 0;
+        Text = label;
+        Paint(Calm);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (armed > 0 && (armed -= delta) <= 0) Disarm();
+    }
+}

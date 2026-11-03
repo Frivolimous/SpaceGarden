@@ -227,4 +227,40 @@ public class SeedlingTests
         Assert.Equal(3, loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Stem).MaxFruits);
         Assert.Contains(NodeKind.BigStem, loaded.WildUnlocked);
     }
+
+    // Respec (Nov 3): a bloomed evolution taken back loses its effect and caps (the garden may stay over them), frees
+    // its seedling slot, and lowers the next bloom's target; its flower stays.
+    [Fact]
+    public void ARespecTakesBackAnEvolutionAndFreesItsSlot()
+    {
+        var garden = Garden.New(Layout.Radial, 3);
+        garden.PassiveGrowth = false;
+        var before = garden.Capacity;
+        double target = garden.NextTarget;
+        var second = garden.EvolveNow(EvolutionKind.SecondPath)!;
+        Assert.Equal(before.CoreLinks + 1, garden.Capacity.CoreLinks);
+        int nodes = garden.Nodes.Count;
+        int free = garden.FreeSeedlingSlots;
+
+        Assert.True(garden.Respec(second));
+        Assert.Equal(before.CoreLinks, garden.Capacity.CoreLinks);
+        Assert.Equal(before.WildFlowers, garden.Capacity.WildFlowers);
+        Assert.DoesNotContain(second, garden.Evolved);
+        Assert.Equal(free + 1, garden.FreeSeedlingSlots);
+        Assert.Equal(target, garden.NextTarget);
+        Assert.Equal(nodes, garden.Nodes.Count); // its flower stays
+        Assert.False(garden.Respec(second)); // once
+    }
+
+    [Fact]
+    public void ARespecStepsLaterLevelsDown()
+    {
+        var garden = Garden.New(Layout.Radial, 3);
+        var first = garden.EvolveNow(EvolutionKind.BuildYourCore)!;
+        var second = garden.EvolveNow(EvolutionKind.BuildYourCore)!;
+        Assert.Equal(2, second.Level);
+        garden.Respec(first);
+        Assert.Equal(1, second.Level);
+        Assert.Equal(1, garden.Taken(EvolutionKind.BuildYourCore));
+    }
 }

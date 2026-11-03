@@ -191,7 +191,7 @@ public sealed class Tracking
 // Hub bought, Tool a shaping tool gained from the garden's size; Discovery a wild flower kind's first appearance, Ended
 // a wild flower whose life cycle ended it (step 5d); Chosen and Bloomed an evolution chosen for a seedling, and its
 // seedling bloomed (step 5c).
-public enum JournalKind { Planted, First, Unlock, Milestone, Purchase, Tool, Discovery, Ended, Chosen, Bloomed }
+public enum JournalKind { Planted, First, Unlock, Milestone, Purchase, Tool, Discovery, Ended, Chosen, Bloomed, Respec }
 
 // One moment in the Almanac: when (the garden's age), what sort, and what happened.
 public sealed record JournalEntry(double Age, JournalKind Kind, string Text);

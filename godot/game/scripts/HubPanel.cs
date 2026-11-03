@@ -11,6 +11,9 @@ namespace SpaceGarden;
 public partial class HubPanel : FloatingWindow
 {
     public event Action<NodeKind>? BuyPressed;
+    // Respec (Jeremy, Nov 3): every path back to 0, the points refunded but a level's worth (Garden.RespecHub).
+    public event Action? RespecPressed;
+    readonly ConfirmButton respec;
 
     const double RefreshSeconds = 0.25;
     const float RowWidth = 320;
@@ -49,6 +52,10 @@ public partial class HubPanel : FloatingWindow
         pool.AddChild(poolBar);
         poolText = new Label { MouseFilter = MouseFilterEnum.Ignore, LabelSettings = new LabelSettings { FontSize = 11, FontColor = Dim } };
         pool.AddChild(poolText);
+        respec = new ConfirmButton("Reset levels", "Confirm reset",
+            $"Every path back to level 0, its points refunded but {Tuning.HubRespecCost} (a level's worth)");
+        respec.Confirmed += () => RespecPressed?.Invoke();
+        pool.AddChild(respec);
         Column.AddChild(pool);
         Column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2), MouseFilter = MouseFilterEnum.Ignore });
 
@@ -172,6 +179,7 @@ public partial class HubPanel : FloatingWindow
         if (!IsOpen || !Visible || (refreshTimer -= delta) > 0) return;
         refreshTimer = RefreshSeconds;
         Note.Text = garden.HubPoints == 1 ? "1 point" : $"{garden.HubPoints} points";
+        respec.Visible = garden.HubLevelsBought > 0;
         poolBar.Progress = (float)Math.Clamp(garden.HubPool / garden.NextPointCost, 0, 1);
         poolText.Text = $"{Math.Floor(garden.HubPool):#,0} / {garden.NextPointCost:#,0} genes to the next point"
             + NextPointIn(garden, growthSpeed);
