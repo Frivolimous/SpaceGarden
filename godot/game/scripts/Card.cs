@@ -114,6 +114,14 @@ public partial class Card : PanelContainer
     readonly BeckonFrame formingFrame = new();
     bool formingShown;
 
+    // The frame lives on whichever label shows the Forming line; one never laid on any (the garden's card) is the
+    // card's to free, or it leaks at exit.
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete && IsInstanceValid(formingFrame) && formingFrame.GetParent() == null)
+            formingFrame.Free();
+    }
+
     public void Update(Garden garden, double growthSpeed, double delta)
     {
         formingFrame.Visible = BeckonForming && formingShown;
