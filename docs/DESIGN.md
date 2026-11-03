@@ -71,7 +71,7 @@ Three flowing resources move visibly through the stems; capacity is a set of lim
 | Growth blobs | Orange | Grove flowers | Wander the stems and grow fruit and new buds where they're absorbed |
 | Gene blobs | Purple | Lab flowers | Wander the stems; only the core and the Hub absorb them |
 
-There is no core trickle of growth: groves are the only source of growth blobs, and a new garden has none. The player plants the first grove by hand (step 6's onboarding points there first); its bud grows on its own, like every node bud, and four times as fast while the garden has no grove (see Growth and pruning).
+There is no core trickle of growth: groves are the only source of growth blobs, and a new garden has none. The player plants the first grove by hand (the opening tutorial's first step asks for it); its bud grows on its own, like every node bud, and four times as fast while the garden has no grove (see Growth and pruning).
 
 **Power is a light show, not the pace.** Power fills and drains in seconds, as in the original, and keeps moving: the fills rock around a balance that shifts as the plant changes, never settling. It doesn't set the garden's pace (the gene tracks do, through what the player buys with them); it shows the garden's health, and a low garden works slower.
 
@@ -734,7 +734,7 @@ From the first draft, not contradicted by the anchor but not scheduled. Candidat
 - Day and night tied to local time; seasons over weeks.
 - Rare events: visiting comets, creature migrations, special blooms.
 - Lifetime garden stats (age, blooms, tallest stem) as Almanac material.
-- Onboarding as gentle, skippable hints spread over the first days.
+- Onboarding beyond the opening tutorial (done, Nov 3): gentle hints for later features (seedlings, wild flowers, the Hub) spread over the first days.
 
 ## Open questions
 
@@ -764,7 +764,7 @@ Design layers still to work through:
 - [ ] Build step 5 (5a prep, 5b tracks, 5c seedlings, 5d wild flowers and the Hub done), then the real-week tuning check
 - [x] Alerts: a faint ring closing in on whatever waits (the core, the Hub, a seedling), and a red dot on the core menu's Research slot (see Alerts)
 - [x] Hub details: respec, built Nov 3 (the paths, point curve and milestones are set by the step 5 addendum; upkeep per upgrade a placeholder: see Built: the Hub)
-- [x] Onboarding: the opening tutorial (Jeremy's script, Nov 3; built). A new garden (the core with its first stem) walks twelve steps in a small panel (Active only): a header ("Getting started" and six pips: a step and its wait share one, the welcome and the send-off have none), the step's title with its part's mark, its text (a dot in a blob's colour for Growth and Genes), and Continue where the step waits for it. By default it sits under where the parts' info panel opens, lined up with it; dragged, it stays put. The next thing to touch is beckoned with a breathing gold ring (a part, a bud button, a core menu slot, the pot's button) or frame (a card's Forming line, Research's Buy).
+- [x] Onboarding: the opening tutorial (Jeremy's script, Nov 3; built, and done for now (Jeremy, Nov 3): later features such as seedlings, wild flowers and the Hub may get hints of their own another time). A new garden (the core with its first stem) walks twelve steps in a small panel (Active only): a header ("Getting started" and six pips: a step and its wait share one, the welcome and the send-off have none), the step's title with its part's mark, its text (a dot in a blob's colour for Growth and Genes), and Continue where the step waits for it. By default it sits under where the parts' info panel opens, lined up with it; dragged, it stays put. The next thing to touch is beckoned with a breathing gold ring (a part, a bud button, a core menu slot, the pot's button) or frame (a card's Forming line, Research's Buy).
 
   | Step | Title | Passed by | Beckoned | Held back |
   |---|---|---|---|---|
