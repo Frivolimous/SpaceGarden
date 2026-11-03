@@ -477,8 +477,8 @@ public partial class Widget : Node
         // hotkey) brings it back. Elsewhere, a real minimise, so the taskbar button brings it back (see FollowWindow).
         var window = GetWindow();
         if (TrayOnly.Supported) TrayOnly.Hide(mode == DisplayMode.Minimised);
-        else if (mode == DisplayMode.Minimised) window.Mode = Window.ModeEnum.Minimized;
-        else if (window.Mode == Window.ModeEnum.Minimized)
+        if (mode == DisplayMode.Minimised && !TrayOnly.Supported) window.Mode = Window.ModeEnum.Minimized;
+        else if (mode != DisplayMode.Minimised && window.Mode == Window.ModeEnum.Minimized)
         {
             window.Mode = Window.ModeEnum.Windowed;
             CoverScreen(plantScale);
@@ -852,7 +852,9 @@ public partial class Widget : Node
     {
         bool minimised = GetWindow().Mode == Window.ModeEnum.Minimized;
         if (minimised && Mode != DisplayMode.Minimised) SetMode(DisplayMode.Minimised);
-        else if (!minimised && Mode == DisplayMode.Minimised) SetMode(DisplayMode.Active);
+        // (On Windows, Minimised hides the window rather than minimising it (see TrayOnly): only the tray icon or the
+        // hotkey brings it back.)
+        else if (!minimised && Mode == DisplayMode.Minimised && !TrayOnly.Supported) SetMode(DisplayMode.Active);
     }
 
     // The Undo pill sits centred under the plant (over it if there's no room below), kept on the screen, and glides
