@@ -177,9 +177,9 @@ public static class Tuning
     // Ember: the power it can hold falls in a straight line from its store to nothing over EmberLifeSeconds, so it dims
     // and makes less as it goes, then burns out (Jeremy, Nov 3: a day, was 3).
     public const float EmberLifeSeconds = 86400;
-    // Tendril: its link TendrilLink times as long and TendrilSpring as springy; it sends power TendrilSplits times a
+    // Tendril: its link TendrilLink times as long, as springy as any (Jeremy, Nov 3; was 0.3 as springy); it sends power TendrilSplits times a
     // step, a share each (Jeremy, Nov 3: "transfer delay / 2", a steadier flow).
-    public const float TendrilLink = 2.5f, TendrilSpring = 0.3f;
+    public const float TendrilLink = 2.5f;
     public const int TendrilSplits = 2;
     // Wood (the Lumber Grove's fruit) and Glow: glow, a white fruit, sends GlowBlobs buff blobs an hour (one a minute).
     // Buffer: BufferBlobs an hour (one every 5 s); each wanders BufferReach links (BufferAmplifiedReach more once it

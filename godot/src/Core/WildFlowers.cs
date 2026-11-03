@@ -75,7 +75,7 @@ static class WildFlowers
         yield return Wild(stem, NodeKind.Tendril, "Tendril", Shape.Trefoil, 0x78E010, WildUnlock.Start,
             "A long, springy link, a large store and a fast, steady transfer.", "Takes a stem slot too.") with
         {
-            Radius = 8, LinkScale = Tuning.TendrilLink, Spring = Tuning.TendrilSpring, MaxFruits = 3,
+            Radius = 8, LinkScale = Tuning.TendrilLink, MaxFruits = 3,
             PowerStore = 300, PowerPerSecond = -6, PowerWeight = 1.1f, PowerTransferPerSecond = 60,
             TransferSplits = Tuning.TendrilSplits,
         };
