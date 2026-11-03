@@ -47,6 +47,10 @@ public static class Tuning
     public const float LinkFlashFadePerSecond = 3.3f;
     public const float FlashPeak = 0.9f; // (Jeremy, Nov 3: brighter, was 0.6)
 
+    // Whether a part sends its transfer rate times its fill (Jeremy, Nov 3) or its whole rate whatever its fill (the
+    // rule before). Not const: the recovery experiment (RecoveryTests) runs both.
+    public static bool TransferFollowsFill = true;
+
     // A part's brightness and size follow its fill, as in the original (PlantNodeView): the shown fill moves a share
     // of the way to the real one each tick (INTENSITY_V_INC / _DEC). Its level (PlantNode.Level) runs from
     // FillLookFloor empty to 1 full along the shown fill to the power FillLookCurve: flat near empty, so a low part

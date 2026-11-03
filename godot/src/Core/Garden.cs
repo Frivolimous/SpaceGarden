@@ -1007,7 +1007,8 @@ public sealed class Garden
 
     // How fast a part sends power on now: its transfer rate times its fill, up to full (Jeremy, Nov 3: a stem sending
     // 30/s sends 15/s at half full), as everything follows its fill.
-    public static float SendsPerSecond(PlantNode node) => TransferPerSecond(node) * Math.Clamp(FlowFill(node), 0, 1);
+    public static float SendsPerSecond(PlantNode node) =>
+        TransferPerSecond(node) * (Tuning.TransferFollowsFill ? Math.Clamp(FlowFill(node), 0, 1) : 1);
 
     // How fast a part can send power on: its kind's rate, raised by evolutions (Long Stemmed, Twin Stars, Second Path).
     public static float TransferPerSecond(PlantNode node) =>
