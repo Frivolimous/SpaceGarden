@@ -124,7 +124,7 @@ public static class Evolutions
         [EvolutionKind.SmartParticles] = new(EvolutionKind.SmartParticles, "Smart Particles", NodeKind.Resistor, Specialist,
             new() { SmartChance = 0.5f }, MaxLevel: 2),
         [EvolutionKind.RapidEvolution] = new(EvolutionKind.RapidEvolution, "Rapid Evolution", NodeKind.WildLab, Genes,
-            new() { LabBlobSize = 2, LabUpkeep = 2 }, MaxLevel: 3),
+            new() { LabBlobSize = 1.5f, LabUpkeep = 1.2f }, MaxLevel: 3), // (Jeremy, Nov 3: x2 upkeep starved the plant)
         [EvolutionKind.MorePower] = new(EvolutionKind.MorePower, "More Power", NodeKind.Lichen, Power,
             new() { Generators = 2, GeneratorTransfer = 2 }, MaxLevel: 3),
         [EvolutionKind.PulsarPower] = new(EvolutionKind.PulsarPower, "Pulsar Power", NodeKind.Pulsar, Power,
