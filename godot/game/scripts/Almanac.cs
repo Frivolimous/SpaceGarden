@@ -279,7 +279,7 @@ public partial class Almanac : FloatingWindow
                 $"Chosen day {Tracking.DayOf(evolution.ChosenAt)}, {Tracking.ClockOf(evolution.ChosenAt)}");
             if (evolution.Bloomed)
             {
-                var delete = new ConfirmButton("Delete", "Confirm delete",
+                var delete = new ConfirmButton("", "Delete?",
                     "Take this evolution back: its effect and caps go (its flower stays), and its seedling slot is free for a new seedling")
                 { SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
                 delete.Confirmed += () => RespecPressed?.Invoke(evolution);

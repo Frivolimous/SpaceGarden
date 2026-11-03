@@ -105,6 +105,14 @@ public partial class Widget : Node
         DialogText = "Start a new garden? This one can't be brought back.",
         OkButtonText = "Start a new garden",
     };
+    // Cancelling a forming bud asks every time (Jeremy, Nov 3): its growth is lost.
+    readonly ConfirmationDialog confirmCancel = new()
+    {
+        Title = "Cancel bud",
+        OkButtonText = "Cancel the bud",
+        CancelButtonText = "Keep it",
+    };
+    PlantNode? cancelling;
     readonly Toolbar toolbar = new();
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
     readonly Card partCard = new(), gardenCard = new();
@@ -280,7 +288,7 @@ public partial class Widget : Node
         // core's menu and the card then (but not for the garden's own settings or dialog).
         window.FocusExited += () =>
         {
-            if (menu.Visible || devMenu.Visible || confirmNew.Visible) return;
+            if (menu.Visible || devMenu.Visible || confirmNew.Visible || confirmCancel.Visible) return;
             toolbar.HideAway();
             coreMenu.Close();
             evolutionMenu.Close();
@@ -335,6 +343,15 @@ public partial class Widget : Node
             main.NewGarden();
         };
         AddChild(confirmNew);
+        confirmCancel.Confirmed += () =>
+        {
+            if (cancelling is { } part && Garden.Nodes.Contains(part)) Garden.CancelBud(part);
+            cancelling = null;
+            partCard.RefreshNow();
+            gardenCard.RefreshNow();
+        };
+        confirmCancel.Canceled += () => cancelling = null;
+        AddChild(confirmCancel);
 
         tray.Icon = TrayIcon();
         tray.Tooltip = $"Space Garden: click to show or hide, right-click for settings. {Hotkey.Name} to tend.";
@@ -521,7 +538,7 @@ public partial class Widget : Node
         var window = GetWindow();
         Dpi = Mathf.Clamp(Mathf.Round(DisplayServer.ScreenGetDpi() / 96f * 4) / 4, 1, 3);
         plantScale = scale;
-        menu.ContentScaleFactor = devMenu.ContentScaleFactor = ambientMenu.ContentScaleFactor = confirmNew.ContentScaleFactor = Dpi;
+        menu.ContentScaleFactor = devMenu.ContentScaleFactor = ambientMenu.ContentScaleFactor = confirmNew.ContentScaleFactor = confirmCancel.ContentScaleFactor = Dpi;
         toolbarLayer.Scale = new Vector2(Dpi, Dpi);
         var usable = DisplayServer.ScreenGetUsableRect();
         if (usable == new Rect2I(DisplayServer.ScreenGetPosition(), DisplayServer.ScreenGetSize()))
@@ -1218,7 +1235,14 @@ public partial class Widget : Node
         if (Toolbar.KindOf(tool) is { } kind)
         {
             var at = node.Spec.IsFruit && node.Parent != null ? node.Parent : node;
-            if (at.Forming is { } forming && at.FormingBud && Garden.IsBudOf(forming, kind)) Garden.CancelBud(at);
+            if (at.Forming is { } forming && at.FormingBud && Garden.IsBudOf(forming, kind))
+            {
+                // (Asks first: its growth would be lost.)
+                cancelling = at;
+                confirmCancel.DialogText = $"Cancel the {NodeSpecs.All[forming].Name.ToLowerInvariant()} bud forming here? "
+                    + $"Its growth ({at.Growth / Tuning.BudGrowth * 100:0}%) is lost.";
+                confirmCancel.PopupCentered();
+            }
             else if (!Garden.ChangeBud(at, kind)) Garden.SproutFrom(at, kind);
         }
         switch (tool)

@@ -182,11 +182,13 @@ public partial class ConfirmButton : Button
     readonly string label, confirm;
     double armed;
 
+    // (An empty label draws a small bin instead, as the Almanac's Delete: Jeremy, Nov 3.)
     public ConfirmButton(string label, string confirm, string tooltip)
     {
         this.label = label;
         this.confirm = confirm;
         Text = label;
+        if (label == "") CustomMinimumSize = new Vector2(22, 20);
         TooltipText = tooltip;
         Flat = true;
         FocusMode = FocusModeEnum.None;
@@ -223,5 +225,19 @@ public partial class ConfirmButton : Button
     public override void _Process(double delta)
     {
         if (armed > 0 && (armed -= delta) <= 0) Disarm();
+        if (label == "") QueueRedraw(); // (the bin brightens under the pointer)
+    }
+
+    // The bin, while it isn't asking: a lid with a handle over a tapering can with two ribs.
+    public override void _Draw()
+    {
+        if (label != "" || armed > 0) return;
+        var c = Size / 2;
+        var ink = IsHovered() ? Alarm : Calm;
+        DrawLine(c + new Vector2(-5.5f, -4), c + new Vector2(5.5f, -4), ink, 1.4f, true);
+        DrawLine(c + new Vector2(-1.5f, -5.5f), c + new Vector2(1.5f, -5.5f), ink, 1.4f, true);
+        DrawPolyline([c + new Vector2(-4, -3), c + new Vector2(-3.2f, 5), c + new Vector2(3.2f, 5), c + new Vector2(4, -3)], ink, 1.3f, true);
+        DrawLine(c + new Vector2(-1.2f, -1), c + new Vector2(-1, 3.5f), ink, 1, true);
+        DrawLine(c + new Vector2(1.2f, -1), c + new Vector2(1, 3.5f), ink, 1, true);
     }
 }
