@@ -77,6 +77,23 @@ public class StatsTests
         Assert.Equal(reach, found / (double)walks, 0.012);
     }
 
+    // Build mode's blob-path view (Nov 3): with TrackTraffic on, each link a blob steps along counts; off, nothing.
+    [Fact]
+    public void TrafficCountsTheLinksBlobsTakeOnlyWhileTracked()
+    {
+        var garden = NewGarden(new Capacity(4, 1, 1));
+        var stem = Add(garden, garden.Core, NodeKind.Stem);
+        var lab = Add(garden, stem, NodeKind.Lab);
+        garden.WalkGene(lab);
+        Assert.Empty(garden.Traffic);
+        garden.TrackTraffic = true;
+        for (int i = 0; i < 10; i++) garden.WalkGene(lab);
+        Assert.Equal(10, garden.Traffic[lab]); // lab - stem, every time
+        Assert.Equal(10, garden.Traffic[stem]); // stem - core: the only way on
+        garden.TrackTraffic = false;
+        Assert.Empty(garden.Traffic);
+    }
+
     // ==== GARDEN STATS ==== \\
 
     [Fact]

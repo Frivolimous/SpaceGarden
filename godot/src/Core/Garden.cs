@@ -897,6 +897,7 @@ public sealed class Garden
             link.FlashIn = (float)(looks.NextDouble() * seconds);
         }
         CheckSeedlings();
+        if (trackTraffic) FadeTraffic(seconds);
         Tracking.Age += seconds;
         Tracking.History.Record(Tracking.Age, seconds, stored, production, upkeep);
         return grew;
@@ -1059,6 +1060,7 @@ public sealed class Garden
             cameFrom = at;
             at = next;
             route?.Add(at);
+            if (TrackTraffic) CountTraffic(cameFrom, at);
             if (genes ? CatchesGenes(at) : Absorbs(at, counts)) return at;
             if (canDouble && Doubled == null && at.Spec.DoublesBlobs)
             {
@@ -1068,6 +1070,35 @@ public sealed class Garden
             }
         }
         return null;
+    }
+
+    // Blob traffic (build mode's blob-path view, Jeremy, Nov 3): while TrackTraffic, every link a gene or growth blob
+    // steps along counts one (keyed by the link's outer part), fading by half every Tuning.TrafficHalfLife of growth
+    // time, so it shows where blobs have been going lately. Off, nothing is counted (and what was is dropped).
+    public readonly Dictionary<PlantNode, float> Traffic = new();
+    bool trackTraffic;
+    public bool TrackTraffic
+    {
+        get => trackTraffic;
+        set
+        {
+            trackTraffic = value;
+            if (!value) Traffic.Clear();
+        }
+    }
+
+    void CountTraffic(PlantNode a, PlantNode b)
+    {
+        var outer = b.Parent == a ? b : a;
+        Traffic[outer] = Traffic.GetValueOrDefault(outer) + 1;
+    }
+
+    void FadeTraffic(double seconds)
+    {
+        if (Traffic.Count == 0) return;
+        float keep = (float)Math.Pow(0.5, seconds / Tuning.TrafficHalfLife);
+        foreach (var key in Traffic.Keys.ToList())
+            if (!linkToParent.ContainsKey(key) || (Traffic[key] *= keep) < 0.01f) Traffic.Remove(key); // (pruned: gone)
     }
 
     // Where the last walk was doubled by an Amplifier: the part, the one it came from, the hops it had taken, and

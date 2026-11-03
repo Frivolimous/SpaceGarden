@@ -3,6 +3,9 @@ using Num = System.Numerics;
 
 namespace SpaceGarden;
 
+// Build mode's special views (see GardenView.Heat).
+public enum HeatView { None, Power, Blobs }
+
 // Draws the garden each frame, back to front: stems, the motes travelling along them, soft halos (and the glow where
 // a mote is absorbed), the parts, then the core's marks and the ring on the part under the pointer. The parts of a
 // branch just pruned drift off loose, fading out. Nothing here changes the garden.
@@ -42,6 +45,10 @@ public partial class GardenView : Node2D
     // (Building) a dark backdrop fades in round the plant and its tools, and the tools' handles show.
     public float ToolsWanted;
     public bool Building;
+    // Build mode's special views (Jeremy, Nov 3), drawn over the plant: each part's power as heat, or where blobs have
+    // been going lately (Garden.Traffic) as heat along the links.
+    public HeatView Heat;
+    readonly Node2D heatLayer = new();
     public ShapingTool? HotTool;
     public ShapingHandle HotHandle;
     float toolsAlpha, backdropAlpha, backdropRadius;
@@ -115,12 +122,13 @@ public partial class GardenView : Node2D
         backdropLayer.Draw += DrawBackdrop;
         shapingLayer.Draw += DrawShaping;
         potLayer.Draw += DrawPots;
+        heatLayer.Draw += DrawHeat;
         foreach (var layer in new[] { wildLayer, wildFormingLayer })
         {
             layer.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
             layer.Material = Textures.AtlasMaterial;
         }
-        foreach (var layer in new[] { backdropLayer, shapingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, wildLayer, formingLayer, wildFormingLayer, potLayer, markLayer })
+        foreach (var layer in new[] { backdropLayer, shapingLayer, linkLayer, moteLayer, haloLayer, shapeLayer, wildLayer, formingLayer, wildFormingLayer, potLayer, markLayer, heatLayer })
             AddChild(layer);
     }
 
@@ -168,6 +176,44 @@ public partial class GardenView : Node2D
         wildFormingLayer.QueueRedraw();
         markLayer.QueueRedraw();
         moteLayer.QueueRedraw();
+        heatLayer.QueueRedraw();
+    }
+
+    // The special views' heat: cold blue, through green and yellow, to hot red.
+    static Color HeatColour(float t)
+    {
+        t = Mathf.Clamp(t, 0, 1);
+        Color[] stops = [new(0.2f, 0.35f, 1f), new(0.1f, 0.85f, 0.9f), new(0.3f, 0.95f, 0.3f), new(1f, 0.9f, 0.2f), new(1f, 0.25f, 0.15f)];
+        float at = t * (stops.Length - 1);
+        int i = Math.Min(stops.Length - 2, (int)at);
+        return stops[i].Lerp(stops[i + 1], at - i);
+    }
+
+    // Power: a disc on each part in its fill's heat (empty blue, half full green, full red; past full white-hot).
+    // Blob paths: each link in its traffic's heat against the busiest link, wider as it's busier (sqrt, so quiet
+    // links still show); links no blob took lately stay dim.
+    void DrawHeat()
+    {
+        if (Heat == HeatView.None || !Building) return;
+        if (Heat == HeatView.Power)
+        {
+            foreach (var node in garden.Nodes)
+            {
+                if (node.Spec.IsFruit || node.Store <= 0) continue;
+                float fill = node.Power / Garden.PowerCap(node);
+                var colour = fill > 1 ? HeatColour(1).Lerp(Colors.White, Mathf.Clamp((fill - 1) * 2, 0, 1)) : HeatColour(fill);
+                heatLayer.DrawCircle(At(node), Mathf.Max(node.Spec.Radius * 0.9f, 6), colour with { A = 0.75f });
+            }
+            return;
+        }
+        float busiest = garden.Traffic.Count == 0 ? 1 : Mathf.Max(1, garden.Traffic.Values.Max());
+        foreach (var link in garden.Links)
+        {
+            if (link.Target.Spec.IsFruit) continue;
+            float t = Mathf.Sqrt(garden.Traffic.GetValueOrDefault(link.Target) / busiest);
+            var colour = t <= 0 ? new Color(1, 1, 1, 0.15f) : HeatColour(t) with { A = 0.85f };
+            heatLayer.DrawLine(At(link.Origin), At(link.Target), colour, 2 + 7 * t, true);
+        }
     }
 
     // Where to draw a part this frame: blended between its last two physics ticks by how far the frame is into the

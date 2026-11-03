@@ -212,6 +212,8 @@ Undo covers only the most recent prune, and only while its room is still free: p
 
 Players keep a mature garden compact and give it form through zoom and shaping tools.
 
+**Special views** (Jeremy, Nov 3): in build mode only, two switches under the shaping bar draw over the plant, one at a time: **Power**, each part's fill as heat, and **Blob paths**, the links gene and growth blobs have taken lately (`Garden.Traffic`, counted only while the view is on, halving every `Tuning.TrafficHalfLife`, 2 minutes of growth), as heat and width along each link. They help place labs and see where power runs short.
+
 - **Zoom:** the player can zoom the garden in or out.
 - **Gravity Pots:** a node connected to a pot moves to it and locks in place; the nodes linked to it (its parent and what grows straight out of it) are pushed subtly in the pot's facing direction, and the rest of the plant follows them.
 - Long branches can still spill back over, so a large garden may need several pots.

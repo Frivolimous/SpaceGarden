@@ -371,6 +371,9 @@ public partial class ShapingBar : PanelContainer
 {
     public event Action<ShapingKind>? Started;
     public event Action? Done;
+    // The special views (Jeremy, Nov 3), in a row under the tools: one at a time, or none.
+    public event Action<HeatView>? HeatPicked;
+    readonly Dictionary<HeatView, Button> heatButtons = new();
 
     readonly Dictionary<ShapingKind, ToolButton> buttons = new();
     Tween? fade;
@@ -381,9 +384,39 @@ public partial class ShapingBar : PanelContainer
         MouseFilter = MouseFilterEnum.Stop;
         Visible = false;
         AddThemeStyleboxOverride("panel", Toolbar.PillStyle());
+        var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+        column.AddThemeConstantOverride("separation", 2);
+        AddChild(column);
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         row.AddThemeConstantOverride("separation", 2);
-        AddChild(row);
+        column.AddChild(row);
+        var views = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass, Alignment = BoxContainer.AlignmentMode.Center };
+        views.AddThemeConstantOverride("separation", 4);
+        column.AddChild(views);
+        foreach (var (view, text, tip) in new[]
+        {
+            (HeatView.Power, "Power", "Show each part's power as heat: blue empty, green half, red full"),
+            (HeatView.Blobs, "Blob paths", "Show where gene and growth blobs have been going lately (counted from now)"),
+        })
+        {
+            var toggle = new Button
+            {
+                Text = text, TooltipText = tip, ToggleMode = true, Flat = true,
+                FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand,
+            };
+            toggle.AddThemeFontSizeOverride("font_size", 11);
+            toggle.AddThemeColorOverride("font_color", new Color(1, 1, 1, 0.55f));
+            toggle.AddThemeColorOverride("font_hover_color", new Color(1, 1, 1, 0.85f));
+            toggle.AddThemeColorOverride("font_pressed_color", new Color(1, 0.9f, 0.45f));
+            toggle.AddThemeColorOverride("font_hover_pressed_color", new Color(1, 0.95f, 0.6f));
+            toggle.Toggled += on =>
+            {
+                foreach (var (other, button) in heatButtons) if (other != view) button.SetPressedNoSignal(false);
+                HeatPicked?.Invoke(on ? view : HeatView.None);
+            };
+            heatButtons[view] = toggle;
+            views.AddChild(toggle);
+        }
         foreach (var (kind, tool) in new[] { (ShapingKind.Pot, Tool.Pot), (ShapingKind.Trellis, Tool.Trellis), (ShapingKind.Well, Tool.Well) })
         {
             var button = new ToolButton(tool);
@@ -418,6 +451,7 @@ public partial class ShapingBar : PanelContainer
     {
         if (show == showing) return;
         showing = show;
+        if (!show) foreach (var button in heatButtons.Values) button.SetPressedNoSignal(false); // (the views end with build mode)
         fade?.Kill();
         if (show)
         {

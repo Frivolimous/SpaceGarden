@@ -256,6 +256,11 @@ public partial class Widget : Node
         toolbarLayer.AddChild(shapingBar);
         shapingBar.Started += TakeFromBar;
         shapingBar.Done += () => SetBuilding(false);
+        shapingBar.HeatPicked += view =>
+        {
+            main.View.Heat = view;
+            Garden.TrackTraffic = view == HeatView.Blobs;
+        };
         // A click anywhere off the plant lands in another window, which takes the focus: close the toolbar, the
         // core's menu and the card then (but not for the garden's own settings or dialog).
         window.FocusExited += () =>
@@ -392,6 +397,11 @@ public partial class Widget : Node
         Building = on;
         barAt = null;
         shapingBar.Appear(on);
+        if (!on)
+        {
+            main.View.Heat = HeatView.None;
+            Garden.TrackTraffic = false;
+        }
         if (toolbar.TargetTool != null) toolbar.HideAway(); // a part's (the core's, under its menu) stays
         movingTool = null;
         fromBar = false;

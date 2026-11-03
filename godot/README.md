@@ -56,7 +56,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   tooltip says at what size the next comes). Drag a tool
   off the bar to place it, drag its body, knob or posts to move and turn it, and drop a part on a pot or trellis to
   tie it (or an empty pot on a part to plant it). Each part shows its links used against its most (white 1/N, yellow, red when full), to see where
-  there's room to bud. Done or Escape ends it. See Shaping the garden in DESIGN.md.
+  there's room to bud. Under the tools, two switches show special views over the plant (one at a time, ending with build mode): **Power**, each part's fill as heat (blue empty, green half, red full, white past full), and **Blob paths**, where gene and growth blobs have gone lately (counted from when it's switched on, fading by half every 2 minutes of growth), as heat along the links. Done or Escape ends it. See Shaping the garden in DESIGN.md.
 - The plant floats free, as in the TS game (the radial layout; the core isn't planted).
 - **Drag any part, the core included**: it's pulled to the pointer and the rest follows only through the links, at
   its real weight. Letting go keeps the momentum: fling it and the plant glides on and slows to rest. The screen
