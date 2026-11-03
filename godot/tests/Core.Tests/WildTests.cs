@@ -98,7 +98,7 @@ public class WildTests
         ember.Life = Tuning.EmberLifeSeconds / 2;
         Assert.Equal(ember.Spec.PowerStore, ember.Store);
         Assert.Equal(ember.Store / 2, Garden.PowerCap(ember), 0.5f);
-        Assert.Equal(Tuning.EmberGen, Garden.FullProductionPerSecond(ember), 1e-3f);
+        Assert.Equal(NodeSpecs.All[NodeKind.Ember].PowerPerSecond, Garden.FullProductionPerSecond(ember), 1e-3f);
         ember.Power = Garden.PowerCap(ember);
         Assert.Equal(0, Garden.ProductionPerSecond(ember)); // at its cap, as a full generator
         ember.Power = ember.Store; // over its cap: it sends on
@@ -191,7 +191,7 @@ public class WildTests
         pulsar.Power = burstAt;
         stem.Power = 0;
         garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.Equal(burstAt * (1 - Tuning.PulsarBurst), pulsar.Power, 1f);
+        Assert.Equal(burstAt - pulsar.Store * Tuning.PulsarBurst, pulsar.Power, 1f); // half its store (Nov 3)
     }
 
     [Fact]
@@ -227,5 +227,76 @@ public class WildTests
         };
         foreach (var kind in takes) Assert.True(NodeSpecs.All[kind].TakesBuffs, $"{kind} should take buffs");
         foreach (var kind in passes) Assert.False(NodeSpecs.All[kind].TakesBuffs, $"{kind} shouldn't take buffs");
+    }
+
+    // ==== Nov 3 rework ==== \\
+
+    // A Wild Lab's blob carries 2 genes: on the core, every one it sends counts twice.
+    [Fact]
+    public void AWildLabsBlobsCarryTwoGenes()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        Add(garden, stem, NodeKind.WildLab);
+        foreach (var n in garden.Nodes) n.Power = n.Store;
+        double before = garden.Genes;
+        garden.Grow(60);
+        double genes = garden.Genes - before;
+        Assert.True(genes > 0);
+        Assert.Equal(0, genes % 2, 6); // whole pairs
+    }
+
+    // An Amplifier doubles a passing blob's value (once), half the time: one blob, worth 2.
+    [Fact]
+    public void AnAmplifierDoublesABlobsValue()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        var amplifier = Add(garden, stem, NodeKind.Amplifier);
+        var lab = Add(garden, amplifier, NodeKind.Lab);
+        foreach (var n in garden.Nodes) n.Power = n.Store;
+        double before = garden.Genes;
+        garden.Grow(600); // about 120 blobs, all reaching the core (core - stem - amplifier - lab: the only way)
+        double perBlob = (garden.Genes - before) / (Garden.BlobsPerHour(lab) * 600 / 3600);
+        Assert.InRange(perBlob, 1.3, 1.7); // 1.5 on average
+    }
+
+    // A Tendril sends its clump in two halves a step, picking afresh for the second.
+    [Fact]
+    public void ATendrilSendsTwiceAStep()
+    {
+        Assert.Equal(2, NodeSpecs.All[NodeKind.Tendril].TransferSplits);
+        var (garden, stem) = Make(wildLimit: 1);
+        var tendril = Add(garden, stem, NodeKind.Tendril);
+        var a = Add(garden, tendril, NodeKind.Stem);
+        var b = Add(garden, tendril, NodeKind.Stem);
+        foreach (var n in garden.Nodes) n.Power = 0;
+        tendril.Power = tendril.Store;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        // Both halves found an empty neighbour, a different one each.
+        Assert.Equal(2, new[] { stem, a, b }.Count(n => n.Power > 0));
+    }
+
+    // A Comet Bloom: active for its first 10 minutes (blobs worth double, buffs twice as long), then fading.
+    [Fact]
+    public void ACometBloomIsActiveThenFades()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        var comet = Add(garden, stem, NodeKind.CometBloom);
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.True(garden.CometActive);
+        Assert.Equal(1, Garden.Brightness(comet));
+        comet.Life = Tuning.CometActiveSeconds + Tuning.CometFadeSeconds / 2;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.False(garden.CometActive);
+        Assert.InRange(Garden.Brightness(comet), 0.45f, 0.55f);
+    }
+
+    // The Nebula Bloom is retired: it never grows wild.
+    [Fact]
+    public void TheNebulaBloomNoLongerGrows()
+    {
+        var (garden, stem) = Make(wildLimit: 20);
+        Assert.False(garden.CanGrowWild(NodeKind.NebulaBloom));
+        Assert.DoesNotContain(NodeSpecs.Wild, s => s.Kind == NodeKind.NebulaBloom);
+        for (int i = 0; i < 3_000; i++) Assert.NotEqual(NodeKind.NebulaBloom, garden.RollBud(stem, NodeKind.Grove, passive: true));
     }
 }

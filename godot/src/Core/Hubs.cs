@@ -12,8 +12,7 @@ public sealed record HubEffect(NodeKind Kind, HubAxis Axis, float Share);
 // path's kind: fruit slots or links more, its transfer, upkeep, store or life multiplied, a share of its output that
 // holds whatever its store (OutputFloor), its gene blobs going further and faster (Reach), each of its leaves adding
 // a share to its output (LeafBonus), its buds growing on their own faster (BudGrow). The rest are read where they act
-// (Garden.HubAt): the stem cap, an Amplifier's triple, the buffs, a Moonflower's range, a Nebula Bloom's boost and
-// the Hub's own upkeep. Text is the panel's line.
+// (Garden.HubAt): the stem cap, an Amplifier's triple, the buffs, a Moonflower's range and the Hub's own upkeep. Text is the panel's line.
 public sealed record HubMilestone(int Level, string Text)
 {
     public int Fruits { get; init; }
@@ -84,7 +83,7 @@ public static class Hubs
                 new HubMilestone(3, "Upkeep −20%") { Upkeep = 0.8f },
                 new HubMilestone(5, "Gene blobs travel 33% faster and 33% more links") { Reach = 4f / 3 }),
 
-            Path(NodeKind.Amplifier, Short, "+10% chance to double; core +20% power",
+            Path(NodeKind.Amplifier, Short, "+10% chance to double a blob's value; core +20% power",
                 CorePower(NodeKind.Amplifier, HubAxis.Chance, 0.1f),
                 new HubMilestone(3, $"{Tuning.HubTripleChance * 100:0}% chance to triple")),
             Path(NodeKind.Resistor, Short, "+1 glow; core +20% power", CorePower(NodeKind.Resistor, HubAxis.Fruits, 1),
@@ -97,13 +96,13 @@ public static class Hubs
                 new HubMilestone(3, "+1 link") { Links = 1 }),
             Path(NodeKind.Pulsar, Short, "+30% power; generators +10% power",
                 Own(NodeKind.Pulsar, HubAxis.Gen, 0.3f, generator, HubAxis.Gen, 0.1f),
-                new HubMilestone(3, "Power store ×1.5, transfer +50%") { Store = 1.5f, Transfer = 1.5f }),
+                new HubMilestone(3, "Power store ×1.5: bigger bursts") { Store = 1.5f }),
             Path(NodeKind.TwinStar, Short, "+30% power; generators +10% power",
                 Own(NodeKind.TwinStar, HubAxis.Gen, 0.3f, generator, HubAxis.Gen, 0.1f),
                 new HubMilestone(3, "Transfer +50%") { Transfer = 1.5f }),
             Path(NodeKind.Ember, Short, "+30% power; generators +10% power",
                 Own(NodeKind.Ember, HubAxis.Gen, 0.3f, generator, HubAxis.Gen, 0.1f),
-                new HubMilestone(3, "Burns 50% longer (fades over 4.5 days)") { Life = 1.5f }),
+                new HubMilestone(3, "Burns 50% longer (fades over 1.5 days)") { Life = 1.5f }),
             Path(NodeKind.LumberGrove, Short, "+30% growth; groves +10% growth",
                 Own(NodeKind.LumberGrove, HubAxis.Blobs, 0.3f, grove, HubAxis.Blobs, 0.1f),
                 new HubMilestone(3, "Upkeep −50%") { Upkeep = 0.5f }),
@@ -120,13 +119,11 @@ public static class Hubs
                 new HubMilestone(3, "All buffs +10% stronger")),
             Path(NodeKind.CometBloom, Short, "Upkeep −20%; core +20% power",
                 CorePower(NodeKind.CometBloom, HubAxis.Upkeep, -0.2f),
-                new HubMilestone(3, "Lingers 6 hours instead of 24") { Life = 0.25f }),
+                new HubMilestone(3, "Fades out in a quarter of the time (its slot free sooner)") { Life = 0.25f }),
             Path(NodeKind.Moonflower, Short, "Upkeep −20%; core +20% power",
                 CorePower(NodeKind.Moonflower, HubAxis.Upkeep, -0.2f),
                 new HubMilestone(3, $"Range from {Tuning.MoonflowerReach} links to {Tuning.HubMoonflowerReach}")),
-            Path(NodeKind.NebulaBloom, Short, "Upkeep −20%; core +20% power",
-                CorePower(NodeKind.NebulaBloom, HubAxis.Upkeep, -0.2f),
-                new HubMilestone(3, "Power to nearby seedlings counts triple")),
+            // (No Nebula Bloom path: it's retired, Nov 3. Levels bought on it before stay in the save, unused.)
 
             // The Hub's own (Jeremy, Oct 31): 3 links to start, +1 a level up to 6.
             Path(NodeKind.Hub, Short, "+1 link", [new(NodeKind.Hub, HubAxis.Links, 1)],

@@ -114,10 +114,10 @@ public class HubTests
     }
 
     [Fact]
-    public void ThePathsCost96PointsAndTheHubsOwnAddsLinks()
+    public void ThePathsCost92PointsAndTheHubsOwnAddsLinks()
     {
-        Assert.Equal(96, Hubs.TotalPoints);
-        Assert.Equal(20, Hubs.Paths.Count);
+        Assert.Equal(92, Hubs.TotalPoints); // (96 with the retired Nebula Bloom's path)
+        Assert.Equal(19, Hubs.Paths.Count);
         var (garden, _, _, hub) = Make();
         garden.HubPoints = 4;
         Assert.Equal(3, hub.MaxLinks);

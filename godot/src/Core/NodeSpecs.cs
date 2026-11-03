@@ -99,6 +99,17 @@ public sealed record NodeSpec(NodeKind Kind)
     // core, generators, labs and groves, and their wild kinds, which take it from their base's spec). Others let it
     // pass untouched.
     public bool TakesBuffs { get; init; }
+    // A blob it sends is worth this many basic ones (a growth blob's BlobGrowth, a gene blob's BlobGenes): a Lumber
+    // Grove's 0.2 growth, a Wild Lab's 2 genes (Jeremy, Nov 3).
+    public float BlobValue { get; init; } = 1;
+    // How many times a step it sends power, a share of its clump each, picking where afresh each time (a Tendril's 2:
+    // a steadier flow).
+    public int TransferSplits { get; init; } = 1;
+    // A wild flower active for this long after it appears (a Comet Bloom), then dormant, fading out over the rest of its
+    // life (0: none).
+    public float ActiveSeconds { get; init; }
+    // A kind that no longer grows (the Nebula Bloom, Nov 3); one already in a garden keeps working.
+    public bool Retired { get; init; }
     public float BurstFill { get; init; } = 1;
     public float LifeSeconds { get; init; }
     public bool Dims { get; init; }
@@ -136,8 +147,8 @@ public static class NodeSpecs
 {
     public static readonly IReadOnlyDictionary<NodeKind, NodeSpec> All = Build();
 
-    // The wild flower kinds, in the table's order.
-    public static readonly IReadOnlyList<NodeSpec> Wild = All.Values.Where(s => s.IsWild).OrderBy(s => s.Kind).ToList();
+    // The wild flower kinds that can grow, in the table's order (not the retired Nebula Bloom).
+    public static readonly IReadOnlyList<NodeSpec> Wild = All.Values.Where(s => s.IsWild && !s.Retired).OrderBy(s => s.Kind).ToList();
 
     static Dictionary<NodeKind, NodeSpec> Build()
     {

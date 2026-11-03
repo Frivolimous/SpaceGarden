@@ -77,7 +77,7 @@ public sealed class Tracking
         Log(JournalKind.Ended, $"{Article(spec.Name)} {spec.Name} {EndedVerb(spec)}");
     }
 
-    public static string EndedVerb(NodeSpec spec) => spec.Dims ? "burned out" : "withered";
+    public static string EndedVerb(NodeSpec spec) => spec.Kind == NodeKind.Ember ? "burned out" : "withered";
 
     // "A" or "An" before a name.
     public static string Article(string name) => "AEIOU".Contains(name[0]) ? "An" : "A";

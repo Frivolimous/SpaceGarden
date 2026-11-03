@@ -58,6 +58,7 @@ public partial class Card : PanelContainer
             LabelSettings = new LabelSettings { FontSize = 12, FontColor = QuirkInk },
         };
         top.AddChild(buffTime);
+        top.AddChild(moonlit);
         column.AddChild(top);
     }
 
@@ -65,6 +66,8 @@ public partial class Card : PanelContainer
 
     // A small glow fruit beside the heading while a buff blob's boost is running on the part (a Buffer's or a glow's).
     readonly BuffMark buffed = new() { Visible = false };
+    // And the Moonflower's rose while one nearby boosts this wild flower (Jeremy, Nov 3).
+    readonly BuffMark moonlit = new(NodeKind.Moonflower) { Visible = false, TooltipText = "Moonlit: a Moonflower nearby" };
 
     // Inside the shared info panel (Jeremy, Nov 3: the part's and the garden's cards in one panel): no frame of its
     // own, the panel's is round both.
@@ -121,6 +124,7 @@ public partial class Card : PanelContainer
         var stats = NodeStats.Of(node);
         heading.Text = spec.Name;
         buffed.Visible = buffTime.Visible = node.Buff > 0;
+        moonlit.Visible = node.Moonlit;
         if (node.Buff > 0) buffTime.Text = $"{Math.Ceiling(node.Buff / speed):0}s";
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
         // A wild flower's quirk, under its name: what it trades for its effect.
@@ -128,7 +132,7 @@ public partial class Card : PanelContainer
         Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
         // How fast it can send power on, beside its Gen or Drain: on every power maker, and on every part that can have 2
         // or more links (one that passes power along a branch). A Pulsar sends in bursts: the share of its power, when full.
-        string sends = spec.BurstShare > 0 ? $" (sends {spec.BurstShare:0%} at {spec.BurstFill:0%})"
+        string sends = spec.BurstShare > 0 ? $" (sends {spec.BurstShare:0%} of its store at {spec.BurstFill:0%})"
             : spec.PowerPerSecond > 0 || stats.MaxLinks >= 2 ? $" (sends {stats.Sends * speed:0}/s)" : "";
         if (spec.PowerPerSecond > 0) // by kind, so the lines stay put when a rate falls to 0
             Line(ref used, $"Gen: {stats.Makes * speed:0}/s{sends}");
@@ -141,8 +145,11 @@ public partial class Card : PanelContainer
         if (stats.Evolution is { } evolution)
             Line(ref used, ("Evolution: ", Ink), (evolution.Name, GardenView.Rgb(evolution.Spec.Rgb).Lightened(0.3f)));
         // A wild flower that ends itself: how long it has left (an Ember burns out, a Comet Bloom withers).
+        // (A Comet Bloom says how long it stays active first.)
+        if (Garden.IsActive(node))
+            Line(ref used, $"Active for: {Eta((spec.ActiveSeconds - node.Life) / speed)} (blobs worth double)");
         if (spec.LifeSeconds > 0)
-            Line(ref used, $"{(spec.Dims ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, Garden.LifeOf(node) - node.Life) / speed)}");
+            Line(ref used, $"{(spec.Kind == NodeKind.Ember ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, Garden.LifeOf(node) - node.Life) / speed)}");
         // The Hub: its points to spend, the genes in its pool and those its next point still needs (its toolbar's
         // upgrades button opens its panel).
         if (node.IsHub)
@@ -165,7 +172,7 @@ public partial class Card : PanelContainer
     void ShowGardenLines(GardenStats stats, double speed, ref int used)
     {
         heading.Text = "Garden";
-        buffed.Visible = buffTime.Visible = false;
+        buffed.Visible = buffTime.Visible = moonlit.Visible = false;
         heading.LabelSettings.FontColor = GardenTint.Lightened(0.35f);
         Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0}", PowerInk(stats.PowerHeld, stats.PowerStore)),
             ($" / {stats.PowerStore:0}", Ink));
@@ -268,8 +275,12 @@ public partial class Card : PanelContainer
 // The buff mark on a part's card: a glow fruit's shape and colour, small, centred on the heading's line.
 public partial class BuffMark : Control
 {
-    public BuffMark()
+    readonly NodeKind kind;
+
+    // (A glow by default; the Moonflower's rose for the moonlit mark.)
+    public BuffMark(NodeKind kind = NodeKind.Glow)
     {
+        this.kind = kind;
         MouseFilter = MouseFilterEnum.Ignore;
         CustomMinimumSize = new Vector2(14, 14);
         SizeFlagsVertical = SizeFlags.ShrinkCenter;
@@ -277,8 +288,8 @@ public partial class BuffMark : Control
 
     public override void _Draw()
     {
-        var glow = NodeSpecs.All[NodeKind.Glow];
-        ToolButton.DrawShape(this, Size / 2, glow.Shape, 6, GardenView.Rgb(glow.Rgb));
+        var spec = NodeSpecs.All[kind];
+        ToolButton.DrawShape(this, Size / 2, spec.Shape, 6, GardenView.Rgb(spec.Rgb));
     }
 }
 
