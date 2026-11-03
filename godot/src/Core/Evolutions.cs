@@ -189,6 +189,8 @@ public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, 
     public float BudGrow { get; init; } = 1;
     // What each blob it sends carries, times its spec's BlobValue (Rapid Evolution: a lab's gene blobs' size).
     public float Value { get; init; } = 1;
+    // Seconds added to its active time (a Comet Bloom's, with its Hub path).
+    public float Active { get; init; }
 
     public static readonly Boost None = new();
 }

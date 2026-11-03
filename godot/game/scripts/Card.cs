@@ -147,7 +147,7 @@ public partial class Card : PanelContainer
         // A wild flower that ends itself: how long it has left (an Ember burns out, a Comet Bloom withers).
         // (A Comet Bloom says how long it stays active first.)
         if (Garden.IsActive(node))
-            Line(ref used, $"Active for: {Eta((spec.ActiveSeconds - node.Life) / speed)} (blobs worth double)");
+            Line(ref used, $"Active for: {Eta((Garden.ActiveOf(node) - node.Life) / speed)} (blobs worth double)");
         if (spec.LifeSeconds > 0)
             Line(ref used, $"{(spec.Kind == NodeKind.Ember ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, Garden.LifeOf(node) - node.Life) / speed)}");
         // The Hub: its points to spend, the genes in its pool and those its next point still needs (its toolbar's

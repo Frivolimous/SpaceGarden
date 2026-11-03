@@ -471,7 +471,7 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | Amplifier | +10% chance to double; core +20% power | 20% chance to triple |
 | Resistor | +1 glow; core +20% power | +1 link |
 | Tendril | +30% transfer; stems +10% transfer | +1 link |
-| Big Stem | Upkeep −30%; stems +10% transfer | +1 link |
+| Big Stem | +30% transfer; stems +10% transfer (Nov 3) | +1 link |
 | Pulsar | +30% power; generators +10% power | Power store ×1.5, transfer +50% |
 | Twin Star | +30% power; generators +10% power | Transfer +50% |
 | Ember | +30% power; generators +10% power | Burns 50% longer (fades over 4.5 days) |
@@ -479,10 +479,10 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | Seed Pod | +30% growth; groves +10% growth | Upkeep −50% |
 | Wild Lab | +30% genes; labs +10% genes | Upkeep −50% |
 | Lichen | +30% genes; labs +10% genes | Each leaf also adds +5% genes |
-| Buffer | Upkeep −20%; core +20% power | All buffs +10% stronger |
-| Comet Bloom | Upkeep −20%; core +20% power | Lingers 6 hours instead of 24 |
-| Moonflower | Upkeep −20%; core +20% power | Range from 5 links to 8 |
-| Nebula Bloom | Upkeep −20%; core +20% power | Power to nearby seedlings counts triple |
+| Buffer | All buffs +10% stronger (Nov 3) | Buffs last +10 s |
+| Comet Bloom | Active 2 minutes longer; core +20% power (Nov 3) | Lingers half as long once dormant |
+| Moonflower | Wild flowers near it +5% more; core +20% power (Nov 3) | Range from 5 links to 6 |
+| ~~Nebula Bloom~~ | Retired Nov 3: no path | — |
 | Hub | +1 link (3 to 6) | The upkeep each Hub upgrade adds −20% |
 - If pruned, its upgrades go dormant until a new Hub is planted. A respec option comes later.
 

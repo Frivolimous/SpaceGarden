@@ -220,4 +220,34 @@ public class HubTests
         Assert.True(left < garden.HubPoints);
         Assert.False(garden.RespecHub()); // nothing to take back
     }
+
+    // Nov 3: the Buffer's path makes every buff 10% stronger a level and, at 3, 10 s longer; the Comet Bloom's keeps it
+    // active 2 minutes longer a level and, at 3, halves its fading; the Moonflower's adds 5% a level to its bonus.
+    [Fact]
+    public void TheSpecialistsPathsActOnTheirEffects()
+    {
+        var (garden, _, _, hub) = Make();
+        garden.Capacity = garden.Capacity with { WildFlowers = 2 };
+        var branch = Add(garden, hub, NodeKind.Stem);
+        var comet = Add(garden, branch, NodeKind.CometBloom);
+        foreach (var kind in new[] { NodeKind.Buffer, NodeKind.CometBloom, NodeKind.Moonflower })
+            garden.Tracking.Discovered[kind] = 0;
+        garden.HubPoints = 12;
+        double life = Garden.LifeOf(comet), active = Garden.ActiveOf(comet);
+        for (int i = 0; i < 3; i++)
+        {
+            Assert.True(garden.BuyHubLevel(NodeKind.CometBloom));
+            Assert.True(garden.BuyHubLevel(NodeKind.Buffer));
+        }
+        Assert.Equal(active + 3 * 120, Garden.ActiveOf(comet), 3);
+        Assert.Equal(Garden.ActiveOf(comet) + (life - active) * 0.5, Garden.LifeOf(comet), 3);
+
+        // A buff now: +10% a level, 10 s longer (and twice as long while the Comet is active).
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.True(garden.CometActive);
+        var generator = Add(garden, branch, NodeKind.Generator);
+        garden.BuffForTest(generator);
+        Assert.Equal(Tuning.BuffBonus * 1.3f, generator.BuffBonus, 4);
+        Assert.Equal((Tuning.BuffSeconds + Tuning.HubBuffSeconds) * Tuning.CometBuffTime, generator.Buff, 4);
+    }
 }

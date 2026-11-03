@@ -3,7 +3,9 @@ namespace SpaceGarden.Core;
 // What a Hub level raises on a kind, a share a level, adding up: the power it makes, the blobs it sends (genes, growth
 // or buffs), how fast it sends power on, its upkeep (a negative share: less), its fruit slots or links (whole ones), or
 // an Amplifier's chance to double a blob.
-public enum HubAxis { Gen, Blobs, Transfer, Upkeep, Fruits, Links, Chance }
+// (Jeremy, Nov 3: BuffStrength, every buff's bonus; Active, a Comet Bloom's active seconds; Moonlit, the Moonflower's
+// bonus to wild flowers near it.)
+public enum HubAxis { Gen, Blobs, Transfer, Upkeep, Fruits, Links, Chance, BuffStrength, Active, Moonlit }
 
 // One thing every level of a path gives: Share more of an axis on a kind (the path's own, or its family's).
 public sealed record HubEffect(NodeKind Kind, HubAxis Axis, float Share);
@@ -91,8 +93,8 @@ public static class Hubs
             Path(NodeKind.Tendril, Short, "+30% transfer; stems +10% transfer",
                 Own(NodeKind.Tendril, HubAxis.Transfer, 0.3f, stem, HubAxis.Transfer, 0.1f),
                 new HubMilestone(3, "+1 link") { Links = 1 }),
-            Path(NodeKind.BigStem, Short, "Upkeep −30%; stems +10% transfer",
-                Own(NodeKind.BigStem, HubAxis.Upkeep, -0.3f, stem, HubAxis.Transfer, 0.1f),
+            Path(NodeKind.BigStem, Short, "+30% transfer; stems +10% transfer",
+                Own(NodeKind.BigStem, HubAxis.Transfer, 0.3f, stem, HubAxis.Transfer, 0.1f),
                 new HubMilestone(3, "+1 link") { Links = 1 }),
             Path(NodeKind.Pulsar, Short, "+30% power; generators +10% power",
                 Own(NodeKind.Pulsar, HubAxis.Gen, 0.3f, generator, HubAxis.Gen, 0.1f),
@@ -115,13 +117,13 @@ public static class Hubs
             Path(NodeKind.Lichen, Short, "+30% genes; labs +10% genes",
                 Own(NodeKind.Lichen, HubAxis.Blobs, 0.3f, lab, HubAxis.Blobs, 0.1f),
                 new HubMilestone(3, "Each leaf also adds +5% genes") { LeafBonus = 0.05f }),
-            Path(NodeKind.Buffer, Short, "Upkeep −20%; core +20% power", CorePower(NodeKind.Buffer, HubAxis.Upkeep, -0.2f),
-                new HubMilestone(3, "All buffs +10% stronger")),
-            Path(NodeKind.CometBloom, Short, "Upkeep −20%; core +20% power",
-                CorePower(NodeKind.CometBloom, HubAxis.Upkeep, -0.2f),
-                new HubMilestone(3, "Fades out in a quarter of the time (its slot free sooner)") { Life = 0.25f }),
-            Path(NodeKind.Moonflower, Short, "Upkeep −20%; core +20% power",
-                CorePower(NodeKind.Moonflower, HubAxis.Upkeep, -0.2f),
+            Path(NodeKind.Buffer, Short, "All buffs +10% stronger", [new(NodeKind.Buffer, HubAxis.BuffStrength, 0.1f)],
+                new HubMilestone(3, $"Buffs last +{Tuning.HubBuffSeconds:0} s")),
+            Path(NodeKind.CometBloom, Short, "Active 2 minutes longer; core +20% power",
+                CorePower(NodeKind.CometBloom, HubAxis.Active, 120),
+                new HubMilestone(3, "Lingers half as long once dormant") { Life = 0.5f }),
+            Path(NodeKind.Moonflower, Short, "Wild flowers near it +5% more; core +20% power",
+                CorePower(NodeKind.Moonflower, HubAxis.Moonlit, 0.05f),
                 new HubMilestone(3, $"Range from {Tuning.MoonflowerReach} links to {Tuning.HubMoonflowerReach}")),
             // (No Nebula Bloom path: it's retired, Nov 3. Levels bought on it before stay in the save, unused.)
 

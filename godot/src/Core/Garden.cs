@@ -710,6 +710,7 @@ public sealed class Garden
         foreach (var n in Nodes)
         {
             n.Moonlit = false;
+            n.MoonlitBonus = Tuning.MoonlitBonus + hubMoonlit;
             any |= n.Spec.WildBoost > 0;
         }
         if (!any) return;
@@ -1033,13 +1034,13 @@ public sealed class Garden
     {
         if (!node.Spec.Dims) return 1;
         // (A Comet Bloom keeps full while active, then fades over the rest of its life.)
-        double active = node.Spec.ActiveSeconds, life = LifeOf(node);
+        double active = ActiveOf(node), life = LifeOf(node);
         if (node.Life <= active) return 1;
         return 1 - (float)Math.Clamp((node.Life - active) / Math.Max(1, life - active), 0, 1);
     }
 
     // Whether a part is in its active time (a Comet Bloom's first CometActiveSeconds).
-    public static bool IsActive(PlantNode node) => node.Spec.ActiveSeconds > 0 && node.Life < node.Spec.ActiveSeconds;
+    public static bool IsActive(PlantNode node) => node.Spec.ActiveSeconds > 0 && node.Life < ActiveOf(node);
 
     // Whether a Comet Bloom is active: every gene and growth blob is then worth CometBlobValue times as much, and
     // buffs last CometBuffTime times as long (Jeremy, Nov 3). Worked out each economy step.
@@ -1047,7 +1048,12 @@ public sealed class Garden
 
     // How long a wild flower that ends itself lives: its spec's, times its Hub milestone's (an Ember's longer, a Comet
     // Bloom's shorter).
-    public static double LifeOf(PlantNode node) => node.Spec.LifeSeconds * node.Boost.Life;
+    // (A Comet Bloom: its active time, longer with its Hub path, then its fading time, shorter with its milestone.)
+    public static double LifeOf(PlantNode node) =>
+        ActiveOf(node) + (node.Spec.LifeSeconds - node.Spec.ActiveSeconds) * node.Boost.Life;
+
+    // How long a part stays active after it appears (a Comet Bloom), with its Hub path's added seconds.
+    public static double ActiveOf(PlantNode node) => node.Spec.ActiveSeconds <= 0 ? 0 : node.Spec.ActiveSeconds + node.Boost.Active;
 
     // Power a part costs per second now: its full upkeep times its fill (past full, more).
     public static float UpkeepPerSecond(PlantNode node) => FullUpkeepPerSecond(node) * Math.Max(0, node.Fill);
@@ -1072,7 +1078,7 @@ public sealed class Garden
         node.Spec.BlobsPerHour * FruitBonus(node) * Boosted(node) * node.Boost.Blobs;
 
     // A part a Buffer'"'"'s buff blob passed lately makes BuffBonus more.
-    static float Boosted(PlantNode node) => (node.Buff > 0 ? 1 + node.BuffBonus : 1) * (node.Moonlit ? 1 + Tuning.MoonlitBonus : 1);
+    static float Boosted(PlantNode node) => (node.Buff > 0 ? 1 + node.BuffBonus : 1) * (node.Moonlit ? 1 + node.MoonlitBonus : 1);
 
     // ==== BLOBS ==== \\
 
@@ -1330,13 +1336,17 @@ public sealed class Garden
         Show(route, from);
     }
 
-    // A buff blob passes a part: for BuffSeconds it makes BuffBonus more (HubBuffStrength times that with the
-    // Buffer's Hub milestone).
+    // A buff blob passes a part that uses it: for BuffSeconds (HubBuffSeconds more with the Buffer's milestone) it
+    // makes BuffBonus more (plus Resonant Frequency's, and a tenth more a level of the Buffer's Hub path).
+    // For tests: as if a buff blob passed this part.
+    internal void BuffForTest(PlantNode part) => Buffs(part);
+
     void Buffs(PlantNode part)
     {
         if (!part.Spec.TakesBuffs) return; // (it passes untouched: Jeremy, Nov 3)
-        part.Buff = Tuning.BuffSeconds * (CometActive ? Tuning.CometBuffTime : 1);
-        part.BuffBonus = (Tuning.BuffBonus + ResonantBonus) * (HubAt(NodeKind.Buffer, 3) ? Tuning.HubBuffStrength : 1);
+        part.Buff = (Tuning.BuffSeconds + (HubAt(NodeKind.Buffer, 3) ? Tuning.HubBuffSeconds : 0))
+            * (CometActive ? Tuning.CometBuffTime : 1);
+        part.BuffBonus = (Tuning.BuffBonus + ResonantBonus) * (1 + hubBuffStrength);
     }
 
     // A part with something forming always absorbs a growth blob; one with room to start a fruit or a bud does
@@ -1655,6 +1665,8 @@ public sealed class Garden
         hubAwake = HubPlanted;
         HubComplete = Hubs.Paths.All(p => HubLevel(p.Kind) >= p.MaxLevel);
         amplifyBonus = 0;
+        hubBuffStrength = 0;
+        hubMoonlit = 0;
         if (hubAwake)
         {
             var shares = new Dictionary<(NodeKind Kind, HubAxis Axis), float>();
@@ -1684,6 +1696,9 @@ public sealed class Garden
                     case HubAxis.Fruits: Raise(kind, b => b with { Fruits = b.Fruits + whole }); break;
                     case HubAxis.Links: Raise(kind, b => b with { Links = b.Links + whole }); break;
                     case HubAxis.Chance: amplifyBonus += share; break;
+                    case HubAxis.BuffStrength: hubBuffStrength += share; break;
+                    case HubAxis.Moonlit: hubMoonlit += share; break;
+                    case HubAxis.Active: Raise(kind, b => b with { Active = b.Active + share }); break;
                 }
             }
         }
@@ -1780,6 +1795,8 @@ public sealed class Garden
     // A Hub planted as the boosts were last worked out, and its levels' share of the Amplifier's chance.
     bool hubAwake;
     float amplifyBonus;
+    // The Buffer's and the Moonflower's paths' shares, a level each (Nov 3): every buff's bonus, and the Moonflower's.
+    float hubBuffStrength, hubMoonlit;
 
     // Whether a path's level (a milestone) works now: bought, and a Hub planted.
     public bool HubAt(NodeKind kind, int level) => hubAwake && HubLevel(kind) >= level;

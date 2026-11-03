@@ -219,16 +219,18 @@ public static class Tuning
     // 3,800 ...). The paths, their costs and effects are data in Hubs.Paths. The Hub's upkeep is HubUpkeep a second,
     // plus HubUpkeepPerLevel for every level bought (HubUpkeepCut of that once its own path reaches level 3). The
     // milestones read where they act: the stem's (HubStemCap more stems), the Amplifier's (a doubling blob tripled
-    // HubTripleChance of the time), the Buffer's (every buff HubBuffStrength times as strong), the Moonflower's (its
+    // HubTripleChance of the time), the Buffer's (buffs last HubBuffSeconds longer), the Moonflower's (its
     // reach HubMoonflowerReach links) and the Nebula Bloom's (power to its seedlings counts HubNebulaFill times).
     public const double HubFirstPoint = 3_000, HubPointStep = 400;
     public const float HubUpkeep = 3, HubUpkeepPerLevel = 0.5f, HubUpkeepCut = 0.8f;
     // How fast the Hub sends power on, a second (a stem 30; Jeremy, Nov 3: was 15).
     public const float HubTransfer = 20;
-    public const int HubStemCap = 2, HubMoonflowerReach = 8;
+    public const int HubStemCap = 2, HubMoonflowerReach = 6; // (Nov 3: 6, was 8)
+    // The Buffer's milestone (Nov 3): buffs last this many seconds longer.
+    public const float HubBuffSeconds = 10;
     // What resetting the Hub's levels costs, in points (Jeremy, Nov 3: "reduce total levels by 1"; a level is 1-3).
     public const int HubRespecCost = 1;
-    public const float HubTripleChance = 0.2f, HubBuffStrength = 1.1f, HubNebulaFill = 3;
+    public const float HubTripleChance = 0.2f, HubNebulaFill = 3;
 
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in

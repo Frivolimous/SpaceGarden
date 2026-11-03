@@ -53,6 +53,7 @@ public sealed class PlantNode
     // A wild flower within MoonflowerReach links of a Moonflower, which makes it a little more (worked out each
     // economy step).
     public bool Moonlit;
+    public float MoonlitBonus = Tuning.MoonlitBonus; // (more with the Moonflower's Hub path)
 
     // The garden's evolutions' effect on its kind (see Garden.Boosts): set as it's added, and again as one blooms.
     public Boost Boost = Boost.None;
