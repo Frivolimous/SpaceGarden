@@ -133,8 +133,9 @@ public static class Tuning
     // BlobMaxHops links (the original's 30) if nothing absorbed them.
     public const int BlobMaxHops = 30;
     public const int MaxMotes = 60; // blobs in flight at once; past it a blob still does its work, unseen
-    // Build mode's blob-path view counts the links blobs take, halving every TrafficHalfLife growth seconds.
-    public const double TrafficHalfLife = 120;
+    // Build mode's blob-path view counts the links blobs take, halving every TrafficHalfLife growth seconds (Jeremy,
+    // Nov 3: 10, was 120).
+    public const double TrafficHalfLife = 10;
 
     // Growth blobs, from groves, each carry BlobGrowth. A part with nothing forming absorbs one AbsorbChance of the
     // time (the original's 30%), a part with something forming always does. A fresh one starts a bud BudChance of the

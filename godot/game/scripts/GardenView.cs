@@ -229,8 +229,10 @@ public partial class GardenView : Node2D
             foreach (var link in garden.Links)
             {
                 if (link.Target.Spec.IsFruit) continue;
-                float t = garden.Traffic.GetValueOrDefault((link.Target, kind)) / busiest;
-                if (t <= 0) continue;
+                // (Eased, quadratic: the busiest links stand out, light traffic fades away. Jeremy, Nov 3.)
+                float share = garden.Traffic.GetValueOrDefault((link.Target, kind)) / busiest;
+                if (share <= 0) continue;
+                float t = share * share;
                 var (a, b) = (At(link.Origin), At(link.Target));
                 var side = (b - a).Orthogonal().Normalized() * offset;
                 // Dark and solid at the busiest, light and faint at a fifth (the strength by concentration).
