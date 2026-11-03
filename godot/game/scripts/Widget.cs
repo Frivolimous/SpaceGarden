@@ -167,7 +167,9 @@ public partial class Widget : Node
     Vector2 movePointer, moveStart; // where the pointer is, and was when it took the tool (viewport pixels)
     bool moveReleased;
     PlantNode? movingPart; // the potted part pressed to take its pot, if that's how it was taken
-    float opacity = 1;
+    // The whole window's (see ClickThrough.Opacity). It starts at 0 and fades in, at launch and back from the tray, so
+    // the frames before the garden is drawn (the window's first, a stale one from before it hid) never show.
+    float opacity = 0;
     bool undoPlaced;
     // Where the card was set down as it opened (its top corner on the side it's on), kept while it's open.
     Vector2? cardAnchor;
@@ -430,6 +432,7 @@ public partial class Widget : Node
         AddChild(tray);
         Hotkey.Register();
         ClickThrough.Opacity(opacity);
+        ClickThrough.Set(false); // (layered at once, so the window is see-through until it fades in)
     }
 
     public override void _ExitTree() => Hotkey.Unregister();
@@ -456,6 +459,7 @@ public partial class Widget : Node
     public void SetMode(DisplayMode mode)
     {
         if (mode == Mode) return;
+        bool fromTray = Mode == DisplayMode.Minimised;
         Rescale(() => Mode = mode); // (Ambient has a size of its own)
         if (idling) OS.LowProcessorUsageModeSleepUsec = 1_000_000 / IdleRate; // (and an idle rate)
         almanac.SetAway(mode != DisplayMode.Active); // only the core takes clicks outside Active
@@ -476,7 +480,15 @@ public partial class Widget : Node
         // On Windows the widget has no taskbar button (see TrayOnly), so Minimise hides it and the tray icon (or the
         // hotkey) brings it back. Elsewhere, a real minimise, so the taskbar button brings it back (see FollowWindow).
         var window = GetWindow();
-        if (TrayOnly.Supported) TrayOnly.Hide(mode == DisplayMode.Minimised);
+        if (TrayOnly.Supported)
+        {
+            if (fromTray) // back from the tray: fades in from nothing
+            {
+                opacity = 0;
+                ClickThrough.Opacity(0);
+            }
+            TrayOnly.Hide(mode == DisplayMode.Minimised);
+        }
         if (mode == DisplayMode.Minimised && !TrayOnly.Supported) window.Mode = Window.ModeEnum.Minimized;
         else if (mode != DisplayMode.Minimised && window.Mode == Window.ModeEnum.Minimized)
         {
