@@ -65,6 +65,30 @@ public sealed class Garden
     // Off, growth blobs still grow fruit but start no passive buds (tests, and later a "hold growth" choice).
     public bool PassiveGrowth = true;
 
+    // The opening's tutorial step (see Tutorial), or null: none, or over. A new garden starts one with StartTutorial;
+    // an older save has none. Until its lab step is done, growth blobs start no passive buds, so the stem's free links
+    // wait for the grove, stem and lab it asks for.
+    public TutorialStep? Tutorial { get; private set; }
+
+    public void StartTutorial()
+    {
+        Tutorial = TutorialStep.Grove;
+        AdvanceTutorial();
+    }
+
+    // Passes every step already done; returns whether the step changed.
+    public bool AdvanceTutorial()
+    {
+        var was = Tutorial;
+        while (Tutorial is { } step && step < TutorialStep.Done && global::SpaceGarden.Core.Tutorial.Done(this, step)) Tutorial = step + 1;
+        return Tutorial != was;
+    }
+
+    // The send-off read: the tutorial is over.
+    public void FinishTutorial() => Tutorial = null;
+
+    bool TutorialHoldsBuds => Tutorial is { } t && t <= TutorialStep.Lab;
+
     // The part the player is holding (see Grab), and where the pointer is pulling it.
     public PlantNode? Held { get; private set; }
     public Vector2 HoldTarget;
@@ -1245,7 +1269,7 @@ public sealed class Garden
         return kind switch
         {
             BlobKind.Genes => CatchesGenes(to),
-            BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && to.CanBranch),
+            BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && !TutorialHoldsBuds && to.CanBranch),
             _ => to.Spec.TakesBuffs && to.Buff <= 0, // (a dead end worth a buff)
         };
     }
@@ -1441,7 +1465,7 @@ public sealed class Garden
     // Whether BranchKinds has anything for this part, without listing them: the core grows only stems, any other part
     // a lab at least (labs are uncapped).
     bool CanBud(PlantNode node, Counts counts) =>
-        PassiveGrowth && Nodes.Count < Tuning.MaxNodes && node.CanBranch
+        PassiveGrowth && !TutorialHoldsBuds && Nodes.Count < Tuning.MaxNodes && node.CanBranch
         && (node.Depth >= 1 || HasRoomFor(NodeKind.Stem, counts));
 
     // A growth blob absorbed: a part with nothing forming starts something (a bud BudChance of the time where a
@@ -2504,7 +2528,7 @@ public sealed class Garden
             Nodes.Where(n => n.TiedTo == t).Select(n => n.Id).ToList())).ToList(),
         Tracking.ToSave(), GeneBalance, new ResearchSave(StemsBought, GeneratorsBought, CoreBought), WildUnlocked.ToList(), new(WildCaps),
         Evolved.Select(e => new EvolutionSave(e.Kind, e.Level, e.Target, e.Bloomed, e.BloomedAt, e.ChosenAt)).ToList(),
-        new HubSave(HubPool, HubPoints, HubPointsEarned, HubGenes, new(HubLevels)));
+        new HubSave(HubPool, HubPoints, HubPointsEarned, HubGenes, new(HubLevels)), Tutorial);
 
     // Parts are saved in the order they grew, so a parent always comes before its children.
     public static Garden FromSave(GardenSave save, int? seed = null)
@@ -2516,6 +2540,7 @@ public sealed class Garden
             Genes = save.Genes,
             GeneBalance = save.GeneBalance,
             Tracking = Tracking.FromSave(save.Tracking),
+            Tutorial = save.Tutorial,
             loading = true,
         };
         if (save.Research is { } research)
@@ -2660,8 +2685,8 @@ public sealed record NodeSave(int Id, NodeKind Kind, int ParentId, float X, floa
 
 // (WildUnlocked and WildCaps since step 5d: the Evolution kinds unlocked, and any per-kind caps; see Garden.WildUnlocked.
 // Evolutions since 5c: those chosen, in order; see Garden.Evolved. Hub since the Hub's step: its pool, points and
-// levels.)
+// levels. Tutorial since Nov 3: the opening tutorial's step, null when there's none.)
 public sealed record GardenSave(Layout Layout, double EconomyClock, Capacity Capacity, List<NodeSave> Nodes,
     double Genes = 0, List<ShapingSave>? Shaping = null, TrackingSave? Tracking = null, double GeneBalance = 0,
     ResearchSave? Research = null, List<NodeKind>? WildUnlocked = null, Dictionary<NodeKind, int>? WildCaps = null,
-    List<EvolutionSave>? Evolutions = null, HubSave? Hub = null);
+    List<EvolutionSave>? Evolutions = null, HubSave? Hub = null, TutorialStep? Tutorial = null);

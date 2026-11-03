@@ -112,6 +112,16 @@ public partial class Widget : Node
     Action? askAction;
     PlantNode? askFor;
     Tool? askTool;
+    // The opening's tutorial (see Tutorial in Core): its step in a pill under the plant, Active only. A new step
+    // brightens it for a moment; the send-off stays TutorialDoneSeconds of Active time, then fades and ends it.
+    readonly PanelContainer tutorialPill = new() { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+    readonly Label tutorialText = new()
+    {
+        MouseFilter = Control.MouseFilterEnum.Ignore, AutowrapMode = TextServer.AutowrapMode.WordSmart,
+        CustomMinimumSize = new Vector2(TutorialWidth, 0),
+    };
+    const float TutorialWidth = 280, TutorialDoneSeconds = 10, TutorialFlashSeconds = 1.2f;
+    float tutorialFlash, tutorialDone;
     readonly Toolbar toolbar = new();
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
     readonly Card partCard = new(), gardenCard = new();
@@ -343,6 +353,15 @@ public partial class Widget : Node
         askText.LabelSettings = new LabelSettings { FontSize = 12 };
         askPill.AddChild(askText);
         toolbarLayer.AddChild(askPill);
+        var tutorialStyle = Toolbar.PillStyle();
+        tutorialStyle.BorderColor = new Color(0.95f, 0.85f, 0.45f, 0.5f);
+        tutorialStyle.SetCornerRadiusAll(10);
+        tutorialStyle.ContentMarginLeft = tutorialStyle.ContentMarginRight = 12;
+        tutorialStyle.ContentMarginTop = tutorialStyle.ContentMarginBottom = 7;
+        tutorialPill.AddThemeStyleboxOverride("panel", tutorialStyle);
+        tutorialText.LabelSettings = new LabelSettings { FontSize = 13, LineSpacing = 1 };
+        tutorialPill.AddChild(tutorialText);
+        toolbarLayer.AddChild(tutorialPill);
 
         tray.Icon = TrayIcon();
         tray.Tooltip = $"Space Garden: click to show or hide, right-click for settings. {Hotkey.Name} to tend.";
@@ -617,6 +636,8 @@ public partial class Widget : Node
         var pointer = PointerInViewport();
         var world = ToSim(ToWorld(pointer));
         bool inWindow = GetViewport().GetVisibleRect().HasPoint(pointer);
+
+        UpdateTutorial(delta);
 
         // Ambient: every click falls through but on the core, which brightens and is ringed under the pointer (a tap
         // wakes the garden: see _UnhandledInput).
@@ -1226,6 +1247,45 @@ public partial class Widget : Node
         askAction = action;
         askPill.Visible = true;
         askPill.Size = Vector2.Zero; // (shrinks to the new text)
+    }
+
+    // Moves the tutorial on as its steps are done (in any mode: they're checks on the garden), and shows the step in
+    // Active, centred under the plant and kept on the screen.
+    void UpdateTutorial(double delta)
+    {
+        if (Garden.Tutorial is not { } step)
+        {
+            tutorialPill.Visible = false;
+            return;
+        }
+        if (Garden.AdvanceTutorial())
+        {
+            step = Garden.Tutorial!.Value;
+            tutorialFlash = TutorialFlashSeconds;
+            tutorialDone = 0;
+        }
+        bool shown = Mode == DisplayMode.Active && main.HiddenReason == null;
+        tutorialPill.Visible = shown;
+        if (!shown) return;
+        if (step == TutorialStep.Done && (tutorialDone += (float)delta) >= TutorialDoneSeconds)
+        {
+            Garden.FinishTutorial();
+            tutorialPill.Visible = false;
+            return;
+        }
+        tutorialText.Text = step == TutorialStep.Done ? Tutorial.Text(step)
+            : $"{(int)step + 1}/{Tutorial.Steps}   {Tutorial.Text(step)}";
+        tutorialFlash = Math.Max(0, tutorialFlash - (float)delta);
+        float fade = step == TutorialStep.Done ? Math.Clamp(TutorialDoneSeconds - tutorialDone, 0, 1) : 1;
+        tutorialPill.Modulate = new Color(1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.2f, fade);
+
+        var viewport = GetViewport().GetVisibleRect().Size / Dpi;
+        var (_, max) = Garden.Bounds();
+        var under = ToViewport(new Num.Vector2(Garden.Core.Position.X, max.Y)) / Dpi;
+        var size = tutorialPill.GetCombinedMinimumSize();
+        var at = new Vector2(under.X - size.X / 2, under.Y + 18);
+        tutorialPill.Position = at.Clamp(new Vector2(4, 4), (viewport - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
+        tutorialPill.Size = size;
     }
 
     void Unask()

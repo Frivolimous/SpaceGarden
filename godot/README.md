@@ -176,7 +176,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 
 ## Dev options
 `--path game -- [options]`: `--grow=N`, `--upright` (the shelved planted layout: core fixed at the bottom, a pull
-upward, a ground), `--fresh`, `--seed=N`, `--away=HOURS`,
+upward, a ground), `--fresh` (a new garden, with the opening tutorial; add `--notutorial` for none), `--seed=N`, `--away=HOURS`,
 `--profile=NAME` (use `user://NAME.json` instead of the real save), `--backdrop=RRGGBB`, `--pausetest=AT,FOR`
 (act as if hidden for FOR seconds from AT seconds after start, to test the pause),
 `--screenshot=out.png [--frames=N | --at=a,b,c]` (saves the viewport, keeping transparency, then quits; with it,

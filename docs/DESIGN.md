@@ -764,13 +764,14 @@ Design layers still to work through:
 - [ ] Build step 5 (5a prep, 5b tracks, 5c seedlings, 5d wild flowers and the Hub done), then the real-week tuning check
 - [x] Alerts: a faint ring closing in on whatever waits (the core, the Hub, a seedling), and a red dot on the core menu's Research slot (see Alerts)
 - [x] Hub details: respec, built Nov 3 (the paths, point curve and milestones are set by the step 5 addendum; upkeep per upgrade a placeholder: see Built: the Hub)
-- [ ] Onboarding over the first days (step 6), starting with planting the first grove. Pinned (Jeremy, Nov 3), a first framework: a tutorial that walks the opening, one step at a time, each shown once the last is done:
-  1. Plant a grove (nothing grows on its own without one).
-  2. Use a Gravity Pot (the first shaping tool, there from the start).
-  3. Grow a stem, then a lab on it (labs make the genes that buy everything).
-  4. Wait for research, or build more meanwhile (the garden card's Next line and ETA).
-  5. Here's Research: buy the first upgrade (a stem).
-  6. Grow the new stem. Then it ends (open: is that the whole tutorial, or do seedlings, wild flowers and the Hub get steps of their own later?).
+- [x] Onboarding: the opening tutorial (Jeremy, Nov 3; built). A new garden (the core with its first stem) walks the opening one step at a time, each shown once the last is done, in a pill under the plant (Active only; "1/6" and the step), brightening as a new step comes:
+  1. Plant a grove on the stem (groves send the growth that grows the garden).
+  2. Once it's out, grow a new stem the same way (a part forms one bud at a time).
+  3. Grow a lab on the new stem (labs make genes, which buy upgrades).
+  4. Open Build mode and drag the Gravity Pot onto a part.
+  5. Wait for research (genes on their way; grow more meanwhile, or watch).
+  6. Open Research and buy the first upgrade.
+  Then a send-off, "Keep going, you're doing great! You're on your own from here!", for ten seconds, and it's over. No skip. Each step is a check on the garden, so a step done early is passed at once, and a bud started counts (a wild stand-in too). Until the lab step is done, growth blobs start no passive buds (fruit only), so the stem's free link waits for the player's own stem. The step is saved (`GardenSave.Tutorial`); a garden from an older save has none. Code: `Core/Tutorial.cs`, `Garden.StartTutorial`/`AdvanceTutorial`/`FinishTutorial`, `Widget.UpdateTutorial`. Dev aid: `--notutorial` (a fresh garden without it, for screenshots). Later features (seedlings, wild flowers, the Hub) get no steps of their own.
 - [ ] Playtest notes, Nov 3, waiting:
   - Next-unlock alert in the garden view (the next upgrade's timing even while one is affordable, to save past a stem for power): paused until play shows whether the Research panel's timer on Buy is enough.
   - The garden card's "Next: +1 stem" line (whether to name it "next research"): left alone for now.
