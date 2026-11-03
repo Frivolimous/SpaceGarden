@@ -555,7 +555,7 @@ public partial class GardenView : Node2D
         {
             if (node.Forming is not { } kind || (node.FormingLook <= 0 && !node.FormingBud)) continue;
             var spec = NodeSpecs.All[kind];
-            if (Textures.InAtlas(spec.Shape) != atlas) continue;
+            if (Textures.InAtlas(spec.Shape) != atlas || (Ghosted && spec.IsFruit)) continue; // (no fruit under the paths)
             var (batch, cell) = BatchFor(spec.Shape, forming, wildForming);
             float grown = node.FormingLook / (spec.IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth);
             float level = Level(node) * GrowIn(node);
@@ -583,6 +583,14 @@ public partial class GardenView : Node2D
                 // A thin, almost white rim round it, so it reads against the parent's fill however dark it starts
                 // (opaque on top, so the rim doesn't show through).
                 var rim = BudRim with { A = BudRim.A * level };
+                if (Ghosted)
+                {
+                    // (Under the blob paths: a grey ghost like the rest, no rim.)
+                    float grey = colour.R * 0.3f + colour.G * 0.59f + colour.B * 0.11f;
+                    colour = new Color(grey, grey, grey, GhostAlpha);
+                    batch.AddTurned(at, Textures.ShapeDiameter(size), cos, sin, colour, cell);
+                    continue;
+                }
                 batch.AddTurned(at, Textures.ShapeDiameter(size + BudRimWidth), cos, sin, rim, cell);
                 colour.A = 1;
             }
