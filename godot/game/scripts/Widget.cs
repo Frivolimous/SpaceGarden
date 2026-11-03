@@ -187,23 +187,17 @@ public partial class Widget : Node
         }
     }
 
-    // Changes the scale (by change), keeping things' distance from the screen's edges (Jeremy, Nov 3): the plant grows
-    // or shrinks from the corner of its outline nearest the screen's nearest corner, which stays put, so a plant in
-    // the bottom right keeps its gap to the taskbar and the right edge rather than shrinking towards the middle.
+    // Changes the scale (by change), keeping things' distance from the screen's edges (Jeremy, Nov 3): each shaping tool
+    // stays where it is on the screen, the parts tied to tools lock onto them, or with none tied the core stays where it
+    // is; the rest of the plant follows the anchored part nearest it.
     void Rescale(Action change)
     {
-        var (min, max) = Garden.Bounds();
-        var screen = (Vector2)GetWindow().Size;
-        var middle = GardenView.V((min + max) / 2) * Scale;
-        // That corner of the outline, on the screen.
-        var corner = new Num.Vector2(middle.X > screen.X / 2 ? max.X : min.X, middle.Y > screen.Y / 2 ? max.Y : min.Y);
-        var cornerOnScreen = GardenView.V(corner) * Scale;
-        // The shaping tools stay where they are on the screen, each keeping its own distance from the edges (a trellis
-        // in the top right isn't carried across the screen by a plant in the bottom right); what's tied to them follows.
+        // Each shaping tool, and the core, keep their place on the screen, so their distance from its edges; the rules
+        // lock the tools' parts on and move the rest of the plant with its anchors (Garden.Reanchor).
         var tools = Garden.Shaping.Select(t => (Tool: t, OnScreen: GardenView.V(t.Position) * Scale)).ToList();
+        var coreOnScreen = GardenView.V(Garden.Core.Position) * Scale;
         change();
-        Garden.Translate(ToSim(cornerOnScreen / Scale) - corner);
-        foreach (var (tool, onScreen) in tools) tool.Position = ToSim(onScreen / Scale);
+        Garden.Reanchor(tools.ToDictionary(t => t.Tool, t => ToSim(t.OnScreen / Scale)), ToSim(coreOnScreen / Scale));
         ApplyTransform();
     }
 

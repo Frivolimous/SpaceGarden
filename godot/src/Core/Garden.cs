@@ -391,6 +391,52 @@ public sealed class Garden
         HoldTarget += offset;
     }
 
+    // After a change of size (Jeremy, Nov 3): each shaping tool goes where the widget puts it (keeping its distance from
+    // the screen's edges); each part tied to one locks onto it at once (a pot's part to the pot, a trellis's parts moving
+    // with it); if no part is tied, the core goes to coreTo (its own distance from the edges kept). Every other part
+    // moves as the anchored part nearest it along the plant does, so the plant keeps its shape round its anchors. Cut
+    // branches still drifting move as the core does.
+    public void Reanchor(IReadOnlyDictionary<ShapingTool, Vector2> toolTo, Vector2 coreTo)
+    {
+        var moved = new Dictionary<PlantNode, Vector2>();
+        var queue = new Queue<PlantNode>();
+        foreach (var tool in Shaping)
+        {
+            var to = toolTo.TryGetValue(tool, out var p) ? p : tool.Position;
+            var by = to - tool.Position;
+            tool.Position = to;
+            foreach (var node in Nodes.Where(n => n.TiedTo == tool))
+            {
+                moved[node] = tool.Kind == ShapingKind.Pot ? to - node.Position : by;
+                queue.Enqueue(node);
+            }
+        }
+        if (moved.Count == 0)
+        {
+            moved[Core] = coreTo - Core.Position;
+            queue.Enqueue(Core);
+        }
+        // Outwards from the anchors along the links: each part takes the move of the anchor it's reached from first.
+        while (queue.Count > 0)
+        {
+            var at = queue.Dequeue();
+            foreach (var next in at.Neighbours())
+                if (moved.TryAdd(next, moved[at])) queue.Enqueue(next);
+        }
+        foreach (var (node, by) in moved)
+        {
+            node.Position += by;
+            node.PreviousPosition += by;
+        }
+        var coreBy = moved.GetValueOrDefault(Core);
+        foreach (var node in Cut.SelectMany(c => c.Nodes))
+        {
+            node.Position += coreBy;
+            node.PreviousPosition += coreBy;
+        }
+        HoldTarget += coreBy;
+    }
+
     // ==== SHAPING ==== \\
 
     // Whether there's room under the caps for another tool of this kind.

@@ -345,4 +345,35 @@ public class ShapingTests
         }
         Assert.True(up >= 18, $"{up} of 20 buds headed up");
     }
+
+    // ==== Resizing (Nov 3) ==== \\
+
+    // With no part tied, the core goes where it's put and the plant keeps its shape round it; tools go where they're put.
+    [Fact]
+    public void ReanchoringWithNothingTiedMovesThePlantWithTheCore()
+    {
+        var (garden, trunk, tip) = Line();
+        var well = garden.Place(ShapingKind.Well, garden.Core.Position + new Vector2(400, -300))!;
+        var offset = tip.Position - garden.Core.Position;
+        var coreTo = garden.Core.Position + new Vector2(50, 20);
+        var wellTo = well.Position + new Vector2(-200, 100);
+        garden.Reanchor(new Dictionary<ShapingTool, Vector2> { [well] = wellTo }, coreTo);
+        Assert.Equal(coreTo, garden.Core.Position);
+        Assert.True(Vector2.Distance(offset, tip.Position - garden.Core.Position) < 1e-3f);
+        Assert.Equal(wellTo, well.Position);
+    }
+
+    // A potted part locks onto its pot where the pot goes, and the plant follows it, not the core's spot.
+    [Fact]
+    public void ReanchoringLocksTiedPartsOntoTheirTools()
+    {
+        var (garden, trunk, tip) = Line();
+        var pot = garden.Place(ShapingKind.Pot, trunk.Position)!;
+        Assert.True(garden.Tie(trunk, pot));
+        var offset = garden.Core.Position - trunk.Position;
+        var potTo = pot.Position + new Vector2(-120, 60);
+        garden.Reanchor(new Dictionary<ShapingTool, Vector2> { [pot] = potTo }, garden.Core.Position + new Vector2(999, 999));
+        Assert.True(Vector2.Distance(potTo, trunk.Position) < 1e-3f);
+        Assert.True(Vector2.Distance(potTo + offset, garden.Core.Position) < 1e-3f); // with the anchor, not to coreTo
+    }
 }
