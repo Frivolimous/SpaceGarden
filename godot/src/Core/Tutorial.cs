@@ -34,6 +34,24 @@ public static class Tutorial
         _ => false,
     };
 
+    // The kind of part a step asks the player to grow, if it asks for one.
+    public static NodeKind? Kind(TutorialStep step) => step switch
+    {
+        TutorialStep.Grove => NodeKind.Grove,
+        TutorialStep.Stem => NodeKind.Stem,
+        TutorialStep.Lab => NodeKind.Lab,
+        _ => null,
+    };
+
+    // Where the step's part can be grown now: a stem (the core too, for a stem) with a free link and no bud forming,
+    // the furthest out first (the lab goes on the new stem), the newest among equals. Null if none can: the bud asked
+    // for is forming (wait for it), or there's no room.
+    public static PlantNode? Spot(Garden garden, NodeKind kind) => garden.Nodes
+        .Where(n => (Garden.IsBudOf(n.Spec.Kind, NodeKind.Stem) || (kind == NodeKind.Stem && n == garden.Core))
+            && !n.FormingBud && garden.CanSproutFrom(n, kind))
+        .Select((n, i) => (n, i)).OrderByDescending(p => p.n.Depth).ThenByDescending(p => p.i)
+        .Select(p => p.n).FirstOrDefault();
+
     // Parts of the kind (or a wild flower standing in for it), grown or forming as a bud: a bud started counts, as the
     // step asked for it and it grows on its own.
     static int Count(Garden garden, NodeKind kind) =>

@@ -27,6 +27,8 @@ public partial class GardenView : Node2D
     static readonly Color Edge = new(0, 0, 0, 0.55f);
 
     public PlantNode? Highlight;
+    // The tutorial's next part to touch (see Widget.UpdateTutorial): a gold ring breathing around it.
+    public PlantNode? Beckon;
 
     // Dev aid (--labels): each wild flower's name beside it, for a sheet of their looks.
     public bool Labels;
@@ -621,6 +623,9 @@ public partial class GardenView : Node2D
             markLayer.DrawArc(At(Highlight), r, 0, Mathf.Tau, 40, new Color(0, 0, 0, 0.35f * highlightRing), 3.5f, true);
             markLayer.DrawArc(At(Highlight), r, 0, Mathf.Tau, 40, new Color(1, 1, 1, 0.8f * highlightRing), 1.5f, true);
         }
+
+        if (Beckon != null && garden.Nodes.Contains(Beckon))
+            ToolButton.DrawBeckon(markLayer, At(Beckon), Beckon.Spec.Radius * GrowIn(Beckon) + 6);
 
         DrawMoments();
     }

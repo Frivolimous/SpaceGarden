@@ -89,6 +89,12 @@ public partial class CoreMenu : Control
             if (button.Tool == tool) button.Dot = on;
     }
 
+    // The tutorial's beckon on a slot (or none).
+    public void SetBeckon(Tool? tool)
+    {
+        foreach (var button in buttons) button.Beckon = button.Tool == tool;
+    }
+
     // Where its slots are while it's open (in the menu's layer's units), to keep the cards clear of it.
     public Rect2? Extent()
     {

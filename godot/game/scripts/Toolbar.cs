@@ -122,6 +122,12 @@ public partial class Toolbar : PanelContainer
         AntiAliasing = true,
     };
 
+    // The tutorial's beckon on one of its buttons (or none).
+    public void SetBeckon(Tool? tool)
+    {
+        foreach (var (t, button) in buttons) button.Beckon = t == tool;
+    }
+
     public void ShowFor(PlantNode node) => Show(node, null);
 
     public void ShowFor(ShapingTool tool) => Show(null, tool);
@@ -201,6 +207,7 @@ public partial class ToolButton : Control
     public bool Active;
     public bool Forming; // a bud tool whose kind is growing on the part now: outlined, pulsing
     public bool Dot; // an alert: a small red dot on the disc's rim, top right (something waits behind it)
+    public bool Beckon; // the tutorial's next thing to touch: a pulsing gold ring around it
     public string? Badge; // a small count in the corner (how many more of a shaping tool can be placed)
     public readonly Tool Tool;
     // Drawn on a disc of its own, in the pill's look (the core's menu, where the buttons stand apart).
@@ -236,6 +243,19 @@ public partial class ToolButton : Control
         if (IsVisibleInTree()) QueueRedraw(); // Enabled/Active change from outside
     }
 
+    // The tutorial's beckon (see Widget.UpdateTutorial): a gold ring, breathing, on a soft dark edge so it shows over a
+    // light window as well as a dark one.
+    public static readonly Color BeckonGold = new(1, 0.85f, 0.35f);
+    public const float BeckonSeconds = 1.4f;
+
+    public static void DrawBeckon(CanvasItem on, Vector2 c, float radius)
+    {
+        float beat = 0.5f + 0.5f * Mathf.Sin((float)Time.GetTicksMsec() / 1000 * Mathf.Tau / BeckonSeconds);
+        float r = radius + 1 + 3 * beat;
+        on.DrawArc(c, r, 0, Mathf.Tau, 40, new Color(0, 0, 0, 0.3f), 4, true);
+        on.DrawArc(c, r, 0, Mathf.Tau, 40, BeckonGold with { A = 0.5f + 0.5f * beat }, 2, true);
+    }
+
     // Any part's shape, centred at c with this radius, in a colour (from its texture, so a wild flower's too).
     public static void DrawShape(CanvasItem on, Vector2 c, Shape shape, float radius, Color colour)
     {
@@ -252,6 +272,7 @@ public partial class ToolButton : Control
             DrawCircle(c, DiscRadius, DiscFill);
             DrawArc(c, DiscRadius, 0, Mathf.Tau, 32, new Color(1, 1, 1, Hover ? 0.4f : 0.14f), 1, true);
         }
+        if (Beckon) DrawBeckon(this, c, Disc ? DiscRadius + 2 : 14);
         if (Hover && Enabled) DrawCircle(c, 13, new Color(1, 1, 1, 0.13f));
         var ink = !Enabled ? new Color(1, 1, 1, 0.25f) : Active ? new Color(1, 0.9f, 0.45f) : new Color(1, 1, 1, 0.9f);
         const float w = 1.8f;
@@ -438,6 +459,12 @@ public partial class ShapingBar : PanelContainer
         var done = new ToolButton(Tool.Done) { TooltipText = "Done arranging" };
         done.Pressed += () => Done?.Invoke();
         row.AddChild(done);
+    }
+
+    // The tutorial's beckon on a tool's button (or none).
+    public void SetBeckon(ShapingKind? kind)
+    {
+        foreach (var (k, button) in buttons) button.Beckon = k == kind;
     }
 
     // What each tool's button says: how many more can be placed, or the garden size that brings it.

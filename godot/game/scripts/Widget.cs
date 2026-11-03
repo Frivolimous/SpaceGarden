@@ -112,16 +112,23 @@ public partial class Widget : Node
     Action? askAction;
     PlantNode? askFor;
     Tool? askTool;
-    // The opening's tutorial (see Tutorial in Core): its step in a pill under the plant, Active only. A new step
-    // brightens it for a moment; the send-off stays TutorialDoneSeconds of Active time, then fades and ends it.
-    readonly PanelContainer tutorialPill = new() { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+    // The opening's tutorial (see Tutorial in Core): a small panel, Active only, with a header ("Getting started" and
+    // a dot a step) over the step's text. It sits under where the parts' info panel opens, beside the plant, clear of
+    // the toolbars; dragged by hand, it stays where it was left. A new step brightens it for a moment; the send-off
+    // stays TutorialDoneSeconds of Active time, then fades and ends it. The next thing to touch is beckoned: a gold
+    // ring breathing around a part, a bud button, a menu slot or a shaping tool.
+    readonly PanelContainer tutorialPanel = new() { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.Move, Visible = false };
     readonly Label tutorialText = new()
     {
         MouseFilter = Control.MouseFilterEnum.Ignore, AutowrapMode = TextServer.AutowrapMode.WordSmart,
         CustomMinimumSize = new Vector2(TutorialWidth, 0),
     };
-    const float TutorialWidth = 280, TutorialDoneSeconds = 10, TutorialFlashSeconds = 1.2f;
+    readonly TutorialDots tutorialDots = new();
+    const float TutorialWidth = 260, TutorialDoneSeconds = 10, TutorialFlashSeconds = 1.2f, TutorialGap = 8;
     float tutorialFlash, tutorialDone;
+    float infoHeight = 150; // the info panel's last height, so the tutorial keeps clear of it while it's closed
+    Vector2? tutorialGrab, tutorialAt; // held: where on the panel the pointer took it; and where it is
+    bool tutorialMoved;
     readonly Toolbar toolbar = new();
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
     readonly Card partCard = new(), gardenCard = new();
@@ -354,14 +361,33 @@ public partial class Widget : Node
         askPill.AddChild(askText);
         toolbarLayer.AddChild(askPill);
         var tutorialStyle = Toolbar.PillStyle();
-        tutorialStyle.BorderColor = new Color(0.95f, 0.85f, 0.45f, 0.5f);
+        tutorialStyle.BorderColor = ToolButton.BeckonGold with { A = 0.45f };
         tutorialStyle.SetCornerRadiusAll(10);
         tutorialStyle.ContentMarginLeft = tutorialStyle.ContentMarginRight = 12;
-        tutorialStyle.ContentMarginTop = tutorialStyle.ContentMarginBottom = 7;
-        tutorialPill.AddThemeStyleboxOverride("panel", tutorialStyle);
+        tutorialStyle.ContentMarginTop = 6;
+        tutorialStyle.ContentMarginBottom = 9;
+        tutorialPanel.AddThemeStyleboxOverride("panel", tutorialStyle);
+        var tutorialColumn = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        tutorialColumn.AddThemeConstantOverride("separation", 5);
+        var tutorialHeader = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        tutorialHeader.AddChild(new Label
+        {
+            Text = "Getting started", MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            LabelSettings = new LabelSettings { FontSize = 12, FontColor = ToolButton.BeckonGold with { A = 0.85f } },
+        });
+        tutorialHeader.AddChild(tutorialDots);
+        tutorialColumn.AddChild(tutorialHeader);
+        tutorialColumn.AddChild(new ColorRect { Color = new Color(1, 1, 1, 0.12f), CustomMinimumSize = new Vector2(0, 1), MouseFilter = Control.MouseFilterEnum.Ignore });
         tutorialText.LabelSettings = new LabelSettings { FontSize = 13, LineSpacing = 1 };
-        tutorialPill.AddChild(tutorialText);
-        toolbarLayer.AddChild(tutorialPill);
+        tutorialColumn.AddChild(tutorialText);
+        tutorialPanel.AddChild(tutorialColumn);
+        tutorialPanel.GuiInput += e =>
+        {
+            if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } press) return;
+            tutorialGrab = press.Position;
+            tutorialPanel.AcceptEvent();
+        };
+        toolbarLayer.AddChild(tutorialPanel);
 
         tray.Icon = TrayIcon();
         tray.Tooltip = $"Space Garden: click to show or hide, right-click for settings. {Hotkey.Name} to tend.";
@@ -667,8 +693,9 @@ public partial class Widget : Node
         bool overResearch = research.Catches(pointer / Dpi);
         bool overHub = hubPanel.Catches(pointer / Dpi);
         bool overInfo = info.Visible && info.GetGlobalRect().HasPoint(pointer / Dpi);
+        bool overTutorial = tutorialPanel.Visible && tutorialPanel.GetGlobalRect().HasPoint(pointer / Dpi);
         bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac && !overResearch && !overHub
-            && !overInfo;
+            && !overInfo && !overTutorial;
         var handle = free ? HandleAt(world) : null;
         var under = free && handle == null ? Garden.NodeAt(world, HoverSlop) : null;
         var underTool = handle ?? (Building && free && under == null ? Garden.ShapingAt(world, HoverSlop) : null);
@@ -753,10 +780,11 @@ public partial class Widget : Node
 
         bool catchMouse = pressed || overToolbar || overUndo || overMenu || under != null || overBar || onBackdrop
             || underTool != null || movingTool != null || gardenGrab != null || overAlmanac || almanac.Dragging
-            || overResearch || research.Dragging || overHub || hubPanel.Dragging || overInfo || infoGrab != null;
+            || overResearch || research.Dragging || overHub || hubPanel.Dragging || overInfo || infoGrab != null
+            || overTutorial || tutorialGrab != null;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
-        bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || evolutionMenu.Visible || Garden.Held != null
+        bool active = catchMouse || fading || tutorialPanel.Visible || toolbar.Visible || coreMenu.Visible || evolutionMenu.Visible || Garden.Held != null
             || Garden.Speed > SettledSpeed || main.View.Moving;
         activeTime = active ? SettleSeconds : activeTime - delta;
         SetIdle(activeTime <= 0);
@@ -1250,42 +1278,92 @@ public partial class Widget : Node
     }
 
     // Moves the tutorial on as its steps are done (in any mode: they're checks on the garden), and shows the step in
-    // Active, centred under the plant and kept on the screen.
+    // Active, with its beckon.
     void UpdateTutorial(double delta)
     {
-        if (Garden.Tutorial is not { } step)
+        bool shown = Garden.Tutorial != null && Mode == DisplayMode.Active && main.HiddenReason == null;
+        if (Garden.Tutorial is { } && Garden.AdvanceTutorial())
         {
-            tutorialPill.Visible = false;
-            return;
-        }
-        if (Garden.AdvanceTutorial())
-        {
-            step = Garden.Tutorial!.Value;
             tutorialFlash = TutorialFlashSeconds;
             tutorialDone = 0;
         }
-        bool shown = Mode == DisplayMode.Active && main.HiddenReason == null;
-        tutorialPill.Visible = shown;
-        if (!shown) return;
-        if (step == TutorialStep.Done && (tutorialDone += (float)delta) >= TutorialDoneSeconds)
+        if (shown && Garden.Tutorial == TutorialStep.Done && (tutorialDone += (float)delta) >= TutorialDoneSeconds)
         {
             Garden.FinishTutorial();
-            tutorialPill.Visible = false;
-            return;
+            shown = false;
         }
-        tutorialText.Text = step == TutorialStep.Done ? Tutorial.Text(step)
-            : $"{(int)step + 1}/{Tutorial.Steps}   {Tutorial.Text(step)}";
+        tutorialPanel.Visible = shown;
+        Beckon(shown ? Garden.Tutorial : null);
+        if (!shown) return;
+        var step = Garden.Tutorial!.Value;
+        tutorialText.Text = Tutorial.Text(step);
+        tutorialDots.Set((int)step, Tutorial.Steps);
         tutorialFlash = Math.Max(0, tutorialFlash - (float)delta);
         float fade = step == TutorialStep.Done ? Math.Clamp(TutorialDoneSeconds - tutorialDone, 0, 1) : 1;
-        tutorialPill.Modulate = new Color(1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.2f, fade);
+        tutorialPanel.Modulate = new Color(1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.2f, fade);
+        PlaceTutorial(delta);
+    }
 
-        var viewport = GetViewport().GetVisibleRect().Size / Dpi;
-        var (_, max) = Garden.Bounds();
-        var under = ToViewport(new Num.Vector2(Garden.Core.Position.X, max.Y)) / Dpi;
-        var size = tutorialPill.GetCombinedMinimumSize();
-        var at = new Vector2(under.X - size.X / 2, under.Y + 18);
-        tutorialPill.Position = at.Clamp(new Vector2(4, 4), (viewport - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
-        tutorialPill.Size = size;
+    // Under where the parts' info panel opens (see PlaceCard), on its side of the plant and lined up with it, gliding
+    // there as the info panel opens and closes; dragged, it stays where it was left.
+    void PlaceTutorial(double delta)
+    {
+        var screen = GetViewport().GetVisibleRect().Size / Dpi;
+        var size = tutorialPanel.GetCombinedMinimumSize();
+        if (!Input.IsMouseButtonPressed(MouseButton.Left)) tutorialGrab = null;
+        Vector2 wanted;
+        if (tutorialGrab is { } grab)
+        {
+            wanted = PointerInViewport() / Dpi - grab;
+            tutorialMoved = true;
+            tutorialAt = wanted;
+        }
+        else if (tutorialMoved && tutorialAt is { } left) wanted = left;
+        else
+        {
+            if (info.Visible) infoHeight = info.Size.Y;
+            Vector2 top;
+            bool onLeft;
+            if (info.Visible && !infoMoved)
+                (top, onLeft) = (new Vector2(cardOnLeft ? info.Position.X + info.Size.X : info.Position.X, info.Position.Y), cardOnLeft);
+            else (top, onLeft) = Beside(new Vector2(Mathf.Max(size.X, info.Size.X), size.Y), top: 60);
+            wanted = new Vector2(onLeft ? top.X - size.X : top.X, top.Y + infoHeight + TutorialGap);
+            // (it glides, so the info panel opening doesn't make it jump)
+            if (tutorialAt is { } now) wanted = now.Lerp(wanted, Mathf.Min(1, (float)delta * 10));
+            tutorialAt = wanted;
+        }
+        tutorialPanel.Position = wanted.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
+        tutorialPanel.Size = size;
+    }
+
+    // The next thing to touch for the step: the part to grow it on (then its bud button, once the part's toolbar is
+    // up), the core (then its menu's slot), build mode's pot. Nothing while the bud asked for forms, or once the step
+    // needs only waiting.
+    void Beckon(TutorialStep? step)
+    {
+        PlantNode? part = null;
+        Tool? bud = null, slot = null;
+        ShapingKind? shaping = null;
+        if (step is { } s && Tutorial.Kind(s) is { } kind && Tutorial.Spot(Garden, kind) is { } spot)
+        {
+            if (toolbar.Visible && toolbar.Target == spot) bud = Enum.Parse<Tool>(kind.ToString());
+            else part = spot;
+        }
+        else if (step == TutorialStep.Pot)
+        {
+            if (Building) shaping = Garden.Shaping.Any(t => t.Kind == ShapingKind.Pot) ? null : ShapingKind.Pot;
+            else if (coreMenu.IsOpen) slot = Tool.Build;
+            else part = Garden.Core;
+        }
+        else if (step == TutorialStep.Research && !research.IsOpen)
+        {
+            if (coreMenu.IsOpen) slot = Tool.Research;
+            else part = Garden.Core;
+        }
+        main.View.Beckon = part;
+        toolbar.SetBeckon(bud);
+        coreMenu.SetBeckon(slot);
+        shapingBar.SetBeckon(shaping);
     }
 
     void Unask()
@@ -1416,4 +1494,35 @@ public partial class Widget : Node
     Vector2 ToViewport(Num.Vector2 world) => GetViewport().GetCanvasTransform() * GardenView.V(world);
 
     static Num.Vector2 ToSim(Vector2 v) => new(v.X, v.Y);
+}
+
+// The tutorial's header dots: one a step, filled once done, the current one ringed in gold.
+public partial class TutorialDots : Control
+{
+    int done, count;
+
+    public TutorialDots()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        SizeFlagsVertical = SizeFlags.ShrinkCenter;
+    }
+
+    public void Set(int done, int count)
+    {
+        if (done == this.done && count == this.count) return;
+        (this.done, this.count) = (done, count);
+        CustomMinimumSize = new Vector2(count * 11, 10);
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        for (int i = 0; i < count; i++)
+        {
+            var c = new Vector2(5 + i * 11, Size.Y / 2);
+            if (i < done) DrawCircle(c, 3, ToolButton.BeckonGold with { A = 0.85f });
+            else if (i == done) DrawArc(c, 3.2f, 0, Mathf.Tau, 16, ToolButton.BeckonGold, 1.4f, true);
+            else DrawCircle(c, 2.2f, new Color(1, 1, 1, 0.25f));
+        }
+    }
 }
