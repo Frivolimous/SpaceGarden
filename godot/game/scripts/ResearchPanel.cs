@@ -61,14 +61,80 @@ public partial class ResearchPanel : FloatingWindow
         };
         hint.AddChild(hintText);
         AddChild(hint);
-        var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        row.AddThemeConstantOverride("separation", 10);
-        Column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2), MouseFilter = MouseFilterEnum.Ignore });
+        var row = full = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        row.AddThemeConstantOverride("separation", 0);
+        var cardsRow = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        cardsRow.AddThemeConstantOverride("separation", 10);
+        row.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6), MouseFilter = MouseFilterEnum.Ignore });
+        row.AddChild(cardsRow);
+        row.AddChild(new Control { CustomMinimumSize = new Vector2(0, 12), MouseFilter = MouseFilterEnum.Ignore });
         Column.AddChild(row);
-        row.AddChild(Card(Track.Stems, "Stems", GardenView.Rgb(NodeSpecs.All[NodeKind.Stem].Rgb).Lightened(0.15f)));
-        row.AddChild(Card(Track.Generators, "Generators", GardenView.Rgb(NodeSpecs.All[NodeKind.Generator].Rgb)));
-        row.AddChild(Card(Track.Core, "Core", CoreGrey));
-        Column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8), MouseFilter = MouseFilterEnum.Ignore });
+        var stemHue = GardenView.Rgb(NodeSpecs.All[NodeKind.Stem].Rgb).Lightened(0.15f);
+        var generatorHue = GardenView.Rgb(NodeSpecs.All[NodeKind.Generator].Rgb);
+        cardsRow.AddChild(Card(Track.Stems, "Stems", stemHue));
+        cardsRow.AddChild(Card(Track.Generators, "Generators", generatorHue));
+        cardsRow.AddChild(Card(Track.Core, "Core", CoreGrey));
+
+        // Minimised (Jeremy, Nov 3): only the header (the genes) and a small Buy per track, saying how many genes it
+        // still needs while it falls short.
+        compact = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Visible = false, CustomMinimumSize = new Vector2(0, 32) };
+        compact.AddThemeConstantOverride("separation", 6);
+        compact.AddChild(SmallBuy(Track.Stems, stemHue));
+        compact.AddChild(SmallBuy(Track.Generators, generatorHue));
+        compact.AddChild(SmallBuy(Track.Core, CoreGrey));
+        Column.AddChild(compact);
+        minimise = HeaderButton("–", "Minimise");
+        minimise.Pressed += () => SetMinimised(!Minimised);
+    }
+
+    readonly VBoxContainer full;
+    readonly HBoxContainer compact;
+    readonly Button minimise;
+    readonly Dictionary<Track, Button> smallBuys = new();
+
+    public bool Minimised { get; private set; }
+
+    public void SetMinimised(bool value)
+    {
+        Minimised = value;
+        full.Visible = !value;
+        compact.Visible = value;
+        minimise.Text = value ? "□" : "–";
+        minimise.TooltipText = value ? "Show the cards" : "Minimise";
+        ShowHint(null);
+        refreshTimer = 0;
+        Size = Vector2.Zero; // shrinks to fit
+    }
+
+    // A track's small Buy, for the minimised panel: in its hue, dim while the balance falls short.
+    Button SmallBuy(Track track, Color hue)
+    {
+        var buy = new Button
+        {
+            FocusMode = FocusModeEnum.None,
+            MouseDefaultCursorShape = CursorShape.PointingHand,
+            CustomMinimumSize = new Vector2(96, 24),
+        };
+        StyleBoxFlat Fill(Color colour)
+        {
+            var s = new StyleBoxFlat { BgColor = colour, ContentMarginLeft = 8, ContentMarginRight = 8 };
+            s.SetCornerRadiusAll(12);
+            return s;
+        }
+        buy.AddThemeStyleboxOverride("normal", Fill(hue with { A = 0.85f }));
+        buy.AddThemeStyleboxOverride("hover", Fill(hue.Lightened(0.25f)));
+        buy.AddThemeStyleboxOverride("pressed", Fill(hue.Lightened(0.45f)));
+        var short_ = Fill(hue with { A = 0.08f });
+        short_.BorderColor = hue with { A = 0.3f };
+        short_.SetBorderWidthAll(1);
+        buy.AddThemeStyleboxOverride("disabled", short_);
+        buy.AddThemeFontSizeOverride("font_size", 11);
+        foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color" })
+            buy.AddThemeColorOverride(state, Back);
+        buy.AddThemeColorOverride("font_disabled_color", hue.Lightened(0.5f) with { A = 0.9f });
+        buy.Pressed += () => BuyPressed?.Invoke(track);
+        smallBuys[track] = buy;
+        return buy;
     }
 
     // A track's card: its glyph and title, then its next upgrade, the cost and Buy.
@@ -238,6 +304,15 @@ public partial class ResearchPanel : FloatingWindow
                 : perSecond > 0 ? $"in {SpaceGarden.Card.Eta(lacking / perSecond)}" : "no genes coming";
             card.Fill.Progress = card.Affordable ? 1 : (float)Math.Clamp(garden.GeneBalance / next.Cost, 0, 1);
             card.Fill.Visible = !card.Affordable;
+        }
+        foreach (var (track, buy) in smallBuys)
+        {
+            var next = garden.Next(track);
+            string name = track switch { Track.Stems => "Stem", Track.Generators => "Generator", _ => "Core" };
+            buy.Disabled = next == null || !garden.CanSpend(next.Cost);
+            buy.Text = next == null ? $"{name}: done" : !buy.Disabled ? $"{name}: Buy"
+                : $"{name}: {Math.Ceiling(next.Cost - garden.GeneBalance):#,0} more";
+            buy.TooltipText = next == null ? "Every upgrade on this track is bought." : $"{next.Name}, {next.Cost:#,0} genes: {next.Does}";
         }
     }
 }

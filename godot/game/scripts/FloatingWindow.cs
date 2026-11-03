@@ -16,6 +16,7 @@ public partial class FloatingWindow : PanelContainer
     // Its page, under the header; and the note beside its title.
     protected readonly VBoxContainer Column;
     protected readonly Label Note;
+    readonly HBoxContainer Bar;
     Tween? fade;
     Vector2? grab; // while the header is held: where on the window the pointer took it
     bool away;
@@ -43,7 +44,7 @@ public partial class FloatingWindow : PanelContainer
         AddChild(Column);
 
         // The header: its title and note, to drag it by, and the ✕.
-        var bar = new HBoxContainer { MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.Move };
+        var bar = Bar = new HBoxContainer { MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.Move };
         bar.AddThemeConstantOverride("separation", 10);
         Column.AddChild(bar);
         bar.AddChild(new Label
@@ -79,6 +80,25 @@ public partial class FloatingWindow : PanelContainer
             grab = bar.GetGlobalRect().Position + press.Position - Position;
             AcceptEvent();
         };
+    }
+
+    // A small flat button in the header, before the ✕ (the Research panel's minimise).
+    protected Button HeaderButton(string text, string tip)
+    {
+        var button = new Button
+        {
+            Text = text,
+            Flat = true,
+            TooltipText = tip,
+            FocusMode = FocusModeEnum.None,
+            MouseDefaultCursorShape = CursorShape.PointingHand,
+        };
+        button.AddThemeFontSizeOverride("font_size", 15);
+        button.AddThemeColorOverride("font_color", Dim);
+        button.AddThemeColorOverride("font_hover_color", Ink);
+        Bar.AddChild(button);
+        Bar.MoveChild(button, Bar.GetChildCount() - 2);
+        return button;
     }
 
     // Opens it, set down at spot the first time (later it opens where it was left).

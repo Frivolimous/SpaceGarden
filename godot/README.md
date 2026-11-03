@@ -41,7 +41,9 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   header; ✕ or the slot closes it): the gene balance in its header, and three cards in their roles' hues, **Stems**,
   **Generators** and **Core**, each with a glyph of its part and only its next upgrade, its cost and **Buy** (dim,
   saying how many more genes it needs over a fill showing how close the balance is, while it falls short; a card you can afford glows; the (i) by each title says at once what its next upgrade does). Buying
-  spends the balance and raises the cap at once (the core ripples purple). See Upgrade tracks in DESIGN.md.
+  spends the balance and raises the cap at once (the core ripples purple). Its header also shows the genes a
+  second, and hovering a Buy you can't afford yet says how long until you can. The header's **–** minimises it to
+  the header and a small Buy per track ("Stem: 1,234 more"); **□** brings the cards back. See Upgrade tracks in DESIGN.md.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
 - **Undo a prune** (switched off for now: `Tuning.UndoPruneOn`): for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
