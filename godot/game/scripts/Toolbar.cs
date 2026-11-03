@@ -375,7 +375,7 @@ public partial class ShapingBar : PanelContainer
     public event Action<HeatView>? HeatPicked;
     // Move garden (Jeremy, Nov 3): a handle; dragging it moves the whole garden, tools and all.
     public event Action? MoveStarted;
-    readonly Button move;
+
     readonly Dictionary<HeatView, Button> heatButtons = new();
 
     readonly Dictionary<ShapingKind, ToolButton> buttons = new();
@@ -387,9 +387,16 @@ public partial class ShapingBar : PanelContainer
         MouseFilter = MouseFilterEnum.Stop;
         Visible = false;
         AddThemeStyleboxOverride("panel", Toolbar.PillStyle());
+        // The Move garden handle on the left, the full height of the bar; then the tools over the views.
+        var outer = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+        outer.AddThemeConstantOverride("separation", 4);
+        AddChild(outer);
+        var handle = new MoveHandle { TooltipText = "Drag to move the whole garden at once" };
+        handle.Grabbed += () => MoveStarted?.Invoke();
+        outer.AddChild(handle);
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         column.AddThemeConstantOverride("separation", 2);
-        AddChild(column);
+        outer.AddChild(column);
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         row.AddThemeConstantOverride("separation", 2);
         column.AddChild(row);
@@ -420,18 +427,7 @@ public partial class ShapingBar : PanelContainer
             heatButtons[view] = toggle;
             views.AddChild(toggle);
         }
-        move = new Button
-        {
-            Text = "✥ Move garden", TooltipText = "Drag this to move the whole garden at once",
-            Flat = true, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.Move,
-        };
-        move.AddThemeFontSizeOverride("font_size", 11);
-        move.AddThemeColorOverride("font_color", new Color(1, 1, 1, 0.55f));
-        move.AddThemeColorOverride("font_hover_color", new Color(1, 1, 1, 0.85f));
-        move.AddThemeColorOverride("font_pressed_color", new Color(1, 0.9f, 0.45f));
-        move.AddThemeColorOverride("font_hover_pressed_color", new Color(1, 0.95f, 0.6f));
-        move.ButtonDown += () => MoveStarted?.Invoke();
-        views.AddChild(move);
+
         foreach (var (kind, tool) in new[] { (ShapingKind.Pot, Tool.Pot), (ShapingKind.Trellis, Tool.Trellis), (ShapingKind.Well, Tool.Well) })
         {
             var button = new ToolButton(tool);
@@ -484,5 +480,45 @@ public partial class ShapingBar : PanelContainer
         var size = GetCombinedMinimumSize();
         Position = (above - new Vector2(size.X / 2, size.Y + 6)).Clamp(new Vector2(4, 4), viewport - size - new Vector2(4, 4));
         Size = size;
+    }
+}
+
+// Build mode's Move garden handle (Jeremy, Nov 3): four arrows from a centre, on the left of the shaping bar; a press
+// on it starts moving the whole garden (the widget follows the pointer while it's held).
+public partial class MoveHandle : Control
+{
+    public event Action? Grabbed;
+
+    public MoveHandle()
+    {
+        CustomMinimumSize = new Vector2(30, 0);
+        SizeFlagsVertical = SizeFlags.ExpandFill;
+        MouseFilter = MouseFilterEnum.Stop;
+        MouseDefaultCursorShape = CursorShape.Move;
+        MouseEntered += QueueRedraw;
+        MouseExited += QueueRedraw;
+        GuiInput += e =>
+        {
+            if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }) return;
+            AcceptEvent();
+            Grabbed?.Invoke();
+        };
+    }
+
+    public override void _Draw()
+    {
+        var c = Size / 2;
+        bool hovered = GetGlobalRect().HasPoint(GetGlobalMousePosition());
+        var ink = new Color(1, 1, 1, hovered ? 0.95f : 0.6f);
+        if (hovered) DrawCircle(c, 13, new Color(1, 1, 1, 0.13f));
+        const float arm = 9, head = 3.2f;
+        foreach (var dir in new[] { Vector2.Up, Vector2.Down, Vector2.Left, Vector2.Right })
+        {
+            var tip = c + dir * arm;
+            DrawLine(c, tip, ink, 1.6f, true);
+            var side = new Vector2(-dir.Y, dir.X);
+            DrawLine(tip, tip - dir * head + side * head, ink, 1.6f, true);
+            DrawLine(tip, tip - dir * head - side * head, ink, 1.6f, true);
+        }
     }
 }

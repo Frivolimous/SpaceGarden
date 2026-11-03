@@ -784,6 +784,8 @@ public partial class Widget : Node
         }
         var to = ToSim(ToWorld(PointerInViewport()));
         Garden.Translate(to - from);
+        // The shaping bar moves with it (it's set down over the backdrop and otherwise stays put).
+        if (barAt is { } bar) barAt = bar + (ToViewport(to) - ToViewport(from)) / Dpi;
         gardenGrab = to;
     }
 
