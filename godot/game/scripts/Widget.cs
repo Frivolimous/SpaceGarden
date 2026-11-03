@@ -1328,6 +1328,7 @@ public partial class Widget : Node
             && Tutorial.Forming(Garden, Tutorial.Kind(step.Value)!.Value) is { } forming)
             Select(forming);
         shownStep = step;
+        if (step == TutorialStep.Tools && !Building) Garden.ActTutorial(TutorialStep.Tools); // build mode closed
         coreMenu.SetEnabled(Tool.Build, Garden.TutorialAllows(TutorialAction.Build) || Building);
         coreMenu.SetEnabled(Tool.Research, Garden.TutorialAllows(TutorialAction.Research) || research.IsOpen);
         bool shown = step != null && Mode == DisplayMode.Active && main.HiddenReason == null;
@@ -1402,7 +1403,7 @@ public partial class Widget : Node
         PlantNode? part = null;
         Tool? bud = null, slot = null;
         ShapingKind? shaping = null;
-        bool forming = false;
+        bool forming = false, closeBuild = false;
         Track? buy = null;
         void Open(Tool menuSlot)
         {
@@ -1431,6 +1432,9 @@ public partial class Widget : Node
                 else if (!Garden.Shaping.Any(t => t.Kind == ShapingKind.Pot)) shaping = ShapingKind.Pot;
                 else part = Garden.Core;
                 break;
+            case TutorialStep.Tools:
+                closeBuild = true; // its checkmark
+                break;
             case TutorialStep.Genes:
                 if (!research.IsOpen) Open(Tool.Research);
                 break;
@@ -1442,7 +1446,7 @@ public partial class Widget : Node
         main.View.Beckon = part;
         toolbar.SetBeckon(bud);
         coreMenu.SetBeckon(slot);
-        shapingBar.SetBeckon(shaping);
+        shapingBar.SetBeckon(shaping, closeBuild);
         partCard.BeckonForming = forming;
         research.Beckon(buy);
     }
@@ -1623,7 +1627,7 @@ public partial class TutorialMark : Control
 
     public void Show(TutorialStep at)
     {
-        Visible = Tutorial.Kind(at) != null || at is TutorialStep.Pot or TutorialStep.Research;
+        Visible = Tutorial.Kind(at) != null || at is TutorialStep.Pot or TutorialStep.Tools or TutorialStep.Research;
         if (at == step) return;
         step = at;
         QueueRedraw();
@@ -1632,7 +1636,7 @@ public partial class TutorialMark : Control
     public override void _Draw()
     {
         var c = Size / 2;
-        if (step == TutorialStep.Pot)
+        if (step is TutorialStep.Pot or TutorialStep.Tools)
         {
             ShapingLook.DrawIcon(this, Tool.Pot, c, new Color(1, 1, 1, 0.9f));
             return;

@@ -97,8 +97,8 @@ public sealed class Garden
     public bool TutorialAllows(TutorialAction action, NodeKind? kind = null, ShapingKind? shaping = null) =>
         global::SpaceGarden.Core.Tutorial.Allows(Tutorial, action, kind, shaping);
 
-    // How much faster buds and fruit grow: Tuning.TutorialGrowthSpeed while the tutorial runs.
-    float TutorialGrowth => Tutorial != null ? Tuning.TutorialGrowthSpeed : 1;
+    // How much faster buds and fruit grow: Tuning.TutorialGrowthSpeed while the tutorial runs, until the lab is out.
+    float TutorialGrowth => Tutorial != null && !Nodes.Any(n => IsBudOf(n.Spec.Kind, NodeKind.Lab)) ? Tuning.TutorialGrowthSpeed : 1;
 
     bool TutorialHoldsBuds => Tutorial is { } t && t <= TutorialStep.Lab;
 

@@ -764,7 +764,7 @@ Design layers still to work through:
 - [ ] Build step 5 (5a prep, 5b tracks, 5c seedlings, 5d wild flowers and the Hub done), then the real-week tuning check
 - [x] Alerts: a faint ring closing in on whatever waits (the core, the Hub, a seedling), and a red dot on the core menu's Research slot (see Alerts)
 - [x] Hub details: respec, built Nov 3 (the paths, point curve and milestones are set by the step 5 addendum; upkeep per upgrade a placeholder: see Built: the Hub)
-- [x] Onboarding: the opening tutorial (Jeremy's script, Nov 3; built). A new garden (the core with its first stem) walks eleven steps in a small panel (Active only): a header ("Getting started" and a dot a step), the step's title with its part's mark, its text (a dot in a blob's colour for Growth and Genes), and Continue where the step waits for it. By default it sits under where the parts' info panel opens, lined up with it; dragged, it stays put. The next thing to touch is beckoned with a breathing gold ring (a part, a bud button, a core menu slot, the pot's button) or frame (a card's Forming line, Research's Buy).
+- [x] Onboarding: the opening tutorial (Jeremy's script, Nov 3; built). A new garden (the core with its first stem) walks twelve steps in a small panel (Active only): a header ("Getting started" and a dot a step), the step's title with its part's mark, its text (a dot in a blob's colour for Growth and Genes), and Continue where the step waits for it. By default it sits under where the parts' info panel opens, lined up with it; dragged, it stays put. The next thing to touch is beckoned with a breathing gold ring (a part, a bud button, a core menu slot, the pot's button) or frame (a card's Forming line, Research's Buy).
 
   | Step | Title | Passed by | Beckoned | Held back |
   |---|---|---|---|---|
@@ -775,12 +775,13 @@ Design layers still to work through:
   | 5 | Wait for the Stem | the stem out | as 3 | as 3 |
   | 6 | Grow a Lab | a lab bud started (no wait) | the new stem, then its lab button | as 2 |
   | 7 | Tending Mode | the core in a Gravity Pot | the core, Build, the pot's button, the core | other tools, moving the garden, potting any other part, prune |
-  | 8 | Wait for Genes | Research opened | the core, Research | — |
-  | 9 | Wait for Genes | the first stem upgrade affordable | — | — |
-  | 10 | Research Stems | the first stem upgrade bought | the core, Research, the Stems card's Buy | — |
-  | 11 | You're on your own! | Continue | — | — |
+  | 8 | Tending Mode ("Gardening tools are just used to arrange your garden…") | build mode closed | the build bar's checkmark | as 7 |
+  | 9 | Wait for Genes | Research opened | the core, Research | — |
+  | 10 | Wait for Genes | the first stem upgrade affordable | — | — |
+  | 11 | Research Stems | the first stem upgrade bought | the core, Research, the Stems card's Buy | — |
+  | 12 | You're on your own! | Continue | — | — |
 
-  Held-back buttons are greyed and do nothing. Every step is a check on the garden or the player's act, so a step already done is passed at once (a wild stand-in for the bud counts). Until the lab is planted, growth blobs start no passive buds (fruit only). While the tutorial runs, buds and fruit grow twice as fast, on their own and from growth blobs (`Tuning.TutorialGrowthSpeed`, Jeremy, Nov 3). The step is saved (`GardenSave.Tutorial`); a garden from an older save has none. Code: `Core/Tutorial.cs` (steps, texts, `Allows`), `Garden.StartTutorial`/`AdvanceTutorial`/`ActTutorial`/`TutorialAllows`, `Widget.UpdateTutorial`/`Beckon`. Dev aid: `--notutorial`.
+  Held-back buttons are greyed and do nothing. Every step is a check on the garden or the player's act, so a step already done is passed at once (a wild stand-in for the bud counts). Until the lab is planted, growth blobs start no passive buds (fruit only). While the tutorial runs, until its lab is out, buds and fruit grow twice as fast, on their own and from growth blobs (`Tuning.TutorialGrowthSpeed`, Jeremy, Nov 3). The step is saved (`GardenSave.Tutorial`); a garden from an older save has none. Code: `Core/Tutorial.cs` (steps, texts, `Allows`), `Garden.StartTutorial`/`AdvanceTutorial`/`ActTutorial`/`TutorialAllows`, `Widget.UpdateTutorial`/`Beckon`. Dev aid: `--notutorial`.
 - [ ] Playtest notes, Nov 3, waiting:
   - Next-unlock alert in the garden view (the next upgrade's timing even while one is affordable, to save past a stem for power): paused until play shows whether the Research panel's timer on Buy is enough.
   - The garden card's "Next: +1 stem" line (whether to name it "next research"): left alone for now.

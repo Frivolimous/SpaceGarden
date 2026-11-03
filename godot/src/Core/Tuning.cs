@@ -157,8 +157,8 @@ public static class Tuning
     // While the garden has no grove (a new garden, or one that pruned its last), a grove bud grows this many times as
     // fast, so a new player's first grove is out in about half a minute instead of two (Jeremy, balance pass).
     public const float FirstGroveSpeed = 4;
-    // While the opening's tutorial runs, buds and fruit grow this many times as fast, on their own and from growth
-    // blobs alike (Jeremy, Nov 3).
+    // While the opening's tutorial runs, until its lab is out, buds and fruit grow this many times as fast, on their own
+    // and from growth blobs alike (Jeremy, Nov 3).
     public const float TutorialGrowthSpeed = 2;
     // Placeholders. A completed bud starts this far out (a share of its link's length) and pops out at this speed.
     public const float EmergeStart = 0.3f;

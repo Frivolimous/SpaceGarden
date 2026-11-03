@@ -405,6 +405,7 @@ public partial class ShapingBar : PanelContainer
 
     readonly Dictionary<ShapingKind, ToolButton> buttons = new();
     readonly MoveHandle handle;
+    readonly ToolButton done;
     Tween? fade;
     bool showing;
 
@@ -461,15 +462,16 @@ public partial class ShapingBar : PanelContainer
             buttons[kind] = button;
             row.AddChild(button);
         }
-        var done = new ToolButton(Tool.Done) { TooltipText = "Done arranging" };
+        done = new ToolButton(Tool.Done) { TooltipText = "Done arranging" };
         done.Pressed += () => Done?.Invoke();
         row.AddChild(done);
     }
 
     // The tutorial's beckon on a tool's button (or none).
-    public void SetBeckon(ShapingKind? kind)
+    public void SetBeckon(ShapingKind? kind, bool done = false)
     {
         foreach (var (k, button) in buttons) button.Beckon = k == kind;
+        this.done.Beckon = done;
     }
 
     // What each tool's button says: how many more can be placed, or the garden size that brings it.

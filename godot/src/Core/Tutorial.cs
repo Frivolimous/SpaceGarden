@@ -5,7 +5,7 @@ namespace SpaceGarden.Core;
 // affordable or bought), or by the player (Continue, Research opened: see Act). It keeps the player on the rails:
 // until the lab is planted only the step's own action is open (see Allows). No skip.
 // (Grove, Stem, Lab, Pot, Wait, Research and Done keep their names from the first build, whose saves hold them.)
-public enum TutorialStep { Welcome, Grove, GroveWait, Stem, StemWait, Lab, Pot, Genes, Wait, Research, Done }
+public enum TutorialStep { Welcome, Grove, GroveWait, Stem, StemWait, Lab, Pot, Tools, Genes, Wait, Research, Done }
 
 // What the player tries that a step may hold back.
 public enum TutorialAction { Bud, CancelBud, Prune, Build, Research, Shaping, MoveGarden, Tie }
@@ -22,7 +22,7 @@ public static class Tutorial
         TutorialStep.Stem => "Grow a Stem",
         TutorialStep.StemWait => "Wait for the Stem",
         TutorialStep.Lab => "Grow a Lab",
-        TutorialStep.Pot => "Tending Mode",
+        TutorialStep.Pot or TutorialStep.Tools => "Tending Mode",
         TutorialStep.Genes or TutorialStep.Wait => "Wait for Genes",
         TutorialStep.Research => "Research Stems",
         _ => "You're on your own!",
@@ -36,6 +36,7 @@ public static class Tutorial
         TutorialStep.Stem or TutorialStep.StemWait => "Stems give you more space to grow flowers, and carry power between them.",
         TutorialStep.Lab => "Labs send Genes {Genes} to the core, which are used to buy upgrades.",
         TutorialStep.Pot => "While you wait, let's arrange your garden! Open the tending menu and plant your Core in a Gravity Pot.",
+        TutorialStep.Tools => "Gardening tools are just used to arrange your garden and don't have any other in-game effect. You'll unlock more tools as your garden grows.",
         TutorialStep.Genes => "Labs send Genes {Genes} that are absorbed by the core. When you have enough, you can start upgrading your garden.",
         TutorialStep.Wait => "Explore your options and keep growing your garden while your genes accumulate!",
         TutorialStep.Research => "This is how your garden grows!",
@@ -55,7 +56,8 @@ public static class Tutorial
     public static bool AsksForBud(TutorialStep step) => step is TutorialStep.Grove or TutorialStep.Stem or TutorialStep.Lab;
 
     // Whether the step waits for the player (Continue, or opening Research) rather than a check on the garden.
-    public static bool ByAct(TutorialStep step) => step is TutorialStep.Welcome or TutorialStep.Genes or TutorialStep.Done;
+    // (Tools: build mode closed.)
+    public static bool ByAct(TutorialStep step) => step is TutorialStep.Welcome or TutorialStep.Tools or TutorialStep.Genes or TutorialStep.Done;
 
     // Whether the step is done in this garden (a step passed by the player never is: see Act).
     public static bool Done(Garden garden, TutorialStep step) => step switch
@@ -72,12 +74,12 @@ public static class Tutorial
     };
 
     // Whether a step holds this back. Through the lab: only the step's own bud (none while waiting for one, or at the
-    // welcome), no cancelling, no pruning, no build mode, no Research. Tending Mode: build mode for the pot alone (no
+    // welcome), no cancelling, no pruning, no build mode, no Research. Tending Mode (both its steps): build mode for the pot alone (no
     // other tool, no moving the garden, only the core potted), still no pruning. From then on, nothing.
     public static bool Allows(TutorialStep? step, TutorialAction action, NodeKind? kind = null, ShapingKind? shaping = null)
     {
-        if (step is not { } s || s > TutorialStep.Pot) return true;
-        if (s == TutorialStep.Pot)
+        if (step is not { } s || s > TutorialStep.Tools) return true;
+        if (s is TutorialStep.Pot or TutorialStep.Tools)
             return action switch
             {
                 TutorialAction.Prune or TutorialAction.MoveGarden => false,

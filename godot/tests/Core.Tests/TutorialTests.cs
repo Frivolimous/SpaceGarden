@@ -59,6 +59,9 @@ public class TutorialTests
         Assert.False(garden.AdvanceTutorial()); // the core it asks for
         garden.Tie(garden.Core, pot);
         garden.AdvanceTutorial();
+        Assert.Equal(TutorialStep.Tools, garden.Tutorial);
+        Assert.False(garden.AdvanceTutorial()); // waits for build mode to close
+        Assert.True(garden.ActTutorial(TutorialStep.Tools));
         Assert.Equal(TutorialStep.Genes, garden.Tutorial);
 
         Assert.False(garden.ActTutorial(TutorialStep.Welcome)); // only the step's own act
@@ -94,6 +97,8 @@ public class TutorialTests
         Assert.True(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Shaping, shaping: ShapingKind.Pot));
         Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Shaping, shaping: ShapingKind.Trellis));
         Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.MoveGarden));
+        Assert.False(Tutorial.Allows(TutorialStep.Tools, TutorialAction.Shaping, shaping: ShapingKind.Well));
+        Assert.False(Tutorial.Allows(TutorialStep.Tools, TutorialAction.Prune));
         Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Prune));
         Assert.True(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Tie, NodeKind.Core));
         Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Tie, NodeKind.Stem));
@@ -132,13 +137,18 @@ public class TutorialTests
     [Fact]
     public void BudsGrowTwiceAsFastDuringIt()
     {
-        double Seconds(bool tutorial)
+        double Seconds(bool tutorial, bool lab)
         {
             var (garden, stem) = Opening();
             garden.ActTutorial(TutorialStep.Welcome);
             if (!tutorial) garden = Garden.FromSave(garden.ToSave() with { Tutorial = null });
             stem = garden.Nodes[1];
             garden.GrowBranch(stem, NodeKind.Grove); // (not the groveless first grove's speed)
+            if (lab)
+            {
+                garden.Capacity = garden.Capacity with { CoreLinks = 2 };
+                Assert.NotNull(garden.GrowBranch(garden.Core, NodeKind.Lab));
+            }
             garden.SproutFrom(stem, NodeKind.Stem);
             double t = 0;
             while (stem.FormingBud && t < 600)
@@ -149,7 +159,8 @@ public class TutorialTests
             }
             return t;
         }
-        double with = Seconds(true), without = Seconds(false);
+        double with = Seconds(true, lab: false), without = Seconds(false, lab: false);
         Assert.InRange(with, without / Tuning.TutorialGrowthSpeed * 0.8, without / Tuning.TutorialGrowthSpeed * 1.2);
+        Assert.InRange(Seconds(true, lab: true), without * 0.9, without * 1.1); // the lab out: back to the usual speed
     }
 }
