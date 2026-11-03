@@ -573,7 +573,8 @@ public sealed class Garden
     //   - each main part linked to a potted one (growing straight out of it, or its parent) is pushed the way the pot
     //     faces (its Lean, summed if it's next to more than one pot), as a force: a stem feels all of it, the heavy core
     //     a thirtieth. Parts further away only follow through their links;
-    //   - a well pulls every part towards it, the core and fruit too, alike whatever their weight, like gravity: a free
+    //   - a well (each part's nearest, if there are several) pulls every part towards it, the core and fruit too, alike
+    //     whatever their weight, like gravity: a free
     //     plant drifts whole to the well and settles round it; one held back (its core in a pot) hangs towards it.
     // (Pots and trellises hold their parts after they move: see Hold.)
     void Shape()
@@ -594,16 +595,24 @@ public sealed class Garden
         foreach (var node in Nodes)
             if (node.TiedTo == null && !node.Spec.IsFruit) node.Velocity += node.Lean * Tuning.PotPush * node.Spec.InverseMass;
 
-        foreach (var well in Shaping)
+        // With two or more wells, each part feels only its nearest (Jeremy, Nov 3): a potted plant's branches lean each
+        // to their own well, rather than equal pulls cancelling out.
+        wells.Clear();
+        foreach (var tool in Shaping) if (tool.Kind == ShapingKind.Well) wells.Add(tool);
+        if (wells.Count == 0) return;
+        foreach (var node in Nodes)
         {
-            if (well.Kind != ShapingKind.Well) continue;
-            foreach (var node in Nodes)
+            var well = wells[0];
+            float best = Vector2.DistanceSquared(well.Position, node.Position);
+            for (int i = 1; i < wells.Count; i++)
             {
-                var d = well.Position - node.Position;
-                float dist = d.Length();
-                if (dist < 0.5f) continue;
-                node.Velocity += d / dist * (Tuning.WellPull * Math.Min(1, dist / Tuning.WellEase));
+                float d2 = Vector2.DistanceSquared(wells[i].Position, node.Position);
+                if (d2 < best) (well, best) = (wells[i], d2);
             }
+            var d = well.Position - node.Position;
+            float dist = d.Length();
+            if (dist < 0.5f) continue;
+            node.Velocity += d / dist * (Tuning.WellPull * Math.Min(1, dist / Tuning.WellEase));
         }
     }
 
@@ -619,6 +628,7 @@ public sealed class Garden
     }
 
     float swayScale = 1; // SwayScale, worked out once a tick (see Shape)
+    readonly List<ShapingTool> wells = new(); // (Shape's, kept to save making one a tick)
 
     // A potted part is drawn to its pot and held there; a part on a trellis is held on its line, free to slide along it.
     void Hold(PlantNode node, ShapingTool tool)

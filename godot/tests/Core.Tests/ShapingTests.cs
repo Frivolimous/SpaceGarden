@@ -256,7 +256,7 @@ public class ShapingTests
     public void ToolsByGardenSizeFollowTheDocs()
     {
         // DESIGN.md, Upgrade tracks: a pot at the start, a trellis at 15, a second pot at 25, a well at 40, +1 pot at
-        // 60 and 100, then every 50.
+        // 60 and 100, then every 50; a second well at 100, a third at 150.
         Assert.Equal((1, 0, 0), Tuning.ToolsAtSize(1));
         Assert.Equal((1, 0, 0), Tuning.ToolsAtSize(14));
         Assert.Equal((1, 1, 0), Tuning.ToolsAtSize(15));
@@ -264,14 +264,17 @@ public class ShapingTests
         Assert.Equal((2, 1, 1), Tuning.ToolsAtSize(40));
         Assert.Equal((3, 1, 1), Tuning.ToolsAtSize(60));
         Assert.Equal((3, 1, 1), Tuning.ToolsAtSize(99));
-        Assert.Equal((4, 1, 1), Tuning.ToolsAtSize(100));
-        Assert.Equal((4, 1, 1), Tuning.ToolsAtSize(149));
-        Assert.Equal((5, 1, 1), Tuning.ToolsAtSize(150));
-        Assert.Equal((6, 1, 1), Tuning.ToolsAtSize(200));
+        Assert.Equal((4, 1, 2), Tuning.ToolsAtSize(100));
+        Assert.Equal((4, 1, 2), Tuning.ToolsAtSize(149));
+        Assert.Equal((5, 1, 3), Tuning.ToolsAtSize(150));
+        Assert.Equal((6, 1, 3), Tuning.ToolsAtSize(200));
 
         Assert.Equal(15, Tuning.NextToolSize(ShapingKind.Trellis, 3));
         Assert.Null(Tuning.NextToolSize(ShapingKind.Trellis, 15));
         Assert.Equal(40, Tuning.NextToolSize(ShapingKind.Well, 39));
+        Assert.Equal(100, Tuning.NextToolSize(ShapingKind.Well, 40));
+        Assert.Equal(150, Tuning.NextToolSize(ShapingKind.Well, 120));
+        Assert.Null(Tuning.NextToolSize(ShapingKind.Well, 150));
         Assert.Equal(25, Tuning.NextToolSize(ShapingKind.Pot, 1));
         Assert.Equal(60, Tuning.NextToolSize(ShapingKind.Pot, 25));
         Assert.Equal(100, Tuning.NextToolSize(ShapingKind.Pot, 60));
@@ -375,5 +378,45 @@ public class ShapingTests
         garden.Reanchor(new Dictionary<ShapingTool, Vector2> { [pot] = potTo }, garden.Core.Position + new Vector2(999, 999));
         Assert.True(Vector2.Distance(potTo, trunk.Position) < 1e-3f);
         Assert.True(Vector2.Distance(potTo + offset, garden.Core.Position) < 1e-3f); // with the anchor, not to coreTo
+    }
+
+    [Fact]
+    public void WithTwoWellsEachPartFeelsOnlyItsNearest()
+    {
+        // core (held where it is) with two branches of three stems; each branch's well off to its outer side, so the
+        // branches swing apart, each towards its own (with every well pulling every part, they'd pull alike).
+        var garden = Garden.New(Layout.Radial, seed: 7);
+        garden.Capacity = new Capacity(8, 0, 2, Pots: 1, Wells: 2);
+        garden.PassiveGrowth = false;
+        var tips = new List<PlantNode>();
+        for (int b = 0; b < 2; b++)
+        {
+            var tip = garden.Core;
+            for (int i = 0; i < 3; i++) tip = Add(garden, tip, NodeKind.Stem);
+            tips.Add(tip);
+        }
+        for (int i = 0; i < 600; i++) garden.Step(); // settled
+        garden.Core.Fixed = true;
+        var core = garden.Core.Position;
+        float AngleOf(Vector2 p) => MathF.Atan2(p.Y - core.Y, p.X - core.X);
+        float Between(float a, float b) => MathF.Abs(MathF.IEEERemainder(a - b, MathF.Tau));
+        var angles = tips.Select(t => AngleOf(t.Position)).ToList();
+        float side = MathF.Sign(MathF.IEEERemainder(angles[0] - angles[1], MathF.Tau)); // tip 0's outer side
+        var wells = new List<ShapingTool>();
+        for (int i = 0; i < 2; i++)
+        {
+            float at = angles[i] + (i == 0 ? side : -side) * 0.8f;
+            wells.Add(garden.Place(ShapingKind.Well, core + new Vector2(MathF.Cos(at), MathF.Sin(at)) * 400)!);
+        }
+        float spread = Between(angles[0], angles[1]);
+        for (int i = 0; i < 3000; i++) garden.Step();
+        var now = tips.Select(t => AngleOf(t.Position)).ToList();
+        for (int i = 0; i < 2; i++)
+        {
+            float well = AngleOf(wells[i].Position);
+            Assert.True(Between(now[i], well) < Between(angles[i], well) - 0.2f,
+                $"tip {i}: {Between(angles[i], well):0.00} to {Between(now[i], well):0.00} from its well");
+        }
+        Assert.True(Between(now[0], now[1]) > spread + 0.4f, $"spread {spread:0.00} to {Between(now[0], now[1]):0.00}");
     }
 }

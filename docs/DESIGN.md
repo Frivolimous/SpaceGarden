@@ -226,7 +226,7 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 | --- | --- | --- | --- |
 | Gravity Pot | The node dropped on it moves to the pot and is locked there; the pot is drawn over the plant as a flower pot the node sits in up to its middle: a rim straight across the node's middle and a round bowl just bigger than the node, on the side away from the way it faces. Only the main nodes linked to it (its parent, and those growing straight out of it) are pushed gently the way the pot faces; nodes further out just follow them through their links. New buds on the potted node head that way too | One node (dropping another swaps it) | 1 from the start, a second at 25 main nodes, +1 at 60, 100, then every 50 |
 | Trellis | A straight line between two posts. The nodes dropped on it are held on the line but slide along it, so the plant's own push spaces them out, like an espalier wire | Any number | 1 at 15 main nodes |
-| Gravity Well | Pulls every node towards it, the core and fruit too, alike whatever their weight, like gravity. A free plant drifts to the well and settles round it; to keep the plant where it is, put its core in a pot, and it hangs towards the well instead | Nothing | 1 at 40 main nodes |
+| Gravity Well | Pulls every node towards it, the core and fruit too, alike whatever their weight, like gravity. A free plant drifts to the well and settles round it; to keep the plant where it is, put its core in a pot, and it hangs towards the well instead. With two or more, each node feels only its nearest well (Jeremy, Nov 3), so a potted plant's branches lean each to their own; a free plant mostly settles round one | Nothing | 1 at 40 main nodes, a second at 100, a third at 150 (for later) |
 | Sway Controller | Placed anywhere, it sets how much the wind sways the whole plant (Jeremy, Nov 3): a dial whose knob runs over the top, from its left end (no sway) through straight up (the usual) to its right end (three times as much, `Tuning.SwayMax`), the setting shown under it ("×1.5"). Several would multiply. Seen in build mode only, like the well; its blade of grass sways as much as it says | Nothing | 1 at 60 main nodes |
 
 Fruit is never tied or pushed by a pot: it follows its node (a well pulls it along with everything else). A pruned node lets go of its tool; undoing the prune ties it again if the tool is still there (and a pot still free). Pruning or removing never refunds or costs anything.
@@ -369,6 +369,7 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | 40 | Gravity Well |
 | 60 | Sway Controller |
 | 60, 100, then every 50 | +1 Gravity Pot |
+| 100, 150 | Second and third Gravity Well |
 
 **Wording, settled in the build (5b):**
 - **The build bar:** a tool not yet gained is greyed, its tooltip saying "Trellis: comes at garden size 15 (now 9: the most stems and flowers it has had, the core too)"; one gained says "Another at garden size 60" while more will come.

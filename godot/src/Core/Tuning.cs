@@ -318,11 +318,11 @@ public static class Tuning
 
     // Shaping tools come from the garden's size, the most main nodes it has had (DESIGN.md, Upgrade tracks): a Gravity
     // Pot from the start and another at each of PotSizes, then every PotEvery past the last; a Trellis at TrellisSize
-    // and a Gravity Well at WellSize.
+    // and a Gravity Well at each of WellSizes (the second and third for later: Jeremy, Nov 3).
     public static readonly int[] PotSizes = [25, 60, 100];
     public const int PotEvery = 50;
     public const int TrellisSize = 15;
-    public const int WellSize = 40;
+    public static readonly int[] WellSizes = [40, 100, 150];
     // A Sway Controller at SwaySize (Jeremy, Nov 3), whose dial's right end sways the plant SwayMax times as much.
     public const int SwaySize = 60;
     public const float SwayMax = 3;
@@ -335,14 +335,14 @@ public static class Tuning
     {
         int pots = StartPotCap + PotSizes.Count(s => size >= s);
         if (size >= PotSizes[^1]) pots += (size - PotSizes[^1]) / PotEvery;
-        return (pots, size >= TrellisSize ? 1 : 0, size >= WellSize ? 1 : 0);
+        return (pots, size >= TrellisSize ? 1 : 0, WellSizes.Count(s => size >= s));
     }
 
     // The size at which a garden of this size gains its next one of a tool (null: never another).
     public static int? NextToolSize(ShapingKind kind, int size) => kind switch
     {
         ShapingKind.Trellis => size < TrellisSize ? TrellisSize : null,
-        ShapingKind.Well => size < WellSize ? WellSize : null,
+        ShapingKind.Well => WellSizes.Where(s => s > size).Select(s => (int?)s).FirstOrDefault(),
         ShapingKind.Sway => size < SwaySize ? SwaySize : null,
         _ => size < PotSizes[^1] ? PotSizes.First(s => s > size)
             : PotSizes[^1] + ((size - PotSizes[^1]) / PotEvery + 1) * PotEvery,
