@@ -111,16 +111,15 @@ public partial class ResearchPanel : FloatingWindow
     // cards' Buy), dim while it falls short; under the pointer, how long until it won't.
     Control SmallBuy(Track track, Color hue)
     {
-        var holder = new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(112, 24) };
+        // (A container, so it grows to fit the button's text and the fill sits behind it, the same size.)
+        var holder = new MarginContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(120, 24) };
         var fill = new BuyFill(hue);
-        fill.SetAnchorsPreset(LayoutPreset.FullRect);
         holder.AddChild(fill);
         var buy = new Button
         {
             FocusMode = FocusModeEnum.None,
             MouseDefaultCursorShape = CursorShape.PointingHand,
         };
-        buy.SetAnchorsPreset(LayoutPreset.FullRect);
         holder.AddChild(buy);
         buy.MouseEntered += () => { smallHovered = track; refreshTimer = 0; };
         buy.MouseExited += () => { if (smallHovered == track) smallHovered = null; refreshTimer = 0; };
