@@ -30,6 +30,41 @@ public class BudTests
         return seconds;
     }
 
+    // Nov 3: the player can cancel a forming bud (its growth lost, its link free again) or change it to another kind,
+    // which starts over.
+    [Fact]
+    public void AFormingBudCanBeCancelledOrChangedStartingOver()
+    {
+        var (garden, stem) = WithAStem();
+        Assert.True(garden.SproutFrom(stem, NodeKind.Lab));
+        stem.Growth = 2;
+        Assert.False(garden.CanChangeBud(stem, NodeKind.Lab)); // already a lab
+        Assert.True(garden.CanChangeBud(stem, NodeKind.Grove));
+        Assert.True(garden.ChangeBud(stem, NodeKind.Grove));
+        Assert.True(Garden.IsBudOf(stem.Forming!.Value, NodeKind.Grove));
+        Assert.Equal(0, stem.Growth);
+
+        stem.Growth = 1;
+        Assert.True(garden.CancelBud(stem));
+        Assert.Null(stem.Forming);
+        Assert.Equal(0, stem.Growth);
+        Assert.False(garden.CancelBud(stem)); // nothing forming
+        Assert.True(garden.CanSproutFrom(stem, NodeKind.Lab)); // its link free again
+    }
+
+    // A change needs room for the new kind, counting the bud's own room as free: no stem slot left, a lab bud can't
+    // become a stem; a stem bud can become another stem kind's room (its own).
+    [Fact]
+    public void AChangeNeedsRoomForTheNewKind()
+    {
+        var (garden, stem) = WithAStem(); // 3 stems allowed, 1 grown
+        Add(garden, stem, NodeKind.Stem);
+        var third = Add(garden, garden.Nodes.Last(), NodeKind.Stem);
+        Assert.True(garden.SproutFrom(third, NodeKind.Lab));
+        Assert.False(garden.CanChangeBud(third, NodeKind.Stem)); // the stem cap is full
+        Assert.True(garden.CanChangeBud(third, NodeKind.Grove));
+    }
+
     [Fact]
     public void AManualBudFormsThenEmergesInAboutTwoMinutesAtFullFill()
     {

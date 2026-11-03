@@ -210,6 +210,7 @@ public partial class Widget : Node
         toolbarLayer.AddChild(evolutionMenu);
         evolutionMenu.Picked += ChooseEvolution;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
+        toolbar.CanChange = (node, kind) => Garden.CanChangeBud(node, kind);
         toolbar.HubPanelOpen = () => hubPanel.IsOpen;
         toolbar.Offered = kind => kind switch
         {
@@ -1116,7 +1117,13 @@ public partial class Widget : Node
             else OpenHubPanel();
             return;
         }
-        if (Toolbar.KindOf(tool) is { } kind) Garden.SproutFrom(node, kind);
+        // A bud: grown, or while one forms here, that one cancelled (its own button) or changed (another's).
+        if (Toolbar.KindOf(tool) is { } kind)
+        {
+            var at = node.Spec.IsFruit && node.Parent != null ? node.Parent : node;
+            if (at.Forming is { } forming && at.FormingBud && Garden.IsBudOf(forming, kind)) Garden.CancelBud(at);
+            else if (!Garden.ChangeBud(at, kind)) Garden.SproutFrom(at, kind);
+        }
         switch (tool)
         {
             case Tool.Unhook: Garden.Untie(node); break;

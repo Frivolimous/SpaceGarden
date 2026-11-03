@@ -184,6 +184,41 @@ public sealed class Garden
         return true;
     }
 
+    // The player's say over a bud forming in a part (Jeremy, Nov 3), passive or planted: cancel it (its growth lost, its
+    // link and slots free again), or change it to another kind, which starts over as a new bud would (and may grow
+    // wild). Returns whether it did.
+    public bool CancelBud(PlantNode node)
+    {
+        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
+        if (!node.FormingBud) return false;
+        node.Forming = null;
+        node.Growth = 0;
+        node.FormingLook = 0;
+        return true;
+    }
+
+    public bool ChangeBud(PlantNode node, NodeKind kind)
+    {
+        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
+        return CanChangeBud(node, kind) && CancelBud(node) && SproutFrom(node, kind);
+    }
+
+    // Whether the bud forming here could become this kind: another kind than it is (or stands in for, if wild), with
+    // room for it once this bud's own room is free.
+    public bool CanChangeBud(PlantNode node, NodeKind kind)
+    {
+        if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;
+        if (node.Forming is not { } forming || !node.FormingBud || IsBudOf(forming, kind)) return false;
+        node.Forming = null; // (as if cancelled, just to ask)
+        bool can = CanSproutFrom(node, kind);
+        node.Forming = forming;
+        return can;
+    }
+
+    // Whether a bud forming as this kind is one of that kind: the kind itself, or a wild flower standing in for it.
+    public static bool IsBudOf(NodeKind forming, NodeKind kind) =>
+        forming == kind || NodeSpecs.All[forming].Wild?.Base == kind;
+
     public bool CanSproutFrom(PlantNode node, NodeKind kind)
     {
         if (node.Spec.IsFruit && node.Parent != null) node = node.Parent;

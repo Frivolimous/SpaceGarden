@@ -22,6 +22,15 @@ public partial class Toolbar : PanelContainer
     public ShapingTool? TargetTool { get; private set; }
     // Whether a part has room to grow a bud of a kind (its links, and the garden's capacity).
     public Func<PlantNode, NodeKind, bool> CanGrow = (_, _) => true;
+    // Whether the bud forming on a part could change to this kind (see Garden.CanChangeBud).
+    public Func<PlantNode, NodeKind, bool> CanChange = (_, _) => false;
+    readonly Dictionary<Tool, string> tips = new();
+
+    static string Article(NodeKind kind)
+    {
+        var name = NodeSpecs.All[kind].Name.ToLowerInvariant();
+        return ("aeiou".Contains(name[0]) ? "an " : "a ") + name;
+    }
     // Whether a bud tool shows at all: the seedling's while a seedling slot is free, the Hub's while one can be planted.
     public Func<NodeKind, bool> Offered = _ => true;
     // Whether the Hub's panel is open (its button on the Hub's toolbar is lit then).
@@ -93,6 +102,7 @@ public partial class Toolbar : PanelContainer
         })
         {
             var button = new ToolButton(tool) { TooltipText = tip };
+            tips[tool] = tip;
             button.Pressed += () => Used?.Invoke(tool);
             buttons[tool] = button;
             (KindOf(tool) != null ? buds : row).AddChild(button);
@@ -146,10 +156,14 @@ public partial class Toolbar : PanelContainer
             if (KindOf(tool) is { } kind)
             {
                 // Its bud is growing here now (or a wild flower standing in for it).
-                button.Forming = Target.Forming is { } forming && (forming == kind || NodeSpecs.All[forming].Wild?.Base == kind);
+                button.Forming = Target.Forming is { } forming && Target.FormingBud && Garden.IsBudOf(forming, kind);
                 // (A seedling's or the Hub's shows only while one could be planted, or one forms here.)
                 button.Visible = buds && (Offered(kind) || button.Forming);
-                button.Enabled = CanGrow(Target, kind);
+                // (While a bud forms: its own button cancels it, another changes it, starting over.)
+                button.Enabled = button.Forming || CanGrow(Target, kind) || CanChange(Target, kind);
+                button.TooltipText = button.Forming ? $"Cancel the {NodeSpecs.All[Target.Forming!.Value].Name.ToLowerInvariant()} bud (its growth is lost)"
+                    : Target.FormingBud ? $"Change the bud to {Article(kind)} (it starts over)"
+                    : tips[tool];
             }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
         // Every link taken (a bud forming holds one, but then its button shows it growing instead).
