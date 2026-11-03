@@ -167,7 +167,7 @@ public sealed record NodeStats(
             ? Math.Clamp(node.Growth / (NodeSpecs.All[kind].IsFruit ? Tuning.FruitGrowth : Tuning.BudGrowth), 0, 1)
             : 0;
         return new NodeStats(node.Power, Garden.PowerCap(node),
-            Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : Garden.TransferPerSecond(node),
+            Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : Garden.SendsPerSecond(node),
             Garden.UpkeepPerSecond(node),
             spec.Sends == BlobKind.Growth ? blobs : 0, spec.Sends == BlobKind.Genes ? blobs * Tuning.BlobGenes : 0,
             node.Links, node.MaxLinks, node.Forming, progress, node.Evolution);

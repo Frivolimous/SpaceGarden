@@ -229,7 +229,8 @@ public class TrackingTests
         Assert.Contains(note.Lines, l => l.EndsWith(" fruits grew."));
         Assert.Contains(note.Lines, l => l.EndsWith("genes reached the core."));
         Assert.Equal("Trellis gained at garden size 15.", note.Lines[3]); // before the firsts
-        Assert.DoesNotContain(note.Lines, l => l.StartsWith("Power ran low"));
+        // (No check on a dip: since transfer follows the fill, Nov 3, this small garden can dip over 6 hours. The dip
+        // has a test of its own.)
     }
 
     [Fact]

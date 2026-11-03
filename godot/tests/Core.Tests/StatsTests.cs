@@ -175,7 +175,7 @@ public class StatsTests
         var core = NodeStats.Of(garden.Core);
         Assert.Equal((300f, 800f), (core.Power, core.Store));
         Assert.Equal(24 * 300f / 800, core.Makes, 4); // in proportion to its fill
-        Assert.Equal(NodeSpecs.All[NodeKind.Core].PowerTransferPerSecond, core.Sends, 4);
+        Assert.Equal(NodeSpecs.All[NodeKind.Core].PowerTransferPerSecond * 300f / 800, core.Sends, 4); // its fill's share (Nov 3)
         Assert.Equal(0, core.Upkeep);
         garden.Core.Power = 800;
         Assert.Equal(24, NodeStats.Of(garden.Core).Makes, 4); // full, it makes nothing: the card shows its full rate

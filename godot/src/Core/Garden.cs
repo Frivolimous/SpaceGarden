@@ -935,9 +935,13 @@ public sealed class Garden
         }
     }
 
-    // The clump of power a part sends in one transfer: its transfer rate times the step's length, so the rate holds
+    // The clump of power a part sends in one transfer: its rate now times the step's length, so the rate holds
     // whatever the step (a longer step sends bigger, rarer clumps).
-    public static float Clump(PlantNode node) => TransferPerSecond(node) * (float)Tuning.EconomyStepSeconds;
+    public static float Clump(PlantNode node) => SendsPerSecond(node) * (float)Tuning.EconomyStepSeconds;
+
+    // How fast a part sends power on now: its transfer rate times its fill, up to full (Jeremy, Nov 3: a stem sending
+    // 30/s sends 15/s at half full), as everything follows its fill.
+    public static float SendsPerSecond(PlantNode node) => TransferPerSecond(node) * Math.Clamp(FlowFill(node), 0, 1);
 
     // How fast a part can send power on: its kind's rate, raised by evolutions (Long Stemmed, Twin Stars, Second Path).
     public static float TransferPerSecond(PlantNode node) => node.Spec.PowerTransferPerSecond * node.Boost.Transfer;

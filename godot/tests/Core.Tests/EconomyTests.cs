@@ -150,12 +150,21 @@ public class EconomyTests
         var before = garden.Nodes.ToDictionary(n => n, n => n.Power);
         var production = garden.Nodes.ToDictionary(n => n, Garden.ProductionPerSecond);
         var upkeep = garden.Nodes.ToDictionary(n => n, Garden.UpkeepPerSecond);
+        // A clump is a share of the rate by fill (Nov 3), the fill after the step's making and upkeep.
+        var clump = garden.Nodes.ToDictionary(n => n, n =>
+        {
+            float held = n.Power;
+            n.Power += (production[n] - upkeep[n]) * (float)Tuning.EconomyStepSeconds;
+            float c = Garden.Clump(n);
+            n.Power = held;
+            return c;
+        });
         garden.Grow(Tuning.EconomyStepSeconds);
         float Moved(PlantNode n) =>
             n.Power - before[n] - (production[n] - upkeep[n]) * (float)Tuning.EconomyStepSeconds;
-        Assert.Equal(-Garden.Clump(garden.Core), Moved(garden.Core), 1e-3f);
-        Assert.Equal(Garden.Clump(garden.Core) - Garden.Clump(trunk), Moved(trunk), 1e-3f);
-        Assert.Equal(Garden.Clump(trunk), Moved(stem), 1e-3f);
+        Assert.Equal(-clump[garden.Core], Moved(garden.Core), 1e-3f);
+        Assert.Equal(clump[garden.Core] - clump[trunk], Moved(trunk), 1e-3f);
+        Assert.Equal(clump[trunk], Moved(stem), 1e-3f);
         Assert.Equal(0, Moved(lab), 1e-3f);
     }
 
