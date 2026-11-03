@@ -1346,7 +1346,7 @@ public partial class Widget : Node
             .Replace("{Genes}", $"[color=#{NodeSpecs.All[NodeKind.Lab].Rgb:X6}]●[/color]");
         tutorialMark.Show(s);
         tutorialContinue.Visible = s is TutorialStep.Welcome or TutorialStep.Done;
-        tutorialDots.Set((int)s, Tutorial.Steps);
+        tutorialDots.Set(Tutorial.Pip(s), Tutorial.Pips);
         tutorialFlash = Math.Max(0, tutorialFlash - (float)delta);
         tutorialPanel.Modulate = new Color(1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.2f);
         PlaceTutorial(delta);

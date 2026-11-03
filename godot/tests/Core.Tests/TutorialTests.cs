@@ -163,4 +163,16 @@ public class TutorialTests
         Assert.InRange(with, without / Tuning.TutorialGrowthSpeed * 0.8, without / Tuning.TutorialGrowthSpeed * 1.2);
         Assert.InRange(Seconds(true, lab: true), without * 0.9, without * 1.1); // the lab out: back to the usual speed
     }
+
+    [Fact]
+    public void AStepAndItsWaitShareAPip()
+    {
+        Assert.Equal(-1, Tutorial.Pip(TutorialStep.Welcome));
+        Assert.Equal(Tutorial.Pip(TutorialStep.Grove), Tutorial.Pip(TutorialStep.GroveWait));
+        Assert.Equal(Tutorial.Pip(TutorialStep.Pot), Tutorial.Pip(TutorialStep.Tools));
+        Assert.Equal(Tutorial.Pips - 1, Tutorial.Pip(TutorialStep.Research));
+        Assert.Equal(Tutorial.Pips, Tutorial.Pip(TutorialStep.Done));
+        for (var step = TutorialStep.Welcome; step < TutorialStep.Done; step++) // in order, none skipped
+            Assert.InRange(Tutorial.Pip(step + 1) - Tutorial.Pip(step), 0, 1);
+    }
 }

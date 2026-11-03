@@ -12,7 +12,22 @@ public enum TutorialAction { Bud, CancelBud, Prune, Build, Research, Shaping, Mo
 
 public static class Tutorial
 {
-    public const int Steps = (int)TutorialStep.Done + 1;
+    // The header's pips: a step and its wait share one (Grove and Wait for the Grove; both Tending Mode steps; both
+    // Wait for Genes steps), and the welcome and the send-off have none (Jeremy, Nov 3).
+    public const int Pips = 6;
+
+    // The pip a step lights: 0 to Pips - 1, or -1 before the first (the welcome), Pips after the last (the send-off).
+    public static int Pip(TutorialStep step) => step switch
+    {
+        TutorialStep.Welcome => -1,
+        TutorialStep.Grove or TutorialStep.GroveWait => 0,
+        TutorialStep.Stem or TutorialStep.StemWait => 1,
+        TutorialStep.Lab => 2,
+        TutorialStep.Pot or TutorialStep.Tools => 3,
+        TutorialStep.Genes or TutorialStep.Wait => 4,
+        TutorialStep.Research => 5,
+        _ => Pips,
+    };
 
     public static string Title(TutorialStep step) => step switch
     {
