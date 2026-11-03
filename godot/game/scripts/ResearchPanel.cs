@@ -77,7 +77,11 @@ public partial class ResearchPanel : FloatingWindow
 
         // Minimised (Jeremy, Nov 3): only the header (the genes) and a small Buy per track, saying how many genes it
         // still needs while it falls short.
-        compact = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Visible = false, CustomMinimumSize = new Vector2(0, 32) };
+        // (As wide as the cards' row, three equal Buys, so the panel keeps its width either way and as their text changes.)
+        compact = new HBoxContainer
+        {
+            MouseFilter = MouseFilterEnum.Ignore, Visible = false, CustomMinimumSize = new Vector2(3 * CardWidth + 2 * 10, 32),
+        };
         compact.AddThemeConstantOverride("separation", 6);
         compact.AddChild(SmallBuy(Track.Stems, stemHue));
         compact.AddChild(SmallBuy(Track.Generators, generatorHue));
@@ -112,13 +116,17 @@ public partial class ResearchPanel : FloatingWindow
     Control SmallBuy(Track track, Color hue)
     {
         // (A container, so it grows to fit the button's text and the fill sits behind it, the same size.)
-        var holder = new MarginContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(120, 24) };
+        var holder = new MarginContainer
+        {
+            MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(0, 24), SizeFlagsHorizontal = SizeFlags.ExpandFill,
+        };
         var fill = new BuyFill(hue);
         holder.AddChild(fill);
         var buy = new Button
         {
             FocusMode = FocusModeEnum.None,
             MouseDefaultCursorShape = CursorShape.PointingHand,
+            ClipText = true, // (its text never widens it)
         };
         holder.AddChild(buy);
         buy.MouseEntered += () => { smallHovered = track; refreshTimer = 0; };
