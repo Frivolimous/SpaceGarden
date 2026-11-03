@@ -50,6 +50,7 @@ public partial class Main : Node2D
 
     public override void _Ready()
     {
+        Textures.Prepare(); // the parts' shapes, worked out off the main thread (see Textures.Prepare)
         foreach (var a in OS.GetCmdlineUserArgs())
         {
             var parts = a.TrimStart('-').Split('=', 2);
@@ -309,6 +310,7 @@ public partial class Main : Node2D
     // spent per frame (process, physics, and the renderer's CPU and GPU), draw calls and triangles.
     public override void _Process(double delta)
     {
+        Textures.Warm();
         CheckVisibility(delta);
         if (!args.ContainsKey("fpslog") || (fpsLogTimer -= delta) > 0) return;
         fpsLogTimer = 0.25;

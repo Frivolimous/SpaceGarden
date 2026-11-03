@@ -754,7 +754,13 @@ Design layers still to work through:
 - [ ] Build step 5 (5a prep, 5b tracks, 5c seedlings, 5d wild flowers and the Hub done), then the real-week tuning check
 - [x] Alerts: a faint ring closing in on whatever waits (the core, the Hub, a seedling), and a red dot on the core menu's Research slot (see Alerts)
 - [ ] Hub details: respec (the paths, point curve and milestones are set by the step 5 addendum; upkeep per upgrade a placeholder: see Built: the Hub)
-- [ ] Onboarding over the first days (step 6), starting with planting the first grove
+- [ ] Onboarding over the first days (step 6), starting with planting the first grove. Pinned (Jeremy, Nov 3), a first framework: a tutorial that walks the opening, one step at a time, each shown once the last is done:
+  1. Plant a grove (nothing grows on its own without one).
+  2. Use a Gravity Pot (the first shaping tool, there from the start).
+  3. Grow a stem, then a lab on it (labs make the genes that buy everything).
+  4. Wait for research, or build more meanwhile (the garden card's Next line and ETA).
+  5. Here's Research: buy the first upgrade (a stem).
+  6. Grow the new stem. Then it ends (open: is that the whole tutorial, or do seedlings, wild flowers and the Hub get steps of their own later?).
 - [ ] Identity: what makes each garden uniquely yours after months
 - [ ] Events and surprises: rare blooms, seasons, day and night
 - [ ] Audio: likely silent by default

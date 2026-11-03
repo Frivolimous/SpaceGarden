@@ -923,6 +923,68 @@ public static class Textures
         return texture;
     }
 
+    // ==== PREPARING THE SHAPES ==== \\
+    // Working out a shape's coverage is slow (every wild flower shape together took about half a second, on the
+    // frame the first seedling or wild flower showed: Jeremy's "hiccup when you place a seedling"). So every shape's
+    // coverage is worked out once, off the main thread, as the game starts (Prepare), as plain bytes; the textures are
+    // made from those bytes when first wanted (fast), and the atlas and its material as soon as they're ready (Warm,
+    // each frame until done), before any part needs them.
+    static Task<Dictionary<Shape, byte[]>>? coverage;
+
+    public static void Prepare() => coverage ??= Task.Run(() =>
+    {
+        var all = Enum.GetValues<Shape>();
+        var done = new byte[all.Length][];
+        Parallel.For(0, all.Length, i => done[i] = Coverage(all[i]));
+        return all.Select((shape, i) => (shape, done[i])).ToDictionary(p => p.shape, p => p.Item2);
+    });
+
+    // Each frame until done: once the coverage is in, makes the atlas and its material, so the first wild flower,
+    // seedling or Hub costs nothing extra.
+    public static void Warm()
+    {
+        if (atlas != null || coverage is not { IsCompleted: true }) return;
+        _ = Atlas;
+        _ = AtlasMaterial;
+    }
+
+    // A shape's coverage: one alpha byte per pixel, ShapeSize square (waits for Prepare, or works it out here if it
+    // wasn't called).
+    static byte[] CoverageOf(Shape shape)
+    {
+        Prepare();
+        return coverage!.Result[shape];
+    }
+
+    // Supersampled: how much of each pixel is inside the shape. Plain math, safe off the main thread.
+    static byte[] Coverage(Shape shape)
+    {
+        var corners = GardenView.UnitPolygon(shape);
+        Func<Vector2, bool> inside = InAtlas(shape) ? WildShape(shape) : p => Inside(shape, corners, p);
+        var alpha = new byte[ShapeSize * ShapeSize];
+        for (int y = 0; y < ShapeSize; y++)
+            for (int x = 0; x < ShapeSize; x++)
+            {
+                int count = 0;
+                for (int sy = 0; sy < Supersample; sy++)
+                    for (int sx = 0; sx < Supersample; sx++)
+                    {
+                        var p = new Vector2(x + (sx + 0.5f) / Supersample, y + (sy + 0.5f) / Supersample) / ShapeSize * 2 - Vector2.One;
+                        if (inside(p / ShapeFill)) count++;
+                    }
+                alpha[y * ShapeSize + x] = (byte)Math.Round(255f * count / (Supersample * Supersample));
+            }
+        return alpha;
+    }
+
+    // White pixels with these alphas, as a texture with mipmaps.
+    static Texture2D WhiteTexture(int width, int height, byte[] rgba)
+    {
+        var image = Image.CreateFromData(width, height, false, Image.Format.Rgba8, rgba);
+        image.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(image);
+    }
+
     // The quad size that draws a shape at this radius.
     public static float ShapeDiameter(float radius) => radius * 2 / ShapeFill;
 
@@ -974,28 +1036,19 @@ public static class Textures
 
     static Texture2D MakeAtlas()
     {
-        var image = Image.CreateEmpty(AtlasColumns * AtlasCell, AtlasRows * AtlasCell, false, Image.Format.Rgba8);
-        image.Fill(new Color(1, 1, 1, 0));
+        int width = AtlasColumns * AtlasCell, height = AtlasRows * AtlasCell;
+        var rgba = new byte[width * height * 4];
+        for (int i = 0; i < rgba.Length; i += 4) rgba[i] = rgba[i + 1] = rgba[i + 2] = 255; // white, clear
         for (var shape = SpaceGarden.Core.Shape.Plus; (int)shape < Enum.GetValues<Shape>().Length; shape++)
         {
             var cell = CellOf(shape);
             int left = (int)cell.X * AtlasCell + AtlasGutter, top = (int)cell.Y * AtlasCell + AtlasGutter;
-            var parts = WildShape(shape);
+            var alpha = CoverageOf(shape);
             for (int y = 0; y < ShapeSize; y++)
                 for (int x = 0; x < ShapeSize; x++)
-                {
-                    int inside = 0;
-                    for (int sy = 0; sy < Supersample; sy++)
-                        for (int sx = 0; sx < Supersample; sx++)
-                        {
-                            var p = new Vector2(x + (sx + 0.5f) / Supersample, y + (sy + 0.5f) / Supersample) / ShapeSize * 2 - Vector2.One;
-                            if (parts(p / ShapeFill)) inside++;
-                        }
-                    image.SetPixel(left + x, top + y, new Color(1, 1, 1, inside / (float)(Supersample * Supersample)));
-                }
+                    rgba[((top + y) * width + left + x) * 4 + 3] = alpha[y * ShapeSize + x];
         }
-        image.GenerateMipmaps();
-        return ImageTexture.CreateFromImage(image);
+        return WhiteTexture(width, height, rgba);
     }
 
     // The wild flowers' shapes, each radially symmetric within the unit circle, as a test of whether a point is inside.
@@ -1078,23 +1131,14 @@ public static class Textures
     // (A wild flower's shape too, on its own: the toolbar's and the evolution menu's icons draw them.)
     static Texture2D MakeShape(Shape shape)
     {
-        var corners = GardenView.UnitPolygon(shape);
-        Func<Vector2, bool> inside = InAtlas(shape) ? WildShape(shape) : p => Inside(shape, corners, p);
-        var image = Image.CreateEmpty(ShapeSize, ShapeSize, false, Image.Format.Rgba8);
-        for (int y = 0; y < ShapeSize; y++)
-            for (int x = 0; x < ShapeSize; x++)
-            {
-                int count = 0;
-                for (int sy = 0; sy < Supersample; sy++)
-                    for (int sx = 0; sx < Supersample; sx++)
-                    {
-                        var p = new Vector2(x + (sx + 0.5f) / Supersample, y + (sy + 0.5f) / Supersample) / ShapeSize * 2 - Vector2.One;
-                        if (inside(p / ShapeFill)) count++;
-                    }
-                image.SetPixel(x, y, new Color(1, 1, 1, count / (float)(Supersample * Supersample)));
-            }
-        image.GenerateMipmaps();
-        return ImageTexture.CreateFromImage(image);
+        var alpha = CoverageOf(shape);
+        var rgba = new byte[alpha.Length * 4];
+        for (int i = 0; i < alpha.Length; i++)
+        {
+            rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = 255;
+            rgba[i * 4 + 3] = alpha[i];
+        }
+        return WhiteTexture(ShapeSize, ShapeSize, rgba);
     }
 
     static bool Inside(Shape shape, Vector2[] corners, Vector2 p)
