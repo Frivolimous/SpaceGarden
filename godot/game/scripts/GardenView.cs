@@ -693,8 +693,9 @@ public partial class GardenView : Node2D
                 colour = colour.Lightened(0.5f);
                 colour.A = flare;
                 float turn = -Mathf.Pi / 2 + t * 0.5f;
-                markLayer.DrawColoredPolygon(Sparkle(at, reach + 1, turn), new Color(0, 0, 0, 0.3f * flare));
-                markLayer.DrawColoredPolygon(Sparkle(at, reach, turn), colour);
+                if (!float.IsFinite(at.X) || !float.IsFinite(at.Y)) continue;
+                DrawFan(at, Sparkle(at, reach + 1, turn), new Color(0, 0, 0, 0.3f * flare));
+                DrawFan(at, Sparkle(at, reach, turn), colour);
             }
             else
             {
@@ -804,6 +805,15 @@ public partial class GardenView : Node2D
     }
 
     // Four long thin points about a centre.
+    // A star shape drawn as triangles from its centre, so Godot needn't triangulate it (DrawColoredPolygon's
+    // triangulation failed now and then on a glint: "Invalid polygon data").
+    void DrawFan(Vector2 centre, Vector2[] rim, Color colour)
+    {
+        var colours = new[] { colour, colour, colour };
+        for (int i = 0; i < rim.Length; i++)
+            markLayer.DrawPrimitive([centre, rim[i], rim[(i + 1) % rim.Length]], colours, []);
+    }
+
     static Vector2[] Sparkle(Vector2 at, float reach, float turn)
     {
         var points = new Vector2[8];
