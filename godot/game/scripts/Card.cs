@@ -66,6 +66,16 @@ public partial class Card : PanelContainer
     // A small glow fruit beside the heading while a buff blob's boost is running on the part (a Buffer's or a glow's).
     readonly BuffMark buffed = new() { Visible = false };
 
+    // Inside the shared info panel (Jeremy, Nov 3: the part's and the garden's cards in one panel): no frame of its
+    // own, the panel's is round both.
+    public void Inline()
+    {
+        AddThemeStyleboxOverride("panel", new StyleBoxEmpty
+        {
+            ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 6, ContentMarginBottom = 8,
+        });
+    }
+
     public void ShowPart(PlantNode node) => Open(node, false);
 
     public void ShowGarden() => Open(null, true);

@@ -45,7 +45,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   second, and hovering a Buy you can't afford yet says how long until you can. The header's **–** minimises it to
   the header and a small Buy per track ("Stem: 1,234 more"); **□** brings the cards back. See Upgrade tracks in DESIGN.md.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
-  time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
+  time. Tap the core again, anywhere else, or Escape to close it. The cards (the garden's above the part's) share one panel, set down beside the plant; drag it anywhere on it to move it, and it stays where you leave it.
 - **Undo a prune** (switched off for now: `Tuning.UndoPruneOn`): for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
   the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; passive growth waits out the window
   so the room is still there, and a bud placed in that room, or time away, ends it.

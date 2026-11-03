@@ -109,6 +109,11 @@ public partial class Widget : Node
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
     readonly Card partCard = new(), gardenCard = new();
     readonly VBoxContainer cards = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
+    // The cards share one panel (Jeremy, Nov 3), dragged anywhere on it; once moved it stays where it was left.
+    readonly PanelContainer info = new() { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.Move };
+    readonly ColorRect infoDivider = new() { Color = new Color(1, 1, 1, 0.12f), CustomMinimumSize = new Vector2(0, 1), MouseFilter = Control.MouseFilterEnum.Ignore };
+    Vector2? infoGrab; // while held: where on the panel the pointer took it
+    bool infoMoved;
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
     readonly Almanac almanac = new(); // its own window, open until its slot or ✕ closes it (see SetAlmanac)
     readonly ResearchPanel research = new(); // its own window too (see SetResearch)
@@ -194,10 +199,26 @@ public partial class Widget : Node
         toolbar.Used += Use;
         toolbarLayer.AddChild(undo);
         undo.Pressed += UndoPrune;
-        cards.AddThemeConstantOverride("separation", 6);
+        cards.AddThemeConstantOverride("separation", 0);
+        gardenCard.Inline();
+        partCard.Inline();
         cards.AddChild(gardenCard);
+        cards.AddChild(infoDivider);
         cards.AddChild(partCard);
-        toolbarLayer.AddChild(cards);
+        var infoStyle = Toolbar.PillStyle();
+        infoStyle.SetCornerRadiusAll(10);
+        infoStyle.ContentMarginLeft = infoStyle.ContentMarginRight = infoStyle.ContentMarginTop = infoStyle.ContentMarginBottom = 0;
+        info.AddThemeStyleboxOverride("panel", infoStyle);
+        info.TooltipText = "";
+        info.AddChild(cards);
+        info.Visible = false;
+        info.GuiInput += e =>
+        {
+            if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } press) return;
+            infoGrab = press.Position;
+            info.AcceptEvent();
+        };
+        toolbarLayer.AddChild(info);
         toolbarLayer.AddChild(almanac);
         toolbarLayer.AddChild(research);
         toolbarLayer.AddChild(hubPanel);
@@ -587,7 +608,9 @@ public partial class Widget : Node
         bool overAlmanac = almanac.Catches(pointer / Dpi);
         bool overResearch = research.Catches(pointer / Dpi);
         bool overHub = hubPanel.Catches(pointer / Dpi);
-        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac && !overResearch && !overHub;
+        bool overInfo = info.Visible && info.GetGlobalRect().HasPoint(pointer / Dpi);
+        bool free = inWindow && !overToolbar && !overUndo && !overBar && !overMenu && !overAlmanac && !overResearch && !overHub
+            && !overInfo;
         var handle = free ? HandleAt(world) : null;
         var under = free && handle == null ? Garden.NodeAt(world, HoverSlop) : null;
         var underTool = handle ?? (Building && free && under == null ? Garden.ShapingAt(world, HoverSlop) : null);
@@ -663,7 +686,7 @@ public partial class Widget : Node
 
         bool catchMouse = pressed || overToolbar || overUndo || overMenu || under != null || overBar || onBackdrop
             || underTool != null || movingTool != null || overAlmanac || almanac.Dragging
-            || overResearch || research.Dragging || overHub || hubPanel.Dragging;
+            || overResearch || research.Dragging || overHub || hubPanel.Dragging || overInfo || infoGrab != null;
         if (ClickThrough.Supported) ClickThrough.Set(!catchMouse);
         else UpdateRegion(delta);
         bool active = catchMouse || fading || toolbar.Visible || coreMenu.Visible || evolutionMenu.Visible || Garden.Held != null
@@ -707,17 +730,27 @@ public partial class Widget : Node
     // side fixed (only pushed back onto the screen past an edge).
     void PlaceCard()
     {
-        if (!partCard.Visible && !gardenCard.Visible)
+        info.Visible = partCard.Visible || gardenCard.Visible;
+        infoDivider.Visible = partCard.Visible && gardenCard.Visible;
+        if (!Input.IsMouseButtonPressed(MouseButton.Left)) infoGrab = null;
+        if (!info.Visible)
         {
-            cardAnchor = null;
+            if (!infoMoved) cardAnchor = null; // (moved by hand, it opens where it was left)
             return;
         }
         var screen = GetViewport().GetVisibleRect().Size / Dpi;
-        var size = cards.GetCombinedMinimumSize();
+        var size = info.GetCombinedMinimumSize();
+        if (infoGrab is { } grab)
+        {
+            // Held: it follows the pointer, set down by its top left from now on.
+            cardAnchor = PointerInViewport() / Dpi - grab;
+            cardOnLeft = false;
+            infoMoved = true;
+        }
         if (cardAnchor == null) (cardAnchor, cardOnLeft) = Beside(size, top: 60);
         var at = cardAnchor.Value - new Vector2(cardOnLeft ? size.X : 0, 0);
-        cards.Position = at.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
-        cards.Size = size;
+        info.Position = at.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
+        info.Size = size;
     }
 
     // Where something this size goes beside the plant and the core's menu (see PlaceCard), its top this far above the
