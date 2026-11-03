@@ -251,7 +251,7 @@ public static class Tuning
     // ==== RESEARCH ==== \\
     // The three upgrade tracks (DESIGN.md, Upgrade tracks): genes from the balance buy each track's next upgrade, in
     // order. Placeholders for playtesting (Jeremy's balance pass, Nov 1: dearer overall than 5b's, the early steps
-    // most). Stems and generators each raise their cap by 1 (to 47 stems and 44 generators); the core's track is its
+    // most; generators again, Nov 3: dearer from the third on, most in the middle). Stems and generators each raise their cap by 1 (to 47 stems and 44 generators); the core's track is its
     // own list, the Hub ninth. Past these each track ends, as long-term pacing isn't designed yet.
     public static readonly double[] StemCosts =
     [
@@ -263,10 +263,10 @@ public static class Tuning
 
     public static readonly double[] GeneratorCosts =
     [
-        1_000, 2_000, 3_000, 5_000, 9_000, 15_000, 25_000, 40_000, 60_000, 85_000, 115_000, 150_000, 190_000, 235_000,
-        285_000, 340_000, 400_000, 465_000, 535_000, 606_000, 678_000, 751_000, 825_000, 900_000, 976_000, 1_053_000,
-        1_131_000, 1_210_000, 1_290_000, 1_371_000, 1_453_000, 1_536_000, 1_620_000, 1_705_000, 1_791_000, 1_878_000,
-        1_966_000, 2_055_000, 2_145_000, 2_236_000, 2_328_000, 2_421_000, 2_515_000,
+        1_000, 2_000, 4_000, 6_000, 10_000, 16_000, 26_000, 44_000, 64_000, 95_000, 125_000, 175_000, 245_000, 295_000,
+        345_000, 400_000, 460_000, 525_000, 595_000, 666_000, 738_000, 811_000, 885_000, 960_000, 1_036_000, 1_113_000,
+        1_191_000, 1_270_000, 1_350_000, 1_431_000, 1_513_000, 1_596_000, 1_680_000, 1_765_000, 1_851_000, 1_938_000,
+        2_026_000, 2_115_000, 2_205_000, 2_296_000, 2_388_000, 2_481_000, 2_575_000,
     ];
 
     public static readonly (UpgradeKind Kind, double Cost)[] CoreCosts =

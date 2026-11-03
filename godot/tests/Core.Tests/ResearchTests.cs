@@ -53,10 +53,10 @@ public class ResearchTests
 
         var generators = BuyAll(garden, Track.Generators);
         Assert.Equal(43, generators.Count);
-        Assert.Equal([1_000, 2_000, 3_000, 5_000, 9_000, 15_000, 25_000, 40_000, 60_000, 85_000],
+        Assert.Equal([1_000, 2_000, 4_000, 6_000, 10_000, 16_000, 26_000, 44_000, 64_000, 95_000],
             generators.Take(10).Select(u => u.Cost));
-        Assert.Equal(2_515_000, generators[^1].Cost);
-        Assert.Equal(39_400_000, generators.Sum(u => u.Cost));
+        Assert.Equal(2_575_000, generators[^1].Cost);
+        Assert.Equal(41_313_000, generators.Sum(u => u.Cost));
         Assert.Equal(44, garden.Capacity.Generators);
     }
 
