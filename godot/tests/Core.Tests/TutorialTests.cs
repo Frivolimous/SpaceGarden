@@ -128,4 +128,28 @@ public class TutorialTests
         Assert.Null(Garden.FromSave(garden.ToSave() with { Tutorial = null }).Tutorial);
         Assert.Null(Garden.New(Layout.Radial).Tutorial); // (tests and sims start without one)
     }
+
+    [Fact]
+    public void BudsGrowTwiceAsFastDuringIt()
+    {
+        double Seconds(bool tutorial)
+        {
+            var (garden, stem) = Opening();
+            garden.ActTutorial(TutorialStep.Welcome);
+            if (!tutorial) garden = Garden.FromSave(garden.ToSave() with { Tutorial = null });
+            stem = garden.Nodes[1];
+            garden.GrowBranch(stem, NodeKind.Grove); // (not the groveless first grove's speed)
+            garden.SproutFrom(stem, NodeKind.Stem);
+            double t = 0;
+            while (stem.FormingBud && t < 600)
+            {
+                foreach (var n in garden.Nodes) if (!n.Spec.IsFruit) n.Power = n.Store;
+                garden.Grow(Tuning.EconomyStepSeconds);
+                t += Tuning.EconomyStepSeconds;
+            }
+            return t;
+        }
+        double with = Seconds(true), without = Seconds(false);
+        Assert.InRange(with, without / Tuning.TutorialGrowthSpeed * 0.8, without / Tuning.TutorialGrowthSpeed * 1.2);
+    }
 }

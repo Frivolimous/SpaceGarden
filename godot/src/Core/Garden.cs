@@ -97,6 +97,9 @@ public sealed class Garden
     public bool TutorialAllows(TutorialAction action, NodeKind? kind = null, ShapingKind? shaping = null) =>
         global::SpaceGarden.Core.Tutorial.Allows(Tutorial, action, kind, shaping);
 
+    // How much faster buds and fruit grow: Tuning.TutorialGrowthSpeed while the tutorial runs.
+    float TutorialGrowth => Tutorial != null ? Tuning.TutorialGrowthSpeed : 1;
+
     bool TutorialHoldsBuds => Tutorial is { } t && t <= TutorialStep.Lab;
 
     // The part the player is holding (see Grab), and where the pointer is pulling it.
@@ -1497,7 +1500,7 @@ public sealed class Garden
             node.Growth = 0;
             node.FormingLook = 0;
         }
-        node.Growth += growth;
+        node.Growth += growth * TutorialGrowth;
         if (node.Growth < (node.FormingFruit ? Tuning.FruitGrowth : Tuning.BudGrowth) - 1e-4f) return null;
         var kind = node.Forming!.Value;
         node.Forming = null;
@@ -1517,6 +1520,7 @@ public sealed class Garden
             if (!node.FormingBud) continue;
             float growth = Tuning.BudGrowth / Tuning.BudSelfGrowSeconds * Output(node) * dt * node.Boost.BudGrow;
             if (groveless && node.Forming == NodeKind.Grove) growth *= Tuning.FirstGroveSpeed;
+            growth *= TutorialGrowth;
             node.Growth += growth;
             node.FormingLook = Math.Min(node.Growth, node.FormingLook + growth);
             if (node.Growth >= Tuning.BudGrowth - 1e-4f) budding.Add(node);

@@ -780,7 +780,7 @@ Design layers still to work through:
   | 10 | Research Stems | the first stem upgrade bought | the core, Research, the Stems card's Buy | — |
   | 11 | You're on your own! | Continue | — | — |
 
-  Held-back buttons are greyed and do nothing. Every step is a check on the garden or the player's act, so a step already done is passed at once (a wild stand-in for the bud counts). Until the lab is planted, growth blobs start no passive buds (fruit only). The step is saved (`GardenSave.Tutorial`); a garden from an older save has none. Code: `Core/Tutorial.cs` (steps, texts, `Allows`), `Garden.StartTutorial`/`AdvanceTutorial`/`ActTutorial`/`TutorialAllows`, `Widget.UpdateTutorial`/`Beckon`. Dev aid: `--notutorial`.
+  Held-back buttons are greyed and do nothing. Every step is a check on the garden or the player's act, so a step already done is passed at once (a wild stand-in for the bud counts). Until the lab is planted, growth blobs start no passive buds (fruit only). While the tutorial runs, buds and fruit grow twice as fast, on their own and from growth blobs (`Tuning.TutorialGrowthSpeed`, Jeremy, Nov 3). The step is saved (`GardenSave.Tutorial`); a garden from an older save has none. Code: `Core/Tutorial.cs` (steps, texts, `Allows`), `Garden.StartTutorial`/`AdvanceTutorial`/`ActTutorial`/`TutorialAllows`, `Widget.UpdateTutorial`/`Beckon`. Dev aid: `--notutorial`.
 - [ ] Playtest notes, Nov 3, waiting:
   - Next-unlock alert in the garden view (the next upgrade's timing even while one is affordable, to save past a stem for power): paused until play shows whether the Research panel's timer on Buy is enough.
   - The garden card's "Next: +1 stem" line (whether to name it "next research"): left alone for now.
