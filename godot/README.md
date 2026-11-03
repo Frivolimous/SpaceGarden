@@ -11,7 +11,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
 
 ## Using it
 - **Display modes.** It starts in **Active**: full opacity, with its toolbar, card and the core's menu. **Ambient**
-  (the core's menu, or **Ctrl+Alt+G** from anywhere; Windows) fades it, and every click falls through to the
+  (the core's menu, or **Ctrl+Alt+G** from anywhere; Windows) fades it (Settings > Ambient sets its opacity, its size as a share of Size, and its idle frame rate), and every click falls through to the
   desktop except on the core: it brightens and is ringed under the pointer, and a tap brings the garden back to Active with the
   core's menu open (so does Ctrl+Alt+G again). **Minimised** (the core's menu, a click on the yellow tray icon, or
   minimising the window any other way) minimises the window and pauses the garden like a locked screen, catching up

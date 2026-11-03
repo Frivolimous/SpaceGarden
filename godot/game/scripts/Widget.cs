@@ -49,13 +49,37 @@ public partial class Widget : Node
 
     public static readonly float[] Sizes = [0.5f, 0.75f, 1f, 1.25f];
 
-    // Ambient mode's opacity, and how long a change of mode takes to fade.
-    const float AmbientOpacity = 0.55f;
+    // How long a change of mode takes to fade.
     const float FadeSeconds = 0.3f;
+
+    // Ambient mode's own settings (Jeremy, Nov 3; the Settings menu's Ambient submenu, saved): its opacity, its size
+    // as a share of the garden's Size, and its idle frame rate.
+    public static readonly float[] AmbientOpacities = [0.25f, 0.4f, 0.55f, 0.7f, 0.85f, 1f];
+    public static readonly float[] AmbientScales = [0.5f, 0.75f, 1f];
+    public float AmbientOpacity { get; private set; } = 0.55f;
+    public float AmbientScale { get; private set; } = 1;
+    public int AmbientIdleFps { get; private set; } = 30;
+
+    // Sets them (any not among the menu's choices is left as it was), applying the size at once if in Ambient.
+    public void SetAmbient(float opacity, float scale, int idleFps)
+    {
+        if (AmbientOpacities.Any(o => Mathf.IsEqualApprox(o, opacity))) AmbientOpacity = opacity;
+        if (IdleRates.Contains(idleFps)) AmbientIdleFps = idleFps;
+        if (AmbientScales.Any(s => Mathf.IsEqualApprox(s, scale))) Rescale(() => AmbientScale = scale);
+        if (idling) OS.LowProcessorUsageModeSleepUsec = 1_000_000 / IdleRate;
+        CheckMenu();
+    }
+
+    // The idle frame rate now: Ambient's own while in it.
+    int IdleRate => Mode == DisplayMode.Ambient ? AmbientIdleFps : idleFps;
 
     // The settings (right-click, the core menu's Settings, the tray icon's right-click), and in debug builds their
     // Developer submenu.
-    enum MenuId { AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows, Export, Size0 = 100, Idle0 = 200 }
+    enum MenuId
+    {
+        AlwaysOnTop, Speed1, Speed60, Speed3600, Reset, Quit, FruitBorrows, Export, Size0 = 100, Idle0 = 200,
+        AmbientOpacity0 = 300, AmbientScale0 = 400, AmbientIdle0 = 500,
+    }
 
     public int IdleFps
     {
@@ -63,7 +87,7 @@ public partial class Widget : Node
         set
         {
             idleFps = value;
-            OS.LowProcessorUsageModeSleepUsec = 1_000_000 / idleFps; // takes effect at once if idling
+            OS.LowProcessorUsageModeSleepUsec = 1_000_000 / IdleRate; // takes effect at once if idling
             CheckMenu();
         }
     }
@@ -74,6 +98,7 @@ public partial class Widget : Node
     readonly Main main;
     readonly PopupMenu menu = new();
     readonly PopupMenu devMenu = new();
+    readonly PopupMenu ambientMenu = new();
     readonly ConfirmationDialog confirmNew = new()
     {
         Title = "New garden",
@@ -132,21 +157,27 @@ public partial class Widget : Node
 
     Garden Garden => main.Garden;
 
-    // Screen pixels per garden unit.
-    float Scale => Dpi * plantScale;
+    // Screen pixels per garden unit: the Size, times Ambient's own share of it while in Ambient.
+    float Scale => Dpi * ViewScale;
+    float ViewScale => plantScale * (Mode == DisplayMode.Ambient ? AmbientScale : 1);
 
     public float PlantScale
     {
         get => plantScale;
         set
         {
-            // Rescale around the core, so the plant stays planted where it is.
-            var coreOnScreen = GardenView.V(Garden.Core.Position) * Scale;
-            plantScale = value;
-            Garden.Translate(ToSim(coreOnScreen / Scale) - Garden.Core.Position);
-            ApplyTransform();
+            Rescale(() => plantScale = value);
             CheckMenu();
         }
+    }
+
+    // Changes the scale (by change), around the core, so the plant stays planted where it is.
+    void Rescale(Action change)
+    {
+        var coreOnScreen = GardenView.V(Garden.Core.Position) * Scale;
+        change();
+        Garden.Translate(ToSim(coreOnScreen / Scale) - Garden.Core.Position);
+        ApplyTransform();
     }
 
     public override void _Ready()
@@ -205,6 +236,19 @@ public partial class Widget : Node
         menu.AddSeparator("Idle frame rate");
         for (int i = 0; i < IdleRates.Length; i++)
             menu.AddRadioCheckItem($"{IdleRates[i]} fps{(IdleRates[i] == 30 ? " (default)" : "")}", (int)MenuId.Idle0 + i);
+        // Ambient mode's own opacity, size (a share of Size) and idle frame rate.
+        ambientMenu.AddSeparator("Opacity");
+        for (int i = 0; i < AmbientOpacities.Length; i++)
+            ambientMenu.AddRadioCheckItem($"{AmbientOpacities[i] * 100:0}%{(i == 2 ? " (default)" : "")}", (int)MenuId.AmbientOpacity0 + i);
+        ambientMenu.AddSeparator("Size");
+        for (int i = 0; i < AmbientScales.Length; i++)
+            ambientMenu.AddRadioCheckItem($"{AmbientScales[i] * 100:0}% of Size{(AmbientScales[i] == 1 ? " (default)" : "")}", (int)MenuId.AmbientScale0 + i);
+        ambientMenu.AddSeparator("Idle frame rate");
+        for (int i = 0; i < IdleRates.Length; i++)
+            ambientMenu.AddRadioCheckItem($"{IdleRates[i]} fps{(IdleRates[i] == 30 ? " (default)" : "")}", (int)MenuId.AmbientIdle0 + i);
+        ambientMenu.IdPressed += OnMenu;
+        menu.AddSeparator();
+        menu.AddSubmenuNodeItem("Ambient", ambientMenu);
         menu.AddSeparator();
         menu.AddItem("New garden...", (int)MenuId.Reset);
         // Developer settings, only in debug builds (running from the project, not an export).
@@ -272,7 +316,8 @@ public partial class Widget : Node
     public void SetMode(DisplayMode mode)
     {
         if (mode == Mode) return;
-        Mode = mode;
+        Rescale(() => Mode = mode); // (Ambient has a size of its own)
+        if (idling) OS.LowProcessorUsageModeSleepUsec = 1_000_000 / IdleRate; // (and an idle rate)
         almanac.SetAway(mode != DisplayMode.Active); // only the core takes clicks outside Active
         research.SetAway(mode != DisplayMode.Active);
         hubPanel.SetAway(mode != DisplayMode.Active);
@@ -414,7 +459,7 @@ public partial class Widget : Node
         var window = GetWindow();
         Dpi = Mathf.Clamp(Mathf.Round(DisplayServer.ScreenGetDpi() / 96f * 4) / 4, 1, 3);
         plantScale = scale;
-        menu.ContentScaleFactor = devMenu.ContentScaleFactor = confirmNew.ContentScaleFactor = Dpi;
+        menu.ContentScaleFactor = devMenu.ContentScaleFactor = ambientMenu.ContentScaleFactor = confirmNew.ContentScaleFactor = Dpi;
         toolbarLayer.Scale = new Vector2(Dpi, Dpi);
         var usable = DisplayServer.ScreenGetUsableRect();
         if (usable == new Rect2I(DisplayServer.ScreenGetPosition(), DisplayServer.ScreenGetSize()))
@@ -554,12 +599,12 @@ public partial class Widget : Node
         coreMenu.SetDot(Tool.Research, main.View.Alerts && Garden.UpgradeAffordable && !research.IsOpen);
         coreMenu.SetActive(Tool.Build, Building);
         PlaceCard();
-        if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * plantScale, viewport);
+        if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * ViewScale, viewport);
         // A seedling's choice follows it, and goes once it's chosen, bloomed or pruned.
         if (evolutionMenu.IsOpen)
         {
             if (evolutionMenu.Seedling is { } seedling && Garden.Nodes.Contains(seedling) && seedling.Choosing)
-                evolutionMenu.Follow(ToViewport(seedling.Position) / Dpi, seedling.Spec.Radius * plantScale, viewport);
+                evolutionMenu.Follow(ToViewport(seedling.Position) / Dpi, seedling.Spec.Radius * ViewScale, viewport);
             else evolutionMenu.Close();
         }
 
@@ -579,14 +624,14 @@ public partial class Widget : Node
             {
                 bool below = (target == Garden.Core && coreMenu.IsOpen && coreMenu.Above)
                     || (target == evolutionMenu.Seedling && evolutionMenu.IsOpen && evolutionMenu.Above);
-                toolbar.Follow(ToViewport(target.Position) / Dpi, target.Spec.Radius * plantScale, viewport, below);
+                toolbar.Follow(ToViewport(target.Position) / Dpi, target.Spec.Radius * ViewScale, viewport, below);
                 toolbar.Refresh();
             }
         }
         else if (toolbar.TargetTool is { } tool)
         {
             if (!Garden.Shaping.Contains(tool) || !Building) toolbar.HideAway();
-            else toolbar.Follow(ToViewport(tool.Position) / Dpi, 20 * plantScale, viewport);
+            else toolbar.Follow(ToViewport(tool.Position) / Dpi, 20 * ViewScale, viewport);
         }
         main.View.Highlight = dragging || pressed ? pressNode : under ?? toolbar.Target ?? selected;
         main.View.HotTool = dragging ? DropTarget(world) : movingTool ?? underTool?.Tool ?? toolbar.TargetTool;
@@ -713,7 +758,7 @@ public partial class Widget : Node
     {
         if (idle == idling) return;
         idling = idle;
-        OS.LowProcessorUsageModeSleepUsec = 1_000_000 / idleFps;
+        OS.LowProcessorUsageModeSleepUsec = 1_000_000 / IdleRate;
         OS.LowProcessorUsageMode = idle;
     }
 
@@ -948,7 +993,7 @@ public partial class Widget : Node
         Select(Garden.Core);
         toolbar.ShowFor(Garden.Core);
         coreMenu.Open();
-        coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * plantScale,
+        coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * ViewScale,
             GetViewport().GetVisibleRect().Size / Dpi);
     }
 
@@ -1103,6 +1148,15 @@ public partial class Widget : Node
             case MenuId.Quit: main.SaveAndQuit(); break;
             case MenuId.FruitBorrows: fruitBorrowsPush = !fruitBorrowsPush; break;
             case MenuId.Export: main.ExportTracking(null); break;
+            case >= MenuId.AmbientIdle0:
+                SetAmbient(AmbientOpacity, AmbientScale, IdleRates[(int)id - (int)MenuId.AmbientIdle0]);
+                break;
+            case >= MenuId.AmbientScale0:
+                SetAmbient(AmbientOpacity, AmbientScales[(int)id - (int)MenuId.AmbientScale0], AmbientIdleFps);
+                break;
+            case >= MenuId.AmbientOpacity0:
+                SetAmbient(AmbientOpacities[(int)id - (int)MenuId.AmbientOpacity0], AmbientScale, AmbientIdleFps);
+                break;
             case >= MenuId.Idle0: IdleFps = IdleRates[(int)id - (int)MenuId.Idle0]; break;
             case >= MenuId.Size0: PlantScale = Sizes[(int)id - (int)MenuId.Size0]; break;
         }
@@ -1118,6 +1172,11 @@ public partial class Widget : Node
         Check(devMenu, MenuId.FruitBorrows, fruitBorrowsPush);
         for (int i = 0; i < Sizes.Length; i++) Check(menu, MenuId.Size0 + i, Mathf.IsEqualApprox(Sizes[i], plantScale));
         for (int i = 0; i < IdleRates.Length; i++) Check(menu, MenuId.Idle0 + i, IdleRates[i] == idleFps);
+        for (int i = 0; i < AmbientOpacities.Length; i++)
+            Check(ambientMenu, MenuId.AmbientOpacity0 + i, Mathf.IsEqualApprox(AmbientOpacities[i], AmbientOpacity));
+        for (int i = 0; i < AmbientScales.Length; i++)
+            Check(ambientMenu, MenuId.AmbientScale0 + i, Mathf.IsEqualApprox(AmbientScales[i], AmbientScale));
+        for (int i = 0; i < IdleRates.Length; i++) Check(ambientMenu, MenuId.AmbientIdle0 + i, IdleRates[i] == AmbientIdleFps);
     }
 
     // (The Developer submenu is empty in a release build.)

@@ -6,9 +6,11 @@ using FileAccess = Godot.FileAccess;
 namespace SpaceGarden;
 
 // The garden (its parts' places are their places on the desktop) plus what only the overlay needs (when it was
-// last seen, the Size and Idle frame rate settings), as JSON in user://. Saves aren't migrated until release: one
+// last seen, the Size and Idle frame rate settings, and Ambient mode's own opacity, size and idle rate), as JSON in
+// user://. Saves aren't migrated until release: one
 // from another Version is set aside and a new garden starts.
-public sealed record SaveData(int Version, GardenSave Garden, double LastSeenUnix, float PlantScale = 0.75f, int IdleFps = 30);
+public sealed record SaveData(int Version, GardenSave Garden, double LastSeenUnix, float PlantScale = 0.75f, int IdleFps = 30,
+    float AmbientOpacity = 0.55f, float AmbientScale = 1, int AmbientIdleFps = 30);
 
 public static class SaveFile
 {

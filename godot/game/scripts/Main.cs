@@ -92,6 +92,7 @@ public partial class Main : Node2D
         AddChild(widget);
         widget.CoverScreen(args.TryGetValue("scale", out var sc) ? float.Parse(sc) : save?.PlantScale ?? 0.75f);
         if (save != null && Widget.IdleRates.Contains(save.IdleFps)) widget.IdleFps = save.IdleFps;
+        if (save != null) widget.SetAmbient(save.AmbientOpacity, save.AmbientScale, save.AmbientIdleFps);
         if (save == null) PlantAtHome();
         else widget.KeepOnScreen();
         // Dev aid: a new garden with its first grove and lab already planted (nothing grows passively without a grove).
@@ -470,7 +471,8 @@ public partial class Main : Node2D
         }));
     }
 
-    void Save() => SaveFile.Write(new SaveData(SaveFile.Version, Garden.ToSave(), Time.GetUnixTimeFromSystem(), widget.PlantScale, widget.IdleFps));
+    void Save() => SaveFile.Write(new SaveData(SaveFile.Version, Garden.ToSave(), Time.GetUnixTimeFromSystem(), widget.PlantScale, widget.IdleFps,
+        widget.AmbientOpacity, widget.AmbientScale, widget.AmbientIdleFps));
 
     public void SaveAndQuit()
     {
