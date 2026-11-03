@@ -105,12 +105,13 @@ public partial class Widget : Node
         DialogText = "Start a new garden? This one can't be brought back.",
         OkButtonText = "Start a new garden",
     };
-    // Cancelling or changing a forming bud asks every time (Jeremy, Nov 3: its growth is lost): a pill over the
-    // toolbar, what it would do and Confirm. It goes with the toolbar, or when another tool is picked.
-    readonly PanelContainer askPill = new() { MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
+    // Cancelling or changing a forming bud takes a second tap of the same button (Jeremy, Nov 3: its growth is lost):
+    // the first shows a hint over the toolbar ("Tap again to cancel"). It goes with the toolbar, or another pick.
+    readonly PanelContainer askPill = new() { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
     readonly Label askText = new() { MouseFilter = Control.MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center };
     Action? askAction;
     PlantNode? askFor;
+    Tool? askTool;
     readonly Toolbar toolbar = new();
     readonly CanvasLayer toolbarLayer = new() { Layer = 10 };
     readonly Card partCard = new(), gardenCard = new();
@@ -342,36 +343,11 @@ public partial class Widget : Node
         };
         AddChild(confirmNew);
         var askStyle = Toolbar.PillStyle();
-        askStyle.ContentMarginLeft = 12;
-        askStyle.ContentMarginRight = 4;
+        askStyle.ContentMarginLeft = askStyle.ContentMarginRight = 10;
         askStyle.ContentMarginTop = askStyle.ContentMarginBottom = 3;
         askPill.AddThemeStyleboxOverride("panel", askStyle);
-        var askRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Pass };
-        askRow.AddThemeConstantOverride("separation", 8);
         askText.LabelSettings = new LabelSettings { FontSize = 12 };
-        askRow.AddChild(askText);
-        var confirm = new Button { Text = "Confirm", FocusMode = Control.FocusModeEnum.None, MouseDefaultCursorShape = Control.CursorShape.PointingHand };
-        var confirmStyle = new StyleBoxFlat { BgColor = new Color(1f, 0.45f, 0.4f, 0.9f), ContentMarginLeft = 10, ContentMarginRight = 10 };
-        confirmStyle.SetCornerRadiusAll(10);
-        confirm.AddThemeStyleboxOverride("normal", confirmStyle);
-        var confirmHover = (StyleBoxFlat)confirmStyle.Duplicate();
-        confirmHover.BgColor = new Color(1f, 0.6f, 0.55f);
-        confirm.AddThemeStyleboxOverride("hover", confirmHover);
-        confirm.AddThemeStyleboxOverride("pressed", confirmHover);
-        confirm.AddThemeFontSizeOverride("font_size", 12);
-        foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color" })
-            confirm.AddThemeColorOverride(state, new Color(0.06f, 0.07f, 0.09f));
-        confirm.Pressed += () =>
-        {
-            var act = askAction;
-            Unask();
-            act?.Invoke();
-            partCard.RefreshNow();
-            gardenCard.RefreshNow();
-            toolbar.HideAway();
-        };
-        askRow.AddChild(confirm);
-        askPill.AddChild(askRow);
+        askPill.AddChild(askText);
         toolbarLayer.AddChild(askPill);
 
         tray.Icon = TrayIcon();
@@ -668,8 +644,7 @@ public partial class Widget : Node
         if (selected != null && !Garden.Nodes.Contains(selected)) Select(null); // pruned, or a new garden
         // (The ask pill goes with the toolbar it's over: gone if the toolbar closed or moved to another part.)
         if (askPill.Visible && (!toolbar.Visible || toolbar.Target != askFor)) Unask();
-        bool overToolbar = toolbar.Visible && (toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi)
-            || (askPill.Visible && askPill.GetRect().Grow(4).HasPoint(pointer / Dpi)));
+        bool overToolbar = toolbar.Visible && toolbar.GetRect().Grow(4).HasPoint(pointer / Dpi);
         bool overUndo = undo.Catches(pointer / Dpi);
         bool overMenu = coreMenu.Over(pointer / Dpi) || evolutionMenu.Over(pointer / Dpi);
         bool overBar = shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(pointer / Dpi);
@@ -1248,10 +1223,11 @@ public partial class Widget : Node
         menu.Popup(new Rect2I(at, Vector2I.Zero));
     }
 
-    // Shows the ask pill over the toolbar for this part: what picking it would do, and Confirm, which does it.
-    void Ask(PlantNode part, string text, Action action)
+    // Shows the hint over the toolbar for this part and tool; the same tool picked again does the action.
+    void Ask(PlantNode part, Tool tool, string text, Action action)
     {
         askFor = part;
+        askTool = tool;
         askText.Text = text;
         askAction = action;
         askPill.Visible = true;
@@ -1263,11 +1239,22 @@ public partial class Widget : Node
         askPill.Visible = false;
         askAction = null;
         askFor = null;
+        askTool = null;
     }
 
     // Picking a tool does its job and closes the toolbar (and the core's menu, for the core's).
     void Use(Tool tool)
     {
+        // The second tap of the tool that asked does it.
+        if (askTool == tool && askAction is { } confirmed && toolbar.Target == askFor)
+        {
+            Unask();
+            confirmed();
+            partCard.RefreshNow();
+            gardenCard.RefreshNow();
+            toolbar.HideAway();
+            return;
+        }
         Unask(); // (another pick forgets what was being asked)
         if (toolbar.TargetTool is { } shaping)
         {
@@ -1290,11 +1277,8 @@ public partial class Widget : Node
             // (Cancelling or changing a forming bud asks first, over the toolbar: its growth would be lost.)
             if (at.Forming is { } forming && at.FormingBud)
             {
-                string name = NodeSpecs.All[forming].Name.ToLowerInvariant(), growth = $"{at.Growth / Tuning.BudGrowth * 100:0}%";
-                if (Garden.IsBudOf(forming, kind)) Ask(at, $"Cancel the {name} bud ({growth} grown)?", () => Garden.CancelBud(at));
-                else if (Garden.CanChangeBud(at, kind))
-                    Ask(at, $"Change the {name} bud ({growth} grown) to a new {NodeSpecs.All[kind].Name.ToLowerInvariant()}?",
-                        () => Garden.ChangeBud(at, kind));
+                if (Garden.IsBudOf(forming, kind)) Ask(at, tool, "Tap again to cancel", () => Garden.CancelBud(at));
+                else if (Garden.CanChangeBud(at, kind)) Ask(at, tool, "Tap again to switch types", () => Garden.ChangeBud(at, kind));
                 return;
             }
             Garden.SproutFrom(at, kind);
