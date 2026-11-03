@@ -776,6 +776,7 @@ Design layers still to work through:
   - The garden card's "Next: +1 stem" line (whether to name it "next research"): left alone for now.
   - A "grow wild" bud (choose to grow a wild ??? with a longer incubation) and the wild rework (with it, selecting a part always by hand): check whether they're still needed now that the wild chance is 25% and every kind grows from the start.
   - Dropped: a wild mutation (turning a part into its wild variant).
+  - Resizing with tools in different quadrants: the Nov 3 build (tools keep their screen place, tied parts lock on, the plant follows its nearest anchor) isn't quite what Jeremy meant, but breaks nothing: good enough for now, to revisit.
 - [ ] Identity: what makes each garden uniquely yours after months
 - [ ] Events and surprises: rare blooms, seasons, day and night
 - [ ] Audio: likely silent by default
