@@ -865,9 +865,10 @@ public partial class GardenView : Node2D
 
     static Color ColourOf(NodeSpec spec) => kindColours[(int)spec.Kind];
 
-    // While a special view is on (Jeremy, Nov 3) the plant is a faded grey ghost under it: its parts and stems grey at
-    // GhostAlpha, no halos, fruit, link counts, motes or flashes, so only the view's colours stand out.
-    bool Ghosted => Heat != HeatView.None && Building;
+    // While the blob paths view is on (Jeremy, Nov 3) the plant is a faded grey ghost under it: its parts and stems grey
+    // at GhostAlpha, no halos, fruit, link counts, motes or flashes, so only the paths' colours stand out. (The power
+    // view keeps the plant as it is: its discs read against the parts.)
+    bool Ghosted => Heat == HeatView.Blobs && Building;
     const float GhostAlpha = 0.25f;
 
     // A kind's colour as drawn now: its own, or its grey (by its brightness) under a special view.
