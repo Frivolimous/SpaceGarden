@@ -15,6 +15,7 @@ public static class ShapingLook
     {
         ShapingKind.Pot => "Gravity Pot",
         ShapingKind.Trellis => "Trellis",
+        ShapingKind.Sway => "Sway Controller",
         _ => "Gravity Well",
     };
 
@@ -22,6 +23,8 @@ public static class ShapingLook
     {
         ShapingKind.Pot => "Drop a part on it: the part is held there, and its branch grows the way the pot faces.",
         ShapingKind.Trellis => "Drop parts on it: they're held along its line.",
+        ShapingKind.Sway => "Place it anywhere and turn its knob: left calms the plant's sway (to none), right stirs it (up to "
+            + $"{Tuning.SwayMax:0}×). Straight up is the usual.",
         _ => "Pulls the whole plant towards it, core and all. Pot the core to keep the plant where it is.",
     };
 
@@ -105,6 +108,30 @@ public static class ShapingLook
         ci.DrawCircle(at, 2 * s, tint.Lightened(0.4f) with { A = tint.A });
     }
 
+    // A sway controller: a dark dial face, a faint track along its knob's arc (through the top), lit from its left end
+    // up to the dial's setting, and in the middle a blade of grass swaying as much as the dial says (time moves it).
+    public static void Sway(CanvasItem ci, Vector2 at, float dial, float sway, Color tint, float time, float s = 1)
+    {
+        var edge = Edge with { A = Edge.A * tint.A };
+        float r = ShapingTool.DialRadius * s;
+        ci.DrawCircle(at, r + 1.1f, edge);
+        ci.DrawCircle(at, r, Fill with { A = 0.9f * tint.A });
+        ci.DrawArc(at, r, 0, Mathf.Tau, 40, tint, 1.4f * Mathf.Sqrt(s), true);
+        float start = -Mathf.Pi / 2 - ShapingTool.DialSweep / 2;
+        float track = r - 3.2f * s;
+        ci.DrawArc(at, track, start, start + ShapingTool.DialSweep, 40, tint with { A = tint.A * 0.25f }, 1.6f * s, true);
+        if (dial > 0.01f)
+            ci.DrawArc(at, track, start, start + ShapingTool.DialSweep * dial, 40, tint, 1.8f * s, true);
+        // The blade: rooted below the middle, its tip swinging side to side.
+        var root = at + new Vector2(0, 5.5f * s);
+        float swing = Mathf.Sin(time * 1.6f) * 2.6f * s * Mathf.Min(sway, Tuning.SwayMax);
+        var tip = at + new Vector2(swing, -5.5f * s);
+        var mid = (root + tip) / 2 + new Vector2(swing * 0.15f, 0);
+        Vector2[] blade = [root, mid, tip];
+        ci.DrawPolyline(blade, edge, 3 * s, true);
+        ci.DrawPolyline(blade, tint.Lightened(0.3f) with { A = tint.A }, 1.4f * s, true);
+    }
+
     // A handle the pointer can take (a pot's turning knob, a trellis's ends): a small bright bead.
     public static void Knob(CanvasItem ci, Vector2 at, float r, Color tint)
     {
@@ -124,6 +151,7 @@ public static class ShapingLook
                 break;
             case Tool.Trellis: Trellis(ci, c + new Vector2(-8, 5), c + new Vector2(8, -5), tint, 0.6f); break;
             case Tool.Well: Well(ci, c, tint, 0.1f, 0.45f); break;
+            case Tool.Sway: Sway(ci, c, 0.65f, 1.5f, tint, 1, 0.62f); break;
         }
     }
 

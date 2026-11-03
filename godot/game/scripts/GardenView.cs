@@ -373,6 +373,17 @@ public partial class GardenView : Node2D
                     // Only in build mode (fading with the backdrop): tending, a well isn't seen at all.
                     if (backdropAlpha > 0) ShapingLook.Well(shapingLayer, at, tint with { A = tint.A * backdropAlpha }, time);
                     break;
+                case ShapingKind.Sway:
+                    // Only in build mode too, with its setting under it ("×1.5").
+                    if (backdropAlpha <= 0) break;
+                    var faded = tint with { A = tint.A * backdropAlpha };
+                    ShapingLook.Sway(shapingLayer, at, tool.Dial, tool.Sway, faded, time);
+                    string label = $"×{tool.Sway:0.#}";
+                    var font = ThemeDB.FallbackFont;
+                    float width = font.GetStringSize(label, HorizontalAlignment.Left, -1, 10).X;
+                    shapingLayer.DrawString(font, at + new Vector2(-width / 2, ShapingTool.DialRadius + 13), label,
+                        HorizontalAlignment.Left, -1, 10, faded);
+                    break;
             }
         }
     }
@@ -394,6 +405,13 @@ public partial class GardenView : Node2D
                 var knob = PotAt(tool) + u * (garden.PotRadius(tool) + ShapingTool.PotKnob);
                 markLayer.DrawDashedLine(PotAt(tool) + u * (PotRadius(tool) + 3), knob - u * 4, tint with { A = tint.A * 0.4f }, 1, 3, true, true);
                 ShapingLook.Knob(markLayer, knob, 3.5f, tint);
+            }
+            else if (tool.Kind == ShapingKind.Sway)
+            {
+                // Its knob, just outside the dial on its arc.
+                var u = V(tool.Facing);
+                ShapingLook.Knob(markLayer, V(tool.Position) + u * (ShapingTool.DialRadius + ShapingTool.DialKnob), 3.5f,
+                    KnobTint(ShapingHandle.Turn));
             }
             else if (tool.Kind == ShapingKind.Trellis)
             {

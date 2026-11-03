@@ -573,6 +573,7 @@ public partial class Widget : Node
             switch (movingHandle)
             {
                 case ShapingHandle.Body: tool.Position = at + moveOffset; break;
+                case ShapingHandle.Turn when tool.Kind == ShapingKind.Sway: tool.DialTo(at); break;
                 case ShapingHandle.Turn: tool.TurnTo(at); break;
                 default: tool.MoveEnd(movingHandle, at); break;
             }
@@ -604,7 +605,7 @@ public partial class Widget : Node
 
     // The pot or trellis a part dragged in build mode would be tied to if let go here (a well holds nothing).
     ShapingTool? DropTarget(Num.Vector2 at) =>
-        Building && Garden.ShapingAt(at, HoverSlop) is { } hit && hit.Tool.Kind != ShapingKind.Well ? hit.Tool : null;
+        Building && Garden.ShapingAt(at, HoverSlop) is { } hit && hit.Tool.Kind is not (ShapingKind.Well or ShapingKind.Sway) ? hit.Tool : null;
 
     void UndoPrune()
     {

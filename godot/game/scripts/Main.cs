@@ -251,7 +251,8 @@ public partial class Main : Node2D
 
     // Dev aid, --shaping (now, or --shaping=N at physics tick N): one of each shaping tool, their caps raised to allow
     // it. A pot where the stem with the biggest branch beyond it stands, holding it and facing a little up from its
-    // way out; a trellis across the end of another branch, holding the stems there; and a well off to one side.
+    // way out; a trellis across the end of another branch, holding the stems there; a well off to one side; and a sway
+    // controller off to the other, turned up a little.
     public void PlaceShaping()
     {
         Garden.Capacity = Garden.Capacity with
@@ -259,6 +260,7 @@ public partial class Main : Node2D
             Pots = Math.Max(1, Garden.Capacity.Pots),
             Trellises = Math.Max(1, Garden.Capacity.Trellises),
             Wells = Math.Max(1, Garden.Capacity.Wells),
+            Sways = Math.Max(1, Garden.Capacity.Sways),
         };
         var core = Garden.Core.Position;
         int Size(PlantNode n) => 1 + n.Branches.Sum(Size);
@@ -280,6 +282,7 @@ public partial class Main : Node2D
             foreach (var n in others) Garden.Tie(n, trellis);
         }
         Garden.Place(ShapingKind.Well, core + new System.Numerics.Vector2(away.Y, -away.X) * 260);
+        if (Garden.Place(ShapingKind.Sway, core + new System.Numerics.Vector2(-away.Y, away.X) * 200) is { } sway) sway.Dial = 0.7f;
 
         static bool IsBeyond(PlantNode n, PlantNode of)
         {

@@ -501,7 +501,7 @@ public sealed class Garden
     // fruit can't be tied. Returns whether it was.
     public bool Tie(PlantNode node, ShapingTool tool)
     {
-        if (tool.Kind == ShapingKind.Well || node.Spec.IsFruit || !Shaping.Contains(tool)) return false;
+        if (tool.Kind is ShapingKind.Well or ShapingKind.Sway || node.Spec.IsFruit || !Shaping.Contains(tool)) return false;
         if (tool.Kind == ShapingKind.Pot)
             foreach (var other in Nodes)
                 if (other.TiedTo == tool) other.TiedTo = null;
@@ -559,6 +559,11 @@ public sealed class Garden
                 case ShapingKind.Well:
                     Consider(tool, ShapingHandle.Body, tool.Position, ShapingTool.WellRadius);
                     break;
+                case ShapingKind.Sway:
+                    Consider(tool, ShapingHandle.Turn, tool.Position + tool.Facing * (ShapingTool.DialRadius + ShapingTool.DialKnob),
+                        ShapingTool.HandleReach);
+                    Consider(tool, ShapingHandle.Body, tool.Position, ShapingTool.DialRadius + 2);
+                    break;
             }
         }
         return handle ?? body;
@@ -573,6 +578,7 @@ public sealed class Garden
     // (Pots and trellises hold their parts after they move: see Hold.)
     void Shape()
     {
+        swayScale = SwayScale;
         if (Shaping.Count == 0)
         {
             foreach (var node in Nodes) node.Lean = Vector2.Zero;
@@ -600,6 +606,19 @@ public sealed class Garden
             }
         }
     }
+
+    // How much the wind sways the plant: 1, scaled by each sway controller's dial (they multiply).
+    public float SwayScale
+    {
+        get
+        {
+            float scale = 1;
+            foreach (var tool in Shaping) if (tool.Kind == ShapingKind.Sway) scale *= tool.Sway;
+            return scale;
+        }
+    }
+
+    float swayScale = 1; // SwayScale, worked out once a tick (see Shape)
 
     // A potted part is drawn to its pot and held there; a part on a trellis is held on its line, free to slide along it.
     void Hold(PlantNode node, ShapingTool tool)
@@ -2043,7 +2062,9 @@ public sealed class Garden
     {
         int size = Tracking.MostMainNodes;
         var (pots, trellises, wells) = Tuning.ToolsAtSize(size);
+        int sways = Tuning.SwaysAtSize(size);
         var gained = new List<ShapingKind>();
+        if (sways > Capacity.Sways) gained.Add(ShapingKind.Sway);
         if (trellises > Capacity.Trellises) gained.Add(ShapingKind.Trellis);
         if (wells > Capacity.Wells) gained.Add(ShapingKind.Well);
         if (pots > Capacity.Pots) gained.Add(ShapingKind.Pot);
@@ -2053,6 +2074,7 @@ public sealed class Garden
             Pots = Math.Max(Capacity.Pots, pots),
             Trellises = Math.Max(Capacity.Trellises, trellises),
             Wells = Math.Max(Capacity.Wells, wells),
+            Sways = Math.Max(Capacity.Sways, sways),
         };
         if (!log) return;
         foreach (var kind in gained) Tracking.Log(JournalKind.Tool, ToolGainedText(kind, Capacity.Of(kind), size));
@@ -2089,6 +2111,7 @@ public sealed class Garden
     {
         ShapingKind.Pot => "Gravity Pot",
         ShapingKind.Trellis => "Trellis",
+        ShapingKind.Sway => "Sway Controller",
         _ => "Gravity Well",
     };
 
@@ -2408,8 +2431,9 @@ public sealed class Garden
         var p = node.Position - Core.Position;
         float t = (float)Time;
         // A slow breath with two faster gusts over it; the phase shifts with height so the sway ripples up the plant.
-        float gust = 0.5f * MathF.Sin(t * 0.11f) + 0.7f * MathF.Sin(t * 0.37f + p.Y * 0.004f)
-            + 0.3f * MathF.Sin(t * 0.93f + node.Id * 0.7f);
+        // Sway controllers scale it (see SwayScale).
+        float gust = (0.5f * MathF.Sin(t * 0.11f) + 0.7f * MathF.Sin(t * 0.37f + p.Y * 0.004f)
+            + 0.3f * MathF.Sin(t * 0.93f + node.Id * 0.7f)) * swayScale;
 
         if (Layout == Layout.Upright)
         {
@@ -2627,7 +2651,8 @@ public sealed class Garden
 // limit them. The wild flower limit (5d), seedling slots (5c) and Hubs (one planted at a time once bought) have their
 // mechanics. Upgrades bought and evolutions bloomed raise these, and the garden's size the shaping tools.
 public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots = Tuning.StartPotCap, int Trellises = 0,
-    int Wells = 0, int WildFlowers = Tuning.StartWildFlowers, int Seedlings = Tuning.StartSeedlings, int Hubs = 0)
+    int Wells = 0, int WildFlowers = Tuning.StartWildFlowers, int Seedlings = Tuning.StartSeedlings, int Hubs = 0,
+    int Sways = 0)
 {
     public static readonly Capacity Start = new(Tuning.StartStemCap, Tuning.StartGeneratorCap, Tuning.StartCoreLinks);
     public static readonly Capacity Unlimited = new(int.MaxValue, int.MaxValue, 2, 3, 3, 3); // stress tests (--parts)
@@ -2647,6 +2672,7 @@ public sealed record Capacity(int Stems, int Generators, int CoreLinks, int Pots
     {
         ShapingKind.Pot => Pots,
         ShapingKind.Trellis => Trellises,
+        ShapingKind.Sway => Sways,
         _ => Wells,
     };
 

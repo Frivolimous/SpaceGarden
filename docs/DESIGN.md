@@ -199,7 +199,7 @@ The player has eight basic commands.
 
 1. **New sprout:** choose a basic node type and start a bud of it at a chosen spot; it forms and emerges on its own (see Growth and pruning). A part with room only for its parent's link (a generator, grove or lab) offers no buds in its toolbar, only prune.
 2. **Prune:** remove any node and all of its children. No preview; undo restores the last prune only, within about 30 seconds (to be tuned). (Nov 3, Jeremy's playtest: undo is switched off for the player, `Tuning.UndoPruneOn`; the rules keep it.)
-3. **Place a shaping tool** (Gravity Pot, Trellis, Gravity Well) in build mode: a subtle overlay, placed, moved and turned anywhere (see Shaping the garden).
+3. **Place a shaping tool** (Gravity Pot, Trellis, Gravity Well, Sway Controller) in build mode: a subtle overlay, placed, moved and turned anywhere (see Shaping the garden).
 4. **Connect a node to a Gravity Pot or Trellis** in build mode, by dragging the node onto it: in a pot it moves to the pot and locks there, and the nodes linked to it (its parent and what grows straight out of it) are pushed gently in the pot's facing direction; on a trellis it's held on the trellis's line.
 5. **Select evolution:** on a growing seedling, a radial menu of 3 random evolutions (see Progression).
 6. **Zoom** in or out.
@@ -227,6 +227,7 @@ Players keep a mature garden compact and give it form through zoom and shaping t
 | Gravity Pot | The node dropped on it moves to the pot and is locked there; the pot is drawn over the plant as a flower pot the node sits in up to its middle: a rim straight across the node's middle and a round bowl just bigger than the node, on the side away from the way it faces. Only the main nodes linked to it (its parent, and those growing straight out of it) are pushed gently the way the pot faces; nodes further out just follow them through their links. New buds on the potted node head that way too | One node (dropping another swaps it) | 1 from the start, a second at 25 main nodes, +1 at 60, 100, then every 50 |
 | Trellis | A straight line between two posts. The nodes dropped on it are held on the line but slide along it, so the plant's own push spaces them out, like an espalier wire | Any number | 1 at 15 main nodes |
 | Gravity Well | Pulls every node towards it, the core and fruit too, alike whatever their weight, like gravity. A free plant drifts to the well and settles round it; to keep the plant where it is, put its core in a pot, and it hangs towards the well instead | Nothing | 1 at 40 main nodes |
+| Sway Controller | Placed anywhere, it sets how much the wind sways the whole plant (Jeremy, Nov 3): a dial whose knob runs over the top, from its left end (no sway) through straight up (the usual) to its right end (three times as much, `Tuning.SwayMax`), the setting shown under it ("×1.5"). Several would multiply. Seen in build mode only, like the well; its blade of grass sways as much as it says | Nothing | 1 at 60 main nodes |
 
 Fruit is never tied or pushed by a pot: it follows its node (a well pulls it along with everything else). A pruned node lets go of its tool; undoing the prune ties it again if the tool is still there (and a pot still free). Pruning or removing never refunds or costs anything.
 
@@ -326,7 +327,7 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 | --- | --- | --- |
 | Linear / numeric | +1 stem cap, +1 generator cap, wild flower limit | The three gene tracks in the Research panel |
 | Mechanic change / unlock / bundled change | Core power ×1.5, Big Stem unlocked, labs ×2 genes at more upkeep | Seedlings: evolutions |
-| Shaping tools | Gravity Pot, Trellis, Gravity Well | Garden size |
+| Shaping tools | Gravity Pot, Trellis, Gravity Well, Sway Controller | Garden size |
 | Per-kind boosts | +20% (basic) or +30% (wild) to a kind's main effect, milestones | The Hub's points |
 
 *History:* through step 4, genes reaching the core raised caps automatically along one fixed track of about a week (nine thresholds up to 330,000 genes), with only about 55-70k genes a day arriving from day 2, since 40-60% of blobs reach the core by day 3.
@@ -366,6 +367,7 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | 15 | Trellis |
 | 25 | Second Gravity Pot |
 | 40 | Gravity Well |
+| 60 | Sway Controller |
 | 60, 100, then every 50 | +1 Gravity Pot |
 
 **Wording, settled in the build (5b):**

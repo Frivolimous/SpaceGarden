@@ -8,7 +8,7 @@ namespace SpaceGarden;
 // Ambient, Minimised and the settings.
 public enum Tool
 {
-    Stem, Generator, Lab, Grove, Seedling, Hub, HubPanel, Prune, Unhook, Remove, Pot, Trellis, Well, Done,
+    Stem, Generator, Lab, Grove, Seedling, Hub, HubPanel, Prune, Unhook, Remove, Pot, Trellis, Well, Sway, Done,
     Info, Almanac, Research, Build, Ambient, Minimise, Settings,
 }
 
@@ -371,7 +371,7 @@ public partial class ToolButton : Control
             case Tool.Done: // a tick
                 DrawPolyline([c + new Vector2(-6, 0), c + new Vector2(-2, 4.5f), c + new Vector2(6, -5)], ink, w, true);
                 break;
-            case Tool.Pot or Tool.Trellis or Tool.Well:
+            case Tool.Pot or Tool.Trellis or Tool.Well or Tool.Sway:
                 ShapingLook.DrawIcon(this, tool, c, Enabled ? ShapingLook.Tint : new Color(1, 1, 1, 0.25f));
                 if (Badge != null)
                     DrawString(ThemeDB.FallbackFont, c + new Vector2(6, 14), Badge, HorizontalAlignment.Left, -1, 9,
@@ -459,7 +459,8 @@ public partial class ShapingBar : PanelContainer
             views.AddChild(toggle);
         }
 
-        foreach (var (kind, tool) in new[] { (ShapingKind.Pot, Tool.Pot), (ShapingKind.Trellis, Tool.Trellis), (ShapingKind.Well, Tool.Well) })
+        foreach (var (kind, tool) in new[] { (ShapingKind.Pot, Tool.Pot), (ShapingKind.Trellis, Tool.Trellis), (ShapingKind.Well, Tool.Well),
+            (ShapingKind.Sway, Tool.Sway) })
         {
             var button = new ToolButton(tool);
             button.Pressed += () => Started?.Invoke(kind);

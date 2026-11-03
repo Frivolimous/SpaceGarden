@@ -323,6 +323,12 @@ public static class Tuning
     public const int PotEvery = 50;
     public const int TrellisSize = 15;
     public const int WellSize = 40;
+    // A Sway Controller at SwaySize (Jeremy, Nov 3), whose dial's right end sways the plant SwayMax times as much.
+    public const int SwaySize = 60;
+    public const float SwayMax = 3;
+
+    // The sway controllers a garden of this size may place.
+    public static int SwaysAtSize(int size) => size >= SwaySize ? 1 : 0;
 
     // The shaping tools a garden of this size may place.
     public static (int Pots, int Trellises, int Wells) ToolsAtSize(int size)
@@ -337,6 +343,7 @@ public static class Tuning
     {
         ShapingKind.Trellis => size < TrellisSize ? TrellisSize : null,
         ShapingKind.Well => size < WellSize ? WellSize : null,
+        ShapingKind.Sway => size < SwaySize ? SwaySize : null,
         _ => size < PotSizes[^1] ? PotSizes.First(s => s > size)
             : PotSizes[^1] + ((size - PotSizes[^1]) / PotEvery + 1) * PotEvery,
     };
