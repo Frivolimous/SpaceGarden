@@ -1170,7 +1170,7 @@ public static class Textures
         var (triangleA, triangleB) = (Star(3, 1, 1, 0), Star(3, 1, 1, Mathf.Pi / 3));
         var burst = Star(8, 1, 0.7f);
         // The Hub's scallops: a circle through two neighbouring corners whose rim dips to scallopDepth mid-edge.
-        const float scallopDepth = 0.8f;
+        const float scallopDepth = 0.9f; // (Jeremy, Nov 3: shallower, was 0.8)
         float halfEdge = Mathf.Pi / 12;
         float scallopCentre = (1 - scallopDepth * scallopDepth) / (2 * (Mathf.Cos(halfEdge) - scallopDepth));
         float scallopRadius = scallopCentre - scallopDepth;
