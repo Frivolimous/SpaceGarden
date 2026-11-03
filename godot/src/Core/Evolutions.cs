@@ -193,6 +193,8 @@ public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, 
     public float Active { get; init; }
     // Power store added flat, after Store multiplies (the Stem's Hub milestone).
     public float StoreAdd { get; init; }
+    // Power made a second, and its transfer, once every leaf it can hold is out (the Lichen's Hub milestone).
+    public float LeafGen { get; init; }
 
     public static readonly Boost None = new();
 }

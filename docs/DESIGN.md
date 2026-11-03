@@ -476,9 +476,9 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | Twin Star | +30% power; generators +10% power | Transfer +50% |
 | Ember | +30% power; generators +10% power | Burns 50% longer (fades over 4.5 days) |
 | Lumber Grove | +30% growth; groves +10% growth | Upkeep −50% |
-| Seed Pod | +30% growth; groves +10% growth | Upkeep −50% |
-| Wild Lab | +30% genes; labs +10% genes | Upkeep −50% |
-| Lichen | +30% genes; labs +10% genes | Each leaf also adds +5% genes |
+| Seed Pod | +30% growth; groves +10% growth | Buds its blobs start are twice as likely to grow wild (Nov 3) |
+| Wild Lab | +30% genes; labs +10% genes | Max power +100: steadier (Nov 3) |
+| Lichen | +30% genes; labs +10% genes | With all 4 leaves, makes 3 power a second and sends at 3 (Nov 3) |
 | Buffer | All buffs +10 points of the output (Nov 3: added, so 150% becomes 180% at level 3, and with Resonant Frequency I 230%) | Buffs last +10 s |
 | Comet Bloom | Active 2 minutes longer; core +20% power (Nov 3) | Lingers half as long once dormant |
 | Moonflower | Wild flowers near it +5% more; core +20% power (Nov 3) | Range from 5 links to 6 |

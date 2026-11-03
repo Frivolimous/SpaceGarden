@@ -265,4 +265,31 @@ public class HubTests
         Assert.True(garden.BuyHubLevel(NodeKind.Stem)); // level 3
         Assert.Equal(store + Tuning.HubStemStore, stem.Store, 3);
     }
+
+    // Nov 3: the Wild Lab's level 3 adds 100 max power; the Lichen's, with all 4 leaves, makes 3 power a second and
+    // sends at 3; the Seed Pod's makes the buds its blobs start twice as likely to grow wild.
+    [Fact]
+    public void TheWildLabLichenAndSeedPodMilestones()
+    {
+        var (garden, _, _, hub) = Make();
+        garden.Capacity = garden.Capacity with { WildFlowers = 2 };
+        var branch = Add(garden, hub, NodeKind.Stem);
+        var wildLab = Add(garden, branch, NodeKind.WildLab);
+        var lichen = Add(garden, branch, NodeKind.Lichen);
+        float store = wildLab.Store;
+        foreach (var kind in new[] { NodeKind.WildLab, NodeKind.Lichen, NodeKind.SeedPod }) garden.Tracking.Discovered[kind] = 0;
+        garden.HubPoints = 12;
+        for (int i = 0; i < 3; i++)
+        {
+            Assert.True(garden.BuyHubLevel(NodeKind.WildLab));
+            Assert.True(garden.BuyHubLevel(NodeKind.Lichen));
+        }
+        Assert.Equal(store + Tuning.HubWildLabStore, wildLab.Store, 3);
+
+        foreach (var n in garden.Nodes) n.Power = n.Store;
+        Assert.Equal(0, Garden.FullProductionPerSecond(lichen)); // its leaves aren't out yet
+        while (lichen.CanFruit) garden.GrowFruit(lichen);
+        Assert.True(Garden.FullProductionPerSecond(lichen) >= Tuning.HubLichenGen);
+        Assert.Equal(Tuning.HubLichenGen, Garden.TransferPerSecond(lichen), 3);
+    }
 }

@@ -233,6 +233,9 @@ public static class Tuning
     public const float HubFadedGenes3 = 0.25f, HubFadedGenes5 = 0.5f;
     // The stem's level 3 milestone (Nov 3): a stem's max power this much more.
     public const float HubStemStore = 150;
+    // The level 3 milestones of the Wild Lab (max power more), the Lichen (with all 4 leaves, power made a second and its
+    // transfer) and the Seed Pod (buds its blobs start this many times as likely to grow wild) (Nov 3).
+    public const float HubWildLabStore = 100, HubLichenGen = 3, HubSeedPodWild = 2;
     // What resetting the Hub's levels costs, in points (Jeremy, Nov 3: "reduce total levels by 1"; a level is 1-3).
     public const int HubRespecCost = 1;
     public const float HubTripleChance = 0.2f, HubNebulaFill = 3;

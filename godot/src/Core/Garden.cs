@@ -653,11 +653,11 @@ public sealed class Garden
     // near a Moonflower. If it does, its kind is one of those that can stand in for its base kind, among those that can grow
     // now; a passive bud may also become a passive-only kind, but leans to its base's own (Tuning.PassiveBaseShare).
     // Alike within each group. Returns the bud's kind.
-    NodeKind GrowsWild(PlantNode parent, NodeKind kind, bool passive, Counts counts)
+    NodeKind GrowsWild(PlantNode parent, NodeKind kind, bool passive, Counts counts, float times = 1)
     {
         int free = Capacity.WildFlowers - counts.Wild;
         if (free <= 0) return kind;
-        double chance = (passive ? Tuning.PassiveWildChance : Tuning.PlantedWildChance) * WildBoostAt(parent);
+        double chance = (passive ? Tuning.PassiveWildChance : Tuning.PlantedWildChance) * WildBoostAt(parent) * times;
         if (rng.NextDouble() >= chance) return kind;
         var own = NodeSpecs.Wild.Where(s => s.Wild!.Base == kind && CanGrowWild(s.Kind)).Select(s => s.Kind).ToList();
         var passiveOnly = passive
@@ -964,7 +964,8 @@ public sealed class Garden
     public static float SendsPerSecond(PlantNode node) => TransferPerSecond(node) * Math.Clamp(FlowFill(node), 0, 1);
 
     // How fast a part can send power on: its kind's rate, raised by evolutions (Long Stemmed, Twin Stars, Second Path).
-    public static float TransferPerSecond(PlantNode node) => node.Spec.PowerTransferPerSecond * node.Boost.Transfer;
+    public static float TransferPerSecond(PlantNode node) =>
+        Math.Max(node.Spec.PowerTransferPerSecond, LeafGen(node)) * node.Boost.Transfer;
 
     // Which fruit a part feeds this step, if any (the original's powerFruits): once it's at least FeedFruitFill full,
     // its emptiest fruit, while that's less full than the part and not yet full. Fruit costs nothing to keep, so it
@@ -1013,7 +1014,11 @@ public sealed class Garden
     // What a part makes per second when full (its fruit adding a little each: see FruitBonus; evolutions more: see
     // Boosts). An Ember's rate stays: it makes less as it dims because it can hold less (see PowerCap).
     public static float FullProductionPerSecond(PlantNode node) =>
-        Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) * Boosted(node) * node.Boost.Gen;
+        (Math.Max(0, node.Spec.PowerPerSecond) * FruitBonus(node) + LeafGen(node)) * Boosted(node) * node.Boost.Gen;
+
+    // The Lichen's Hub milestone: once every leaf it can hold is out, power it makes a second (and sends on at).
+    static float LeafGen(PlantNode node) =>
+        node.Boost.LeafGen > 0 && node.Fruits.Count(f => f.Spec.Kind == NodeKind.Leaf) >= node.MaxFruits ? node.Boost.LeafGen : 0;
 
     // A part's own fruit raise its output, each by its FlowerBonus (times the part's FruitBonusScale: a Wild Lab's
     // count double).
@@ -1294,7 +1299,8 @@ public sealed class Garden
             return 0;
         }
         float growth = Tuning.BlobGrowth * BlobValue(grove) * Amplified;
-        var grown = Feed(absorber, ref counts, growth);
+        float wildTimes = grove.Spec.Kind == NodeKind.SeedPod && HubAt(NodeKind.SeedPod, 3) ? Tuning.HubSeedPodWild : 1;
+        var grown = Feed(absorber, ref counts, growth, wildTimes);
         if (Show(route, grove) is { } mote)
         {
             mote.Growth = growth;
@@ -1375,12 +1381,13 @@ public sealed class Garden
     // A growth blob absorbed: a part with nothing forming starts something (a bud BudChance of the time where a
     // branch could grow, its kind rolled now; else a fruit), then the blob's growth is added, and what's forming
     // completes once it has grown enough. Returns the part that grew, if one did.
-    PlantNode? Feed(PlantNode node, ref Counts counts, float growth)
+    // (wildTimes: how much likelier a bud the blob starts is to grow wild: a Seed Pod's, with its Hub milestone.)
+    PlantNode? Feed(PlantNode node, ref Counts counts, float growth, float wildTimes = 1)
     {
         if (node.Forming == null)
         {
             bool bud = CanBud(node, counts) && (!CanStartFruit(node) || rng.NextDouble() < Tuning.BudChance);
-            node.Forming = bud ? GrowsWild(node, Roll(BranchKinds(node, counts)), passive: true, counts) : node.Spec.Fruit;
+            node.Forming = bud ? GrowsWild(node, Roll(BranchKinds(node, counts)), passive: true, counts, wildTimes) : node.Spec.Fruit;
             if (bud)
             {
                 counts = counts.With(node.Forming!.Value);
@@ -1687,6 +1694,7 @@ public sealed class Garden
                         Upkeep = b.Upkeep * m.Upkeep, Store = b.Store * m.Store, Life = b.Life * m.Life,
                         OutputFloor = Math.Max(b.OutputFloor, m.OutputFloor), Reach = b.Reach * m.Reach,
                         LeafBonus = b.LeafBonus + m.LeafBonus, BudGrow = b.BudGrow * m.BudGrow, StoreAdd = b.StoreAdd + m.StoreAdd,
+                        LeafGen = b.LeafGen + m.LeafGen,
                     });
             }
             foreach (var ((kind, axis), share) in shares)

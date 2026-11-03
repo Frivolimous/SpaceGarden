@@ -28,6 +28,7 @@ public sealed record HubMilestone(int Level, string Text)
     public float LeafBonus { get; init; }
     public float BudGrow { get; init; } = 1;
     public float StoreAdd { get; init; } // power store added flat, after the multipliers (the stem's, Nov 3)
+    public float LeafGen { get; init; } // power made, and sent on, once all its leaves are out (the Lichen's, Nov 3)
 }
 
 // A kind's path in the Hub's panel: each level's cost in points (so its number of levels), what every level gives
@@ -111,13 +112,14 @@ public static class Hubs
                 new HubMilestone(3, "Upkeep −50%") { Upkeep = 0.5f }),
             Path(NodeKind.SeedPod, Short, "+30% growth; groves +10% growth",
                 Own(NodeKind.SeedPod, HubAxis.Blobs, 0.3f, grove, HubAxis.Blobs, 0.1f),
-                new HubMilestone(3, "Upkeep −50%") { Upkeep = 0.5f }),
+                new HubMilestone(3, "Buds its blobs start are twice as likely to grow wild")),
             Path(NodeKind.WildLab, Short, "+30% genes; labs +10% genes",
                 Own(NodeKind.WildLab, HubAxis.Blobs, 0.3f, lab, HubAxis.Blobs, 0.1f),
-                new HubMilestone(3, "Upkeep −50%") { Upkeep = 0.5f }),
+                new HubMilestone(3, $"Max power +{Tuning.HubWildLabStore:0}: steadier") { StoreAdd = Tuning.HubWildLabStore }),
             Path(NodeKind.Lichen, Short, "+30% genes; labs +10% genes",
                 Own(NodeKind.Lichen, HubAxis.Blobs, 0.3f, lab, HubAxis.Blobs, 0.1f),
-                new HubMilestone(3, "Each leaf also adds +5% genes") { LeafBonus = 0.05f }),
+                new HubMilestone(3, $"With all 4 leaves, makes {Tuning.HubLichenGen:0} power a second and sends at {Tuning.HubLichenGen:0}")
+                    { LeafGen = Tuning.HubLichenGen }),
             Path(NodeKind.Buffer, Short, "All buffs +10% of the output (150% to 160%)", [new(NodeKind.Buffer, HubAxis.BuffStrength, 0.1f)],
                 new HubMilestone(3, $"Buffs last +{Tuning.HubBuffSeconds:0} s")),
             Path(NodeKind.CometBloom, Short, "Active 2 minutes longer; core +20% power",
