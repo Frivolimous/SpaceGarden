@@ -177,12 +177,19 @@ public partial class Widget : Node
         }
     }
 
-    // Changes the scale (by change), around the core, so the plant stays planted where it is.
+    // Changes the scale (by change), keeping the plant's distance from the screen's edges (Jeremy, Nov 3): it grows
+    // or shrinks from the corner of its outline nearest the screen's nearest corner, which stays put, so a plant in
+    // the bottom right keeps its gap to the taskbar and the right edge rather than shrinking towards the middle.
     void Rescale(Action change)
     {
-        var coreOnScreen = GardenView.V(Garden.Core.Position) * Scale;
+        var (min, max) = Garden.Bounds();
+        var screen = (Vector2)GetWindow().Size;
+        var middle = GardenView.V((min + max) / 2) * Scale;
+        // That corner of the outline, on the screen.
+        var corner = new Num.Vector2(middle.X > screen.X / 2 ? max.X : min.X, middle.Y > screen.Y / 2 ? max.Y : min.Y);
+        var cornerOnScreen = GardenView.V(corner) * Scale;
         change();
-        Garden.Translate(ToSim(coreOnScreen / Scale) - Garden.Core.Position);
+        Garden.Translate(ToSim(cornerOnScreen / Scale) - corner);
         ApplyTransform();
     }
 
