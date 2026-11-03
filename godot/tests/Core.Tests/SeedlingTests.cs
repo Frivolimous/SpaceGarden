@@ -104,13 +104,13 @@ public class SeedlingTests
         Assert.Equal(before.Generators + 1, garden.Capacity.Generators); // an Ember takes a generator slot: it costs nothing
         Assert.Equal(1, garden.WildCount);
         Assert.Equal(0, garden.FreeWildSlots);
-        Assert.Equal(coreGen * 1.5f, Garden.FullProductionPerSecond(garden.Core), 3);
+        Assert.Equal(coreGen * 2f, Garden.FullProductionPerSecond(garden.Core), 3);
         Assert.Equal(1, garden.SeedlingsUsed); // the slot stays used
         Assert.Contains(garden.Tracking.Journal, e => e.Kind == JournalKind.Bloomed);
 
         // Pruning the flower takes only the flower.
         garden.Prune(ember);
-        Assert.Equal(coreGen * 1.5f, Garden.FullProductionPerSecond(garden.Core), 3);
+        Assert.Equal(coreGen * 2f, Garden.FullProductionPerSecond(garden.Core), 3);
         Assert.Empty(garden.Core.Fruits); // the record is data, nothing on the core
         Assert.Equal(1, garden.Blooms);
         Assert.Equal(1, garden.SeedlingsUsed);
@@ -138,16 +138,16 @@ public class SeedlingTests
         Assert.DoesNotContain(EvolutionKind.BuildYourCore, garden.Offerable());
         garden.EvolveNow(EvolutionKind.WildBloom);
         garden.EvolveNow(EvolutionKind.MorePower);
-        garden.EvolveNow(EvolutionKind.TwinStars);
+        garden.EvolveNow(EvolutionKind.PulsarPower);
         Assert.Equal(5, garden.Evolved.Count);
         Assert.Contains(EvolutionKind.BuildYourCore, garden.Offerable());
         Assert.Contains(EvolutionKind.LongStemmed, garden.Offerable());
 
-        // Each level adds level I's effect again: core power ×1.5, then ×2.
-        Assert.Equal(coreGen * 1.5f, Garden.FullProductionPerSecond(garden.Core), 3);
+        // Each level adds level I's effect again: core power ×2, then ×3 (Nov 3).
+        Assert.Equal(coreGen * 2f, Garden.FullProductionPerSecond(garden.Core), 3);
         var repeat = garden.EvolveNow(EvolutionKind.BuildYourCore)!;
         Assert.Equal("Build your Core II", repeat.Name);
-        Assert.Equal(coreGen * 2f, Garden.FullProductionPerSecond(garden.Core), 3);
+        Assert.Equal(coreGen * 3f, Garden.FullProductionPerSecond(garden.Core), 3);
         // Smart Particles II: always; then at its limit.
         garden.EvolveNow(EvolutionKind.SmartParticles);
         Assert.Equal(1f, garden.SmartChance);
@@ -157,22 +157,41 @@ public class SeedlingTests
     [Fact]
     public void LabAndGeneratorEvolutionsReachTheirWildFlowers()
     {
-        // Rapid Evolution every lab kind, Pulsar Power and Twin Stars every generator kind (Jeremy, Nov 1); the stem's
-        // and the core's stay with the basic kind.
+        // Nov 3: Rapid Evolution doubles every lab kind's blob size (not their rate); Pulsar Power doubles every
+        // generator kind's power; More Power doubles the transfer of all but the Pulsar; Wild Bloom adds a quarter.
         var (garden, stem, _) = Make();
-        garden.Capacity = garden.Capacity with { WildFlowers = 2 };
-        garden.UnlockWild(NodeKind.Pulsar);
+        garden.Capacity = garden.Capacity with { WildFlowers = 3 };
         var lichen = Add(garden, stem, NodeKind.Lichen);
-        var pulsar = Add(garden, Add(garden, garden.Core, NodeKind.Stem), NodeKind.Pulsar);
+        var branch = Add(garden, garden.Core, NodeKind.Stem);
+        var pulsar = Add(garden, branch, NodeKind.Pulsar);
+        var ember = Add(garden, branch, NodeKind.Ember);
         foreach (var n in garden.Nodes) n.Power = n.Store;
-        float genes = Garden.FullBlobsPerHour(lichen), power = Garden.FullProductionPerSecond(pulsar);
-        float transfer = Garden.TransferPerSecond(pulsar);
+        float blobs = Garden.FullBlobsPerHour(lichen), power = Garden.FullProductionPerSecond(pulsar);
+        float emberTransfer = Garden.TransferPerSecond(ember), pulsarTransfer = Garden.TransferPerSecond(pulsar);
         garden.EvolveNow(EvolutionKind.RapidEvolution);
         garden.EvolveNow(EvolutionKind.PulsarPower);
-        garden.EvolveNow(EvolutionKind.TwinStars);
-        Assert.Equal(genes * 2, Garden.FullBlobsPerHour(lichen), 3);
-        Assert.Equal(power * 1.1f, Garden.FullProductionPerSecond(pulsar), 3);
-        Assert.Equal(transfer * 1.5f, Garden.TransferPerSecond(pulsar), 3);
+        garden.EvolveNow(EvolutionKind.MorePower);
+        Assert.Equal(blobs, Garden.FullBlobsPerHour(lichen), 3);
+        Assert.Equal(2 * NodeSpecs.All[NodeKind.Lichen].BlobValue, Garden.ValueOf(lichen), 3);
+        Assert.Equal(power * 2, Garden.FullProductionPerSecond(pulsar), 3);
+        Assert.Equal(emberTransfer * 2, Garden.TransferPerSecond(ember), 3);
+        Assert.Equal(pulsarTransfer, Garden.TransferPerSecond(pulsar), 3);
+        garden.EvolveNow(EvolutionKind.WildBloom);
+        Assert.Equal(power * 2 * 1.25f, Garden.FullProductionPerSecond(pulsar), 3);
+        Assert.Equal(blobs * 1.25f, Garden.FullBlobsPerHour(lichen), 3);
+    }
+
+    [Fact]
+    public void TheRetiredEvolutionsAreNeverOfferedAndResonantFrequencyStrengthensBuffs()
+    {
+        var garden = Garden.New(Layout.Radial, seed: 3);
+        for (int i = 0; i < 6; i++) garden.EvolveNow(EvolutionKind.SmartParticles + (i % 2));
+        Assert.DoesNotContain(EvolutionKind.TwinStars, garden.Offerable());
+        Assert.DoesNotContain(EvolutionKind.BigStem, garden.Offerable());
+        Assert.Contains(EvolutionKind.ResonantFrequency, garden.Offerable());
+        garden.EvolveNow(EvolutionKind.ResonantFrequency);
+        garden.EvolveNow(EvolutionKind.ResonantFrequency);
+        Assert.Equal(1f, garden.ResonantBonus, 3); // 250% of the output: +0.5, +0.5 more on the base +0.5
     }
 
     [Fact]

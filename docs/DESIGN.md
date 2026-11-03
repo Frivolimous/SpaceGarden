@@ -398,16 +398,17 @@ All three tracks share one gene income, and the stem and generator tracks will p
 
 | Evolution | Effect | Becomes |
 | --- | --- | --- |
-| Build your Core | Core power ×1.5 | Ember |
-| Second Path | Core link +1, core transfer ×1.5 | Amplifier |
-| Long Stemmed | Stem transfer ×3; only offered once repeats unlock (after 5 evolutions) | Tendril |
+| Build your Core | Core power ×2, core transfer ×2, core store ×1.5 (Nov 3) | Ember |
+| Second Path | Core link +1, core transfer ×2 | Amplifier |
+| Long Stemmed | Stem, Big Stem and Tendril transfer ×2 and store ×2; only offered once repeats unlock (after 5 evolutions) | Tendril |
 | Smart Particles | Blobs avoid dead ends: 50% of the time at level I, always at level II (max level II) | Resistor |
-| Rapid Evolution | Labs ×2 genes, ×1.8 upkeep | Wild Lab |
-| More Power | Generator cap +2 | Lichen |
-| Pulsar Power | Generators +10% output | Pulsar |
-| Twin Stars | Generator transfer rate up | Twin Star |
-| Big Stem | Stems hold +1 leaf | Big Stem |
-| Wild Bloom | Wild flower limit +2 | Moonflower |
+| Rapid Evolution | Lab, Wild Lab and Lichen gene blobs' size ×2, their upkeep ×2 | Wild Lab |
+| More Power | Generator cap +2; generator, Twin Star and Ember transfer ×2 | Lichen |
+| Pulsar Power | Every generator kind's power ×2 (generators, Pulsars, Twin Stars, Embers) | Pulsar |
+| ~~Twin Stars~~ | Retired Nov 3 (never offered; one already taken keeps its effect) | Twin Star |
+| ~~Big Stem~~ | Retired Nov 3 (as Twin Stars) | Big Stem |
+| Wild Bloom | Wild flower limit +2; Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen and Buffer +25% | Moonflower |
+| Resonant Frequency | Buffs 200% of the output (from 150%) | Buffer |
 
 (Balance update, Jeremy, Oct 31: Second Path and Long Stemmed swapped flowers; Long Stemmed held back; Smart Particles in two levels; Rapid Evolution's upkeep ×1.8; Pulsar Power +10%. Watch More Power and Pulsar Power in play as likely default picks.)
 
@@ -423,16 +424,17 @@ All three tracks share one gene income, and the stem and generator tracks will p
 
 | Evolution | Level I | Limit |
 | --- | --- | --- |
-| Build your Core | Core power ×1.5 (×2, ×2.5) | III |
-| Second Path | Core link +1, core transfer ×1.5 | II |
-| Long Stemmed | Stem transfer ×3 (offered from 5 evolutions) | II |
+| Build your Core | Core power ×2, transfer ×2, store ×1.5 (×3, ×3, ×2; ×4, ×4, ×2.5) | III |
+| Second Path | Core link +1, core transfer ×2 (+2 and ×3; +3 and ×4) | III |
+| Long Stemmed | Stem kinds' transfer and store ×2 (×3) (offered from 5 evolutions) | II |
 | Smart Particles | Blobs avoid dead ends 50% of the time (always at II) | II |
-| Rapid Evolution | Labs' genes ×2 at ×1.8 upkeep (×3 at ×2.6, ×4 at ×3.4) | III |
-| More Power | Generator cap +2 | III |
-| Pulsar Power | Generators' power ×1.1 (its boost) | III |
-| Twin Stars | Generator transfer ×1.5 (its boost) | II |
-| Big Stem | Stems hold +1 leaf (its boost) | II |
-| Wild Bloom | Wild flower limit +2 | III |
+| Rapid Evolution | Lab kinds' gene blob size ×2 at ×2 upkeep (×3 at ×3, ×4 at ×4) | III |
+| More Power | Generator cap +2, transfer ×2 but the Pulsar's (+4 and ×3; +6 and ×4) | III |
+| Pulsar Power | Every generator kind's power ×2 (×3, ×4) | III |
+| Twin Stars | Retired | — |
+| Big Stem | Retired | — |
+| Wild Bloom | Wild flower limit +2, listed wild kinds +25% (+4 and +50%; +6 and +75%) | III |
+| Resonant Frequency | Buffs 200% of the output (250%, 300%) | III |
 
 - **Repeats** are offered only once the garden has chosen 5 evolutions; a level's count includes those still growing, so two seedlings can't take the same level. The choice menu and the Almanac show an evolution's effect in all at its level ("Core power ×2").
 - **Smart Particles:** at each step, half the time at level I and always at level II, a blob doesn't step into a dead end (a part with nowhere to go on but back) unless it could be taken in there: for a gene blob only the core, for a growth blob a part with something forming or room to start something, for a buff blob a part not yet buffed. With nowhere else to go it turns back as before. The garden card's gene reach follows the same rule, at the same odds.

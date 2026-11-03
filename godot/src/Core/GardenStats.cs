@@ -77,7 +77,7 @@ public sealed record GardenStats(
     // The genes a lab gets to the core per growth hour, on average: the blobs it makes now, times the chance each
     // finds the core.
     public static double GenesPerHourFrom(Garden garden, PlantNode lab) =>
-        Garden.BlobsPerHour(lab) * Tuning.BlobGenes * GeneReach(garden, lab);
+        Garden.BlobsPerHour(lab) * Tuning.BlobGenes * Garden.ValueOf(lab) * GeneReach(garden, lab);
 
     // The chance a gene blob leaving this lab finds the core before it fades (DESIGN.md, Economy, Blobs): the blob's
     // walk (Garden.Walk) followed exactly, as odds instead of dice. At each part it takes any link but the one it came
@@ -92,7 +92,7 @@ public sealed record GardenStats(
     {
         if (!garden.Nodes.Any(n => n.IsHub && garden.CatchesGenes(n))) return 0;
         return garden.Nodes.Where(n => n.Spec.Sends == BlobKind.Genes)
-            .Sum(lab => Garden.BlobsPerHour(lab) * Tuning.BlobGenes * GeneReaches(garden, lab).Hub);
+            .Sum(lab => Garden.BlobsPerHour(lab) * Tuning.BlobGenes * Garden.ValueOf(lab) * GeneReaches(garden, lab).Hub);
     }
 
     // The chances a gene blob leaving this lab ends at the core, and at a Hub (one catching genes), as GeneReach.
@@ -169,7 +169,7 @@ public sealed record NodeStats(
         return new NodeStats(node.Power, Garden.PowerCap(node),
             Garden.ShownProductionPerSecond(node), spec.IsFruit ? 0 : Garden.SendsPerSecond(node),
             Garden.UpkeepPerSecond(node),
-            spec.Sends == BlobKind.Growth ? blobs : 0, spec.Sends == BlobKind.Genes ? blobs * Tuning.BlobGenes : 0,
+            spec.Sends == BlobKind.Growth ? blobs : 0, spec.Sends == BlobKind.Genes ? blobs * Tuning.BlobGenes * Garden.ValueOf(node) : 0,
             node.Links, node.MaxLinks, node.Forming, progress, node.Evolution);
     }
 }

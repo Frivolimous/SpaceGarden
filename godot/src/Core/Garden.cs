@@ -1246,7 +1246,14 @@ public sealed class Garden
 
     // What a blob leaving this flower carries, as a share of a basic one (BlobGenes, BlobGrowth): its kind's BlobValue
     // (a Lumber Grove's 0.2 growth, a Wild Lab's 2 genes), doubled while a Comet Bloom is active (Jeremy, Nov 3).
-    float BlobValue(PlantNode flower) => flower.Spec.BlobValue * (CometActive ? Tuning.CometBlobValue : 1);
+    float BlobValue(PlantNode flower) => ValueOf(flower) * (CometActive ? Tuning.CometBlobValue : 1);
+
+    // What a flower's blob carries as a share of a basic one, but for a Comet Bloom: its kind's, times its evolutions'
+    // (Rapid Evolution).
+    public static float ValueOf(PlantNode flower) => flower.Spec.BlobValue * flower.Boost.Value;
+
+    // Resonant Frequency's addition to every buff's bonus (worked out in UpdateBoosts).
+    public float ResonantBonus { get; private set; }
 
     // A lab's gene blob leaves. Only the core absorbs it, or the Hub; its genes (its value, times an Amplifier's) count
     // at the core (or in the Hub's pool) in this same step, so a catch-up (which runs no physics) and a live session
@@ -1329,7 +1336,7 @@ public sealed class Garden
     {
         if (!part.Spec.TakesBuffs) return; // (it passes untouched: Jeremy, Nov 3)
         part.Buff = Tuning.BuffSeconds * (CometActive ? Tuning.CometBuffTime : 1);
-        part.BuffBonus = Tuning.BuffBonus * (HubAt(NodeKind.Buffer, 3) ? Tuning.HubBuffStrength : 1);
+        part.BuffBonus = (Tuning.BuffBonus + ResonantBonus) * (HubAt(NodeKind.Buffer, 3) ? Tuning.HubBuffStrength : 1);
     }
 
     // A part with something forming always absorbs a growth blob; one with room to start a fruit or a bud does
@@ -1460,7 +1467,7 @@ public sealed class Garden
         {
             var spec = Evolutions.All[k];
             int taken = Taken(k);
-            return taken < spec.MaxLevel && (repeats || (taken == 0 && !spec.Late));
+            return !spec.Retired && taken < spec.MaxLevel && (repeats || (taken == 0 && !spec.Late));
         }).ToList();
     }
 
@@ -1617,18 +1624,33 @@ public sealed class Garden
     {
         boosts.Clear();
         SmartChance = 0;
+        ResonantBonus = 0;
         void Raise(NodeKind kind, Func<Boost, Boost> by) => boosts[kind] = by(boosts.GetValueOrDefault(kind, Boost.None));
         foreach (var bloomed in Evolved.Where(e => e.Bloomed).GroupBy(e => e.Kind))
         {
             var x = Evolutions.All[bloomed.Key].Effect.At(bloomed.Count());
-            Raise(NodeKind.Core, b => b with { Gen = b.Gen * x.CoreGen, Transfer = b.Transfer * x.CoreTransfer });
-            Raise(NodeKind.Stem, b => b with { Transfer = b.Transfer * x.StemTransfer, Fruits = b.Fruits + x.StemFruits });
-            // Rapid Evolution reaches every lab kind, Pulsar Power and Twin Stars every generator kind (Jeremy, Nov 1).
+            Raise(NodeKind.Core, b => b with
+            {
+                Gen = b.Gen * x.CoreGen, Transfer = b.Transfer * x.CoreTransfer, Store = b.Store * x.CoreStore,
+            });
+            Raise(NodeKind.Stem, b => b with { Fruits = b.Fruits + x.StemFruits });
+            // (Jeremy's table, Nov 3: which kinds each reaches.)
+            foreach (var stem in new[] { NodeKind.Stem, NodeKind.BigStem, NodeKind.Tendril })
+                Raise(stem, b => b with { Transfer = b.Transfer * x.StemTransfer, Store = b.Store * x.StemStore });
             foreach (var lab in Family(NodeKind.Lab))
-                Raise(lab, b => b with { Blobs = b.Blobs * x.LabGenes, Upkeep = b.Upkeep * x.LabUpkeep });
+                Raise(lab, b => b with { Value = b.Value * x.LabBlobSize, Upkeep = b.Upkeep * x.LabUpkeep });
             foreach (var generator in Family(NodeKind.Generator))
-                Raise(generator, b => b with { Gen = b.Gen * x.GeneratorGen, Transfer = b.Transfer * x.GeneratorTransfer });
+                Raise(generator, b => b with
+                {
+                    Gen = b.Gen * x.GeneratorGen, Transfer = b.Transfer * x.AllGeneratorTransfer
+                        * (generator == NodeKind.Pulsar ? 1 : x.GeneratorTransfer),
+                });
+            foreach (var kind in new[] { NodeKind.Pulsar, NodeKind.TwinStar, NodeKind.Ember })
+                Raise(kind, b => b with { Gen = b.Gen * x.WildEffect });
+            foreach (var kind in new[] { NodeKind.LumberGrove, NodeKind.SeedPod, NodeKind.WildLab, NodeKind.Lichen, NodeKind.Buffer })
+                Raise(kind, b => b with { Blobs = b.Blobs * x.WildEffect });
             SmartChance = Math.Max(SmartChance, x.SmartChance);
+            ResonantBonus += x.BuffBonus;
         }
         hubAwake = HubPlanted;
         HubComplete = Hubs.Paths.All(p => HubLevel(p.Kind) >= p.MaxLevel);
