@@ -88,9 +88,11 @@ static class WildFlowers
 
         // The generator kinds, each taking a generator slot too.
         yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Start,
-            "Twice a generator's power, released in bursts.", "Uneven supply; takes a generator slot too.") with
+            "About twice a generator's power, released in bursts.", "Uneven supply; takes a generator slot too.") with
         {
-            PowerStore = 200, PowerPerSecond = 24, PowerWeight = 0.9f,
+            // (21, not the table's 24, Jeremy, Nov 3: it works at full output all the way to 150%, past full, so 24
+            // made it more than twice a generator.)
+            PowerStore = 200, PowerPerSecond = 21, PowerWeight = 0.9f,
             BurstShare = Tuning.PulsarBurst, BurstFill = Tuning.PulsarBurstFill,
         };
         yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Start,
