@@ -235,7 +235,9 @@ public partial class GardenView : Node2D
                 var side = (b - a).Orthogonal().Normalized() * offset;
                 // Dark and solid at the busiest, light and faint at a fifth (the strength by concentration).
                 var colour = hue.Lightened(0.6f * (1 - t)) with { A = 0.25f + 0.75f * t };
-                heatLayer.DrawLine(a + side, b + side, colour, 3, true);
+                // (A thin dark edge under it, so it reads over anything.)
+                heatLayer.DrawLine(a + side, b + side, new Color(0, 0, 0, 0.6f * colour.A), 6, true);
+                heatLayer.DrawLine(a + side, b + side, colour, 4, true);
             }
         }
     }
@@ -244,9 +246,9 @@ public partial class GardenView : Node2D
     // white), side by side across each link.
     static readonly (BlobKind Kind, Color Hue, float Offset)[] TrafficLines =
     [
-        (BlobKind.Genes, new Color(0.45f, 0.25f, 0.85f), -3.5f),
+        (BlobKind.Genes, new Color(0.45f, 0.25f, 0.85f), -4.5f),
         (BlobKind.Growth, new Color(0.9f, 0.45f, 0.05f), 0),
-        (BlobKind.Buff, new Color(0.85f, 0.85f, 0.8f), 3.5f),
+        (BlobKind.Buff, new Color(0.85f, 0.85f, 0.8f), 4.5f),
     ];
 
     // Where to draw a part this frame: blended between its last two physics ticks by how far the frame is into the
@@ -407,7 +409,8 @@ public partial class GardenView : Node2D
         links.Begin();
         linkEdges.Begin();
         straight.Begin();
-        foreach (var link in garden.Links) AddLink(link);
+        foreach (var link in garden.Links)
+            if (!Ghosted || !link.Target.Spec.IsFruit) AddLink(link);
         linkEdges.Draw(linkLayer, Textures.Taper);
         links.Draw(linkLayer, Textures.Taper);
         straight.Draw(linkLayer, Textures.Line);
@@ -419,8 +422,8 @@ public partial class GardenView : Node2D
         // flash and fading (Link.Flash: Tuning.FlashPeak, fading at LinkFlashFadePerSecond). (The original rested at
         // 30%; 45% keeps the stems readable over a dark desktop.) Back to the original's flash and fade from a wipe
         // along the stem, whose motion distracted (Jeremy, Nov 3).
-        var colour = Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash);
-        colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
+        var colour = Shade(Hue(link.Target.Spec), 0.45f + 0.55f * (Ghosted ? 0 : link.Flash));
+        colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f) * (Ghosted ? GhostAlpha : 1);
         float width = LinkWidth(link.Target);
         if (Span(link) is not var (from, to)) return;
         var along = to - from; // the texture's parent end is at the origin
@@ -462,7 +465,7 @@ public partial class GardenView : Node2D
     void DrawHalos()
     {
         halos.Begin();
-        foreach (var node in garden.Nodes)
+        foreach (var node in Ghosted ? [] : garden.Nodes)
         {
             var colour = ColourOf(node.Spec);
             float halo = Mathf.Min(1, Level(node));
@@ -498,8 +501,8 @@ public partial class GardenView : Node2D
         else foreach (var batch in shapes.Values) batch.Begin();
         foreach (var node in garden.Nodes)
         {
-            if (Textures.InAtlas(node.Spec.Shape) != atlas) continue;
-            AddPart(node, 1);
+            if (Textures.InAtlas(node.Spec.Shape) != atlas || (Ghosted && node.Spec.IsFruit)) continue;
+            AddPart(node, Ghosted ? GhostAlpha : 1);
         }
         foreach (var cut in garden.Cut)
             foreach (var node in cut.Nodes)
@@ -516,7 +519,7 @@ public partial class GardenView : Node2D
         float size = Size(node);
         if (size < 0.2f) return;
         float level = Level(node);
-        var colour = ColourOf(node.Spec);
+        var colour = Hue(node.Spec);
         var outline = Shade(colour, OutlineDim + OutlineLit * level);
         var fill = Shade(colour, FillDim + FillLit * level);
         var edge = Edge;
@@ -599,7 +602,7 @@ public partial class GardenView : Node2D
         if (coreHover > 0)
             markLayer.DrawCircle(At(core), Size(core) * 1.02f, ColourOf(core.Spec).Lightened(0.6f) with { A = 0.22f * coreHover });
 
-        if (backdropAlpha > 0) DrawLinkCounts();
+        if (backdropAlpha > 0 && !Ghosted) DrawLinkCounts();
         if (Labels) DrawLabels();
 
         if (Highlight != null && highlightRing > 0)
@@ -805,6 +808,11 @@ public partial class GardenView : Node2D
     void DrawMotes()
     {
         moteDots.Begin();
+        if (Ghosted)
+        {
+            moteDots.Draw(moteLayer, Textures.Shape(Shape.Circle)); // (none while a special view is on)
+            return;
+        }
         // A blob is a small dot of its colour (a gene blob purple, a growth blob orange), as in the original a fixed
         // size, under the parts, so it slips along the stems and in and out of them. The part a growth blob completes
         // stays hidden until it arrives (see GrowIn).
@@ -855,6 +863,20 @@ public partial class GardenView : Node2D
     static readonly Color[] kindColours = Enum.GetValues<NodeKind>().Select(k => Rgb(NodeSpecs.All[k].Rgb)).ToArray();
 
     static Color ColourOf(NodeSpec spec) => kindColours[(int)spec.Kind];
+
+    // While a special view is on (Jeremy, Nov 3) the plant is a faded grey ghost under it: its parts and stems grey at
+    // GhostAlpha, no halos, fruit, link counts, motes or flashes, so only the view's colours stand out.
+    bool Ghosted => Heat != HeatView.None && Building;
+    const float GhostAlpha = 0.25f;
+
+    // A kind's colour as drawn now: its own, or its grey (by its brightness) under a special view.
+    Color Hue(NodeSpec spec)
+    {
+        var colour = ColourOf(spec);
+        if (!Ghosted) return colour;
+        float grey = colour.R * 0.3f + colour.G * 0.59f + colour.B * 0.11f;
+        return new Color(grey, grey, grey, colour.A);
+    }
 
     public static Vector2 V(Num.Vector2 v) => new(v.X, v.Y);
 }
