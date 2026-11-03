@@ -45,7 +45,7 @@ public static class Tuning
     // don't all flash in step (the original's ±10% timing). Placeholder: a flash is FlashPeak times as bright as the
     // part the power reached is full (1: a full part's flash is as bright as the original's).
     public const float LinkFlashFadePerSecond = 3.3f;
-    public const float FlashPeak = 0.6f;
+    public const float FlashPeak = 0.9f; // (Jeremy, Nov 3: brighter, was 0.6)
 
     // A part's brightness and size follow its fill, as in the original (PlantNodeView): the shown fill moves a share
     // of the way to the real one each tick (INTENSITY_V_INC / _DEC). Its level (PlantNode.Level) runs from

@@ -88,8 +88,8 @@ public class StatsTests
         Assert.Empty(garden.Traffic);
         garden.TrackTraffic = true;
         for (int i = 0; i < 10; i++) garden.WalkGene(lab);
-        Assert.Equal(10, garden.Traffic[lab]); // lab - stem, every time
-        Assert.Equal(10, garden.Traffic[stem]); // stem - core: the only way on
+        Assert.Equal(10, garden.Traffic[(lab, BlobKind.Genes)]); // lab - stem, every time
+        Assert.Equal(10, garden.Traffic[(stem, BlobKind.Genes)]); // stem - core: the only way on
         garden.TrackTraffic = false;
         Assert.Empty(garden.Traffic);
     }

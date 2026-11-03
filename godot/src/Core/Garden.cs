@@ -1107,7 +1107,7 @@ public sealed class Garden
             cameFrom = at;
             at = next;
             route?.Add(at);
-            if (TrackTraffic) CountTraffic(cameFrom, at);
+            if (TrackTraffic) CountTraffic(cameFrom, at, genes ? BlobKind.Genes : BlobKind.Growth);
             if (genes ? CatchesGenes(at) : Absorbs(at, counts)) return at;
             if (Amplified == 1 && at.Spec.DoublesBlobs)
             {
@@ -1120,9 +1120,10 @@ public sealed class Garden
     }
 
     // Blob traffic (build mode's blob-path view, Jeremy, Nov 3): while TrackTraffic, every link a gene or growth blob
-    // steps along counts one (keyed by the link's outer part), fading by half every Tuning.TrafficHalfLife of growth
-    // time, so it shows where blobs have been going lately. Off, nothing is counted (and what was is dropped).
-    public readonly Dictionary<PlantNode, float> Traffic = new();
+    // steps along counts one (keyed by the link's outer part and the blob's kind: genes, growth or buff), fading by half
+    // every Tuning.TrafficHalfLife of growth time, so it shows where blobs have been going lately. Off, nothing is
+    // counted (and what was is dropped).
+    public readonly Dictionary<(PlantNode Outer, BlobKind Kind), float> Traffic = new();
     bool trackTraffic;
     public bool TrackTraffic
     {
@@ -1134,10 +1135,10 @@ public sealed class Garden
         }
     }
 
-    void CountTraffic(PlantNode a, PlantNode b)
+    void CountTraffic(PlantNode a, PlantNode b, BlobKind kind)
     {
-        var outer = b.Parent == a ? b : a;
-        Traffic[outer] = Traffic.GetValueOrDefault(outer) + 1;
+        var key = (b.Parent == a ? b : a, kind);
+        Traffic[key] = Traffic.GetValueOrDefault(key) + 1;
     }
 
     void FadeTraffic(double seconds)
@@ -1145,7 +1146,7 @@ public sealed class Garden
         if (Traffic.Count == 0) return;
         float keep = (float)Math.Pow(0.5, seconds / Tuning.TrafficHalfLife);
         foreach (var key in Traffic.Keys.ToList())
-            if (!linkToParent.ContainsKey(key) || (Traffic[key] *= keep) < 0.01f) Traffic.Remove(key); // (pruned: gone)
+            if (!linkToParent.ContainsKey(key.Outer) || (Traffic[key] *= keep) < 0.01f) Traffic.Remove(key); // (pruned: gone)
     }
 
     // What the last walk's blob is worth for its Amplifier: 1, or 2 (3 tripled) once one amplified it.
@@ -1336,6 +1337,7 @@ public sealed class Garden
             cameFrom = at;
             at = next;
             route?.Add(at);
+            if (TrackTraffic) CountTraffic(cameFrom, at, BlobKind.Buff);
             Buffs(at);
             if (!amplified && at.Spec.DoublesBlobs)
             {

@@ -90,7 +90,8 @@ public partial class ResearchPanel : FloatingWindow
     readonly VBoxContainer full;
     readonly HBoxContainer compact;
     readonly Button minimise;
-    readonly Dictionary<Track, Button> smallBuys = new();
+    readonly Dictionary<Track, (Button Buy, BuyFill Fill)> smallBuys = new();
+    Track? smallHovered;
 
     public bool Minimised { get; private set; }
 
@@ -106,15 +107,23 @@ public partial class ResearchPanel : FloatingWindow
         Size = Vector2.Zero; // shrinks to fit
     }
 
-    // A track's small Buy, for the minimised panel: in its hue, dim while the balance falls short.
-    Button SmallBuy(Track track, Color hue)
+    // A track's small Buy, for the minimised panel: in its hue over a fill showing how close the balance is (as the
+    // cards' Buy), dim while it falls short; under the pointer, how long until it won't.
+    Control SmallBuy(Track track, Color hue)
     {
+        var holder = new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(112, 24) };
+        var fill = new BuyFill(hue);
+        fill.SetAnchorsPreset(LayoutPreset.FullRect);
+        holder.AddChild(fill);
         var buy = new Button
         {
             FocusMode = FocusModeEnum.None,
             MouseDefaultCursorShape = CursorShape.PointingHand,
-            CustomMinimumSize = new Vector2(96, 24),
         };
+        buy.SetAnchorsPreset(LayoutPreset.FullRect);
+        holder.AddChild(buy);
+        buy.MouseEntered += () => { smallHovered = track; refreshTimer = 0; };
+        buy.MouseExited += () => { if (smallHovered == track) smallHovered = null; refreshTimer = 0; };
         StyleBoxFlat Fill(Color colour)
         {
             var s = new StyleBoxFlat { BgColor = colour, ContentMarginLeft = 8, ContentMarginRight = 8 };
@@ -124,7 +133,7 @@ public partial class ResearchPanel : FloatingWindow
         buy.AddThemeStyleboxOverride("normal", Fill(hue with { A = 0.85f }));
         buy.AddThemeStyleboxOverride("hover", Fill(hue.Lightened(0.25f)));
         buy.AddThemeStyleboxOverride("pressed", Fill(hue.Lightened(0.45f)));
-        var short_ = Fill(hue with { A = 0.08f });
+        var short_ = Fill(Colors.Transparent);
         short_.BorderColor = hue with { A = 0.3f };
         short_.SetBorderWidthAll(1);
         buy.AddThemeStyleboxOverride("disabled", short_);
@@ -133,8 +142,8 @@ public partial class ResearchPanel : FloatingWindow
             buy.AddThemeColorOverride(state, Back);
         buy.AddThemeColorOverride("font_disabled_color", hue.Lightened(0.5f) with { A = 0.9f });
         buy.Pressed += () => BuyPressed?.Invoke(track);
-        smallBuys[track] = buy;
-        return buy;
+        smallBuys[track] = (buy, fill);
+        return holder;
     }
 
     // A track's card: its glyph and title, then its next upgrade, the cost and Buy.
@@ -305,14 +314,17 @@ public partial class ResearchPanel : FloatingWindow
             card.Fill.Progress = card.Affordable ? 1 : (float)Math.Clamp(garden.GeneBalance / next.Cost, 0, 1);
             card.Fill.Visible = !card.Affordable;
         }
-        foreach (var (track, buy) in smallBuys)
+        foreach (var (track, (buy, fill)) in smallBuys)
         {
             var next = garden.Next(track);
             string name = track switch { Track.Stems => "Stem", Track.Generators => "Generator", _ => "Core" };
             buy.Disabled = next == null || !garden.CanSpend(next.Cost);
+            double lacking = next == null ? 0 : next.Cost - garden.GeneBalance;
             buy.Text = next == null ? $"{name}: done" : !buy.Disabled ? $"{name}: Buy"
-                : $"{name}: {Math.Ceiling(next.Cost - garden.GeneBalance):#,0} more";
-            buy.TooltipText = next == null ? "Every upgrade on this track is bought." : $"{next.Name}, {next.Cost:#,0} genes: {next.Does}";
+                : smallHovered == track ? (perSecond > 0 ? $"{name}: in {SpaceGarden.Card.Eta(lacking / perSecond)}" : $"{name}: no genes coming")
+                : $"{name}: {Math.Ceiling(lacking):#,0} more";
+            fill.Visible = next != null && buy.Disabled;
+            fill.Progress = next == null ? 1 : (float)Math.Clamp(garden.GeneBalance / next.Cost, 0, 1);
         }
     }
 }

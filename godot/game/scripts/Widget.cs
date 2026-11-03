@@ -113,9 +113,8 @@ public partial class Widget : Node
     readonly PanelContainer info = new() { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.Move };
     readonly ColorRect infoDivider = new() { Color = new Color(1, 1, 1, 0.12f), CustomMinimumSize = new Vector2(0, 1), MouseFilter = Control.MouseFilterEnum.Ignore };
     Vector2? infoGrab; // while held: where on the panel the pointer took it
-    // Build mode's Move garden: on, a drag on the backdrop moves the whole garden (gardenGrab: where it was taken, in
-    // garden units, updated as it moves).
-    bool movingGarden;
+    // Build mode's Move garden handle: while it's held, the whole garden follows the pointer (gardenGrab: where the
+    // pointer was, in garden units, updated as it moves).
     Num.Vector2? gardenGrab;
     bool infoMoved;
     bool gardenInfo; // the core menu's Info is on: the garden's card shows above the part's (see ShowGardenCard)
@@ -181,7 +180,7 @@ public partial class Widget : Node
         }
     }
 
-    // Changes the scale (by change), keeping the plant's distance from the screen's edges (Jeremy, Nov 3): it grows
+    // Changes the scale (by change), keeping things' distance from the screen's edges (Jeremy, Nov 3): the plant grows
     // or shrinks from the corner of its outline nearest the screen's nearest corner, which stays put, so a plant in
     // the bottom right keeps its gap to the taskbar and the right edge rather than shrinking towards the middle.
     void Rescale(Action change)
@@ -192,8 +191,12 @@ public partial class Widget : Node
         // That corner of the outline, on the screen.
         var corner = new Num.Vector2(middle.X > screen.X / 2 ? max.X : min.X, middle.Y > screen.Y / 2 ? max.Y : min.Y);
         var cornerOnScreen = GardenView.V(corner) * Scale;
+        // The shaping tools stay where they are on the screen, each keeping its own distance from the edges (a trellis
+        // in the top right isn't carried across the screen by a plant in the bottom right); what's tied to them follows.
+        var tools = Garden.Shaping.Select(t => (Tool: t, OnScreen: GardenView.V(t.Position) * Scale)).ToList();
         change();
         Garden.Translate(ToSim(cornerOnScreen / Scale) - corner);
+        foreach (var (tool, onScreen) in tools) tool.Position = ToSim(onScreen / Scale);
         ApplyTransform();
     }
 
@@ -267,11 +270,7 @@ public partial class Widget : Node
         toolbarLayer.AddChild(shapingBar);
         shapingBar.Started += TakeFromBar;
         shapingBar.Done += () => SetBuilding(false);
-        shapingBar.MoveToggled += on =>
-        {
-            movingGarden = on;
-            gardenGrab = null;
-        };
+        shapingBar.MoveStarted += () => gardenGrab = ToSim(ToWorld(PointerInViewport()));
         shapingBar.HeatPicked += view =>
         {
             main.View.Heat = view;
@@ -415,7 +414,6 @@ public partial class Widget : Node
         shapingBar.Appear(on);
         if (!on)
         {
-            movingGarden = false;
             gardenGrab = null;
             main.View.Heat = HeatView.None;
             Garden.TrackTraffic = false;
@@ -617,6 +615,7 @@ public partial class Widget : Node
         if (Mode != DisplayMode.Active)
         {
             undo.Visible = false;
+            info.Visible = false; // (the cards' panel is Active's only)
             bool overCore = devCoreHover || (inWindow && Garden.NodeAt(world, HoverSlop) == Garden.Core);
             main.View.CoreHover = overCore;
             main.View.Highlight = overCore ? Garden.Core : null; // ringed, as a part is in Active
@@ -724,8 +723,8 @@ public partial class Widget : Node
         SetIdle(activeTime <= 0);
     }
 
-    // While Move garden's drag is held: the whole garden follows the pointer, by the pointer's movement since last
-    // frame (no fling: Garden.Translate moves the parts' last positions too).
+    // While the Move garden handle is held: the whole garden follows the pointer, by the pointer's movement since
+    // last frame (no fling: Garden.Translate moves the parts' last positions too).
     void MoveGarden()
     {
         if (gardenGrab is not { } from) return;
@@ -971,13 +970,6 @@ public partial class Widget : Node
         if (Mode != DisplayMode.Active) return;
         if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left } button)
         {
-            if (button.Pressed && Building && movingGarden && main.View.OnBackdrop(ToSim(ToWorld(button.Position))))
-            {
-                // Move garden: the drag takes the whole garden (see MoveGarden).
-                gardenGrab = ToSim(ToWorld(button.Position));
-                GetViewport().SetInputAsHandled();
-                return;
-            }
             if (button.Pressed)
             {
                 var at = ToSim(ToWorld(button.Position));

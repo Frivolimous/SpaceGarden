@@ -373,8 +373,8 @@ public partial class ShapingBar : PanelContainer
     public event Action? Done;
     // The special views (Jeremy, Nov 3), in a row under the tools: one at a time, or none.
     public event Action<HeatView>? HeatPicked;
-    // Move (Jeremy, Nov 3): while on, a drag anywhere on the backdrop moves the whole garden, tools and all.
-    public event Action<bool>? MoveToggled;
+    // Move garden (Jeremy, Nov 3): a handle; dragging it moves the whole garden, tools and all.
+    public event Action? MoveStarted;
     readonly Button move;
     readonly Dictionary<HeatView, Button> heatButtons = new();
 
@@ -422,15 +422,15 @@ public partial class ShapingBar : PanelContainer
         }
         move = new Button
         {
-            Text = "Move garden", TooltipText = "While on, drag anywhere on the backdrop to move the whole garden at once",
-            ToggleMode = true, Flat = true, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand,
+            Text = "✥ Move garden", TooltipText = "Drag this to move the whole garden at once",
+            Flat = true, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.Move,
         };
         move.AddThemeFontSizeOverride("font_size", 11);
         move.AddThemeColorOverride("font_color", new Color(1, 1, 1, 0.55f));
         move.AddThemeColorOverride("font_hover_color", new Color(1, 1, 1, 0.85f));
         move.AddThemeColorOverride("font_pressed_color", new Color(1, 0.9f, 0.45f));
         move.AddThemeColorOverride("font_hover_pressed_color", new Color(1, 0.95f, 0.6f));
-        move.Toggled += on => MoveToggled?.Invoke(on);
+        move.ButtonDown += () => MoveStarted?.Invoke();
         views.AddChild(move);
         foreach (var (kind, tool) in new[] { (ShapingKind.Pot, Tool.Pot), (ShapingKind.Trellis, Tool.Trellis), (ShapingKind.Well, Tool.Well) })
         {
@@ -466,7 +466,7 @@ public partial class ShapingBar : PanelContainer
     {
         if (show == showing) return;
         showing = show;
-        if (!show) foreach (var button in heatButtons.Values.Append(move)) button.SetPressedNoSignal(false); // (they end with build mode)
+        if (!show) foreach (var button in heatButtons.Values) button.SetPressedNoSignal(false); // (they end with build mode)
         fade?.Kill();
         if (show)
         {

@@ -179,19 +179,20 @@ public partial class GardenView : Node2D
         heatLayer.QueueRedraw();
     }
 
-    // The special views' heat: cold blue, through green and yellow, to hot red.
-    static Color HeatColour(float t)
-    {
-        t = Mathf.Clamp(t, 0, 1);
-        Color[] stops = [new(0.2f, 0.35f, 1f), new(0.1f, 0.85f, 0.9f), new(0.3f, 0.95f, 0.3f), new(1f, 0.9f, 0.2f), new(1f, 0.25f, 0.15f)];
-        float at = t * (stops.Length - 1);
-        int i = Math.Min(stops.Length - 2, (int)at);
-        return stops[i].Lerp(stops[i + 1], at - i);
-    }
+    // The power view's fixed scale (Jeremy, Nov 3): empty red, half full yellow, full green, past full teal (all teal
+    // at 125%).
+    static readonly Color Empty = new(0.95f, 0.2f, 0.15f), Half = new(1f, 0.85f, 0.15f), Full = new(0.25f, 0.9f, 0.3f),
+        Over = new(0.1f, 0.85f, 0.85f);
 
-    // Power: a disc on each part in its fill's heat (empty blue, half full green, full red; past full white-hot).
-    // Blob paths: each link in its traffic's heat against the busiest link, wider as it's busier (sqrt, so quiet
-    // links still show); links no blob took lately stay dim.
+    static Color FillColour(float fill) =>
+        fill <= 0.5f ? Empty.Lerp(Half, Mathf.Clamp(fill / 0.5f, 0, 1))
+        : fill <= 1 ? Half.Lerp(Full, (fill - 0.5f) / 0.5f)
+        : Full.Lerp(Over, Mathf.Clamp((fill - 1) / 0.25f, 0, 1));
+
+    // Power: a disc on each part in its fill's colour (the fixed scale above).
+    // Blob paths: each link gets a line per blob kind (genes, growth, buffs) side by side, each in its kind's colour,
+    // strong where that kind's traffic is heaviest and fading to faint where it's light (each kind against its own
+    // busiest link); a line with none of that kind lately isn't drawn.
     void DrawHeat()
     {
         if (Heat == HeatView.None || !Building) return;
@@ -201,20 +202,36 @@ public partial class GardenView : Node2D
             {
                 if (node.Spec.IsFruit || node.Store <= 0) continue;
                 float fill = node.Power / Garden.PowerCap(node);
-                var colour = fill > 1 ? HeatColour(1).Lerp(Colors.White, Mathf.Clamp((fill - 1) * 2, 0, 1)) : HeatColour(fill);
-                heatLayer.DrawCircle(At(node), Mathf.Max(node.Spec.Radius * 0.9f, 6), colour with { A = 0.75f });
+                heatLayer.DrawCircle(At(node), Mathf.Max(node.Spec.Radius * 0.9f, 6), FillColour(fill) with { A = 0.8f });
             }
             return;
         }
-        float busiest = garden.Traffic.Count == 0 ? 1 : Mathf.Max(1, garden.Traffic.Values.Max());
-        foreach (var link in garden.Links)
+        foreach (var (kind, hue, offset) in TrafficLines)
         {
-            if (link.Target.Spec.IsFruit) continue;
-            float t = Mathf.Sqrt(garden.Traffic.GetValueOrDefault(link.Target) / busiest);
-            var colour = t <= 0 ? new Color(1, 1, 1, 0.15f) : HeatColour(t) with { A = 0.85f };
-            heatLayer.DrawLine(At(link.Origin), At(link.Target), colour, 2 + 7 * t, true);
+            float busiest = 1;
+            foreach (var ((_, k), count) in garden.Traffic) if (k == kind) busiest = Mathf.Max(busiest, count);
+            foreach (var link in garden.Links)
+            {
+                if (link.Target.Spec.IsFruit) continue;
+                float t = garden.Traffic.GetValueOrDefault((link.Target, kind)) / busiest;
+                if (t <= 0) continue;
+                var (a, b) = (At(link.Origin), At(link.Target));
+                var side = (b - a).Orthogonal().Normalized() * offset;
+                // Dark and solid at the busiest, light and faint at a fifth (the strength by concentration).
+                var colour = hue.Lightened(0.6f * (1 - t)) with { A = 0.25f + 0.75f * t };
+                heatLayer.DrawLine(a + side, b + side, colour, 3, true);
+            }
         }
     }
+
+    // The blob paths view's three lines: genes (the labs' purple), growth (the groves' orange) and buffs (the glow's
+    // white), side by side across each link.
+    static readonly (BlobKind Kind, Color Hue, float Offset)[] TrafficLines =
+    [
+        (BlobKind.Genes, new Color(0.45f, 0.25f, 0.85f), -3.5f),
+        (BlobKind.Growth, new Color(0.9f, 0.45f, 0.05f), 0),
+        (BlobKind.Buff, new Color(0.85f, 0.85f, 0.8f), 3.5f),
+    ];
 
     // Where to draw a part this frame: blended between its last two physics ticks by how far the frame is into the
     // next, so motion is smooth at any frame rate (30 when idle, the monitor's rate when active) and not stepped
