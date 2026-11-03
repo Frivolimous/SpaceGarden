@@ -30,7 +30,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   part's whenever you tap the plant, and Build is build mode.
   **Almanac** (lit while open) opens a window with tabs across the top, **Journal** and **Codex**. The Journal is the garden's
   moments under day headings ("Day 2"), newest first, each with its time on that day. They're its planting, each
-  kind's first part, its first passive bud, core links and the Hub bought (in the genes' purple), shaping tools gained
+  kind's first part (not fruit), its first passive bud, core links and the Hub bought (in the genes' purple), shaping tools gained
   from the garden's size (in the tools' blue), part counts reached, the first of each shaping tool placed, and wild
   flowers discovered (a pale gold) or ended. The Codex lists the kinds the garden has grown (only those), each a card
   with its shape, what it does and when it was first found; Evolutions shows each level chosen as a card the same way.
@@ -44,7 +44,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   spends the balance and raises the cap at once (the core ripples purple). See Upgrade tracks in DESIGN.md.
   **Ambient**, **Minimise** and **Settings** close the menu. The core's toolbar (its buds) opens above it at the same
   time. Tap the core again, anywhere else, or Escape to close it. The cards sit in one spot beside the plant.
-- **Undo a prune**: for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
+- **Undo a prune** (switched off for now: `Tuning.UndoPruneOn`): for 30 s after a prune (`Tuning.UndoPruneSeconds`) an **Undo prune** pill under the plant puts
   the branch back (or Ctrl+Z while the widget has the focus). Only the last prune; passive growth waits out the window
   so the room is still there, and a bud placed in that room, or time away, ends it.
 - **Fruit** (leaves, burrs, research pods) ignores the pointer: it can't be hovered, tapped or dragged, and clicks
@@ -76,7 +76,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   the core, shaping tools gained and other moments, and any dip in power (also after 5 minutes or more hidden or
   minimised). A shaping tool gained while you watch gets a short note above the plant instead.
 - While nobody can see it (screen locked, display off, or a full-screen app such as a game or video on its
-  monitor) it pauses: no drawing or physics, waking 4 times a second to check (about 1.5% of a core). When it's
+  monitor) it hides and pauses: nothing shows, no drawing or physics, waking 4 times a second to check (about 1.5% of a core). When it's
   visible again the hidden time's growth is caught up at once, like time away. Windows only (`Visibility.cs`).
 
 ## What's ported, what's new

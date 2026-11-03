@@ -5,8 +5,9 @@ namespace SpaceGarden;
 // The Research panel (DESIGN.md, Upgrade tracks): a window of its own (see FloatingWindow), opened and closed by the
 // Research slot in the core's menu or its ✕. Three cards, Stems, Generators and Core, each in its role's hue with a
 // glyph of its part, showing only its track's next upgrade, its cost and a Buy button, greyed while the gene balance
-// falls short; the balance shows in the header. A card the balance covers glows softly. Buying is the rules'
-// (Garden.Buy): the widget does it on BuyPressed.
+// falls short; the balance shows in the header, with the genes a second reaching the core. A card the balance covers
+// glows softly; under the pointer, a Buy it doesn't cover says how long until it will at that rate. Buying is the
+// rules' (Garden.Buy): the widget does it on BuyPressed.
 public partial class ResearchPanel : FloatingWindow
 {
     public event Action<Track>? BuyPressed;
@@ -22,7 +23,7 @@ public partial class ResearchPanel : FloatingWindow
     sealed record TrackCard(Color Hue, StyleBoxFlat Style, TrackGlyph Glyph, InfoMark Info, Label Name, HBoxContainer Cost,
         Label Price, Control BuyRow, BuyFill Fill, Button Buy)
     {
-        public bool Affordable;
+        public bool Affordable, Hovered;
     }
 
     readonly Dictionary<Track, TrackCard> cards = new();
@@ -149,7 +150,11 @@ public partial class ResearchPanel : FloatingWindow
         buyRow.AddChild(buy);
         page.AddChild(buyRow);
 
-        cards[track] = new TrackCard(hue, style, glyph, info, name, cost, price, buyRow, fill, buy);
+        var made = new TrackCard(hue, style, glyph, info, name, cost, price, buyRow, fill, buy);
+        cards[track] = made;
+        // Under the pointer, a Buy the balance falls short of shows how long until it won't (see Update).
+        buy.MouseEntered += () => { made.Hovered = true; refreshTimer = 0; };
+        buy.MouseExited += () => { made.Hovered = false; refreshTimer = 0; };
         return card;
     }
 
@@ -182,12 +187,15 @@ public partial class ResearchPanel : FloatingWindow
         hint.GlobalPosition = at.Clamp(new Vector2(4, 4), (screen - size - new Vector2(4, 4)).Max(new Vector2(4, 4)));
     }
 
+    // A small rate: one decimal under 10, whole above.
+    static string PerSecond(double rate) => rate < 10 ? $"{rate:0.0}" : $"{rate:#,0}";
+
     // Shows at once: an upgrade just bought.
     public void RefreshNow() => refreshTimer = 0;
 
     // Every frame: follows the pointer while its header is held, keeps it on the screen, breathes the glow of the
     // cards the balance covers, and refreshes the cards a few times a second.
-    public void Update(Garden garden, Vector2 pointer, Vector2 screen, double delta)
+    public void Update(Garden garden, double growthSpeed, Vector2 pointer, Vector2 screen, double delta)
     {
         Place(pointer, screen, GetCombinedMinimumSize());
         if (!IsOpen || !Visible)
@@ -209,7 +217,9 @@ public partial class ResearchPanel : FloatingWindow
 
         if ((refreshTimer -= delta) > 0) return;
         refreshTimer = RefreshSeconds;
-        Note.Text = $"{Math.Floor(garden.GeneBalance):#,0} genes";
+        // Genes a real second, reaching the core now (the garden card's rate: GardenStats.GenesPerHour).
+        double perSecond = GardenStats.Of(garden).GenesPerHour / 3600 * growthSpeed;
+        Note.Text = $"{Math.Floor(garden.GeneBalance):#,0} genes  ({PerSecond(perSecond)}/s)";
         foreach (var (track, card) in cards)
         {
             var next = garden.Next(track);
@@ -222,7 +232,10 @@ public partial class ResearchPanel : FloatingWindow
             if (next == null) continue;
             card.Price.Text = $"{next.Cost:#,0}";
             card.Buy.Disabled = !card.Affordable;
-            card.Buy.Text = card.Affordable ? "Buy" : $"{Math.Ceiling(next.Cost - garden.GeneBalance):#,0} more";
+            double lacking = next.Cost - garden.GeneBalance;
+            card.Buy.Text = card.Affordable ? "Buy"
+                : !card.Hovered ? $"{Math.Ceiling(lacking):#,0} more"
+                : perSecond > 0 ? $"in {SpaceGarden.Card.Eta(lacking / perSecond)}" : "no genes coming";
             card.Fill.Progress = card.Affordable ? 1 : (float)Math.Clamp(garden.GeneBalance / next.Cost, 0, 1);
             card.Fill.Visible = !card.Affordable;
         }

@@ -221,7 +221,7 @@ public static class NodeSpecs
             Name = "Hub", Description = "Catches gene blobs for points of its own, which boost each kind of part.",
             Radius = 25, Mass = 20, Force = 20, MaxLinks = 3, Shape = Shape.Wheel, Rgb = 0x2ED89A,
             PowerStore = NodeBase.PowerStore * 10f, PowerPerSecond = -Tuning.HubUpkeep, PowerWeight = 1.1f,
-            PowerTransferPerSecond = NodeBase.PowerTransfer * 0.5f,
+            PowerTransferPerSecond = Tuning.HubTransfer,
         };
         return all;
     }

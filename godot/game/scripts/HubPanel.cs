@@ -20,7 +20,16 @@ public partial class HubPanel : FloatingWindow
     static readonly Color HueInk = Hue.Lightened(0.3f);
     static readonly Color Back = new(0.06f, 0.07f, 0.09f);
 
-    sealed record PathRow(HubPath Path, StyleBoxFlat Style, Color Hue, PathGlyph Glyph, Label Name, Label Detail, LevelPips Pips, Button Buy, Control Row);
+    sealed record PathRow(HubPath Path, StyleBoxFlat Style, Color Hue, PathGlyph Glyph, Label Name, Label Detail, LevelPips Pips, Button Buy, Control Row,
+        string Milestones);
+
+    // When the Hub's next point comes, at the rate genes find it now (GardenStats.HubGenesPerHour): " (in 25m)", or
+    // nothing while no genes are finding it.
+    public static string NextPointIn(Garden garden, double growthSpeed)
+    {
+        double perSecond = GardenStats.HubGenesPerHour(garden) / 3600 * growthSpeed;
+        return perSecond > 0 ? $" (in {Card.Eta((garden.NextPointCost - garden.HubPool) / perSecond)})" : "";
+    }
 
     readonly List<PathRow> rows = new();
     readonly Label poolText;
@@ -146,7 +155,7 @@ public partial class HubPanel : FloatingWindow
         // Its milestones, in the row's tooltip.
         row.TooltipText = $"Each level: {path.PerLevel}.\n"
             + string.Join("\n", path.Milestones.Select(m => $"Level {m.Level} ({path.Cost(m.Level)} points): {m.Text}."));
-        rows.Add(new PathRow(path, style, hue, glyph, name, detail, pips, buy, row));
+        rows.Add(new PathRow(path, style, hue, glyph, name, detail, pips, buy, row, row.TooltipText));
         return row;
     }
 
@@ -157,14 +166,15 @@ public partial class HubPanel : FloatingWindow
 
     // Every frame: follows the pointer while its header is held, keeps it on the screen, and refreshes the rows a few
     // times a second.
-    public void Update(Garden garden, Vector2 pointer, Vector2 screen, double delta)
+    public void Update(Garden garden, double growthSpeed, Vector2 pointer, Vector2 screen, double delta)
     {
         Place(pointer, screen, GetCombinedMinimumSize());
         if (!IsOpen || !Visible || (refreshTimer -= delta) > 0) return;
         refreshTimer = RefreshSeconds;
         Note.Text = garden.HubPoints == 1 ? "1 point" : $"{garden.HubPoints} points";
         poolBar.Progress = (float)Math.Clamp(garden.HubPool / garden.NextPointCost, 0, 1);
-        poolText.Text = $"{Math.Floor(garden.HubPool):#,0} / {garden.NextPointCost:#,0} genes to the next point";
+        poolText.Text = $"{Math.Floor(garden.HubPool):#,0} / {garden.NextPointCost:#,0} genes to the next point"
+            + NextPointIn(garden, growthSpeed);
         foreach (var row in rows)
         {
             var kind = row.Path.Kind;
@@ -177,6 +187,7 @@ public partial class HubPanel : FloatingWindow
             row.Style.BgColor = Back.Lerp(tint, found ? 0.05f : 0.02f);
             row.Style.BorderColor = tint with { A = found ? 0.16f : 0.08f };
             row.Name.Text = found ? spec.Name : "???";
+            row.Row.TooltipText = found ? row.Milestones : "Not found in the garden yet";
             row.Name.LabelSettings.FontColor = found ? GardenView.Rgb(spec.Rgb).Lightened(0.3f) : Dim;
             row.Pips.Level = level;
             row.Pips.Visible = found;

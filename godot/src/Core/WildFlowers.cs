@@ -58,6 +58,7 @@ static class WildFlowers
         yield return amplifier with
         {
             Radius = 11, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, DoublesBlobs = true,
+            PowerTransferPerSecond = Tuning.AmplifierTransfer,
             Wild = amplifier.Wild! with { BaseSlot = false },
         };
         var resistor = Wild(stem, NodeKind.Resistor, "Resistor", Shape.Minus, 0xF2F2F2, WildUnlock.Start,
@@ -96,6 +97,7 @@ static class WildFlowers
             "Keeps fading, and burns out at 3 days unless pruned first; takes a generator slot too.") with
         {
             PowerPerSecond = Tuning.EmberGen, LifeSeconds = Tuning.EmberLifeSeconds, Dims = true, Fruit = null, MaxFruits = 0,
+            PowerTransferPerSecond = Tuning.EmberTransfer,
         };
 
         // The grove kinds.

@@ -47,13 +47,21 @@ public partial class Card : PanelContainer
             MouseFilter = MouseFilterEnum.Ignore,
             LabelSettings = new LabelSettings { FontSize = 16 },
         };
-        // The heading, with the buff mark after it while the part is buffed.
+        // The heading, with the buff mark after it while the part is buffed, and the buff's time left beside it.
         var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         top.AddThemeConstantOverride("separation", 6);
         top.AddChild(heading);
         top.AddChild(buffed);
+        buffTime = new Label
+        {
+            MouseFilter = MouseFilterEnum.Ignore, Visible = false, SizeFlagsVertical = SizeFlags.ShrinkCenter,
+            LabelSettings = new LabelSettings { FontSize = 12, FontColor = QuirkInk },
+        };
+        top.AddChild(buffTime);
         column.AddChild(top);
     }
+
+    readonly Label buffTime;
 
     // A small glow fruit beside the heading while a buff blob's boost is running on the part (a Buffer's or a glow's).
     readonly BuffMark buffed = new() { Visible = false };
@@ -102,7 +110,8 @@ public partial class Card : PanelContainer
         var spec = node.Spec;
         var stats = NodeStats.Of(node);
         heading.Text = spec.Name;
-        buffed.Visible = node.Buff > 0;
+        buffed.Visible = buffTime.Visible = node.Buff > 0;
+        if (node.Buff > 0) buffTime.Text = $"{Math.Ceiling(node.Buff / speed):0}s";
         heading.LabelSettings.FontColor = GardenView.Rgb(spec.Rgb).Lightened(0.35f);
         // A wild flower's quirk, under its name: what it trades for its effect.
         if (spec.Wild is { } wild) Line(ref used, (wild.Quirk, QuirkInk));
@@ -130,7 +139,8 @@ public partial class Card : PanelContainer
         {
             Line(ref used, ("Hub points: ", Ink), ($"{garden.HubPoints}", HubInk));
             Line(ref used, $"Pool: {Math.Floor(garden.HubPool):#,0} genes");
-            Line(ref used, $"Next point: {Math.Ceiling(garden.NextPointCost - garden.HubPool):#,0} more genes");
+            Line(ref used, $"Next point: {Math.Ceiling(garden.NextPointCost - garden.HubPool):#,0} more genes"
+                + HubPanel.NextPointIn(garden, speed));
         }
         // On the core: an evolution whose seedling was pruned before it bloomed, which the next one planted takes up.
         if (node == garden.Core && garden.Waiting.FirstOrDefault() is { } waiting)
@@ -145,7 +155,7 @@ public partial class Card : PanelContainer
     void ShowGardenLines(GardenStats stats, double speed, ref int used)
     {
         heading.Text = "Garden";
-        buffed.Visible = false;
+        buffed.Visible = buffTime.Visible = false;
         heading.LabelSettings.FontColor = GardenTint.Lightened(0.35f);
         Line(ref used, ("Power: ", Ink), ($"{stats.PowerHeld:0}", PowerInk(stats.PowerHeld, stats.PowerStore)),
             ($" / {stats.PowerStore:0}", Ink));
@@ -298,7 +308,7 @@ public partial class UndoPill : PanelContainer
     {
         if ((refreshTimer -= delta) > 0) return;
         refreshTimer = 0.25;
-        Visible = garden.CanUndoPrune;
+        Visible = Tuning.UndoPruneOn && garden.CanUndoPrune;
         if (Visible) text.Text = $"Undo prune  {Math.Ceiling(garden.UndoSecondsLeft):0} s";
     }
 

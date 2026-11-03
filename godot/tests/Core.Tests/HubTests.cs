@@ -29,6 +29,18 @@ public class HubTests
         return (garden, stem, lab, hub);
     }
 
+    // From the stem a gene blob goes to the core or the Hub, half each: half the lab's genes find the Hub, which sets
+    // when its next point comes.
+    [Fact]
+    public void TheHubsGeneRateIsItsShareOfTheLabsBlobs()
+    {
+        var (garden, _, lab, _) = Make();
+        var (core, hub) = GardenStats.GeneReaches(garden, lab);
+        Assert.Equal(0.5, core, 12);
+        Assert.Equal(0.5, hub, 12);
+        Assert.Equal(Garden.BlobsPerHour(lab) * Tuning.BlobGenes * 0.5, GardenStats.HubGenesPerHour(garden), 9);
+    }
+
     static void GrowFull(Garden garden, double seconds)
     {
         for (double t = 0; t < seconds; t += 1)

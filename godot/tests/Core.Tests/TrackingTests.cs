@@ -180,7 +180,7 @@ public class TrackingTests
         var second = Add(garden, stem, NodeKind.Stem);
         Add(garden, second, NodeKind.Leaf);
         var texts = garden.Tracking.Journal.Select(e => e.Text).ToList();
-        Assert.Equal(["A new garden was planted", "First stem emerged", "First grove emerged", "First leaf grew"], texts);
+        Assert.Equal(["A new garden was planted", "First stem emerged", "First grove emerged"], texts); // (not fruit's)
         Assert.Equal(JournalKind.Planted, garden.Tracking.Journal[0].Kind);
     }
 
@@ -225,9 +225,10 @@ public class TrackingTests
         garden.CatchUp(6 * Hour);
         var note = AwayNote.Since(garden, mark);
         Assert.Equal(6 * Hour, note.Seconds, 6);
-        Assert.Contains(note.Lines, l => l.Contains("new parts grew"));
+        Assert.Contains(note.Lines, l => l.Contains("new parts grew") && !l.Contains("leaf") && !l.Contains("berr"));
+        Assert.Contains(note.Lines, l => l.EndsWith(" fruits grew."));
         Assert.Contains(note.Lines, l => l.EndsWith("genes reached the core."));
-        Assert.Equal("Trellis gained at garden size 15.", note.Lines[2]); // before the firsts
+        Assert.Equal("Trellis gained at garden size 15.", note.Lines[3]); // before the firsts
         Assert.DoesNotContain(note.Lines, l => l.StartsWith("Power ran low"));
     }
 

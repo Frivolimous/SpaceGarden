@@ -25,7 +25,7 @@ namespace SpaceGarden;
 // Widget.DevFlags). --screenshot runs never touch the real save.
 //
 // While nobody can see the garden (screen locked, display off, a full-screen app on its monitor: see Visibility) it
-// stops: no drawing, no physics, and the widget wakes only a few times a second. Growth isn't lost: on coming back,
+// stops and hides: no drawing, no physics, and the widget wakes only a few times a second. Growth isn't lost: on coming back,
 // the time it was hidden is caught up like time away, and the plant settles before it's shown.
 public partial class Main : Node2D
 {

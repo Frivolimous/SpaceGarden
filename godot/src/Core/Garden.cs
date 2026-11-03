@@ -613,16 +613,16 @@ public sealed class Garden
     // Parts of a kind, and buds forming of it.
     int CountOf(NodeKind kind) => Nodes.Count(n => n.Spec.Kind == kind || n.Forming == kind);
 
-    // A new bud may grow wild (DESIGN.md, Wild flowers): the chance is the passive or planted one per free wild flower
-    // slot (none free, no chance, and no dice thrown, so a garden without slots grows exactly as before), raised near a
-    // Moonflower. If it does, its kind is one of those that can stand in for its base kind, among those that can grow
+    // A new bud may grow wild (DESIGN.md, Wild flowers): the chance is the passive or planted one while a wild flower
+    // slot is free (none free, no chance, and no dice thrown, so a garden without slots grows exactly as before), raised
+    // near a Moonflower. If it does, its kind is one of those that can stand in for its base kind, among those that can grow
     // now; a passive bud may also become a passive-only kind, but leans to its base's own (Tuning.PassiveBaseShare).
     // Alike within each group. Returns the bud's kind.
     NodeKind GrowsWild(PlantNode parent, NodeKind kind, bool passive, Counts counts)
     {
         int free = Capacity.WildFlowers - counts.Wild;
         if (free <= 0) return kind;
-        double chance = (passive ? Tuning.PassiveWildChance : Tuning.PlantedWildChance) * free * WildBoostAt(parent);
+        double chance = (passive ? Tuning.PassiveWildChance : Tuning.PlantedWildChance) * WildBoostAt(parent);
         if (rng.NextDouble() >= chance) return kind;
         var own = NodeSpecs.Wild.Where(s => s.Wild!.Base == kind && CanGrowWild(s.Kind)).Select(s => s.Kind).ToList();
         var passiveOnly = passive

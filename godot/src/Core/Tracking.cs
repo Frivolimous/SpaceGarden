@@ -49,8 +49,8 @@ public sealed class Tracking
     // Wild flowers whose own life cycle ended them, by kind (an Ember burned out, a Comet Bloom withered).
     public readonly Dictionary<NodeKind, int> EndedCount = new();
 
-    // A part grew (not loaded): counts it, and logs its kind's first (a wild flower's as its discovery) and any part
-    // count reached for the first time.
+    // A part grew (not loaded): counts it, and logs its kind's first (a wild flower's as its discovery; not fruit's:
+    // Jeremy, Nov 3) and any part count reached for the first time.
     internal void Grew(NodeSpec spec, int parts)
     {
         Grown[spec.Kind] = Grown.GetValueOrDefault(spec.Kind) + 1;
@@ -60,7 +60,7 @@ public sealed class Tracking
             if (found) Log(JournalKind.Discovery, $"Wild flower discovered: {spec.Name}");
         }
         else if (spec.Kind == NodeKind.Hub) First("grew:Hub", "First Hub planted");
-        else First($"grew:{spec.Kind}", $"First {spec.Name.ToLowerInvariant()} {(spec.IsFruit ? "grew" : "emerged")}");
+        else if (!spec.IsFruit) First($"grew:{spec.Kind}", $"First {spec.Name.ToLowerInvariant()} emerged");
         if (parts <= MostParts) return;
         foreach (var milestone in PartMilestones)
             if (MostParts < milestone && parts >= milestone) Log(JournalKind.Milestone, $"The garden reached {milestone} parts");
@@ -321,13 +321,16 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
         var grew = Enum.GetValues<NodeKind>()
             .Select(k => (Kind: k, Count: tracking.Grown.GetValueOrDefault(k) - mark.Grown.GetValueOrDefault(k)))
             .Where(g => g.Count > 0).ToList();
-        var basic = grew.Where(g => !NodeSpecs.All[g.Kind].IsWild).ToList();
+        // The new parts, by kind (fruit not among them), then the fruit, only how many (Jeremy, Nov 3).
+        var basic = grew.Where(g => !NodeSpecs.All[g.Kind].IsWild && !NodeSpecs.All[g.Kind].IsFruit).ToList();
         int parts = basic.Sum(g => g.Count);
         if (parts > 0)
         {
             var kinds = basic.Select(g => Count(g.Count, NodeSpecs.All[g.Kind].Name.ToLowerInvariant())).ToList();
             lines.Add($"{(parts == 1 ? "A new part" : $"{parts} new parts")} grew: {List(kinds)}.");
         }
+        int fruit = grew.Where(g => !NodeSpecs.All[g.Kind].IsWild && NodeSpecs.All[g.Kind].IsFruit).Sum(g => g.Count);
+        if (fruit > 0) lines.Add(fruit == 1 ? "A fruit grew." : $"{fruit} fruits grew.");
 
         // The wild flowers that grew (by their names), each kind new to the garden on a line of its own, picked out;
         // then those whose life cycle ended them.

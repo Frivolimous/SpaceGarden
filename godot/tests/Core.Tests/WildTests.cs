@@ -26,15 +26,19 @@ public class WildTests
         var (none, stem0) = Make(wildLimit: 0);
         Assert.Equal(0, WildShare(none, stem0, passive: true));
 
-        // The chance is per free slot: two free, twice the chance.
+        // The chance is the same however many slots are free.
         var (two, stem2) = Make(wildLimit: 2);
-        Assert.InRange(WildShare(two, stem2, passive: true), 2 * Tuning.PassiveWildChance * 0.9, 2 * Tuning.PassiveWildChance * 1.1);
-        Assert.InRange(WildShare(two, stem2, passive: false), 2 * Tuning.PlantedWildChance * 0.9, 2 * Tuning.PlantedWildChance * 1.1);
+        Assert.InRange(WildShare(two, stem2, passive: true), Tuning.PassiveWildChance * 0.9, Tuning.PassiveWildChance * 1.1);
+        Assert.InRange(WildShare(two, stem2, passive: false), Tuning.PlantedWildChance * 0.9, Tuning.PlantedWildChance * 1.1);
 
-        // A slot taken leaves one.
+        // A slot taken leaves one: the same chance.
         Add(two, stem2, NodeKind.Tendril);
         Assert.Equal(1, two.FreeWildSlots);
-        Assert.InRange(WildShare(two, stem2, passive: true), Tuning.PassiveWildChance * 0.85, Tuning.PassiveWildChance * 1.15);
+        Assert.InRange(WildShare(two, stem2, passive: true), Tuning.PassiveWildChance * 0.9, Tuning.PassiveWildChance * 1.1);
+
+        // All taken: none.
+        Add(two, stem2, NodeKind.Tendril);
+        Assert.Equal(0, WildShare(two, stem2, passive: true));
     }
 
     [Fact]

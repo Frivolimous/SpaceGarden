@@ -397,7 +397,7 @@ public partial class Widget : Node
 
     void UndoPrune()
     {
-        if (Garden.UndoPrune() is not { } back) return;
+        if (!Tuning.UndoPruneOn || Garden.UndoPrune() is not { } back) return;
         main.View.Restored(back); // growing back in, but not new: no pops or glints
         toolbar.HideAway();
         undo.RefreshNow();
@@ -458,7 +458,10 @@ public partial class Widget : Node
         Garden.FruitBorrowsPush = fruitBorrowsPush; // every frame, so it carries over to a new garden too
         FollowWindow();
         if (Hotkey.TakePress()) SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
-        main.View.Visible = Mode != DisplayMode.Minimised; // every frame: a new garden gets a new view
+        // Every frame (a new garden gets a new view). While nobody can see the garden (a full-screen app over it, too)
+        // nothing of it shows: it's hidden, not left frozen on top (Jeremy, Nov 3).
+        main.View.Visible = Mode != DisplayMode.Minimised && main.HiddenReason == null;
+        toolbarLayer.Visible = main.HiddenReason == null;
         main.View.Building = Building;
         main.View.ToolsWanted = Mode != DisplayMode.Active ? 0 : Building ? 1 : ShapingFaint;
 
@@ -542,9 +545,9 @@ public partial class Widget : Node
         partCard.Update(Garden, main.GrowthSpeed, delta);
         gardenCard.Update(Garden, main.GrowthSpeed, delta);
         almanac.Update(Garden, pointer / Dpi, viewport, delta);
-        research.Update(Garden, pointer / Dpi, viewport, delta);
+        research.Update(Garden, main.GrowthSpeed, pointer / Dpi, viewport, delta);
         if (hubPanel.IsOpen && !Garden.HubPlanted) hubPanel.Close(); // pruned: its levels sleep
-        hubPanel.Update(Garden, pointer / Dpi, viewport, delta);
+        hubPanel.Update(Garden, main.GrowthSpeed, pointer / Dpi, viewport, delta);
         coreMenu.SetActive(Tool.Info, gardenInfo);
         coreMenu.SetActive(Tool.Almanac, almanac.IsOpen);
         coreMenu.SetActive(Tool.Research, research.IsOpen);

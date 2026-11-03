@@ -51,11 +51,9 @@ public partial class GardenView : Node2D
     readonly Garden garden;
     readonly Node2D backdropLayer = new(), shapingLayer = new(), linkLayer = new(), haloLayer = new(), shapeLayer = new(),
         formingLayer = new(), potLayer = new(), markLayer = new(), moteLayer = new(), wildLayer = new(), wildFormingLayer = new();
-    // Stems are tapered (links, linkEdges); fruit stalks and the lit stretch of a power flash are straight.
+    // Stems are tapered (links, linkEdges); fruit stalks are straight.
     readonly Batch links = new(), linkEdges = new(), straight = new(), halos = new(), moteDots = new();
     const float MoteRadius = 2; // a blob's dot, in garden units (the original's)
-    // A power flash's light flooding along its stem, then draining: done before the next (at most 3 a second).
-    const float FillSeconds = 0.05f, DrainSeconds = 0.15f;
     readonly Dictionary<Shape, Batch> shapes = new(), forming = new();
     // The wild flowers' shapes, from one atlas (see Textures.Atlas): one batch for the parts, one for their buds.
     readonly Batch wildShapes = new(cells: true), wildForming = new(cells: true);
@@ -330,45 +328,19 @@ public partial class GardenView : Node2D
         links.Begin();
         linkEdges.Begin();
         straight.Begin();
-        foreach (var link in garden.Links)
-        {
-            AddLink(link);
-            if (link.FlashAge < FillSeconds + DrainSeconds) AddLit(link);
-        }
+        foreach (var link in garden.Links) AddLink(link);
         linkEdges.Draw(linkLayer, Textures.Taper);
         links.Draw(linkLayer, Textures.Taper);
         straight.Draw(linkLayer, Textures.Line);
     }
 
-    // A power flash lights its whole stem, as in the original, but in a wipe from the end the power came from: the
-    // light floods along to the far end, then drains away from the same end it came in by. As bright as the flash
-    // (the fuller the part it reached, the brighter). Drawn over the stem at rest, an even width a little inside
-    // the stem's where the lit stretch is.
-    void AddLit(Link link)
-    {
-        float age = link.FlashAge;
-        float head = Mathf.Min(1, age / FillSeconds);
-        float tail = Mathf.Clamp((age - FillSeconds) / DrainSeconds, 0, 1);
-        if (head - tail < 0.01f) return;
-        if (Span(link) is not var (start, end)) return;
-        var (a, b) = link.FlowsToTarget ? (start, end) : (end, start);
-        var along = b - a;
-        float length = along.Length();
-        float middle = (head + tail) / 2; // how far along from the end the power left
-        float fromParent = link.FlowsToTarget ? middle : 1 - middle;
-        float width = LinkWidth(link.Target) * Mathf.Lerp(1, Textures.TaperEnd, fromParent) * 0.9f;
-        // 45% at rest up to 78% for a flash into a full part (FlashPeak 0.6), as the stems flashed before.
-        var colour = Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.FlashStrength);
-        colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
-        var normal = new Vector2(-along.Y, along.X) / length / Textures.LineCore * width;
-        straight.AddAxes(a + along * middle, along * (head - tail), normal, colour);
-    }
-
     void AddLink(Link link)
     {
-        // As the original's link (FDGLink.getColor): its target's colour, dim at rest (lit by a power flash: see
-        // AddLit). (The original rested at 30%; 45% keeps the stems readable over a dark desktop.)
-        var colour = Shade(ColourOf(link.Target.Spec), 0.45f);
+        // As the original's link (FDGLink.getColor): its target's colour, dim at rest, the whole stem lit by a power
+        // flash and fading (Link.Flash: Tuning.FlashPeak, fading at LinkFlashFadePerSecond). (The original rested at
+        // 30%; 45% keeps the stems readable over a dark desktop.) Back to the original's flash and fade from a wipe
+        // along the stem, whose motion distracted (Jeremy, Nov 3).
+        var colour = Shade(ColourOf(link.Target.Spec), 0.45f + 0.55f * link.Flash);
         colour.A = Mathf.Min(1, GrowIn(link.Target) * 1.5f);
         float width = LinkWidth(link.Target);
         if (Span(link) is not var (from, to)) return;

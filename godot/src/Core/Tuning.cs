@@ -36,8 +36,8 @@ public static class Tuning
     // From Config.PHYSICS.EDGE_BOUNCE: how hard the screen edges push parts back.
     public const float EdgeBounce = 0.1f;
 
-    // Motes (travelling blobs: genes, and growth): seconds per link.
-    public const float MoteLinkSeconds = 0.3f;
+    // Motes (travelling blobs: genes, and growth): seconds per link (Jeremy, Nov 3: 25% slower, was 0.3).
+    public const float MoteLinkSeconds = 0.4f;
     public const float GlowFadePerSecond = 1.5f;
 
     // Power shows as link flashes, as in the original game: each transfer lights its link, and the flash fades in
@@ -70,6 +70,9 @@ public static class Tuning
     // Placeholder. How long the last prune can be undone, in real seconds (counted in physics ticks, so the same at
     // any growth speed). Growth blobs start nothing new meanwhile, so the room the prune freed is still there.
     public const double UndoPruneSeconds = 30;
+    // Whether the player can undo a prune at all (its pill and Ctrl+Z). Off (Jeremy, Nov 3: not needed); the rules keep
+    // the window, so turning it back on is this switch.
+    public const bool UndoPruneOn = false;
 
     // A pruned branch's parts drift loose for this long (real seconds, in physics ticks), fading out from the cut.
     // Each part fades a little quicker or slower than the next, at most this share of the time quicker.
@@ -158,16 +161,19 @@ public static class Tuning
     // ==== WILD FLOWERS ==== \
     // Placeholders, as every wild flower number here (DESIGN.md, Wild flowers). The balance target: a wild flower slot
     // is worth about 0.65 labs, so each kind should be worth its base plus about that; upkeep and transfer are the
-    // fine-tuning dials. The chance a new bud grows wild, per free wild flower slot, by how it started: a passive
-    // bud's and a planted one's.
-    public const float PassiveWildChance = 0.05f;
-    public const float PlantedWildChance = 0.04f;
+    // fine-tuning dials. The chance a new bud grows wild while a wild flower slot is free, by how it started: a passive
+    // bud's and a planted one's (Jeremy, Nov 3: raised to a quarter, and no longer per free slot; were 5% and 4% a slot).
+    public const float PassiveWildChance = 0.25f;
+    public const float PlantedWildChance = 0.25f;
 
     // Each kind's own numbers (the kinds in WildFlowers.cs). Amplifier: each one a gene or growth blob passes doubles
-    // it AmplifyChance of the time, once a blob at most (50% larger on average, the blobs still whole).
+    // it AmplifyChance of the time, once a blob at most (50% larger on average, the blobs still whole). It sends power
+    // on at AmplifierTransfer a second (a stem 30; Jeremy, Nov 3).
     public const float AmplifyChance = 0.5f;
-    // Resistor: blobs never step onto it, from either side; it sends power on at ResistorTransfer a second (a stem 30).
-    public const float ResistorTransfer = 12;
+    public const float AmplifierTransfer = 20;
+    // Resistor: blobs never step onto it, from either side; it sends power on at ResistorTransfer a second (a stem 30;
+    // Jeremy, Nov 3: was 12).
+    public const float ResistorTransfer = 10;
     // Tendril: its link TendrilLink times as long and TendrilSpring as springy; holds TendrilStore (a stem 150) and
     // sends on at TendrilTransfer.
     public const float TendrilLink = 2.5f, TendrilSpring = 0.3f, TendrilStore = 600, TendrilTransfer = 40;
@@ -181,8 +187,9 @@ public static class Tuning
     public const float TwinStarGen = 9.6f;
     // Ember: makes EmberGen (twice a generator) for its fill, but the power it can hold falls in a straight line from
     // its store to nothing over EmberLifeSeconds (Jeremy, Nov 1), so it dims and makes less as it goes (level with a
-    // generator about halfway, at a day and a half), then burns out.
-    public const float EmberGen = 24, EmberLifeSeconds = 3 * 86400;
+    // generator about halfway, at a day and a half), then burns out. It sends power on at EmberTransfer, twice a
+    // generator's (Jeremy, Nov 3).
+    public const float EmberGen = 24, EmberLifeSeconds = 3 * 86400, EmberTransfer = NodeBase.SmallGen * 2.15f * 2;
     // Lumber Grove: LumberBlobs growth blobs an hour (2 groves) at LumberUpkeep a second (1.5 groves).
     public const float LumberBlobs = 2400, LumberUpkeep = 8;
     // Seed Pod: SeedPodBlobs an hour (1.5 groves), but they leave SeedPodBurst at once (every 2 minutes at full fill).
@@ -235,6 +242,8 @@ public static class Tuning
     // reach HubMoonflowerReach links) and the Nebula Bloom's (power to its seedlings counts HubNebulaFill times).
     public const double HubFirstPoint = 3_000, HubPointStep = 400;
     public const float HubUpkeep = 3, HubUpkeepPerLevel = 0.5f, HubUpkeepCut = 0.8f;
+    // How fast the Hub sends power on, a second (a stem 30; Jeremy, Nov 3: was 15).
+    public const float HubTransfer = 20;
     public const int HubStemCap = 2, HubMoonflowerReach = 8;
     public const float HubTripleChance = 0.2f, HubBuffStrength = 1.1f, HubNebulaFill = 3;
 
