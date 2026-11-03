@@ -118,8 +118,8 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   slot; a stem or generator kind takes its base's slot too (a Tendril a stem's, a Pulsar a generator's), but the
   Amplifier and the Resistor don't. Pruning frees the slots. Fifteen kinds, each with its own shape: Amplifier,
   Resistor, Tendril, Big Stem, Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen, Buffer, Comet
-  Bloom, Moonflower, Nebula Bloom. Big Stem, Pulsar and Twin Star join the pool only through `Garden.UnlockWild`
-  (their evolutions, step 5c; a passive bud that grows wild leans two to one to its base's own kinds). An Amplifier doubles half the blobs passing it; blobs never step onto a Resistor. An
+  Bloom, Moonflower, Nebula Bloom. Every kind can grow from the first slot (since Nov 3; Big Stem, Pulsar and Twin
+  Star used to wait for their evolutions); a passive bud that grows wild leans two to one to its base's own kinds. An Amplifier doubles half the blobs passing it; blobs never step onto a Resistor. An
   Ember fades from twice a generator to nothing over 3 days and a Comet Bloom withers after one: the only parts the
   garden ever loses on its own, drifting off like a prune; the journal and the away note say so. Their fruit
   includes two new kinds: glow (white, sending buff blobs at a quarter of a Buffer's rate) and wood. The part's card
@@ -197,7 +197,7 @@ Tracking, then quit unless screenshotting), `--ambient` (starts in Ambient) and
 up to N, as if they had reached the core), `--wildlimit=N` (set the wild flower limit), `--wild=KIND[,KIND...]` (grow those
 wild flowers at once, each on a new stem from the core, whatever their lock and the caps, every part full;
 `--wild=all` lays out one of each round the middle of the screen: with `--scale=2 --labels` it's the sheet of their
-looks), `--unlockwild[=KIND,...]` (unlock Big Stem, Pulsar and Twin Star, as their evolutions do), `--evolve=NAME[,NAME]`
+looks), `--unlockwild[=KIND,...]` (unlocks any Evolution kinds; none since Nov 3), `--evolve=NAME[,NAME]`
 (choose and bloom those evolutions at once, by name: `SecondPath` or `second-path`), `--seedling` (plant a seedling at
 once), `--seedfill=N` (set its power, planting one if there is none: full at 200 brings its choice), `--choose=N`
 (each waiting seedling takes its Nth offer), `--bloom` (fill each chosen seedling, so it blooms with its burst), `--tap=seedling` (tap it: its choice menu open, the first card showing), `--hub` (plant the Hub at once, bought if it wasn't), `--hubpoints=N` (give it N points), `--hubbuy=KIND[,KIND]` (buy a level of each kind named, e.g. `Lab,Lab,Stem`), `--hubpanel` (tap it: its card and panel open; e.g. `--fresh --grove --hub --hubpoints=9 --hubbuy=Lab,Stem --hubpanel`), `--almanac=evolutions` (the Almanac at its Evolutions tab), `--scale=N`

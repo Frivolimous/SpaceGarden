@@ -51,6 +51,8 @@ static class WildFlowers
             };
         }
 
+        // Every kind can grow wild from the first wild flower slot (Jeremy, Nov 3: unlocking the Big Stem, Pulsar and
+        // Twin Star by evolution was anticlimactic; the core track only adds slots).
         // The stem kinds. The Amplifier and the Resistor take only a wild flower slot, and are white, the specialists'
         // hue (Jeremy, Oct 30).
         var amplifier = Wild(stem, NodeKind.Amplifier, "Amplifier", Shape.Plus, 0xF2F2F2, WildUnlock.Start,
@@ -74,21 +76,21 @@ static class WildFlowers
             Radius = 8, LinkScale = Tuning.TendrilLink, Spring = Tuning.TendrilSpring, MaxFruits = 3,
             PowerStore = Tuning.TendrilStore, PowerTransferPerSecond = Tuning.TendrilTransfer,
         };
-        yield return Wild(stem, NodeKind.BigStem, "Big Stem", Shape.Quatrefoil, 0x10C838, WildUnlock.Evolution,
+        yield return Wild(stem, NodeKind.BigStem, "Big Stem", Shape.Quatrefoil, 0x10C838, WildUnlock.Start,
             "4 links.", "Slow transfer; takes a stem slot too.") with
         {
             Radius = 13, Mass = 1.5f, MaxLinks = 4, PowerTransferPerSecond = Tuning.BigStemTransfer,
         };
 
         // The generator kinds, each taking a generator slot too.
-        yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Evolution,
+        yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Start,
             "1.5 times a generator's power, released in bursts.", "Uneven supply; takes a generator slot too.") with
         {
             PowerPerSecond = Tuning.PulsarGen, BurstShare = Tuning.PulsarBurst, BurstFill = Tuning.PulsarBurstFill,
             PowerStore = Tuning.PulsarStore,
             PowerTransferPerSecond = Tuning.PulsarTransfer,
         };
-        yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Evolution,
+        yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Start,
             "A generator that continues the branch: 2 links.", "80% of a generator's power; takes a generator slot too.") with
         {
             MaxLinks = 2, PowerPerSecond = Tuning.TwinStarGen, Fruit = NodeKind.Berry,

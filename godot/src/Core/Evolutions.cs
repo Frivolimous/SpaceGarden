@@ -83,12 +83,12 @@ public sealed record EvolutionLevel
 public sealed record EvolutionSpec(EvolutionKind Kind, string Name, NodeKind Becomes, uint Rgb, EvolutionLevel Effect,
     int MaxLevel, bool Late = false)
 {
-    // An unlock evolution's flower joins the wild flower pool as it blooms (Pulsar, Twin Star, Big Stem).
+    // An unlock evolution's flower joins the wild flower pool as it blooms (none since Nov 3: every kind is Start).
     public bool Unlocks => NodeSpecs.All[Becomes].Wild?.Unlock == WildUnlock.Evolution;
 }
 
 // The evolution table (DESIGN.md, Jeremy's balance update of Oct 31), every number a placeholder; the repeat limits
-// are this build's. The unlock evolutions' effect is the small boost to their base type. Watch More Power and Pulsar
+// are this build's. Pulsar Power's, Twin Stars' and Big Stem's effect is the small boost to their base type. Watch More Power and Pulsar
 // Power in play as likely default picks.
 public static class Evolutions
 {

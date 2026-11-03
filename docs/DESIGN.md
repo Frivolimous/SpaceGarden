@@ -266,20 +266,20 @@ A new bud can turn into a special kind. That is **wild growth**, and the results
 
 - **Any new bud can grow wild**, planted or passive. The chance is the same however many wild flower slots are free, and can differ by how the bud started: `PassiveWildChance` for a passive bud, `PlantedWildChance` for a planted one, both 25% (Jeremy, Nov 3; they were 5% and 4% per free slot). It is zero when no slot is free. The roll is made when the bud starts.
 - **One total limit**, the wild flower limit, raised in the core track and by seedlings. A wild flower with a capped base counts as **both** its base type and a wild flower: a Tendril or Big Stem takes a stem slot too, a Pulsar, Twin Star or Ember a generator slot. The Amplifier, the Resistor and the passive-only kinds take only a wild flower slot; groves and labs are uncapped, so the grove and lab kinds do too.
-- **No per-kind caps** for now (the data still supports them). An unlock evolution only adds its kind to the pool, plus its boost. A seedling's bloom adds +1 to the wild flower limit and +1 to its base type's cap, so its own flower costs nothing.
+- **No per-kind caps** for now (the data still supports them). The Pulsar Power, Twin Stars and Big Stem evolutions give their boost and their flower (they no longer unlock their kind: every kind grows from the start since Nov 3). A seedling's bloom adds +1 to the wild flower limit and +1 to its base type's cap, so its own flower costs nothing.
 - **Pruning frees the slot.** A later bud may roll another wild flower, possibly a different kind in a different place.
 - **Balance target:** one wild flower slot is worth about 0.65 labs, so each kind should be worth its base plus about that. Upkeep and transfer rate are the fine-tuning dials. Grove kinds are judged by feel (growth is rarely what a garden lacks), and the Amplifier, which scales with the labs beyond it, may well beat the target: it rewards a good shape.
 - **Looks:** each kind has its own, more complex, radially symmetric shape. The base node's hue is kept, at most with a subtle shift. Passive-only kinds have no base and are white, and so are the Amplifier and the Resistor, the specialists (Jeremy's review, Oct 30). Shapes echo the base where that works (Pulsar is a 5-pointed star).
-- **Unlocked** says when a kind can start to grow wild: **Start** kinds from the first wild flower slot, **Evolution** kinds once the matching evolution has been taken (see Progression). A bloomed seedling always becomes its evolution's own kind.
+- **Unlocked** says when a kind can start to grow wild: every kind from the first wild flower slot since Nov 3 (Jeremy: unlocking the Big Stem, Pulsar and Twin Star by their evolutions was anticlimactic; the core track only adds slots). (They were **Evolution** kinds, unlocked once the matching evolution had been taken.) A bloomed seedling always becomes its evolution's own kind.
 
 | Wild flower | Effect | Cost | Grows from | Unlocked | Fruit |
 | --- | --- | --- | --- | --- | --- |
 | Amplifier | 2 links; gene and growth blobs passing through have a 50% chance to double, once per blob | 1 wild | Stem | Start | 1 glow |
 | Resistor | 2 links; blobs bounce off it from both sides; low transfer | 1 wild | Stem | Start | 1 glow |
 | Tendril | 3 links; long springy link, large power store, medium transfer | 1 wild, 1 stem | Stem | Start | 3 leaf |
-| Big Stem | 4 links; slow transfer | 1 wild, 1 stem | Stem | Evolution | 2 leaf |
-| Pulsar | 1.5× a generator's power; sends nothing until it holds 150% of its store, making power past full, then half its power at once (`Tuning.PulsarBurst`, Jeremy, Nov 1; `PulsarBurstFill`, Nov 3, so it isn't left emptier than its neighbours and backwashed) | 1 wild, 1 generator | Generator | Evolution | 2 burr |
-| Twin Star | 2 links; 80% of a generator's power | 1 wild, 1 generator | Generator | Evolution | 2 berry |
+| Big Stem | 4 links; slow transfer | 1 wild, 1 stem | Stem | Start | 2 leaf |
+| Pulsar | 1.5× a generator's power; sends nothing until it holds 150% of its store, making power past full, then half its power at once (`Tuning.PulsarBurst`, Jeremy, Nov 1; `PulsarBurstFill`, Nov 3, so it isn't left emptier than its neighbours and backwashed) | 1 wild, 1 generator | Generator | Start | 2 burr |
+| Twin Star | 2 links; 80% of a generator's power | 1 wild, 1 generator | Generator | Start | 2 berry |
 | Ember | 2× a generator's rate, but the power it can hold falls from its store to nothing over its life, so its fill, look and output fall with it (about 1× at 1.5 days; Jeremy, Nov 1); burns out at 3 days unless pruned earlier | 1 wild, 1 generator | Generator | Start | None |
 | Lumber Grove | 2× a grove's growth blobs at 1.5× upkeep | 1 wild | Grove | Start | 5 wood |
 | Seed Pod | 1.5× a grove's growth blobs, in bursts | 1 wild | Grove | Start | 3 berry |
@@ -391,7 +391,7 @@ All three tracks share one gene income, and the stem and generator tracks will p
 - **Evolution record** (Jeremy, Oct 31). The Almanac lists the garden's evolutions, each with its current level and when it was chosen. Nothing shows on the core for now: marker fruits read as flowers bare and as UI buttons in bubbles, and gems set into the core's rim didn't read well either. To revisit if needed.
 - **Bloom.** The effect applies immediately and permanently, and the seedling becomes the evolution's wild flower with a flashy effect, which also adds +1 to the wild flower limit and +1 to its base type's cap (so the flower, which takes both slots, costs nothing). Pruning the flower removes only the flower, never the effect. All effects, including bundled changes, are net positives with mild drawbacks, so no choice is regretted.
 - **Repeats.** Evolutions can be taken again ("Build your Core II"). Levels II, III and later give exactly the same effect as level I, never diminished, and stack additively: each level adds the same share of the base (Build your Core ×1.5, ×2.0, ×2.5; Rapid Evolution genes ×2, ×3, ×4 with upkeep ×1.8, ×2.6, ×3.4). Repeats unlock once the garden has 5 evolutions; each evolution's repeat limit is set in data (Jeremy, Oct 31).
-- **Unlock evolutions** (Pulsar Power, Twin Stars, Big Stem) also give a small boost to their base type and add their kind to the wild flower pool (no per-kind cap).
+- **Flower evolutions** (Pulsar Power, Twin Stars, Big Stem) give a small boost to their base type (until Nov 3 they also unlocked their kind as a wild flower; every kind grows from the start now).
 - The original skill tree (see [ORIGINAL_SYSTEMS.md §9](ORIGINAL_SYSTEMS.md)) stays the content pool for later evolutions.
 
 | Evolution | Effect | Becomes |
@@ -402,9 +402,9 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | Smart Particles | Blobs avoid dead ends: 50% of the time at level I, always at level II (max level II) | Resistor |
 | Rapid Evolution | Labs ×2 genes, ×1.8 upkeep | Wild Lab |
 | More Power | Generator cap +2 | Lichen |
-| Pulsar Power | Generators +10% output; unlocks Pulsar | Pulsar |
-| Twin Stars | Generator transfer rate up; unlocks Twin Star | Twin Star |
-| Big Stem | Stems hold +1 leaf; unlocks Big Stem | Big Stem |
+| Pulsar Power | Generators +10% output | Pulsar |
+| Twin Stars | Generator transfer rate up | Twin Star |
+| Big Stem | Stems hold +1 leaf | Big Stem |
 | Wild Bloom | Wild flower limit +2 | Moonflower |
 
 (Balance update, Jeremy, Oct 31: Second Path and Long Stemmed swapped flowers; Long Stemmed held back; Smart Particles in two levels; Rapid Evolution's upkeep ×1.8; Pulsar Power +10%. Watch More Power and Pulsar Power in play as likely default picks.)

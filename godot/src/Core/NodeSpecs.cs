@@ -26,6 +26,7 @@ public enum Shape
 public enum BlobKind { None, Growth, Genes, Buff, All }
 
 // When a wild flower kind can start to grow wild: from the first wild flower slot, or once its evolution is taken.
+// (Evolution: once its evolution blooms. Unused since Nov 3, every kind is Start; kept for a later kind.)
 public enum WildUnlock { Start, Evolution }
 
 // What makes a kind a wild flower (DESIGN.md, Wild flowers): the basic kind whose bud it can replace (null: passive

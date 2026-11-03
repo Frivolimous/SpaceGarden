@@ -67,26 +67,23 @@ public class WildTests
         Assert.NotNull(garden.GrowBranch(stem, NodeKind.Amplifier));
     }
 
+    // Nov 3: every kind can grow wild from the start (the core track only adds slots).
     [Fact]
-    public void TheLockedKindsNeverRollUntilUnlocked()
+    public void EveryKindRollsFromTheStart()
     {
         var (garden, stem) = Make(wildLimit: 20);
-        var locked = new[] { NodeKind.BigStem, NodeKind.Pulsar, NodeKind.TwinStar };
-        foreach (var kind in locked) Assert.False(garden.CanGrowWild(kind));
+        foreach (var spec in NodeSpecs.Wild) Assert.True(garden.CanGrowWild(spec.Kind), $"{spec.Kind} is locked");
         var rolled = new HashSet<NodeKind>();
         for (int i = 0; i < 5_000; i++)
         {
             rolled.Add(garden.RollBud(stem, NodeKind.Stem, passive: true));
             rolled.Add(garden.RollBud(stem, NodeKind.Generator, passive: true));
         }
-        Assert.DoesNotContain(rolled, locked.Contains);
-        Assert.Contains(NodeKind.Ember, rolled);
+        foreach (var kind in new[] { NodeKind.BigStem, NodeKind.Pulsar, NodeKind.TwinStar, NodeKind.Ember })
+            Assert.Contains(kind, rolled);
 
-        // Its evolution unlocks a kind: it joins the pool, uncapped (caps stay possible in data).
-        garden.UnlockWild(NodeKind.Pulsar);
+        // Uncapped, but caps stay possible in data.
         Assert.Null(garden.KindCap(NodeKind.Pulsar));
-        var generators = Enumerable.Range(0, 5_000).Select(_ => garden.RollBud(stem, NodeKind.Generator, passive: true)).ToList();
-        Assert.Contains(NodeKind.Pulsar, generators);
         garden.WildCaps[NodeKind.Pulsar] = 0;
         Assert.False(garden.CanGrowWild(NodeKind.Pulsar)); // a per-kind cap still holds
     }
@@ -212,6 +209,5 @@ public class WildTests
         Assert.Equal(garden.Tracking.Discovered, loaded.Tracking.Discovered);
         Assert.Equal(2, loaded.WildCount);
         Assert.Equal(1234, loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Tendril).Life);
-        Assert.Contains(NodeKind.BigStem, loaded.WildUnlocked);
     }
 }

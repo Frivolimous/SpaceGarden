@@ -117,15 +117,12 @@ public class SeedlingTests
     }
 
     [Fact]
-    public void AnUnlockEvolutionUnlocksItsKindAndBoostsItsBase()
+    public void AFlowerEvolutionBoostsItsBase()
     {
         var (garden, stem, _) = Make();
         var generator = Add(garden, stem, NodeKind.Generator);
         float gen = Garden.FullProductionPerSecond(generator);
-        Assert.False(garden.CanGrowWild(NodeKind.Pulsar));
         garden.EvolveNow(EvolutionKind.PulsarPower);
-        Assert.True(garden.CanGrowWild(NodeKind.Pulsar));
-        Assert.Contains(NodeKind.Pulsar, garden.WildUnlocked);
         Assert.True(Garden.FullProductionPerSecond(generator) > gen);
     }
 
@@ -225,7 +222,6 @@ public class SeedlingTests
         Assert.Equal(garden.Evolved[1].ChosenAt, loaded.Evolved[1].ChosenAt);
         // Big Stem's boost is worked out again: a stem holds a third leaf.
         Assert.Equal(3, loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Stem).MaxFruits);
-        Assert.Contains(NodeKind.BigStem, loaded.WildUnlocked);
     }
 
     // Respec (Nov 3): a bloomed evolution taken back loses its effect and caps (the garden may stay over them), frees

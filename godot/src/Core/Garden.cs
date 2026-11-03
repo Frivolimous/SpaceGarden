@@ -619,7 +619,7 @@ public sealed class Garden
 
     // ==== WILD FLOWERS ==== \
 
-    // The Evolution kinds unlocked (Big Stem, Pulsar, Twin Star): they join the pool once their evolution is taken
+    // The Evolution kinds unlocked (none are Evolution kinds since Nov 3; kept for later ones): they join the pool once their evolution is taken
     // (see UnlockWild).
     public readonly HashSet<NodeKind> WildUnlocked = new();
     // Caps on single wild flower kinds, kept in data though none is set for now (DESIGN.md, Wild flowers: no per-kind
@@ -2481,7 +2481,7 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
     {
         UpgradeKind.Stem => "+1 stem",
         UpgradeKind.Generator => "+1 generator",
-        UpgradeKind.WildFlower => "+1 wild flower",
+        UpgradeKind.WildFlower => "+1 wild flower slot",
         UpgradeKind.CoreLink => "+1 core link",
         UpgradeKind.Seedling => "+1 seedling slot",
         _ => "Hub",
@@ -2492,7 +2492,7 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
     {
         UpgradeKind.Stem => "Increases the total number of stems you can add to your garden.",
         UpgradeKind.Generator => "Increases the total number of generators you can add to your garden.",
-        UpgradeKind.WildFlower => "Lets special, rare wild flowers grow instead of normal stems or flowers.",
+        UpgradeKind.WildFlower => "One more wild flower slot: while one is free, a new bud may grow into any wild flower instead.",
         UpgradeKind.CoreLink => "Lets one more branch grow straight from the core.",
         UpgradeKind.Seedling => "Lets you plant one more seedling, and so choose one more evolution.",
         _ => "Unlocks the Hub: plant it by hand, and it catches genes to boost each kind of part.",
