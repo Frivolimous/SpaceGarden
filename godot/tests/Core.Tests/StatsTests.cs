@@ -85,13 +85,17 @@ public class StatsTests
         var stem = Add(garden, garden.Core, NodeKind.Stem);
         var lab = Add(garden, stem, NodeKind.Lab);
         garden.WalkGene(lab);
-        Assert.Empty(garden.Traffic);
+        Assert.Equal(0, garden.TrafficOf(lab, BlobKind.Genes));
         garden.TrackTraffic = true;
         for (int i = 0; i < 10; i++) garden.WalkGene(lab);
-        Assert.Equal(10, garden.Traffic[(lab, BlobKind.Genes)]); // lab - stem, every time
-        Assert.Equal(10, garden.Traffic[(stem, BlobKind.Genes)]); // stem - core: the only way on
+        Assert.Equal(10, garden.TrafficOf(lab, BlobKind.Genes)); // lab - stem, every time
+        Assert.Equal(10, garden.TrafficOf(stem, BlobKind.Genes)); // stem - core: the only way on
+        // Each step drops out once it's TrafficSeconds old.
+        garden.PassiveGrowth = false;
+        garden.Grow(Tuning.TrafficSeconds + 1);
+        Assert.Equal(0, garden.TrafficOf(lab, BlobKind.Genes));
         garden.TrackTraffic = false;
-        Assert.Empty(garden.Traffic);
+        Assert.Equal(0, garden.BusiestTraffic(BlobKind.Genes));
     }
 
     // ==== GARDEN STATS ==== \\

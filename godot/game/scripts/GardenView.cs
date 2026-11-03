@@ -224,13 +224,12 @@ public partial class GardenView : Node2D
         }
         foreach (var (kind, hue, offset) in TrafficLines)
         {
-            float busiest = 1;
-            foreach (var ((_, k), count) in garden.Traffic) if (k == kind) busiest = Mathf.Max(busiest, count);
+            float busiest = Mathf.Max(1, garden.BusiestTraffic(kind));
             foreach (var link in garden.Links)
             {
                 if (link.Target.Spec.IsFruit) continue;
                 // (Eased, quadratic: the busiest links stand out, light traffic fades away. Jeremy, Nov 3.)
-                float share = garden.Traffic.GetValueOrDefault((link.Target, kind)) / busiest;
+                float share = garden.TrafficOf(link.Target, kind) / busiest;
                 if (share <= 0) continue;
                 float t = share * share;
                 var (a, b) = (At(link.Origin), At(link.Target));

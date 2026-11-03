@@ -901,7 +901,7 @@ public sealed class Garden
             MoveClumps(seconds);
         }
         CheckSeedlings();
-        if (trackTraffic) FadeTraffic(seconds);
+        if (trackTraffic) ExpireTraffic();
         Tracking.Age += seconds;
         Tracking.History.Record(Tracking.Age, seconds, stored, production, upkeep);
         return grew;
@@ -1120,10 +1120,21 @@ public sealed class Garden
     }
 
     // Blob traffic (build mode's blob-path view, Jeremy, Nov 3): while TrackTraffic, every link a gene or growth blob
-    // steps along counts one (keyed by the link's outer part and the blob's kind: genes, growth or buff), fading by half
-    // every Tuning.TrafficHalfLife of growth time, so it shows where blobs have been going lately. Off, nothing is
-    // counted (and what was is dropped).
-    public readonly Dictionary<(PlantNode Outer, BlobKind Kind), float> Traffic = new();
+    // steps along counts one (keyed by the link's outer part and the blob's kind: genes, growth or buff) for
+    // Tuning.TrafficSeconds of growth time, then drops out (Jeremy, Nov 3: each step expires, rather than a decay), so it
+    // shows where blobs went in that window. Off, nothing is counted (and what was is dropped).
+    readonly Dictionary<(PlantNode Outer, BlobKind Kind), Queue<double>> Traffic = new();
+
+    // How many blob steps of this kind took the link to this part in the window.
+    public int TrafficOf(PlantNode outer, BlobKind kind) => Traffic.TryGetValue((outer, kind), out var steps) ? steps.Count : 0;
+
+    // The most any link had of this kind in the window (0: none).
+    public int BusiestTraffic(BlobKind kind)
+    {
+        int most = 0;
+        foreach (var ((_, k), steps) in Traffic) if (k == kind) most = Math.Max(most, steps.Count);
+        return most;
+    }
     bool trackTraffic;
     public bool TrackTraffic
     {
@@ -1138,15 +1149,21 @@ public sealed class Garden
     void CountTraffic(PlantNode a, PlantNode b, BlobKind kind)
     {
         var key = (b.Parent == a ? b : a, kind);
-        Traffic[key] = Traffic.GetValueOrDefault(key) + 1;
+        if (!Traffic.TryGetValue(key, out var steps)) Traffic[key] = steps = new Queue<double>();
+        steps.Enqueue(Tracking.Age);
     }
 
-    void FadeTraffic(double seconds)
+    // Drops the steps older than the window, and the links pruned since.
+    void ExpireTraffic()
     {
         if (Traffic.Count == 0) return;
-        float keep = (float)Math.Pow(0.5, seconds / Tuning.TrafficHalfLife);
+        double since = Tracking.Age - Tuning.TrafficSeconds;
         foreach (var key in Traffic.Keys.ToList())
-            if (!linkToParent.ContainsKey(key.Outer) || (Traffic[key] *= keep) < 0.01f) Traffic.Remove(key); // (pruned: gone)
+        {
+            var steps = Traffic[key];
+            while (steps.Count > 0 && steps.Peek() < since) steps.Dequeue();
+            if (steps.Count == 0 || !linkToParent.ContainsKey(key.Outer)) Traffic.Remove(key);
+        }
     }
 
     // What the last walk's blob is worth for its Amplifier: 1, or 2 (3 tripled) once one amplified it.
