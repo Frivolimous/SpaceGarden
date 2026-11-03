@@ -183,11 +183,18 @@ public class WildTests
         stem.Power = 0;
         garden.Grow(Tuning.EconomyStepSeconds);
         Assert.True(pulsar.Power >= pulsar.Store * 0.9f);
-        // Full, it sends PulsarBurst of its power to its emptiest neighbour in one step.
+        // Full, it still sends nothing, and keeps making power past full.
         pulsar.Power = pulsar.Store;
         stem.Power = 0;
         garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.Equal(pulsar.Store * (1 - Tuning.PulsarBurst), pulsar.Power, 1f);
+        Assert.True(pulsar.Power > pulsar.Store);
+        Assert.True(Garden.ProductionPerSecond(pulsar) > 0);
+        // At PulsarBurstFill of its store, it sends PulsarBurst of its power to its emptiest neighbour in one step.
+        float burstAt = pulsar.Store * Tuning.PulsarBurstFill;
+        pulsar.Power = burstAt;
+        stem.Power = 0;
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.Equal(burstAt * (1 - Tuning.PulsarBurst), pulsar.Power, 1f);
     }
 
     [Fact]

@@ -846,8 +846,8 @@ public sealed class Garden
             }
             if (node.Spec.BurstShare > 0)
             {
-                // A Pulsar: nothing until it's full, then its BurstShare at once.
-                if (node.Power >= node.Store && SendTo(node, node.Power - fed, burst: true) is { } to)
+                // A Pulsar: nothing until it holds its BurstFill, then its BurstShare at once.
+                if (node.Power >= MakeCap(node) - 1e-3f && SendTo(node, node.Power - fed, burst: true) is { } to)
                     transfers.Add((node, to, (node.Power - fed) * node.Spec.BurstShare));
             }
             else if (SendTo(node, node.Power - fed) is { } to) transfers.Add((node, to, Clump(node)));
@@ -928,7 +928,10 @@ public sealed class Garden
 
     // Power a part makes per second now: in proportion to its fill, nothing once full.
     public static float ProductionPerSecond(PlantNode node) =>
-        node.Power >= PowerCap(node) ? 0 : FullProductionPerSecond(node) * PowerOutput(node);
+        node.Power >= MakeCap(node) ? 0 : FullProductionPerSecond(node) * PowerOutput(node);
+
+    // How much a part makes power up to: its PowerCap, or a bursting part's (a Pulsar's) BurstFill of it.
+    public static float MakeCap(PlantNode node) => PowerCap(node) * node.Spec.BurstFill;
 
     // The most power a part can hold: its store, but for one that dims (an Ember) its store times its Brightness, so
     // as its life runs out its fill, and with it its look and what it makes, fall in proportion (Jeremy, Nov 1).
@@ -945,7 +948,7 @@ public sealed class Garden
     // What the cards show it making: its full rate once full (when it makes nothing, idling, not starved), else
     // what it makes now.
     public static float ShownProductionPerSecond(PlantNode node) =>
-        node.Power >= PowerCap(node) ? FullProductionPerSecond(node) : ProductionPerSecond(node);
+        node.Power >= MakeCap(node) ? FullProductionPerSecond(node) : ProductionPerSecond(node);
 
     // What a part makes per second when full (its fruit adding a little each: see FruitBonus; evolutions more: see
     // Boosts). An Ember's rate stays: it makes less as it dims because it can hold less (see PowerCap).

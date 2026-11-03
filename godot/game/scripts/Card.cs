@@ -118,7 +118,7 @@ public partial class Card : PanelContainer
         Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
         // How fast it can send power on, beside its Gen or Drain: on every power maker, and on every part that can have 2
         // or more links (one that passes power along a branch). A Pulsar sends in bursts: the share of its power, when full.
-        string sends = spec.BurstShare > 0 ? $" (sends {spec.BurstShare:0%} when full)"
+        string sends = spec.BurstShare > 0 ? $" (sends {spec.BurstShare:0%} at {spec.BurstFill:0%})"
             : spec.PowerPerSecond > 0 || stats.MaxLinks >= 2 ? $" (sends {stats.Sends * speed:0}/s)" : "";
         if (spec.PowerPerSecond > 0) // by kind, so the lines stay put when a rate falls to 0
             Line(ref used, $"Gen: {stats.Makes * speed:0}/s{sends}");
