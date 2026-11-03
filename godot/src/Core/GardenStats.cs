@@ -76,8 +76,13 @@ public sealed record GardenStats(
 
     // The genes a lab gets to the core per growth hour, on average: the blobs it makes now, times the chance each
     // finds the core.
-    public static double GenesPerHourFrom(Garden garden, PlantNode lab) =>
-        Garden.BlobsPerHour(lab) * Tuning.BlobGenes * Garden.ValueOf(lab) * GeneReach(garden, lab);
+    public static double GenesPerHourFrom(Garden garden, PlantNode lab)
+    {
+        // (With the lab's Hub milestones, the blobs that fade give the core a share too.)
+        var (core, hub) = GeneReaches(garden, lab);
+        double reach = core + (1 - core - hub) * garden.FadedGenes;
+        return Garden.BlobsPerHour(lab) * Tuning.BlobGenes * Garden.ValueOf(lab) * reach;
+    }
 
     // The chance a gene blob leaving this lab finds the core before it fades (DESIGN.md, Economy, Blobs): the blob's
     // walk (Garden.Walk) followed exactly, as odds instead of dice. At each part it takes any link but the one it came

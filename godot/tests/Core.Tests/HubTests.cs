@@ -101,16 +101,18 @@ public class HubTests
         Assert.Equal(blobs * 1.2f, Garden.FullBlobsPerHour(lab), 3);
         Assert.Equal(upkeep + Tuning.HubUpkeepPerLevel, Garden.FullUpkeepPerSecond(hub), 3); // the Hub's upkeep rises
 
-        // A milestone level costs more, and adds its own: level 3's lab costs a fifth less upkeep.
-        float labUpkeep = Garden.FullUpkeepPerSecond(lab);
+        // A milestone level costs more, and adds its own: level 3's faded gene blobs give the core a quarter (Nov 3).
+        Assert.Equal(0, garden.FadedGenes);
         garden.HubLevels[NodeKind.Lab] = 2;
         garden.HubPoints = 1;
         Assert.False(garden.BuyHubLevel(NodeKind.Lab));
         garden.HubPoints = 2;
         Assert.True(garden.BuyHubLevel(NodeKind.Lab));
         Assert.Equal(0, garden.HubPoints);
-        Assert.Equal(labUpkeep * 0.8f, Garden.FullUpkeepPerSecond(lab), 3);
+        Assert.Equal(Tuning.HubFadedGenes3, garden.FadedGenes);
         Assert.Equal(blobs * 1.6f, Garden.FullBlobsPerHour(lab), 3);
+        garden.HubLevels[NodeKind.Lab] = 5;
+        Assert.Equal(Tuning.HubFadedGenes5, garden.FadedGenes);
     }
 
     [Fact]
@@ -249,5 +251,18 @@ public class HubTests
         garden.BuffForTest(generator);
         Assert.Equal(Tuning.BuffBonus + 0.3f, generator.BuffBonus, 4); // 150% + 30 points: 180%
         Assert.Equal((Tuning.BuffSeconds + Tuning.HubBuffSeconds) * Tuning.CometBuffTime, generator.Buff, 4);
+    }
+
+    // Nov 3: the stem's level 3 adds 150 to a stem's max power, flat.
+    [Fact]
+    public void TheStemsLevelThreeAddsMaxPower()
+    {
+        var (garden, stem, _, _) = Make();
+        float store = stem.Store;
+        garden.HubLevels[NodeKind.Stem] = 2;
+        garden.HubPoints = 2;
+        garden.Tracking.Discovered[NodeKind.Stem] = 0;
+        Assert.True(garden.BuyHubLevel(NodeKind.Stem)); // level 3
+        Assert.Equal(store + Tuning.HubStemStore, stem.Store, 3);
     }
 }

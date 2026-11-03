@@ -1254,6 +1254,9 @@ public sealed class Garden
     // (a Lumber Grove's 0.2 growth, a Wild Lab's 2 genes), doubled while a Comet Bloom is active (Jeremy, Nov 3).
     float BlobValue(PlantNode flower) => ValueOf(flower) * (CometActive ? Tuning.CometBlobValue : 1);
 
+    // The share of a faded gene blob's genes the core still gets: the lab's Hub milestones (Nov 3), every gene blob's.
+    public float FadedGenes => HubAt(NodeKind.Lab, 5) ? Tuning.HubFadedGenes5 : HubAt(NodeKind.Lab, 3) ? Tuning.HubFadedGenes3 : 0;
+
     // What a flower's blob carries as a share of a basic one, but for a Comet Bloom: its kind's, times its evolutions'
     // (Rapid Evolution).
     public static float ValueOf(PlantNode flower) => flower.Spec.BlobValue * flower.Boost.Value;
@@ -1272,6 +1275,7 @@ public sealed class Garden
         float genes = Tuning.BlobGenes * BlobValue(lab) * Amplified;
         if (catcher == Core) Deliver(genes);
         else if (catcher != null) CatchAtHub(genes);
+        else if (FadedGenes > 0) Deliver(genes * FadedGenes); // (the lab's Hub milestones)
         if (Show(route, lab) is { } mote) mote.Absorbed = catcher != null;
     }
 
@@ -1682,7 +1686,7 @@ public sealed class Garden
                         Fruits = b.Fruits + m.Fruits, Links = b.Links + m.Links, Transfer = b.Transfer * m.Transfer,
                         Upkeep = b.Upkeep * m.Upkeep, Store = b.Store * m.Store, Life = b.Life * m.Life,
                         OutputFloor = Math.Max(b.OutputFloor, m.OutputFloor), Reach = b.Reach * m.Reach,
-                        LeafBonus = b.LeafBonus + m.LeafBonus, BudGrow = b.BudGrow * m.BudGrow,
+                        LeafBonus = b.LeafBonus + m.LeafBonus, BudGrow = b.BudGrow * m.BudGrow, StoreAdd = b.StoreAdd + m.StoreAdd,
                     });
             }
             foreach (var ((kind, axis), share) in shares)

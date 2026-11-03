@@ -105,7 +105,7 @@ public sealed class PlantNode
 
     // How much power it holds (none for fruit), and how full it is.
     // (A seedling's, once its evolution is chosen, is the evolution's target; a Pulsar's more with its Hub milestone.)
-    public float Store => Evolution is { } evolution ? (float)evolution.Target : Spec.PowerStore * Boost.Store;
+    public float Store => Evolution is { } evolution ? (float)evolution.Target : Spec.PowerStore * Boost.Store + Boost.StoreAdd;
     // Whether its power counts as the garden's (the cards' and the history's): not fruit, nor a seedling's, which is
     // spent on its evolution.
     public bool HoldsGardenPower => !Spec.IsFruit && !IsSeedling;

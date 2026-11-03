@@ -27,6 +27,7 @@ public sealed record HubMilestone(int Level, string Text)
     public float Reach { get; init; } = 1;
     public float LeafBonus { get; init; }
     public float BudGrow { get; init; } = 1;
+    public float StoreAdd { get; init; } // power store added flat, after the multipliers (the stem's, Nov 3)
 }
 
 // A kind's path in the Hub's panel: each level's cost in points (so its number of levels), what every level gives
@@ -73,7 +74,7 @@ public static class Hubs
         return
         [
             Path(stem, Basic, "+20% transfer", [new(stem, HubAxis.Transfer, 0.2f)],
-                new HubMilestone(3, "Buds forming on stems grow twice as fast on their own") { BudGrow = 2 },
+                new HubMilestone(3, $"Stem max power +{Tuning.HubStemStore:0}") { StoreAdd = Tuning.HubStemStore },
                 new HubMilestone(5, $"Stem cap +{Tuning.HubStemCap}")),
             Path(generator, Basic, "+20% power", [new(generator, HubAxis.Gen, 0.2f)],
                 new HubMilestone(3, "Power transfer ×1.5") { Transfer = 1.5f },
@@ -82,8 +83,8 @@ public static class Hubs
                 new HubMilestone(3, "+1 berry slot") { Fruits = 1 },
                 new HubMilestone(5, "+2 berry slots") { Fruits = 2 }),
             Path(lab, Basic, "+20% genes", [new(lab, HubAxis.Blobs, 0.2f)],
-                new HubMilestone(3, "Upkeep −20%") { Upkeep = 0.8f },
-                new HubMilestone(5, "Gene blobs travel 33% faster and 33% more links") { Reach = 4f / 3 }),
+                new HubMilestone(3, $"Gene blobs that fade give {Tuning.HubFadedGenes3:0%} of their genes to the core"),
+                new HubMilestone(5, $"Gene blobs that fade give {Tuning.HubFadedGenes5:0%} of their genes to the core")),
 
             Path(NodeKind.Amplifier, Short, "+10% chance to double a blob's value; core +20% power",
                 CorePower(NodeKind.Amplifier, HubAxis.Chance, 0.1f),

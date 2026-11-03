@@ -461,10 +461,10 @@ All three tracks share one gene income, and the stem and generator tracks will p
 
 | Kind | Per level | Level 3 | Level 5 |
 | --- | --- | --- | --- |
-| Stem | +20% transfer | Buds forming on stems self-grow twice as fast | Stem cap +2 |
+| Stem | +20% transfer | Stem max power +150 (Nov 3; was buds self-growing twice as fast) | Stem cap +2 |
 | Generator | +20% power | Power transfer ×1.5 | Output ranges 50–100% with stored power, instead of 0–100% |
 | Grove | +20% growth | +1 berry slot | +2 berry slots |
-| Lab | +20% genes | Upkeep −20% | Gene blobs travel 33% faster and 33% more links |
+| Lab | +20% genes | Gene blobs that fade give 25% of their genes to the core, every gene blob from any source (Nov 3) | The same, 50% |
 
 | Wild flower | Per level | Level 3 milestone |
 | --- | --- | --- |

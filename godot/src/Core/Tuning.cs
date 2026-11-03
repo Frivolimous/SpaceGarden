@@ -228,6 +228,11 @@ public static class Tuning
     public const int HubStemCap = 2, HubMoonflowerReach = 6; // (Nov 3: 6, was 8)
     // The Buffer's milestone (Nov 3): buffs last this many seconds longer.
     public const float HubBuffSeconds = 10;
+    // The lab's milestones (Jeremy, Nov 3): a gene blob, from any flower, that fades without finding the core or the
+    // Hub still gives this share of its genes to the core, at level 3 and level 5.
+    public const float HubFadedGenes3 = 0.25f, HubFadedGenes5 = 0.5f;
+    // The stem's level 3 milestone (Nov 3): a stem's max power this much more.
+    public const float HubStemStore = 150;
     // What resetting the Hub's levels costs, in points (Jeremy, Nov 3: "reduce total levels by 1"; a level is 1-3).
     public const int HubRespecCost = 1;
     public const float HubTripleChance = 0.2f, HubNebulaFill = 3;

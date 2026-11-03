@@ -191,6 +191,8 @@ public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, 
     public float Value { get; init; } = 1;
     // Seconds added to its active time (a Comet Bloom's, with its Hub path).
     public float Active { get; init; }
+    // Power store added flat, after Store multiplies (the Stem's Hub milestone).
+    public float StoreAdd { get; init; }
 
     public static readonly Boost None = new();
 }
