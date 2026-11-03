@@ -148,6 +148,7 @@ public partial class Widget : Node
     Vector2I dragStartMouse;
     PlantNode? pressNode;
     PlantNode? selected;
+    bool selectedWasChoosing; // the selected part was a seedling waiting for its choice, last frame
     // Dev aids for --screenshot runs (see DevFlags): open a card, the core's menu, Ambient with the pointer on the core.
     bool devFlagsDone, devCoreHover, devTapped;
     bool pressed, dragging;
@@ -614,6 +615,13 @@ public partial class Widget : Node
         coreMenu.SetActive(Tool.Build, Building);
         PlaceCard();
         if (coreMenu.IsOpen) coreMenu.Follow(ToViewport(Garden.Core.Position) / Dpi, Garden.Core.Spec.Radius * ViewScale, viewport);
+        // A selected seedling that fills while it's selected offers its evolutions as it does, without another tap
+        // (Jeremy, Nov 3).
+        // (Only as it fills: closed by Escape or a click elsewhere, it stays closed until the seedling is tapped.)
+        bool choosing = selected is { Choosing: true } && partCard.Part == selected;
+        if (choosing && !selectedWasChoosing && !evolutionMenu.IsOpen && Mode == DisplayMode.Active && Garden.Nodes.Contains(selected!))
+            evolutionMenu.Open(Garden, selected!);
+        selectedWasChoosing = choosing;
         // A seedling's choice follows it, and goes once it's chosen, bloomed or pruned.
         if (evolutionMenu.IsOpen)
         {
