@@ -19,7 +19,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   copy gets the hotkey (a second logs a warning).
 - **Rest the pointer** on a part to ring it; nothing else shows. **Tap** it (click without dragging) for its toolbar
   (grow a stem, generator, lab or grove from it, or plant a seedling or the Hub, their buttons shown only while one can be planted, on parts with room for branches; the kind growing there now has a
-  pulsing outline (tap it to cancel that bud, or another kind's button to change the bud to that kind, starting over), and a part with every link taken shows "3/3 Connections Used" in their place; prune it and everything beyond
+  pulsing outline (tap it to cancel that bud, or another kind's button to change the bud to that kind, starting over; either asks first, with a Confirm pill over the toolbar), and a part with every link taken shows "3/3 Connections Used" in their place; prune it and everything beyond
   it; and Unhook if it's tied to a pot or trellis) and its **card**: its name, power, and its own numbers
   ("Drain: 6/s", "Genes: 12/min", what's
   forming). Tap it again to close both. Picking a tool, clicking anywhere else, starting a drag, or moving away for
