@@ -762,7 +762,7 @@ public sealed class Garden
         if (!any) return;
         foreach (var moonflower in Nodes.Where(n => n.Spec.WildBoost > 0).ToList())
             foreach (var n in Within(moonflower, MoonflowerReach))
-                if (n.Spec.IsWild) n.Moonlit = true;
+                if (n.Spec.IsWild && n.Spec.TakesBuffs) n.Moonlit = true; // (only those that use a boost: Jeremy, Nov 3)
     }
 
     // Dev aid (--wild=KIND) and screenshots: a wild flower of this kind, grown at once on the deepest part with a free

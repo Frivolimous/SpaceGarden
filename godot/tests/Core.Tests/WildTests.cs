@@ -299,4 +299,18 @@ public class WildTests
         Assert.DoesNotContain(NodeSpecs.Wild, s => s.Kind == NodeKind.NebulaBloom);
         for (int i = 0; i < 3_000; i++) Assert.NotEqual(NodeKind.NebulaBloom, garden.RollBud(stem, NodeKind.Grove, passive: true));
     }
+
+    // Nov 3: a Moonflower's bonus reaches only the wild flowers that use a boost (as a buff), not an Amplifier.
+    [Fact]
+    public void AMoonflowerLightsOnlyTheWildFlowersThatUseABoost()
+    {
+        var (garden, stem) = Make(wildLimit: 4);
+        var branch = Add(garden, stem, NodeKind.Stem);
+        Add(garden, branch, NodeKind.Moonflower);
+        var amplifier = Add(garden, stem, NodeKind.Amplifier);
+        var wildLab = Add(garden, branch, NodeKind.WildLab);
+        garden.Grow(Tuning.EconomyStepSeconds);
+        Assert.True(wildLab.Moonlit);
+        Assert.False(amplifier.Moonlit);
+    }
 }
