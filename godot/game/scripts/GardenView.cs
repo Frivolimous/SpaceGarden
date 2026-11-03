@@ -179,15 +179,31 @@ public partial class GardenView : Node2D
         heatLayer.QueueRedraw();
     }
 
-    // The power view's fixed scale (Jeremy, Nov 3): empty red, half full yellow, full green, past full teal (all teal
-    // at 125%).
-    static readonly Color Empty = new(0.95f, 0.2f, 0.15f), Half = new(1f, 0.85f, 0.15f), Full = new(0.25f, 0.9f, 0.3f),
-        Over = new(0.1f, 0.85f, 0.85f);
+    // The power view's fixed scale (Jeremy, Nov 3), to tune by hand: each stop is a fill (1 = full) and its colour,
+    // in order; a fill between two stops blends their colours, below the first or past the last takes its colour.
+    // Empty red, yellow at 75%, full green, teal from 125% past full.
+    static readonly (float Fill, Color Colour)[] PowerStops =
+    [
+        (0f, new Color(0.95f, 0.2f, 0.15f)),   // red
+        (0.75f, new Color(1f, 0.85f, 0.15f)),  // yellow
+        (1f, new Color(0.25f, 0.9f, 0.3f)),    // green
+        (1.25f, new Color(0.1f, 0.85f, 0.85f)), // teal
+    ];
 
-    static Color FillColour(float fill) =>
-        fill <= 0.5f ? Empty.Lerp(Half, Mathf.Clamp(fill / 0.5f, 0, 1))
-        : fill <= 1 ? Half.Lerp(Full, (fill - 0.5f) / 0.5f)
-        : Full.Lerp(Over, Mathf.Clamp((fill - 1) / 0.25f, 0, 1));
+    static Color FillColour(float fill)
+    {
+        if (fill <= PowerStops[0].Fill) return PowerStops[0].Colour;
+        for (int i = 1; i < PowerStops.Length; i++)
+        {
+            var (to, colour) = PowerStops[i];
+            if (fill <= to)
+            {
+                var (from, before) = PowerStops[i - 1];
+                return before.Lerp(colour, (fill - from) / (to - from));
+            }
+        }
+        return PowerStops[^1].Colour;
+    }
 
     // Power: a disc on each part in its fill's colour (the fixed scale above).
     // Blob paths: each link gets a line per blob kind (genes, growth, buffs) side by side, each in its kind's colour,
