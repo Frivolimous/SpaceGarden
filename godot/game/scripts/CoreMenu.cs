@@ -89,6 +89,13 @@ public partial class CoreMenu : Control
             if (button.Tool == tool) button.Dot = on;
     }
 
+    // A slot the tutorial holds back for now (Build, Research): greyed, and a tap does nothing.
+    public void SetEnabled(Tool tool, bool on)
+    {
+        foreach (var button in buttons)
+            if (button.Tool == tool) button.Enabled = on;
+    }
+
     // The tutorial's beckon on a slot (or none).
     public void SetBeckon(Tool? tool)
     {

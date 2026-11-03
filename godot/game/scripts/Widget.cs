@@ -112,20 +112,19 @@ public partial class Widget : Node
     Action? askAction;
     PlantNode? askFor;
     Tool? askTool;
-    // The opening's tutorial (see Tutorial in Core): a small panel, Active only, with a header ("Getting started" and
-    // a dot a step) over the step's text. It sits under where the parts' info panel opens, beside the plant, clear of
-    // the toolbars; dragged by hand, it stays where it was left. A new step brightens it for a moment; the send-off
-    // stays TutorialDoneSeconds of Active time, then fades and ends it. The next thing to touch is beckoned: a gold
-    // ring breathing around a part, a bud button, a menu slot or a shaping tool.
+    // The opening's tutorial (see Tutorial in Core; Jeremy's script, Nov 3): a small panel, Active only, with a header
+    // ("Getting started" and a dot a step), the step's title with its part's mark, its text, and Continue where the step
+    // waits for it. It sits under where the parts' info panel opens, beside the plant, clear of the toolbars; dragged
+    // by hand, it stays where it was left. A new step brightens it for a moment. The next thing to touch is beckoned:
+    // a gold ring breathing around a part, a bud button, a menu slot or a shaping tool, or a frame around a card's
+    // Forming line or Research's Buy. What the step holds back is greyed (see Garden.TutorialAllows).
     readonly PanelContainer tutorialPanel = new() { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.Move, Visible = false };
-    readonly Label tutorialText = new()
-    {
-        MouseFilter = Control.MouseFilterEnum.Ignore, AutowrapMode = TextServer.AutowrapMode.WordSmart,
-        CustomMinimumSize = new Vector2(TutorialWidth, 0),
-    };
+    readonly RichTextLabel tutorialTitle = TutorialRich(15), tutorialText = TutorialRich(13);
+    readonly TutorialMark tutorialMark = new();
+    readonly Button tutorialContinue = new() { Text = "Continue", FocusMode = Control.FocusModeEnum.None, MouseDefaultCursorShape = Control.CursorShape.PointingHand };
     readonly TutorialDots tutorialDots = new();
-    const float TutorialWidth = 260, TutorialDoneSeconds = 10, TutorialFlashSeconds = 1.2f, TutorialGap = 8;
-    float tutorialFlash, tutorialDone;
+    const float TutorialWidth = 260, TutorialFlashSeconds = 1.2f, TutorialGap = 8;
+    float tutorialFlash;
     float infoHeight = 150; // the info panel's last height, so the tutorial keeps clear of it while it's closed
     Vector2? tutorialGrab, tutorialAt; // held: where on the panel the pointer took it; and where it is
     bool tutorialMoved;
@@ -278,6 +277,7 @@ public partial class Widget : Node
         evolutionMenu.Picked += ChooseEvolution;
         toolbar.CanGrow = (node, kind) => Garden.CanSproutFrom(node, kind);
         toolbar.CanChange = (node, kind) => Garden.CanChangeBud(node, kind);
+        toolbar.Allows = (action, kind) => Garden.TutorialAllows(action, kind);
         toolbar.HubPanelOpen = () => hubPanel.IsOpen;
         toolbar.Offered = kind => kind switch
         {
@@ -288,7 +288,10 @@ public partial class Widget : Node
         toolbarLayer.AddChild(shapingBar);
         shapingBar.Started += TakeFromBar;
         shapingBar.Done += () => SetBuilding(false);
-        shapingBar.MoveStarted += () => gardenGrab = ToSim(ToWorld(PointerInViewport()));
+        shapingBar.MoveStarted += () =>
+        {
+            if (Garden.TutorialAllows(TutorialAction.MoveGarden)) gardenGrab = ToSim(ToWorld(PointerInViewport()));
+        };
         shapingBar.HeatPicked += view =>
         {
             main.View.Heat = view;
@@ -378,8 +381,36 @@ public partial class Widget : Node
         tutorialHeader.AddChild(tutorialDots);
         tutorialColumn.AddChild(tutorialHeader);
         tutorialColumn.AddChild(new ColorRect { Color = new Color(1, 1, 1, 0.12f), CustomMinimumSize = new Vector2(0, 1), MouseFilter = Control.MouseFilterEnum.Ignore });
-        tutorialText.LabelSettings = new LabelSettings { FontSize = 13, LineSpacing = 1 };
+        var titleRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        titleRow.AddThemeConstantOverride("separation", 6);
+        titleRow.AddChild(tutorialTitle);
+        titleRow.AddChild(tutorialMark);
+        tutorialTitle.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        tutorialTitle.CustomMinimumSize = Vector2.Zero;
+        tutorialTitle.AutowrapMode = TextServer.AutowrapMode.Off;
+        tutorialColumn.AddChild(titleRow);
         tutorialColumn.AddChild(tutorialText);
+        var continueStyle = Toolbar.PillStyle();
+        continueStyle.BgColor = ToolButton.BeckonGold with { A = 0.85f };
+        continueStyle.SetCornerRadiusAll(8);
+        continueStyle.ContentMarginLeft = continueStyle.ContentMarginRight = 14;
+        continueStyle.ContentMarginTop = 3;
+        continueStyle.ContentMarginBottom = 4;
+        var continueHover = (StyleBoxFlat)continueStyle.Duplicate();
+        continueHover.BgColor = ToolButton.BeckonGold.Lightened(0.25f);
+        tutorialContinue.AddThemeStyleboxOverride("normal", continueStyle);
+        tutorialContinue.AddThemeStyleboxOverride("hover", continueHover);
+        tutorialContinue.AddThemeStyleboxOverride("pressed", continueHover);
+        foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color" })
+            tutorialContinue.AddThemeColorOverride(state, new Color(0.07f, 0.09f, 0.13f));
+        tutorialContinue.AddThemeFontSizeOverride("font_size", 13);
+        tutorialContinue.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
+        tutorialContinue.Pressed += () =>
+        {
+            if (Garden.Tutorial is { } step) Garden.ActTutorial(step);
+            tutorialFlash = TutorialFlashSeconds;
+        };
+        tutorialColumn.AddChild(tutorialContinue);
         tutorialPanel.AddChild(tutorialColumn);
         tutorialPanel.GuiInput += e =>
         {
@@ -481,6 +512,7 @@ public partial class Widget : Node
     // A tool pressed on the bar: a new one at the pointer, carried until let go (see MoveTool).
     void TakeFromBar(ShapingKind kind)
     {
+        if (!Garden.TutorialAllows(TutorialAction.Shaping, shaping: kind)) return;
         var at = ToSim(ToWorld(PointerInViewport()));
         if (Garden.Place(kind, at) is not { } tool) return;
         StartMoving(tool, ShapingHandle.Body, at);
@@ -542,9 +574,14 @@ public partial class Widget : Node
             else toolbar.ShowFor(tool);
         }
         else if (shapingBar.Visible && shapingBar.GetRect().Grow(4).HasPoint(movePointer / Dpi)) Garden.Remove(tool);
-        else if (movingHandle == ShapingHandle.Body) Garden.PlantUnder(tool, HoverSlop); // an empty pot dropped on a part plants it
+        else if (movingHandle == ShapingHandle.Body && PotFor(tool) is { } under) Garden.Tie(under, tool); // an empty pot dropped on a part plants it
         fromBar = false;
     }
+
+    // The part an empty pot let go here would plant, if the tutorial allows it (Tending Mode: the core alone).
+    PlantNode? PotFor(ShapingTool pot) =>
+        pot.Kind == ShapingKind.Pot && Garden.Potted(pot) == null && Garden.NodeAt(pot.Position, HoverSlop) is { } node
+            && Garden.TutorialAllows(TutorialAction.Tie, node.Spec.Kind) ? node : null;
 
     // In build mode, a tool's handle under the pointer (a pot's knob, a trellis's end): these come before the parts,
     // as a pot's knob sits where its branch grows.
@@ -1009,7 +1046,7 @@ public partial class Widget : Node
         if (e is InputEventKey { Pressed: true, Echo: false, CtrlPressed: true } key)
         {
             if (key.Keycode == Key.Z) UndoPrune();
-            else if (key.Keycode == Key.B) SetBuilding(!Building);
+            else if (key.Keycode == Key.B && (Building || Garden.TutorialAllows(TutorialAction.Build))) SetBuilding(!Building);
             else if (key.Keycode == Key.G && key.AltPressed && !Hotkey.Registered)
                 SetMode(Mode == DisplayMode.Active ? DisplayMode.Ambient : DisplayMode.Active);
             else return;
@@ -1102,7 +1139,7 @@ public partial class Widget : Node
     {
         if (!dragging && pressNode != null && Garden.Nodes.Contains(pressNode)) Tap(pressNode);
         if (dragging && pressNode != null && DropTarget(ToSim(ToWorld(PointerInViewport()))) is { } tool)
-            Garden.Tie(pressNode, tool);
+            if (Garden.TutorialAllows(TutorialAction.Tie, pressNode.Spec.Kind)) Garden.Tie(pressNode, tool);
         if (Garden.Held != null) Garden.LetGo();
         pressed = dragging = false;
         pressNode = null;
@@ -1184,6 +1221,7 @@ public partial class Widget : Node
                 ShowGardenCard();
                 return;
             case Tool.Build:
+                if (!Building && !Garden.TutorialAllows(TutorialAction.Build)) return;
                 SetBuilding(!Building);
                 coreMenu.SetActive(Tool.Build, Building);
                 return;
@@ -1191,6 +1229,7 @@ public partial class Widget : Node
                 SetAlmanac(!almanac.IsOpen);
                 return;
             case Tool.Research:
+                if (!research.IsOpen && !Garden.TutorialAllows(TutorialAction.Research)) return;
                 SetResearch(!research.IsOpen);
                 return;
         }
@@ -1240,6 +1279,7 @@ public partial class Widget : Node
         var size = research.GetCombinedMinimumSize();
         var (anchor, onLeft) = Beside(size, top: size.Y / 2);
         research.Open(anchor - new Vector2(onLeft ? size.X : 0, 0));
+        Garden.ActTutorial(TutorialStep.Genes); // (the step that asks for it)
     }
 
     // The Research panel's Buy: the track's next upgrade, if the balance covers it (the caps rise at once, and the
@@ -1278,30 +1318,47 @@ public partial class Widget : Node
     }
 
     // Moves the tutorial on as its steps are done (in any mode: they're checks on the garden), and shows the step in
-    // Active, with its beckon.
+    // Active, with its beckon and what it holds back.
     void UpdateTutorial(double delta)
     {
-        bool shown = Garden.Tutorial != null && Mode == DisplayMode.Active && main.HiddenReason == null;
-        if (Garden.Tutorial is { } && Garden.AdvanceTutorial())
-        {
-            tutorialFlash = TutorialFlashSeconds;
-            tutorialDone = 0;
-        }
-        if (shown && Garden.Tutorial == TutorialStep.Done && (tutorialDone += (float)delta) >= TutorialDoneSeconds)
-        {
-            Garden.FinishTutorial();
-            shown = false;
-        }
+        if (Garden.Tutorial is { } && Garden.AdvanceTutorial()) tutorialFlash = TutorialFlashSeconds;
+        var step = Garden.Tutorial;
+        // Waiting for a bud: its part is selected, so its card shows the Forming line (beckoned).
+        if (step != shownStep && step is TutorialStep.GroveWait or TutorialStep.StemWait
+            && Tutorial.Forming(Garden, Tutorial.Kind(step.Value)!.Value) is { } forming)
+            Select(forming);
+        shownStep = step;
+        coreMenu.SetEnabled(Tool.Build, Garden.TutorialAllows(TutorialAction.Build) || Building);
+        coreMenu.SetEnabled(Tool.Research, Garden.TutorialAllows(TutorialAction.Research) || research.IsOpen);
+        bool shown = step != null && Mode == DisplayMode.Active && main.HiddenReason == null;
         tutorialPanel.Visible = shown;
-        Beckon(shown ? Garden.Tutorial : null);
+        Beckon(shown ? step : null);
         if (!shown) return;
-        var step = Garden.Tutorial!.Value;
-        tutorialText.Text = Tutorial.Text(step);
-        tutorialDots.Set((int)step, Tutorial.Steps);
+        var s = step!.Value;
+        tutorialTitle.Text = $"[b]{Tutorial.Title(s)}[/b]";
+        tutorialText.Text = Tutorial.Text(s)
+            .Replace("{Growth}", $"[color=#{NodeSpecs.All[NodeKind.Grove].Rgb:X6}]●[/color]")
+            .Replace("{Genes}", $"[color=#{NodeSpecs.All[NodeKind.Lab].Rgb:X6}]●[/color]");
+        tutorialMark.Show(s);
+        tutorialContinue.Visible = s is TutorialStep.Welcome or TutorialStep.Done;
+        tutorialDots.Set((int)s, Tutorial.Steps);
         tutorialFlash = Math.Max(0, tutorialFlash - (float)delta);
-        float fade = step == TutorialStep.Done ? Math.Clamp(TutorialDoneSeconds - tutorialDone, 0, 1) : 1;
-        tutorialPanel.Modulate = new Color(1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.2f, fade);
+        tutorialPanel.Modulate = new Color(1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.4f, 1 + tutorialFlash * 0.2f);
         PlaceTutorial(delta);
+    }
+
+    TutorialStep? shownStep;
+
+    static RichTextLabel TutorialRich(int size)
+    {
+        var label = new RichTextLabel
+        {
+            BbcodeEnabled = true, FitContent = true, ScrollActive = false, MouseFilter = Control.MouseFilterEnum.Ignore,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(TutorialWidth, 0),
+        };
+        label.AddThemeFontSizeOverride("normal_font_size", size);
+        label.AddThemeFontSizeOverride("bold_font_size", size);
+        return label;
     }
 
     // Under where the parts' info panel opens (see PlaceCard), on its side of the plant and lined up with it, gliding
@@ -1336,34 +1393,58 @@ public partial class Widget : Node
         tutorialPanel.Size = size;
     }
 
-    // The next thing to touch for the step: the part to grow it on (then its bud button, once the part's toolbar is
-    // up), the core (then its menu's slot), build mode's pot. Nothing while the bud asked for forms, or once the step
-    // needs only waiting.
+    // The next thing to touch for the step (Jeremy's script): for a bud, the part to grow it on, then its bud button
+    // once the part's toolbar is up; waiting for one, its part (then its card's Forming line, once it's selected); in
+    // Tending Mode, the core, Build, the pot, then the core to drop it on; for Research, the core, its slot, then the
+    // Stems card's Buy.
     void Beckon(TutorialStep? step)
     {
         PlantNode? part = null;
         Tool? bud = null, slot = null;
         ShapingKind? shaping = null;
-        if (step is { } s && Tutorial.Kind(s) is { } kind && Tutorial.Spot(Garden, kind) is { } spot)
+        bool forming = false;
+        Track? buy = null;
+        void Open(Tool menuSlot)
         {
-            if (toolbar.Visible && toolbar.Target == spot) bud = Enum.Parse<Tool>(kind.ToString());
-            else part = spot;
-        }
-        else if (step == TutorialStep.Pot)
-        {
-            if (Building) shaping = Garden.Shaping.Any(t => t.Kind == ShapingKind.Pot) ? null : ShapingKind.Pot;
-            else if (coreMenu.IsOpen) slot = Tool.Build;
+            if (coreMenu.IsOpen) slot = menuSlot;
             else part = Garden.Core;
         }
-        else if (step == TutorialStep.Research && !research.IsOpen)
+        switch (step)
         {
-            if (coreMenu.IsOpen) slot = Tool.Research;
-            else part = Garden.Core;
+            case { } s when Tutorial.AsksForBud(s):
+                var kind = Tutorial.Kind(s)!.Value;
+                if (Tutorial.Spot(Garden, kind) is { } spot)
+                {
+                    if (toolbar.Visible && toolbar.Target == spot) bud = Enum.Parse<Tool>(kind.ToString());
+                    else part = spot;
+                }
+                break;
+            case TutorialStep.GroveWait or TutorialStep.StemWait:
+                if (Tutorial.Forming(Garden, Tutorial.Kind(step.Value)!.Value) is { } growing)
+                {
+                    if (selected == growing && partCard.Visible) forming = true;
+                    else part = growing;
+                }
+                break;
+            case TutorialStep.Pot:
+                if (!Building) Open(Tool.Build);
+                else if (!Garden.Shaping.Any(t => t.Kind == ShapingKind.Pot)) shaping = ShapingKind.Pot;
+                else part = Garden.Core;
+                break;
+            case TutorialStep.Genes:
+                if (!research.IsOpen) Open(Tool.Research);
+                break;
+            case TutorialStep.Research:
+                if (!research.IsOpen) Open(Tool.Research);
+                else buy = Track.Stems;
+                break;
         }
         main.View.Beckon = part;
         toolbar.SetBeckon(bud);
         coreMenu.SetBeckon(slot);
         shapingBar.SetBeckon(shaping);
+        partCard.BeckonForming = forming;
+        research.Beckon(buy);
     }
 
     void Unask()
@@ -1409,16 +1490,17 @@ public partial class Widget : Node
             // (Cancelling or changing a forming bud asks first, over the toolbar: its growth would be lost.)
             if (at.Forming is { } forming && at.FormingBud)
             {
+                if (!Garden.TutorialAllows(TutorialAction.CancelBud, kind)) return;
                 if (Garden.IsBudOf(forming, kind)) Ask(at, tool, "Tap again to cancel", () => Garden.CancelBud(at));
                 else if (Garden.CanChangeBud(at, kind)) Ask(at, tool, "Tap again to switch types", () => Garden.ChangeBud(at, kind));
                 return;
             }
-            Garden.SproutFrom(at, kind);
+            else if (Garden.TutorialAllows(TutorialAction.Bud, kind)) Garden.SproutFrom(at, kind);
         }
         switch (tool)
         {
             case Tool.Unhook: Garden.Untie(node); break;
-            case Tool.Prune:
+            case Tool.Prune when Garden.TutorialAllows(TutorialAction.Prune):
                 Garden.Prune(node); // it drifts off and fades (see Garden.Cut)
                 undo.RefreshNow(); // the Undo pill, at once
                 break;
@@ -1524,5 +1606,40 @@ public partial class TutorialDots : Control
             else if (i == done) DrawArc(c, 3.2f, 0, Mathf.Tau, 16, ToolButton.BeckonGold, 1.4f, true);
             else DrawCircle(c, 2.2f, new Color(1, 1, 1, 0.25f));
         }
+    }
+}
+
+// The tutorial title's mark: the shape of the part the step is about (grove, stem, lab), or the pot in Tending Mode.
+public partial class TutorialMark : Control
+{
+    TutorialStep step;
+
+    public TutorialMark()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        CustomMinimumSize = new Vector2(18, 18);
+        SizeFlagsVertical = SizeFlags.ShrinkCenter;
+    }
+
+    public void Show(TutorialStep at)
+    {
+        Visible = Tutorial.Kind(at) != null || at is TutorialStep.Pot or TutorialStep.Research;
+        if (at == step) return;
+        step = at;
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        var c = Size / 2;
+        if (step == TutorialStep.Pot)
+        {
+            ShapingLook.DrawIcon(this, Tool.Pot, c, new Color(1, 1, 1, 0.9f));
+            return;
+        }
+        var spec = NodeSpecs.All[Tutorial.Kind(step) ?? NodeKind.Stem];
+        var points = GardenView.UnitPolygon(spec.Shape);
+        for (int i = 0; i < points.Length; i++) points[i] = c + points[i].Rotated(-Mathf.Pi / 2) * 7;
+        DrawColoredPolygon(points, GardenView.Rgb(spec.Rgb));
     }
 }

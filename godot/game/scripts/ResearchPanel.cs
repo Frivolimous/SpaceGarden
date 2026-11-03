@@ -230,6 +230,9 @@ public partial class ResearchPanel : FloatingWindow
         buy.AddThemeColorOverride("font_disabled_color", hue.Lightened(0.5f) with { A = 0.9f });
         buy.Pressed += () => BuyPressed?.Invoke(track);
         buyRow.AddChild(buy);
+        var beckon = new BeckonFrame();
+        buyRow.AddChild(beckon);
+        beckons[track] = beckon;
         page.AddChild(buyRow);
 
         var made = new TrackCard(hue, style, glyph, info, name, cost, price, buyRow, fill, buy);
@@ -277,6 +280,14 @@ public partial class ResearchPanel : FloatingWindow
 
     // Every frame: follows the pointer while its header is held, keeps it on the screen, breathes the glow of the
     // cards the balance covers, and refreshes the cards a few times a second.
+    // The tutorial's beckon on a track's Buy (Research Stems), or none.
+    readonly Dictionary<Track, BeckonFrame> beckons = new();
+
+    public void Beckon(Track? track)
+    {
+        foreach (var (t, frame) in beckons) frame.Visible = t == track;
+    }
+
     public void Update(Garden garden, double growthSpeed, Vector2 pointer, Vector2 screen, double delta)
     {
         Place(pointer, screen, GetCombinedMinimumSize());

@@ -66,26 +66,36 @@ public sealed class Garden
     public bool PassiveGrowth = true;
 
     // The opening's tutorial step (see Tutorial), or null: none, or over. A new garden starts one with StartTutorial;
-    // an older save has none. Until its lab step is done, growth blobs start no passive buds, so the stem's free links
+    // an older save has none. Until the lab is planted, growth blobs start no passive buds, so the stem's free links
     // wait for the grove, stem and lab it asks for.
     public TutorialStep? Tutorial { get; private set; }
 
-    public void StartTutorial()
-    {
-        Tutorial = TutorialStep.Grove;
-        AdvanceTutorial();
-    }
+    public void StartTutorial() => Tutorial = TutorialStep.Welcome;
 
-    // Passes every step already done; returns whether the step changed.
+    // Passes every step the garden has done (not one that waits for the player: see ActTutorial); returns whether the
+    // step changed.
     public bool AdvanceTutorial()
     {
         var was = Tutorial;
-        while (Tutorial is { } step && step < TutorialStep.Done && global::SpaceGarden.Core.Tutorial.Done(this, step)) Tutorial = step + 1;
+        while (Tutorial is { } step && !global::SpaceGarden.Core.Tutorial.ByAct(step)
+            && global::SpaceGarden.Core.Tutorial.Done(this, step))
+            Tutorial = step + 1;
         return Tutorial != was;
     }
 
-    // The send-off read: the tutorial is over.
-    public void FinishTutorial() => Tutorial = null;
+    // The player did what the step waits for (Continue; Research opened): the next step, or after the last, the end.
+    // Returns whether it was the step's act.
+    public bool ActTutorial(TutorialStep step)
+    {
+        if (Tutorial != step || !global::SpaceGarden.Core.Tutorial.ByAct(step)) return false;
+        Tutorial = step == TutorialStep.Done ? null : step + 1;
+        AdvanceTutorial();
+        return true;
+    }
+
+    // Whether the tutorial's step lets the player do this now (see Tutorial.Allows).
+    public bool TutorialAllows(TutorialAction action, NodeKind? kind = null, ShapingKind? shaping = null) =>
+        global::SpaceGarden.Core.Tutorial.Allows(Tutorial, action, kind, shaping);
 
     bool TutorialHoldsBuds => Tutorial is { } t && t <= TutorialStep.Lab;
 

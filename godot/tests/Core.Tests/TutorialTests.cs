@@ -2,7 +2,8 @@ using System.Numerics;
 
 namespace SpaceGarden.Core.Tests;
 
-// The opening's tutorial (Jeremy, Nov 3): grove, stem, lab, pot, wait for research, research, then a send-off.
+// The opening's tutorial (Jeremy's script, Nov 3): welcome, grove, its wait, stem, its wait, lab, Tending Mode (the core
+// in a pot), Research opened, waiting for the first stem upgrade, buying it, then the send-off.
 public class TutorialTests
 {
     // A new garden as the game starts one: the core, its first stem, and the tutorial.
@@ -14,62 +15,100 @@ public class TutorialTests
         return (garden, stem);
     }
 
-    [Fact]
-    public void ANewGardenWalksTheStepsInOrder()
+    static void GrowUntil(Garden garden, Func<bool> done)
     {
-        var (garden, stem) = Opening();
-        Assert.Equal(TutorialStep.Grove, garden.Tutorial);
-
-        Assert.True(garden.SproutFrom(stem, NodeKind.Grove)); // a bud started counts
-        Assert.True(garden.AdvanceTutorial());
-        Assert.Equal(TutorialStep.Stem, garden.Tutorial);
-        for (int i = 0; i < 1000 && stem.FormingBud; i++) // (a part forms one bud at a time: the grove comes out first)
+        for (int i = 0; i < 2000 && !done(); i++)
         {
             foreach (var n in garden.Nodes) if (!n.Spec.IsFruit) n.Power = n.Store;
             garden.Grow(Tuning.EconomyStepSeconds);
         }
+        Assert.True(done());
+    }
 
-        var second = garden.GrowBranch(stem, NodeKind.Stem)!;
+    [Fact]
+    public void ANewGardenWalksTheScriptInOrder()
+    {
+        var (garden, stem) = Opening();
+        Assert.Equal(TutorialStep.Welcome, garden.Tutorial);
+        Assert.False(garden.AdvanceTutorial()); // the welcome waits for Continue
+        Assert.True(garden.ActTutorial(TutorialStep.Welcome));
+        Assert.Equal(TutorialStep.Grove, garden.Tutorial);
+
+        Assert.True(garden.SproutFrom(stem, NodeKind.Grove));
+        garden.AdvanceTutorial();
+        Assert.Equal(TutorialStep.GroveWait, garden.Tutorial);
+        GrowUntil(garden, () => !stem.FormingBud);
+        garden.AdvanceTutorial();
+        Assert.Equal(TutorialStep.Stem, garden.Tutorial);
+
+        Assert.True(garden.SproutFrom(stem, NodeKind.Stem));
+        garden.AdvanceTutorial();
+        Assert.Equal(TutorialStep.StemWait, garden.Tutorial);
+        GrowUntil(garden, () => !stem.FormingBud);
         garden.AdvanceTutorial();
         Assert.Equal(TutorialStep.Lab, garden.Tutorial);
 
-        garden.GrowBranch(second, NodeKind.Lab);
+        var second = garden.Nodes.Last(n => n.Spec.Kind == NodeKind.Stem || Garden.IsBudOf(n.Spec.Kind, NodeKind.Stem));
+        Assert.Same(second, Tutorial.Spot(garden, NodeKind.Lab)); // the lab goes on the new stem
+        Assert.True(garden.SproutFrom(second, NodeKind.Lab));
         garden.AdvanceTutorial();
-        Assert.Equal(TutorialStep.Pot, garden.Tutorial);
+        Assert.Equal(TutorialStep.Pot, garden.Tutorial); // (no waiting for the lab)
 
-        var pot = garden.Place(ShapingKind.Pot, new Vector2(80, 0))!;
-        Assert.False(garden.AdvanceTutorial()); // placed, not yet holding a part
-        Assert.True(garden.Tie(second, pot));
+        var pot = garden.Place(ShapingKind.Pot, new Vector2(0, 40))!;
+        garden.Tie(stem, pot);
+        Assert.False(garden.AdvanceTutorial()); // the core it asks for
+        garden.Tie(garden.Core, pot);
         garden.AdvanceTutorial();
+        Assert.Equal(TutorialStep.Genes, garden.Tutorial);
+
+        Assert.False(garden.ActTutorial(TutorialStep.Welcome)); // only the step's own act
+        Assert.True(garden.ActTutorial(TutorialStep.Genes)); // Research opened
         Assert.Equal(TutorialStep.Wait, garden.Tutorial);
 
-        garden.GeneBalance = garden.Cheapest!.Cost;
+        garden.GeneBalance = garden.Next(Track.Stems)!.Cost;
         garden.AdvanceTutorial();
         Assert.Equal(TutorialStep.Research, garden.Tutorial);
-
-        Assert.True(garden.Buy(garden.Cheapest!.Track));
+        Assert.True(garden.Buy(Track.Stems));
         garden.AdvanceTutorial();
         Assert.Equal(TutorialStep.Done, garden.Tutorial);
-        Assert.False(garden.AdvanceTutorial()); // the send-off waits for the UI
-        garden.FinishTutorial();
+        Assert.True(garden.ActTutorial(TutorialStep.Done));
         Assert.Null(garden.Tutorial);
     }
 
     [Fact]
-    public void StepsDoneEarlyArePassedAtOnce()
+    public void ItKeepsThePlayerOnTheRails()
     {
-        var (garden, stem) = Opening();
-        garden.GrowBranch(stem, NodeKind.Lab);
-        garden.GrowBranch(stem, NodeKind.Grove);
-        garden.AdvanceTutorial();
-        Assert.Equal(TutorialStep.Stem, garden.Tutorial); // the lab waits its turn, then counts
+        Assert.False(Tutorial.Allows(TutorialStep.Welcome, TutorialAction.Bud, NodeKind.Grove));
+        Assert.True(Tutorial.Allows(TutorialStep.Grove, TutorialAction.Bud, NodeKind.Grove));
+        Assert.False(Tutorial.Allows(TutorialStep.Grove, TutorialAction.Bud, NodeKind.Lab));
+        Assert.False(Tutorial.Allows(TutorialStep.GroveWait, TutorialAction.Bud, NodeKind.Grove));
+        Assert.False(Tutorial.Allows(TutorialStep.GroveWait, TutorialAction.CancelBud));
+        foreach (var step in new[] { TutorialStep.Welcome, TutorialStep.Grove, TutorialStep.StemWait, TutorialStep.Lab })
+        {
+            Assert.False(Tutorial.Allows(step, TutorialAction.Prune));
+            Assert.False(Tutorial.Allows(step, TutorialAction.Build));
+            Assert.False(Tutorial.Allows(step, TutorialAction.Research));
+        }
+        // Tending Mode: build mode for the pot alone; buds and Research open again; still no pruning.
+        Assert.True(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Build));
+        Assert.True(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Shaping, shaping: ShapingKind.Pot));
+        Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Shaping, shaping: ShapingKind.Trellis));
+        Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.MoveGarden));
+        Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Prune));
+        Assert.True(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Tie, NodeKind.Core));
+        Assert.False(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Tie, NodeKind.Stem));
+        Assert.True(Tutorial.Allows(TutorialStep.Pot, TutorialAction.Bud, NodeKind.Generator));
+        // From then on, and without a tutorial, nothing is held back.
+        Assert.True(Tutorial.Allows(TutorialStep.Genes, TutorialAction.Prune));
+        Assert.True(Tutorial.Allows(null, TutorialAction.Prune));
     }
 
     [Fact]
-    public void NoPassiveBudsUntilTheLabIsAskedFor()
+    public void NoPassiveBudsUntilTheLabIsPlanted()
     {
         var (garden, stem) = Opening();
-        var grove = garden.GrowBranch(stem, NodeKind.Grove)!;
+        garden.ActTutorial(TutorialStep.Welcome);
+        garden.GrowBranch(stem, NodeKind.Grove);
         garden.AdvanceTutorial();
         for (int i = 0; i < 2000; i++)
         {
@@ -83,10 +122,9 @@ public class TutorialTests
     [Fact]
     public void ItsStepIsSavedAndAnOldSaveHasNone()
     {
-        var (garden, stem) = Opening();
-        garden.GrowBranch(stem, NodeKind.Grove);
-        garden.AdvanceTutorial();
-        Assert.Equal(TutorialStep.Stem, Garden.FromSave(garden.ToSave()).Tutorial);
+        var (garden, _) = Opening();
+        garden.ActTutorial(TutorialStep.Welcome);
+        Assert.Equal(TutorialStep.Grove, Garden.FromSave(garden.ToSave()).Tutorial);
         Assert.Null(Garden.FromSave(garden.ToSave() with { Tutorial = null }).Tutorial);
         Assert.Null(Garden.New(Layout.Radial).Tutorial); // (tests and sims start without one)
     }

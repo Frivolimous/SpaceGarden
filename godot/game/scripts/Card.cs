@@ -108,8 +108,13 @@ public partial class Card : PanelContainer
         fade.TweenCallback(Callable.From(() => Visible = false));
     }
 
+    // The tutorial's beckon on the Forming line (Wait for the Grove, Wait for the Stem), while it shows.
+    public bool BeckonForming;
+    readonly BeckonFrame formingFrame = new();
+
     public void Update(Garden garden, double growthSpeed, double delta)
     {
+        if (!BeckonForming) formingFrame.Visible = false;
         if (!IsOpen || (refreshTimer -= delta) > 0) return;
         refreshTimer = RefreshSeconds;
         int used = 0;
@@ -166,7 +171,15 @@ public partial class Card : PanelContainer
         {
             var forming = NodeSpecs.All[kind];
             Line(ref used, $"Forming: {forming.Name}{(forming.IsFruit ? "" : " bud")} {stats.FormingProgress * 100:0}%");
+            var label = rows[used - 1].GetChild<Label>(0);
+            if (formingFrame.GetParent() != label)
+            {
+                formingFrame.GetParent()?.RemoveChild(formingFrame);
+                label.AddChild(formingFrame);
+            }
+            formingFrame.Visible = BeckonForming;
         }
+        else formingFrame.Visible = false;
     }
 
     void ShowGardenLines(GardenStats stats, double speed, ref int used)

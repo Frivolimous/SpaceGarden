@@ -35,6 +35,8 @@ public partial class Toolbar : PanelContainer
     public Func<NodeKind, bool> Offered = _ => true;
     // Whether the Hub's panel is open (its button on the Hub's toolbar is lit then).
     public Func<bool> HubPanelOpen = () => false;
+    // Whether the tutorial lets the player do this now (see Garden.TutorialAllows): held-back buttons are greyed.
+    public Func<TutorialAction, NodeKind?, bool> Allows = (_, _) => true;
 
     // The kind each bud tool grows.
     public static NodeKind? KindOf(Tool tool) => tool switch
@@ -166,12 +168,14 @@ public partial class Toolbar : PanelContainer
                 // (A seedling's or the Hub's shows only while one could be planted, or one forms here.)
                 button.Visible = buds && (Offered(kind) || button.Forming);
                 // (While a bud forms: its own button cancels it, another changes it, starting over.)
-                button.Enabled = button.Forming || CanGrow(Target, kind) || CanChange(Target, kind);
+                button.Enabled = button.Forming || Target.FormingBud ? Allows(TutorialAction.CancelBud, kind) && (button.Forming || CanChange(Target, kind))
+                    : CanGrow(Target, kind) && Allows(TutorialAction.Bud, kind);
                 button.TooltipText = button.Forming ? $"Cancel the {NodeSpecs.All[Target.Forming!.Value].Name.ToLowerInvariant()} bud (its growth is lost)"
                     : Target.FormingBud ? $"Change the bud to {Article(kind)} (it starts over)"
                     : tips[tool];
             }
         buttons[Tool.Prune].Visible = Target.Parent != null; // the core can't be pruned
+        buttons[Tool.Prune].Enabled = Allows(TutorialAction.Prune, null);
         // Every link taken (a bud forming holds one, but then its button shows it growing instead).
         full.Visible = buds && Target.Links >= Target.MaxLinks && !Target.FormingBud;
         if (full.Visible) fullText.Text = $"{Target.Links}/{Target.MaxLinks} Connections Used";
@@ -400,6 +404,7 @@ public partial class ShapingBar : PanelContainer
     readonly Dictionary<HeatView, Button> heatButtons = new();
 
     readonly Dictionary<ShapingKind, ToolButton> buttons = new();
+    readonly MoveHandle handle;
     Tween? fade;
     bool showing;
 
@@ -412,7 +417,7 @@ public partial class ShapingBar : PanelContainer
         var outer = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         outer.AddThemeConstantOverride("separation", 4);
         AddChild(outer);
-        var handle = new MoveHandle { TooltipText = "Drag to move the whole garden at once" };
+        handle = new MoveHandle { TooltipText = "Drag to move the whole garden at once" };
         handle.Grabbed += () => MoveStarted?.Invoke();
         outer.AddChild(handle);
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
@@ -470,10 +475,12 @@ public partial class ShapingBar : PanelContainer
     // What each tool's button says: how many more can be placed, or the garden size that brings it.
     public void Refresh(Garden garden)
     {
+        // (The tutorial's Tending Mode holds back every tool but the pot, and moving the garden.)
+        handle.Visible = garden.TutorialAllows(TutorialAction.MoveGarden);
         foreach (var (kind, button) in buttons)
         {
             int cap = garden.Capacity.Of(kind), left = cap - garden.Shaping.Count(t => t.Kind == kind);
-            button.Enabled = left > 0;
+            button.Enabled = left > 0 && garden.TutorialAllows(TutorialAction.Shaping, shaping: kind);
             button.Badge = cap > 0 ? $"{left}" : null;
             string name = ShapingLook.Name(kind);
             int size = garden.Tracking.MostMainNodes;
@@ -547,5 +554,32 @@ public partial class MoveHandle : Control
             DrawLine(tip, tip - dir * head + side * head, ink, 1.6f, true);
             DrawLine(tip, tip - dir * head - side * head, ink, 1.6f, true);
         }
+    }
+}
+
+// The tutorial's beckon around a line or a button (a card's Forming line, Research's Buy): a gold frame breathing just
+// outside its parent, drawn over it. Laid on a control that isn't a container, so it sits where it's anchored.
+public partial class BeckonFrame : Control
+{
+    public BeckonFrame()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        Visible = false;
+        SetAnchorsPreset(LayoutPreset.FullRect);
+        OffsetLeft = OffsetTop = -4;
+        OffsetRight = OffsetBottom = 4;
+    }
+
+    public override void _Process(double delta)
+    {
+        if (Visible) QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        float beat = 0.5f + 0.5f * Mathf.Sin((float)Time.GetTicksMsec() / 1000 * Mathf.Tau / ToolButton.BeckonSeconds);
+        var rect = new Rect2(Vector2.Zero, Size).Grow(beat * 2);
+        DrawRect(rect, new Color(0, 0, 0, 0.3f), false, 4);
+        DrawRect(rect, ToolButton.BeckonGold with { A = 0.5f + 0.5f * beat }, false, 2);
     }
 }
