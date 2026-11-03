@@ -137,7 +137,7 @@ static class WildFlowers
 
         // The passive-only kinds.
         yield return Wild(passive, NodeKind.Buffer, "Buffer", Shape.Burst8, 0xF2F2F2, WildUnlock.Start,
-            "Buff blobs give the parts they pass 150% more for 30 s.", "Local only: 5 links (8 past an Amplifier).") with
+            "Buff blobs give the parts they pass 50% more for 30 s.", "Local only: 5 links (8 past an Amplifier).") with
         {
             Sends = BlobKind.Buff, BlobsPerHour = Tuning.BufferBlobs, MaxFruits = 2, PowerPerSecond = -10,
         };

@@ -183,8 +183,9 @@ public static class Tuning
     // Wood (the Lumber Grove's fruit) and Glow: glow, a white fruit, sends GlowBlobs buff blobs an hour (one a minute).
     // Buffer: BufferBlobs an hour (one every 5 s); each wanders BufferReach links (BufferAmplifiedReach more once it
     // passes an Amplifier), and every part it passes that uses a buff makes BuffBonus more (power and blobs) for the
-    // next BuffSeconds (Jeremy, Nov 3: +150% for 30 s, was +50% for a minute). A second buff only starts the time again.
-    public const float BufferBlobs = 720, GlowBlobs = 60, BuffBonus = 1.5f, BuffSeconds = 30;
+    // next BuffSeconds (Jeremy, Nov 3: 150% of its output, +50%, for 30 s; was a minute). A second buff only starts the
+    // time again.
+    public const float BufferBlobs = 720, GlowBlobs = 60, BuffBonus = 0.5f, BuffSeconds = 30;
     public const int BufferReach = 5, BufferAmplifiedReach = 3;
     // Comet Bloom (Jeremy, Nov 3): active for CometActiveSeconds, then dormant, fading for CometFadeSeconds, then it
     // withers. While any is active, every gene and growth blob is worth CometBlobValue times as much, and buffs last
