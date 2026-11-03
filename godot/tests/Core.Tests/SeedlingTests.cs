@@ -192,6 +192,10 @@ public class SeedlingTests
         garden.EvolveNow(EvolutionKind.ResonantFrequency);
         garden.EvolveNow(EvolutionKind.ResonantFrequency);
         Assert.Equal(1f, garden.ResonantBonus, 3); // 250% of the output: +0.5, +0.5 more on the base +0.5
+        // A buff on a part that uses it: 150% + 50 + 50 points = 250% of its output (they add up, Nov 3).
+        var core = garden.Core;
+        garden.BuffForTest(core);
+        Assert.Equal(Tuning.BuffBonus + 1f, core.BuffBonus, 3);
     }
 
     [Fact]

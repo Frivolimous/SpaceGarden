@@ -117,7 +117,7 @@ public static class Hubs
             Path(NodeKind.Lichen, Short, "+30% genes; labs +10% genes",
                 Own(NodeKind.Lichen, HubAxis.Blobs, 0.3f, lab, HubAxis.Blobs, 0.1f),
                 new HubMilestone(3, "Each leaf also adds +5% genes") { LeafBonus = 0.05f }),
-            Path(NodeKind.Buffer, Short, "All buffs +10% stronger", [new(NodeKind.Buffer, HubAxis.BuffStrength, 0.1f)],
+            Path(NodeKind.Buffer, Short, "All buffs +10% of the output (150% to 160%)", [new(NodeKind.Buffer, HubAxis.BuffStrength, 0.1f)],
                 new HubMilestone(3, $"Buffs last +{Tuning.HubBuffSeconds:0} s")),
             Path(NodeKind.CometBloom, Short, "Active 2 minutes longer; core +20% power",
                 CorePower(NodeKind.CometBloom, HubAxis.Active, 120),

@@ -479,7 +479,7 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | Seed Pod | +30% growth; groves +10% growth | Upkeep −50% |
 | Wild Lab | +30% genes; labs +10% genes | Upkeep −50% |
 | Lichen | +30% genes; labs +10% genes | Each leaf also adds +5% genes |
-| Buffer | All buffs +10% stronger (Nov 3) | Buffs last +10 s |
+| Buffer | All buffs +10 points of the output (Nov 3: added, so 150% becomes 180% at level 3, and with Resonant Frequency I 230%) | Buffs last +10 s |
 | Comet Bloom | Active 2 minutes longer; core +20% power (Nov 3) | Lingers half as long once dormant |
 | Moonflower | Wild flowers near it +5% more; core +20% power (Nov 3) | Range from 5 links to 6 |
 | ~~Nebula Bloom~~ | Retired Nov 3: no path | — |

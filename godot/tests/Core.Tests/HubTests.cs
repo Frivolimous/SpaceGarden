@@ -242,12 +242,12 @@ public class HubTests
         Assert.Equal(active + 3 * 120, Garden.ActiveOf(comet), 3);
         Assert.Equal(Garden.ActiveOf(comet) + (life - active) * 0.5, Garden.LifeOf(comet), 3);
 
-        // A buff now: +10% a level, 10 s longer (and twice as long while the Comet is active).
+        // A buff now: +10 points a level, 10 s longer (and twice as long while the Comet is active).
         garden.Grow(Tuning.EconomyStepSeconds);
         Assert.True(garden.CometActive);
         var generator = Add(garden, branch, NodeKind.Generator);
         garden.BuffForTest(generator);
-        Assert.Equal(Tuning.BuffBonus * 1.3f, generator.BuffBonus, 4);
+        Assert.Equal(Tuning.BuffBonus + 0.3f, generator.BuffBonus, 4); // 150% + 30 points: 180%
         Assert.Equal((Tuning.BuffSeconds + Tuning.HubBuffSeconds) * Tuning.CometBuffTime, generator.Buff, 4);
     }
 }

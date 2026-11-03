@@ -1337,7 +1337,7 @@ public sealed class Garden
     }
 
     // A buff blob passes a part that uses it: for BuffSeconds (HubBuffSeconds more with the Buffer's milestone) it
-    // makes BuffBonus more (plus Resonant Frequency's, and a tenth more a level of the Buffer's Hub path).
+    // makes BuffBonus more, plus Resonant Frequency's and the Buffer's Hub path's, all added (Jeremy, Nov 3).
     // For tests: as if a buff blob passed this part.
     internal void BuffForTest(PlantNode part) => Buffs(part);
 
@@ -1346,7 +1346,8 @@ public sealed class Garden
         if (!part.Spec.TakesBuffs) return; // (it passes untouched: Jeremy, Nov 3)
         part.Buff = (Tuning.BuffSeconds + (HubAt(NodeKind.Buffer, 3) ? Tuning.HubBuffSeconds : 0))
             * (CometActive ? Tuning.CometBuffTime : 1);
-        part.BuffBonus = (Tuning.BuffBonus + ResonantBonus) * (1 + hubBuffStrength);
+        // (They add up, in points of the output: 150% base, +50 a Resonant Frequency level, +10 a Buffer path level.)
+        part.BuffBonus = Tuning.BuffBonus + ResonantBonus + hubBuffStrength;
     }
 
     // A part with something forming always absorbs a growth blob; one with room to start a fruit or a bud does
