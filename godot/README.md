@@ -137,7 +137,7 @@ Run `sg.bat` (builds, then launches; option 5 opens the editor). `dotnet test` r
   seedling after its choice leaves the evolution waiting for the next one planted. The card shows a seedling's
   evolution and its power against its target; the journal its choice and bloom; the away note its bloom.
 - **The Hub** (`src/Core/Hubs.cs` and `Garden.cs`, numbers in `Tuning` under The Hub; DESIGN.md, The Hub): once
-  bought in the Core track, plant it from a part's toolbar (one at a time; it never grows wild). A teal-green wheel
+  bought in the Core track, plant it from a part's toolbar (one at a time; it never grows wild). A teal-green scalloped dodecagon
   that takes no stem slot, it catches gene blobs as the core does, into its own pool (they never reach the gene
   balance): the first hub point at 3,000 genes, each later one 400 more. The upgrades button on its toolbar opens its panel: 20 paths, one
   for each kind, basic and wild ("???" until the garden grows one), and the Hub's own (+1 link a level, up to 6).

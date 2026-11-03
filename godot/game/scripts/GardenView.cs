@@ -1066,6 +1066,11 @@ public static class Textures
         var (squareA, squareB) = (Star(4, 1, 1, 0), Star(4, 1, 1, Mathf.Pi / 4));
         var (triangleA, triangleB) = (Star(3, 1, 1, 0), Star(3, 1, 1, Mathf.Pi / 3));
         var burst = Star(8, 1, 0.7f);
+        // The Hub's scallops: a circle through two neighbouring corners whose rim dips to scallopDepth mid-edge.
+        const float scallopDepth = 0.8f;
+        float halfEdge = Mathf.Pi / 12;
+        float scallopCentre = (1 - scallopDepth * scallopDepth) / (2 * (Mathf.Cos(halfEdge) - scallopDepth));
+        float scallopRadius = scallopCentre - scallopDepth;
         return shape switch
         {
             // Amplifier: a white plus (Jeremy, Oct 30).
@@ -1100,9 +1105,15 @@ public static class Textures
             SpaceGarden.Core.Shape.Swirl => p => R(p) <= 0.3f + 0.7f * Mathf.Pow(Lobes(A(p) + 2.4f * R(p), 3), 2),
             // Seedling (5c, first pass): a round seed with two pointed leaves opening from it.
             SpaceGarden.Core.Shape.Sprout => p => R(p) <= 0.5f || R(p) <= 0.35f + 0.65f * Mathf.Pow(Lobes(A(p), 2), 6),
-            // Hub (first pass): a wheel, its hub and rim joined by six spokes.
-            SpaceGarden.Core.Shape.Wheel => p => R(p) <= 0.4f || (R(p) >= 0.74f && R(p) <= 1)
-                || (R(p) <= 1 && R(p) * Mathf.Abs(Mathf.Sin(A(p) - Mathf.Round(A(p) / (Mathf.Tau / 6)) * (Mathf.Tau / 6))) <= 0.12f),
+            // Hub (Jeremy, Nov 3): an inward-scalloped dodecagon, twelve points joined by arcs curving in (each the rim
+            // of a circle outside the edge, through its two corners, dipping to scallopDepth of the radius mid-edge).
+            SpaceGarden.Core.Shape.Wheel => p =>
+            {
+                if (R(p) > 1) return false;
+                const float edge = Mathf.Tau / 12;
+                float mid = (Mathf.Floor(A(p) / edge) + 0.5f) * edge; // the middle of the edge this point faces
+                return p.DistanceTo(Vector2.FromAngle(mid) * scallopCentre) >= scallopRadius;
+            },
             _ => p => R(p) <= 1,
         };
     }
