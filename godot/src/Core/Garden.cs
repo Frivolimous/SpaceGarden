@@ -1139,7 +1139,7 @@ public sealed class Garden
         {
             BlobKind.Genes => CatchesGenes(to),
             BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && to.CanBranch),
-            _ => to.Buff <= 0,
+            _ => to.Spec.TakesBuffs && to.Buff <= 0, // (a dead end worth a buff)
         };
     }
 
@@ -1302,6 +1302,7 @@ public sealed class Garden
     // Buffer's Hub milestone).
     void Buffs(PlantNode part)
     {
+        if (!part.Spec.TakesBuffs) return; // (it passes untouched: Jeremy, Nov 3)
         part.Buff = Tuning.BuffSeconds;
         part.BuffBonus = Tuning.BuffBonus * (HubAt(NodeKind.Buffer, 3) ? Tuning.HubBuffStrength : 1);
     }

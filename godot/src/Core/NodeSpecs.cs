@@ -95,6 +95,10 @@ public sealed record NodeSpec(NodeKind Kind)
     // (AmplifyChance, once a blob); BlocksBlobs: no blob steps onto it. EmergeBurst: blobs it sends at once as it
     // appears. WildBoost: buds near it are this much likelier to grow wild, and wild flowers near it Moonlit.
     public float BurstShare { get; init; }
+    // Whether a buff blob passing it buffs it (Jeremy, Nov 3: only the parts that make power or blobs use a buff: the
+    // core, generators, labs and groves, and their wild kinds, which take it from their base's spec). Others let it
+    // pass untouched.
+    public bool TakesBuffs { get; init; }
     public float BurstFill { get; init; } = 1;
     public float LifeSeconds { get; init; }
     public bool Dims { get; init; }
@@ -144,7 +148,7 @@ public static class NodeSpecs
                 Name = "Core", Description = "The heart: makes the most power, and takes in genes.",
                 Radius = 30, Mass = 30, Force = 30, MaxLinks = Tuning.StartCoreLinks, Shape = Shape.Circle, Rgb = 0xE5E570,
                 PowerStore = NodeBase.PowerStore * 4, PowerPerSecond = NodeBase.CoreGen, PowerWeight = 1.5f,
-                PowerTransferPerSecond = NodeBase.CoreGen * 1.8f,
+                PowerTransferPerSecond = NodeBase.CoreGen * 1.8f, TakesBuffs = true,
             },
             [NodeKind.Stem] = new(NodeKind.Stem)
             {
@@ -160,7 +164,7 @@ public static class NodeSpecs
                 Radius = 15, Mass = 3, Force = 3, MaxLinks = 1, Shape = Shape.Pentagon, Rgb = 0xE5E570,
                 Fruit = NodeKind.Burr, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.SmallGen,
-                PowerTransferPerSecond = NodeBase.SmallGen * 2.15f,
+                PowerTransferPerSecond = NodeBase.SmallGen * 2.15f, TakesBuffs = true,
             },
             [NodeKind.Lab] = new(NodeKind.Lab)
             {
@@ -169,7 +173,7 @@ public static class NodeSpecs
                 Fruit = NodeKind.Research, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain * 1.5f,
                 PowerTransferPerSecond = NodeBase.PowerTransferSub,
-                BlobsPerHour = 720, Sends = BlobKind.Genes, // one every 5 s
+                BlobsPerHour = 720, Sends = BlobKind.Genes, TakesBuffs = true, // one every 5 s
             },
             [NodeKind.Grove] = new(NodeKind.Grove)
             {
@@ -178,7 +182,7 @@ public static class NodeSpecs
                 Fruit = NodeKind.Berry, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain,
                 PowerTransferPerSecond = NodeBase.PowerTransferSub,
-                BlobsPerHour = 1200, Sends = BlobKind.Growth, // one every 3 s
+                BlobsPerHour = 1200, Sends = BlobKind.Growth, TakesBuffs = true, // one every 3 s
             },
             [NodeKind.Leaf] = new(NodeKind.Leaf)
             {

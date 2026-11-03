@@ -285,7 +285,7 @@ A new bud can turn into a special kind. That is **wild growth**, and the results
 | Seed Pod | 1.5× a grove's growth blobs, in bursts | 1 wild | Grove | Start | 3 berry |
 | Wild Lab | A lab's genes; its fruit bonus is doubled (+20% each), up to 2× with all 5 | 1 wild | Lab | Start | 5 research |
 | Lichen | 0.8× a lab's genes; 4 leaves bring its upkeep to 0 | 1 wild | Lab | Start | 4 leaf |
-| Buffer | Buff blobs give the parts they pass a 50% production boost | 1 wild | Passive only | Start | 2 glow |
+| Buffer | Buff blobs give the parts they pass a 50% production boost: only the parts that use it (the core, generators, labs, groves and their wild kinds; Jeremy, Nov 3), passing the rest untouched | 1 wild | Passive only | Start | 2 glow |
 | Comet Bloom | One burst of gene and growth blobs worth about 2 hours of a lab and a grove; withers after 24 hours | 1 wild | Passive only | Start | 2 glow |
 | Moonflower | Nearby buds much more likely to grow wild; wild flowers within 5 links get +10% output | 1 wild | Passive only | Start | 3 glow |
 | Nebula Bloom | Power reaching seedlings within 5 links counts double | 1 wild | Passive only | Start | 3 glow |

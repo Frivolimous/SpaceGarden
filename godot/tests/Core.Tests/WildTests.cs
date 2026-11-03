@@ -210,4 +210,22 @@ public class WildTests
         Assert.Equal(2, loaded.WildCount);
         Assert.Equal(1234, loaded.Nodes.First(n => n.Spec.Kind == NodeKind.Tendril).Life);
     }
+
+    // Nov 3: buffs only take on the parts that use them.
+    [Fact]
+    public void OnlyThePartsThatUseABuffTakeIt()
+    {
+        var takes = new[]
+        {
+            NodeKind.Generator, NodeKind.Lab, NodeKind.Grove, NodeKind.Core, NodeKind.Pulsar, NodeKind.TwinStar,
+            NodeKind.Ember, NodeKind.LumberGrove, NodeKind.SeedPod, NodeKind.WildLab, NodeKind.Lichen,
+        };
+        var passes = new[]
+        {
+            NodeKind.Stem, NodeKind.Tendril, NodeKind.BigStem, NodeKind.Amplifier, NodeKind.Resistor, NodeKind.Buffer,
+            NodeKind.CometBloom, NodeKind.Moonflower, NodeKind.NebulaBloom,
+        };
+        foreach (var kind in takes) Assert.True(NodeSpecs.All[kind].TakesBuffs, $"{kind} should take buffs");
+        foreach (var kind in passes) Assert.False(NodeSpecs.All[kind].TakesBuffs, $"{kind} shouldn't take buffs");
+    }
 }
