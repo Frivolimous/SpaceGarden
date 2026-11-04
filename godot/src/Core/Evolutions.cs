@@ -115,7 +115,7 @@ public static class Evolutions
 
     public static readonly IReadOnlyDictionary<EvolutionKind, EvolutionSpec> All = new Dictionary<EvolutionKind, EvolutionSpec>
     {
-        [EvolutionKind.BuildYourCore] = new(EvolutionKind.BuildYourCore, "Build your Core", NodeKind.Ember, Power,
+        [EvolutionKind.BuildYourCore] = new(EvolutionKind.BuildYourCore, "Core Growth", NodeKind.Ember, Power,
             new() { CoreGen = 2, CoreTransfer = 2, CoreStore = 1.5f }, MaxLevel: 3),
         [EvolutionKind.SecondPath] = new(EvolutionKind.SecondPath, "Second Path", NodeKind.Amplifier, Structure,
             new() { CoreLinks = 1, CoreTransfer = 2 }, MaxLevel: 3),
@@ -139,7 +139,7 @@ public static class Evolutions
             new() { BuffBonus = 0.5f }, MaxLevel: 3),
     };
 
-    // An evolution's name at a level: "Build your Core", then "Build your Core II".
+    // An evolution's name at a level: "Core Growth", then "Core Growth II".
     public static string Name(EvolutionKind kind, int level) =>
         level <= 1 ? All[kind].Name : $"{All[kind].Name} {Roman(level)}";
 

@@ -146,7 +146,7 @@ public class SeedlingTests
         // Each level adds level I's effect again: core power ×2, then ×3 (Nov 3).
         Assert.Equal(coreGen * 2f, Garden.FullProductionPerSecond(garden.Core), 3);
         var repeat = garden.EvolveNow(EvolutionKind.BuildYourCore)!;
-        Assert.Equal("Build your Core II", repeat.Name);
+        Assert.Equal("Core Growth II", repeat.Name);
         Assert.Equal(coreGen * 3f, Garden.FullProductionPerSecond(garden.Core), 3);
         // Smart Particles II: always; then at its limit.
         garden.EvolveNow(EvolutionKind.SmartParticles);

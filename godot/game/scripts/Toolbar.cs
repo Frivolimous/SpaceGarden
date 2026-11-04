@@ -100,7 +100,7 @@ public partial class Toolbar : PanelContainer
             (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Grow a seedling"),
             (Tool.Hub, "Grow the Hub"),
             (Tool.HubPanel, "Hub upgrades"), (Tool.Unhook, "Take it off its pot or trellis"),
-            (Tool.Prune, "Prune"), (Tool.Remove, "Take this away"),
+            (Tool.Prune, "Prune"), (Tool.Remove, "Remove"),
         })
         {
             var button = new ToolButton(tool) { TooltipText = tip };

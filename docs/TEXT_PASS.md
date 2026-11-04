@@ -14,8 +14,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 
 ## Still open
 
-- The evolution names are written as names ("Second Path", "Smart Motes"), but "Build your Core" mixes the two styles.
-- `Toolbar.cs:103`: the Remove button on a tool says "Take this away".
+Nothing.
 
 
 ## Tutorial
@@ -84,7 +83,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Toolbar.cs:100` | Grow a grove · Grow a seedling | |
 | `Toolbar.cs:101` | Grow the Hub | |
 | `Toolbar.cs:102` | Hub upgrades · Take it off its pot or trellis | |
-| `Toolbar.cs:103` | Prune · Take this away | |
+| `Toolbar.cs:103` | Prune · Remove | |
 | `Toolbar.cs:177` | Cancel the {kind} bud (its growth is lost) | |
 | `Toolbar.cs:178` | Change the bud to {kind} (it starts over) | |
 | `Toolbar.cs:185` | {Links}/{MaxLinks} links used | |
@@ -330,7 +329,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Evolutions.cs:89` | Wildflower limit | |
 | `Evolutions.cs:90` | Wildflower output +{WildEffect}% | |
 | `Evolutions.cs:91` | Buffs {BuffBonus}% of the output | |
-| `Evolutions.cs:118` | Build your Core | |
+| `Evolutions.cs:118` | Core Growth | |
 | `Evolutions.cs:120` | Second Path | |
 | `Evolutions.cs:122` | Long Stemmed | |
 | `Evolutions.cs:124` | Smart Motes | |
