@@ -593,9 +593,10 @@ public class BalanceTests
         var caps = (Environment.GetEnvironmentVariable("BALANCE_STAGE") ?? "12,4,2,1").Split(',').Select(int.Parse).ToArray();
         var stage = new Stage("custom", caps[0], caps[1], caps[2], caps.Length > 3 ? caps[3] : 0);
         int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 1500;
-        // (With any hand-built gardens given, and at 12/4/2/1 the best found by hand, Nov 4: 5,731 genes an hour.)
+        // (With any hand-built gardens given, or else the best found by hand at 12/4/2/1 wherever it fits, Nov 4: 5,731 genes
+        // an hour; a stage with more room is never worse than one with less.)
         var templates = Templates(stage);
-        var extra = (Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? (caps.SequenceEqual([12, 4, 2, 1]) ? BestGrove : ""))
+        var extra = (Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? BestGrove)
             .Split(';', StringSplitOptions.RemoveEmptyEntries).Select(t => Parse(t.Trim())).Where(t => Fits(t, stage, null));
         templates.AddRange(extra);
         var started = DateTime.Now;
