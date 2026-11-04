@@ -492,12 +492,16 @@ public class PacingTests
         if (double.TryParse(Environment.GetEnvironmentVariable("HUB_STEP"), out double step)) Tuning.HubPointStep = step;
         if (double.TryParse(Environment.GetEnvironmentVariable("HUB_GROWTH"), out double growth)) Tuning.HubPointGrowth = growth;
         if (double.TryParse(Environment.GetEnvironmentVariable("HUB_POWER"), out double power)) Tuning.HubPointPower = power;
+        // The player (PLAYER: bad, medium or best; see SmartPlayer.Style).
+        SmartPlayer.Style = Enum.TryParse<SmartPlayer.PlayStyle>(Environment.GetEnvironmentVariable("PLAYER"), true, out var style)
+            ? style : SmartPlayer.PlayStyle.Medium;
         var text = new System.Text.StringBuilder();
         void Log(string line)
         {
             TestContext.Current.TestOutputHelper?.WriteLine(line);
             text.AppendLine(line);
         }
+        Log($"Player: {SmartPlayer.Style}");
         Log($"Hub points: first {Tuning.HubFirstPoint:#,0} genes, each {Tuning.HubPointGrowth}x the last, times its number to the {Tuning.HubPointPower}, and {Tuning.HubPointStep:#,0} more "
             + $"(point 10 {Tuning.HubPointCost(9):#,0}, 46 {Tuning.HubPointCost(45):#,0}, 92 {Tuning.HubPointCost(91):#,0}; all 92 "
             + $"{Enumerable.Range(0, Hubs.TotalPoints).Sum(Tuning.HubPointCost):#,0})");

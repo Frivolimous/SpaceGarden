@@ -22,6 +22,32 @@ namespace SpaceGarden.Core.Tests;
 //     (Hub).
 public static class SmartPlayer
 {
+    // Three players for pacing runs (Jeremy, Nov 4: fixed builds, so runs compare), from the balance tests:
+    //   - Medium: the player above (evolutions at random, Buffers pruned, generators where the garden is hungriest).
+    //   - Best: evolutions by the balance test's ranking (Second Path, Rapid Evolution, Smart Motes, then, with Rapid
+    //     Evolution's drain, Best Generation...), Buffers kept, generators one to a stem (a branch's own).
+    //   - Bad: evolutions in the reverse order (More Power first), every wildflower kept where it grew (a Resistor too),
+    //     labs on the core's links and at any depth, generators side by side, the Hub's points on any path.
+    public enum PlayStyle { Bad, Medium, Best }
+    public static PlayStyle Style = PlayStyle.Medium;
+
+    static readonly EvolutionKind[] BestOrder =
+    [
+        EvolutionKind.SecondPath, EvolutionKind.RapidEvolution, EvolutionKind.SmartParticles, EvolutionKind.WildBloom,
+        EvolutionKind.PulsarPower, EvolutionKind.ResonantFrequency, EvolutionKind.BuildYourCore, EvolutionKind.LongStemmed,
+        EvolutionKind.MorePower,
+    ];
+
+    // Where an evolution stands in the player's order (lower first): the best player's, with Best Generation next after
+    // Rapid Evolution (its drain wants the power); the bad player's the reverse.
+    static int Rank(Garden garden, EvolutionKind kind)
+    {
+        int at = Array.IndexOf(BestOrder, kind);
+        if (at < 0) at = BestOrder.Length;
+        if (Style == PlayStyle.Best && kind == EvolutionKind.PulsarPower && garden.Taken(EvolutionKind.RapidEvolution) > 0) at = -1;
+        return Style == PlayStyle.Bad ? -at : at;
+    }
+
     const int GroveEvery = 15;
     const float Reserve = 1; // power a second
 
@@ -91,7 +117,8 @@ public static class SmartPlayer
         var care = CareOf(garden);
         if (!care.Rebuilt) Rebuild(garden, hub, care);
         while (Hubs.Paths.Where(p => garden.CanBuyHubLevel(p.Kind))
-            .OrderByDescending(p => HubValue(garden, p) / p.Cost(garden.HubLevel(p.Kind) + 1))
+            .OrderByDescending(p => Style == PlayStyle.Bad ? new Random(garden.HubPointsEarned * 31 + (int)p.Kind).NextDouble()
+                : HubValue(garden, p) / p.Cost(garden.HubLevel(p.Kind) + 1))
             .ThenBy(p => ToMilestone(garden, p)).FirstOrDefault() is { } path)
         {
             garden.BuyHubLevel(path.Kind);
@@ -250,15 +277,16 @@ public static class SmartPlayer
             var dice = new Random(seedling.Id * 7919 + garden.Evolved.Count);
             while (offers.Count > 0)
             {
-                var pick = offers[dice.Next(offers.Count)];
+                var pick = Style == PlayStyle.Medium ? offers[dice.Next(offers.Count)] : offers.MinBy(k => Rank(garden, k));
                 if (garden.Choose(seedling, pick)) break;
                 offers.Remove(pick);
             }
         }
     }
 
-    // Labs deeper than this lose most of their gene blobs on the way (they wander), so they aren't worth their upkeep.
-    const int MaxLabDepth = 4;
+    // Labs deeper than this lose most of their gene blobs on the way (they wander), so they aren't worth their upkeep
+    // (the bad player doesn't know).
+    static int MaxLabDepth => Style == PlayStyle.Bad ? 99 : 4;
 
     static int FreeLinks(Garden garden) => garden.Nodes.Count(n => !n.Spec.IsFruit && n.CanBranch);
 
@@ -321,9 +349,11 @@ public static class SmartPlayer
     // Tendrils, Big Stems and Comet Blooms (which wither on their own) stay.
     static void PruneWild(Garden garden)
     {
+        if (Style == PlayStyle.Bad) return; // (keeps whatever grows)
         foreach (var flower in garden.Nodes.Where(n => n.Branches.Count == 0 && n.Spec.Kind switch
             {
-                NodeKind.Resistor or NodeKind.Moonflower or NodeKind.NebulaBloom or NodeKind.Buffer => true,
+                NodeKind.Resistor or NodeKind.Moonflower or NodeKind.NebulaBloom => true,
+                NodeKind.Buffer => Style != PlayStyle.Best || n.Depth > MaxLabDepth, // (the best player keeps one near the labs)
                 NodeKind.Amplifier => n.Depth > MaxLabDepth,
                 NodeKind.Ember => n.Age > Tuning.EmberLifeSeconds / 2,
                 _ => false,
@@ -336,10 +366,16 @@ public static class SmartPlayer
     static bool Bud(Garden garden, NodeKind kind, bool nearFirst, bool middle = false, int maxDepth = int.MaxValue,
         bool hungriest = false)
     {
+        // (The bad player puts a lab on a core link too; generators go one to a stem for the best player, side by side
+        // for the bad one.)
+        bool onCore = kind == NodeKind.Stem || (Style == PlayStyle.Bad && kind == NodeKind.Lab);
+        bool Paired(PlantNode n) => n.Branches.Any(b => Garden.IsBudOf(b.Spec.Kind, NodeKind.Generator))
+            || n.Forming is { } f && Garden.IsBudOf(f, NodeKind.Generator);
         var spots = garden.Nodes
-            .Where(n => !n.Spec.IsFruit && (n.Parent != null || kind == NodeKind.Stem) && n.Depth < maxDepth
+            .Where(n => !n.Spec.IsFruit && (n.Parent != null || onCore) && n.Depth < maxDepth
                 && garden.CanSproutFrom(n, kind))
-            .OrderBy(n => hungriest ? n.Fill : 0)
+            .OrderBy(n => kind != NodeKind.Generator || Style == PlayStyle.Medium ? 0 : Style == PlayStyle.Best ? (Paired(n) ? 1 : 0) : (Paired(n) ? 0 : 1))
+            .ThenBy(n => hungriest ? n.Fill : 0)
             .ThenBy(n => nearFirst ? n.Depth : -n.Depth).ThenBy(n => n.Id).ToList();
         if (spots.Count == 0) return false;
         var spot = middle ? spots.OrderBy(n => n.Depth).ElementAt(spots.Count / 2) : spots[0];
