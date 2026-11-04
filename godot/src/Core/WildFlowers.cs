@@ -90,23 +90,24 @@ static class WildFlowers
         yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Start,
             "About twice a generator's power gen, released in bursts. Takes a wildflower and a generator slot.", "Power released in bursts.") with
         {
-            // (19, not the table's 24, Jeremy, Nov 3-4: it works at full output all the way to 150%, past full, so it
-            // beats a generator, which slows as it fills, by more than the numbers say.)
-            PowerStore = 200, PowerPerSecond = 19, PowerWeight = 0.9f,
+            // (20, not the table's 24, Jeremy, Nov 3-4: it works at full output all the way to 150%, past full, so it
+            // beats a generator, which slows as it fills, by more than the numbers say; 21, then 19, then 20 after the
+            // balance test.)
+            PowerStore = 200, PowerPerSecond = 20, PowerWeight = 0.9f,
             BurstShare = Tuning.PulsarBurst, BurstFill = Tuning.PulsarBurstFill,
         };
         yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Start,
             "A generator that continues the branch: 2 links. Takes a wildflower and a generator slot.", "Generator with 2 links.") with
         {
             MaxLinks = 2, Fruit = NodeKind.Berry,
-            PowerStore = 200, PowerPerSecond = 12, PowerWeight = 1.1f, PowerTransferPerSecond = 42,
+            PowerStore = 200, PowerPerSecond = 14, PowerWeight = 1.1f, PowerTransferPerSecond = 42, // (Nov 4, the balance test: was 12)
         };
         yield return Wild(generator, NodeKind.Ember, "Ember", Shape.Flame, 0xF0BE50, WildUnlock.Start,
             "Starts with a high power gen that fades over 24h. Takes a wildflower and a generator slot.",
             "Powerful, but burns out after 24h.") with
         {
             LifeSeconds = Tuning.EmberLifeSeconds, Dims = true, Fruit = null, MaxFruits = 0,
-            PowerStore = 200, PowerPerSecond = 30, PowerWeight = 1, PowerTransferPerSecond = 54,
+            PowerStore = 200, PowerPerSecond = 36, PowerWeight = 1, PowerTransferPerSecond = 54, // (Nov 4, the balance test: was 30)
         };
 
         // The grove kinds. A growth blob of BlobValue 2 carries 0.2 growth, twice a grove's.
