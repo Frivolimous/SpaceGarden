@@ -488,6 +488,87 @@ public class BalanceTests
         Assert.Skip(text.ToString());
     }
 
+    // The best garden at 12 stems, 4 generators, 2 core links and a grove, hand-built (Nov 4: 5,731 genes an hour; no
+    // search from scratch came near it).
+    const string BestGrove = "C(s(s(s(G L) s(L g)) s(s(L g) L)) s(s(s(L L) s(L g)) s(s(L g) L)))";
+
+    // Every way to put one wildflower into a layout: in place of any part (with what grows beyond it, if it has the
+    // links), in before any part (if it has a link onward), or on a free link; those that fit the caps.
+    static IEnumerable<Part> Placements(Part layout, Stage stage, NodeKind wild)
+    {
+        int count = layout.All().Count();
+        for (int i = 1; i < count; i++)
+        {
+            var copy = layout.Copy();
+            var p = copy.All().ElementAt(i);
+            if (p.Kind == NodeKind.Grove) continue;
+            p.Kind = wild;
+            if (Fits(copy, stage, wild)) yield return copy;
+        }
+        if (Links(new Part(wild), stage) > 0)
+            for (int i = 1; i < count; i++)
+            {
+                var copy = layout.Copy();
+                var before = copy.All().ElementAt(i);
+                var above = before.Up!;
+                before.Detach();
+                var flower = new Part(wild);
+                above.Attach(flower);
+                flower.Attach(before);
+                if (Fits(copy, stage, wild)) yield return copy;
+            }
+        for (int i = 0; i < count; i++)
+        {
+            var copy = layout.Copy();
+            var p = copy.All().ElementAt(i);
+            if (p.Kids.Count >= Links(p, stage)) continue;
+            p.Attach(new Part(wild));
+            if (Fits(copy, stage, wild)) yield return copy;
+        }
+    }
+
+    // Each wildflower built into the best hand-built garden (BALANCE_LAYOUTS's first, or BestGrove): every placement
+    // measured on two seeds, the search run from the best three (BALANCE_STEPS a climb, 1500 by default), the winner
+    // judged on six; against the garden alone, climbed as much.
+    [Fact]
+    public void HandBuiltWild()
+    {
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
+        var caps = (Environment.GetEnvironmentVariable("BALANCE_STAGE") ?? "12,4,2,1").Split(',').Select(int.Parse).ToArray();
+        var stage = new Stage("custom", caps[0], caps[1], caps[2], caps.Length > 3 ? caps[3] : 0);
+        int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 1500;
+        var layout = Parse((Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? BestGrove).Split(';')[0].Trim());
+        Assert.True(Fits(layout, stage, null), "the garden doesn't fit the stage");
+        var started = DateTime.Now;
+        var baseline = new[] { layout, Climb(layout, stage, null, steps, 77).Layout }.Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
+        var results = new ConcurrentDictionary<NodeKind, ((Part Layout, double Genes, double Spread, Measure Measure) Best, int Spots, double Placed)>();
+        Parallel.ForEach(Tested, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, w =>
+        {
+            var spots = Placements(layout, stage, w).ToList();
+            var ranked = spots.Select(p => (Layout: p, Genes: (Run(p, stage, 1).Score + Run(p, stage, 2).Score) / 2))
+                .OrderByDescending(r => r.Genes).ToList();
+            var climbed = ranked.Take(3).Select((r, i) => Climb(r.Layout, stage, w, steps, 300 + i).Layout)
+                .Append(ranked[0].Layout).Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
+            results[w] = (climbed, spots.Count, ranked[0].Genes);
+        });
+        var text = new StringBuilder($"Each wildflower built into the best hand-built garden ({stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links, {stage.Groves} grove), every placement tried, then {steps} search steps from the best three:\n");
+        text.AppendLine($"  {"",-11} {"genes/h",7} {"±",4} {"vs none",7} {"placed",7}  {"stems",5} {"gens",4} {"labs",4} {"fill",5} {"power",9}  layout");
+        void Row(string name, (Part Layout, double Genes, double Spread, Measure Measure) r, string placed)
+        {
+            var m = r.Measure;
+            string delta = name == "none" ? "" : $"{(r.Genes / baseline.Genes - 1) * 100:+0;-0}%";
+            text.AppendLine($"  {name,-11} {r.Genes,7:0} {r.Spread,4:0} {delta,7} {placed,7}  {m.Stems,5} {m.Generators,4} {m.Labs,4} {m.LabFill,5:0%} {m.Production,4:0}/{m.Upkeep,-4:0}  {r.Layout.Show()}");
+        }
+        Row("none", baseline, "");
+        foreach (var (w, r) in results.OrderByDescending(r => r.Value.Best.Genes))
+            Row(NodeSpecs.All[w].Name, r.Best, $"{(r.Placed / baseline.Genes - 1) * 100:+0;-0}%");
+        text.AppendLine("  (placed: the best placement alone, before the search; each tried among "
+            + string.Join(", ", results.OrderBy(r => r.Key).Select(r => $"{NodeSpecs.All[r.Key].Name} {r.Value.Spots}")) + " spots)");
+        text.AppendLine($"  ({(DateTime.Now - started).TotalMinutes:0.#} minutes)");
+        if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
+        Assert.Skip(text.ToString());
+    }
+
     // For a feel of the search's cost: one short climb.
     [Fact]
     public void BalanceRunTime()
