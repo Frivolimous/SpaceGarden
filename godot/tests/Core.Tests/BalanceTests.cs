@@ -13,14 +13,14 @@ public class BalanceTests
 {
     const double Hour = 3600;
 
-    // The stages: the unlocks of the pacing run's median garden at about day 1, 3 and 10 (Nov 4), with no seedling's
-    // evolutions (so the core keeps its 2 links).
+    // The stages: the unlocks of the pacing run's typical garden at about day 1, 2 and 3 (Nov 4: its stems and
+    // generators bought each day), with no seedling's evolutions (so the core keeps its 2 links).
     public sealed record Stage(string Name, int Stems, int Generators, int CoreLinks);
     static readonly Stage[] Stages =
     [
-        new("early (day 1)", 12, 4, 2),
-        new("mid (day 3)", 19, 8, 2),
-        new("late (day 10)", 28, 12, 2),
+        new("day 1", 12, 4, 2),
+        new("day 2", 16, 6, 2),
+        new("day 3", 19, 8, 2),
     ];
 
     // The wildflowers tested in isolation (the rest need growth, or other wildflowers, to show).
