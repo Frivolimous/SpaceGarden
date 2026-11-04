@@ -170,7 +170,7 @@ public class BalanceTests
         NodeKind AnyKind() => kinds[rng.Next(kinds.Length)];
         var open = parts.Where(p => p.Kids.Count < Links(p, stage)).ToList();
         var others = parts.Where(p => p.Kind != NodeKind.Core).ToList();
-        switch (rng.Next(6))
+        switch (rng.Next(7))
         {
             case 0: // a new part on a free link
                 if (open.Count == 0) return null;
@@ -206,6 +206,15 @@ public class BalanceTests
                 var stem = new Part(rng.Next(3) == 0 && wild is { } k ? k : NodeKind.Stem);
                 up.Attach(stem);
                 stem.Attach(p);
+                break;
+            }
+            case 5: // a new stem on a free link, with a lab and a generator (or two labs) on it
+            {
+                if (open.Count == 0) return null;
+                var stem = new Part(NodeKind.Stem);
+                stem.Attach(new Part(NodeKind.Lab));
+                stem.Attach(new Part(rng.Next(2) == 0 ? NodeKind.Generator : NodeKind.Lab));
+                open[rng.Next(open.Count)].Attach(stem);
                 break;
             }
             default: // two parts swap kinds
@@ -270,7 +279,7 @@ public class BalanceTests
         foreach (var f in from)
         {
             var s = f.Copy();
-            if (wild is { } w)
+            if (wild is { } w && !Fits(s, stage, w))
             {
                 // (Fitted with the wildflower: on a free link if there is one, else in place of a part of its slot.)
                 var open = s.All().Where(p => p.Kids.Count < Links(p, stage)).ToList();
@@ -293,7 +302,7 @@ public class BalanceTests
             }
             starts.Add(s);
         }
-        var climbs = starts.Select((s, i) => Climb(s, stage, wild, steps, seed * 31 + i)).ToList();
+        var climbs = starts.AsParallel().Select((s, i) => Climb(s, stage, wild, steps, seed * 31 + i)).ToList();
         var (layout, _) = climbs.MaxBy(c => c.Measure.Score);
         var judged = Enumerable.Range(0, 6).Select(i => Run(layout, stage, 1000 + i)).ToList();
         double mean = judged.Average(m => m.GenesPerHour);
@@ -310,11 +319,16 @@ public class BalanceTests
         text.AppendLine($"Wildflower balance: the best garden at each stage with one wildflower, against the best with none ({steps} search steps a climb).");
         var started = DateTime.Now;
         var results = new ConcurrentDictionary<(int Stage, NodeKind? Wild), (Part Layout, double Genes, double Spread, Measure Measure)>();
-        // The baselines first (the wildflowers' searches start from them too), then the wildflowers, side by side.
-        Parallel.For(0, Stages.Length, i => results[(i, null)] = Best(Stages[i], null, steps, [], 11 + i));
-        var jobs = Enumerable.Range(0, Stages.Length).SelectMany(i => Tested.Select(w => (i, w))).ToList();
-        Parallel.ForEach(jobs, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, job =>
-            results[(job.i, job.w)] = Best(Stages[job.i], job.w, steps, [results[(job.i, null)].Layout], 101 + job.i * 17 + (int)job.w));
+        // Stage by stage, each search starting from the stage before's best too (its caps are less); the baseline first
+        // (the wildflowers' searches start from it too), then the wildflowers side by side.
+        for (int i = 0; i < Stages.Length; i++)
+        {
+            int at = i;
+            var before = (NodeKind? w) => at == 0 ? Enumerable.Empty<Part>() : [results[(at - 1, w)].Layout];
+            results[(i, null)] = Best(Stages[i], null, steps, before(null), 11 + i);
+            Parallel.ForEach(Tested, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, w =>
+                results[(at, w)] = Best(Stages[at], w, steps, before(w).Append(results[(at, null)].Layout), 101 + at * 17 + (int)w));
+        }
         for (int i = 0; i < Stages.Length; i++)
         {
             var stage = Stages[i];
