@@ -15,7 +15,8 @@ public class BalanceTests
 
     // The stages: the unlocks of the pacing run's typical garden at about day 1, 2 and 3 (Nov 4: its stems and
     // generators bought each day), with no seedling's evolutions (so the core keeps its 2 links).
-    public sealed record Stage(string Name, int Stems, int Generators, int CoreLinks);
+    // Groves: how many groves a layout must have (a real garden keeps one to grow; Jeremy, Nov 4).
+    public sealed record Stage(string Name, int Stems, int Generators, int CoreLinks, int Groves = 0);
     static readonly Stage[] Stages =
     [
         new("day 1", 12, 4, 2),
@@ -81,19 +82,20 @@ public class BalanceTests
 
     static string Short(NodeKind kind) => kind switch
     {
-        NodeKind.Core => "C", NodeKind.Stem => "s", NodeKind.Generator => "g", NodeKind.Lab => "L",
+        NodeKind.Core => "C", NodeKind.Stem => "s", NodeKind.Generator => "g", NodeKind.Lab => "L", NodeKind.Grove => "G",
         _ => NodeSpecs.All[kind].Name.Replace(" ", "").ToUpperInvariant(),
     };
 
     // (A part's links count the one to its parent; the core's are all branches.)
     static int Links(Part p, Stage stage) => p.Kind == NodeKind.Core ? stage.CoreLinks : NodeSpecs.All[p.Kind].MaxLinks - 1;
 
-    // Whether a layout fits the stage's caps and holds the wildflower once (or none, for the baseline).
+    // Whether a layout fits the stage's caps, has its groves, and holds the wildflower once (or none, for the baseline).
     static bool Fits(Part core, Stage stage, NodeKind? wild)
     {
-        int stems = 0, generators = 0, wilds = 0;
+        int stems = 0, generators = 0, wilds = 0, groves = 0;
         foreach (var p in core.All())
         {
+            if (p.Kind == NodeKind.Grove) groves++;
             if (p.Kids.Count > Links(p, stage)) return false;
             if (p.Kind == NodeKind.Core) continue;
             var slot = Garden.SlotOf(p.Kind);
@@ -101,7 +103,7 @@ public class BalanceTests
             if (slot == NodeKind.Generator) generators++;
             if (NodeSpecs.All[p.Kind].IsWild) wilds++;
         }
-        return stems <= stage.Stems && generators <= stage.Generators && wilds == (wild == null ? 0 : 1);
+        return stems <= stage.Stems && generators <= stage.Generators && wilds == (wild == null ? 0 : 1) && groves == stage.Groves;
     }
 
     // ==== MEASURING ==== \\
@@ -272,6 +274,13 @@ public class BalanceTests
     {
         var core = new Part(NodeKind.Core);
         if (wild is { } w) core.Attach(new Part(w)); // (the one wildflower the search must keep)
+        if (stage.Groves > 0)
+        {
+            // (and the groves, on a stem of their own)
+            var stem = new Part(NodeKind.Stem);
+            for (int i = 0; i < stage.Groves; i++) stem.Attach(new Part(NodeKind.Grove));
+            core.Attach(stem);
+        }
         for (int i = 0, misses = 0; i < 400 && misses < 60; i++)
         {
             var open = core.All().Where(p => p.Kids.Count < Links(p, stage)).ToList();
@@ -430,7 +439,7 @@ public class BalanceTests
             string name = text[start..at];
             var kind = name switch
             {
-                "C" => NodeKind.Core, "s" => NodeKind.Stem, "g" => NodeKind.Generator, "L" => NodeKind.Lab,
+                "C" => NodeKind.Core, "s" => NodeKind.Stem, "g" => NodeKind.Generator, "L" => NodeKind.Lab, "G" => NodeKind.Grove,
                 _ => NodeSpecs.All.Values.First(spec => spec.Name.Replace(" ", "").ToUpperInvariant() == name).Kind,
             };
             var part = new Part(kind);
@@ -449,20 +458,20 @@ public class BalanceTests
         return Read();
     }
 
-    // Hand-built layouts (BALANCE_LAYOUTS, split by ';') at one stage (BALANCE_STAGE "stems,generators,core links",
-    // 12,4,2 by default), each measured over six seeds, against a long search from scratch (BALANCE_STEPS a climb,
+    // Hand-built layouts (BALANCE_LAYOUTS, split by ';') at one stage (BALANCE_STAGE "stems,generators,core links,groves",
+    // 12,4,2,1 by default: one grove, as a real garden keeps), each measured over six seeds, against a long search from scratch (BALANCE_STEPS a climb,
     // BALANCE_CLIMBS climbs: 3000 and 8 by default) and from each hand-built one.
     [Fact]
     public void HandBuilt()
     {
         Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
-        var caps = (Environment.GetEnvironmentVariable("BALANCE_STAGE") ?? "12,4,2").Split(',').Select(int.Parse).ToArray();
-        var stage = new Stage("custom", caps[0], caps[1], caps[2]);
+        var caps = (Environment.GetEnvironmentVariable("BALANCE_STAGE") ?? "12,4,2,1").Split(',').Select(int.Parse).ToArray();
+        var stage = new Stage("custom", caps[0], caps[1], caps[2], caps.Length > 3 ? caps[3] : 0);
         int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 3000;
         int climbs = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_CLIMBS"), out int c) ? c : 8;
         var hand = (Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries)
             .Select(t => Parse(t.Trim())).ToList();
-        var text = new StringBuilder($"Hand-built against searched, {stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links:\n");
+        var text = new StringBuilder($"Hand-built against searched, {stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links, {stage.Groves} grove(s):\n");
         void Row(string name, (Part Layout, double Genes, double Spread, Measure Measure) r) => text.AppendLine(
             $"  {name,-14} {r.Genes,6:0} ±{r.Spread,-4:0} {r.Measure.Stems,2}s {r.Measure.Generators,2}g {r.Measure.Labs,2}L fill {r.Measure.LabFill:0%} power {r.Measure.Production:0}/{r.Measure.Upkeep:0}{(r.Measure.Overloaded ? " OVERLOADED" : "")}  {r.Layout.Show()}");
         foreach (var (h, i) in hand.Select((h, i) => (h, i)))
