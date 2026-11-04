@@ -181,7 +181,7 @@ public class BalanceTests
         NodeKind AnyKind() => kinds[rng.Next(kinds.Length)];
         var open = parts.Where(p => p.Kids.Count < Links(p, stage)).ToList();
         var others = parts.Where(p => p.Kind != NodeKind.Core).ToList();
-        switch (rng.Next(7))
+        switch (rng.Next(9))
         {
             case 0: // a new part on a free link
                 if (open.Count == 0) return null;
@@ -226,6 +226,31 @@ public class BalanceTests
                 stem.Attach(new Part(NodeKind.Lab));
                 stem.Attach(new Part(rng.Next(2) == 0 ? NodeKind.Generator : NodeKind.Lab));
                 open[rng.Next(open.Count)].Attach(stem);
+                break;
+            }
+            case 6: // the wildflower moved: what grew beyond it goes to its parent, and it goes in before another part
+            {
+                if (wild is not { } k || copy.All().FirstOrDefault(p => p.Kind == k) is not { } flower) return null;
+                var up = flower.Up!;
+                flower.Detach();
+                foreach (var kid in flower.Kids.ToList())
+                {
+                    flower.Kids.Remove(kid);
+                    up.Attach(kid);
+                }
+                var spots = copy.All().Where(p => p.Kind != NodeKind.Core).ToList();
+                if (Links(flower, stage) == 0 || spots.Count == 0)
+                {
+                    var free = copy.All().Where(p => p.Kids.Count < Links(p, stage)).ToList();
+                    if (free.Count == 0) return null;
+                    free[rng.Next(free.Count)].Attach(flower);
+                    break;
+                }
+                var before = spots[rng.Next(spots.Count)];
+                var above = before.Up!;
+                before.Detach();
+                above.Attach(flower);
+                flower.Attach(before);
                 break;
             }
             default: // two parts swap kinds
