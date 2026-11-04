@@ -252,6 +252,11 @@ public class PacingTests
         ("40 stems", g => g.StemsBought >= 36),
         ("third seedling slot", g => g.CoreBought > CoreAt(UpgradeKind.Seedling, 2)),
         ("455,150 genes earned", g => g.Genes >= 455_150),
+        ("Hub grown", g => g.HubPlanted),
+        ("first Hub level", g => g.HubLevelsBought >= 1),
+        ("10 Hub levels", g => g.HubLevelsBought >= 10),
+        ("20 Hub levels", g => g.HubLevelsBought >= 20),
+        ("40 Hub levels", g => g.HubLevelsBought >= 40),
     ];
 
     static string Describe(Garden garden)
@@ -265,7 +270,12 @@ public class PacingTests
             + $"labs at {Fills(garden, NodeKind.Lab)}, groves at {Fills(garden, NodeKind.Grove)}, "
             + $"genes {garden.Genes:0} (balance {garden.GeneBalance:0}), +{production:0.0}/s -{upkeep:0.0}/s"
             + $", wild {garden.WildCount}/{garden.Capacity.WildFlowers}: "
-            + string.Join(", ", garden.Nodes.Where(n => n.Spec.IsWild).GroupBy(n => n.Spec.Name).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}"));
+            + string.Join(", ", garden.Nodes.Where(n => n.Spec.IsWild).GroupBy(n => n.Spec.Name).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}"))
+            + (garden.HubPlanted || garden.HubPointsEarned > 0
+                ? $"; Hub: {garden.HubGenes:0} genes caught, {garden.HubPointsEarned} points earned ({garden.HubPoints} unspent), "
+                    + $"{garden.HubLevelsBought} levels: " + string.Join(", ", garden.HubLevels.Where(l => l.Value > 0)
+                        .OrderByDescending(l => l.Value).ThenBy(l => l.Key.ToString()).Select(l => $"{NodeSpecs.All[l.Key].Name} {l.Value}"))
+                : "");
     }
 
     // The average fill of a kind of part, as a percentage.
@@ -275,7 +285,8 @@ public class PacingTests
     // When each milestone was reached (hours from planting; infinity if not), the genes earned by each day's end, the
     // longest wait between upgrades each day (awake hours) and the upgrades bought at each day's first check-in, after
     // the night.
-    sealed record Run(double[,] Reached, double[,] GenesByDay, double[,] LongestWait, double[,] AfterSleep);
+    sealed record Run(double[,] Reached, double[,] GenesByDay, double[,] LongestWait, double[,] AfterSleep,
+        double[,] HubGenesByDay, double[,] HubLevelsByDay);
 
     // Awake hours from planting to this many hours in (the player sleeps the last 8 of each day: see SmartPlayer.Awake).
     static double AwakeHours(double hours) => Math.Floor(hours / 24) * 16 + Math.Min(hours % 24, 16);
@@ -304,7 +315,8 @@ public class PacingTests
         var seeds = new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         var shownDays = new[] { 1, 3, 7, 10, 14, 21, 30 }.Where(d => d <= days).Append(days).ToHashSet();
         var run = new Run(new double[seeds.Length, Milestones.Length], new double[seeds.Length, days],
-            new double[seeds.Length, days], new double[seeds.Length, days]);
+            new double[seeds.Length, days], new double[seeds.Length, days], new double[seeds.Length, days],
+            new double[seeds.Length, days]);
         for (int s = 0; s < seeds.Length; s++)
             for (int m = 0; m < Milestones.Length; m++) run.Reached[s, m] = double.PositiveInfinity;
         const double step = 600;
@@ -340,6 +352,8 @@ public class PacingTests
                     Check((t + dt) / Hour); // genes earned as they arrive
                 }
                 run.GenesByDay[s, day - 1] = garden.Genes;
+                run.HubGenesByDay[s, day - 1] = garden.HubGenes;
+                run.HubLevelsByDay[s, day - 1] = garden.HubLevelsBought;
                 if (shownDays.Contains(day)) lines[s].Add($"  day {day,2}: {Describe(garden)}");
             }
             var waits = LongestWaits(boughtAt, days);
@@ -398,7 +412,10 @@ public class PacingTests
                 + $"upgrades median {Median(run.LongestWait, day - 1):0.#} h, worst {waits.Max():0.#} h"
                 + (day > 1 ? $"; bought after the night median {Median(run.AfterSleep, day - 1):0}, range "
                     + $"{Enumerable.Range(0, run.AfterSleep.GetLength(0)).Min(s => run.AfterSleep[s, day - 1]):0}-"
-                    + $"{Enumerable.Range(0, run.AfterSleep.GetLength(0)).Max(s => run.AfterSleep[s, day - 1]):0}" : ""));
+                    + $"{Enumerable.Range(0, run.AfterSleep.GetLength(0)).Max(s => run.AfterSleep[s, day - 1]):0}" : "")
+                + (Median(run.HubGenesByDay, day - 1) > 0 || Median(run.HubLevelsByDay, day - 1) > 0
+                    ? $"; the Hub's genes caught median {Median(run.HubGenesByDay, day - 1):#,0}, levels median {Median(run.HubLevelsByDay, day - 1):0}"
+                    : ""));
         }
         for (int s = 0; s < run.Reached.GetLength(0); s++)
             Assert.True(run.Reached[s, 0] <= 1, $"seed {s + 1} bought its first stem at {run.Reached[s, 0]:0.#} h\n{text}");

@@ -14,7 +14,9 @@ namespace SpaceGarden.Core.Tests;
 //   - adds labs near the core (within MaxLabDepth) while the power to spare covers one, keeping a small reserve and
 //     a free link for the plant to grow on;
 //   - fills the generator cap with generators where the plant is hungriest (lowest on power);
-//   - keeps a grove for every GroveEvery stems, planted mid-plant.
+//   - keeps a grove for every GroveEvery stems, planted mid-plant;
+//   - grows the Hub once it's bought, on the free link nearest the core, and spends its points at every check-in, on
+//     the first path in HubOrder whose next level they cover (Hub).
 public static class SmartPlayer
 {
     const int GroveEvery = 15;
@@ -37,6 +39,7 @@ public static class SmartPlayer
         if (Count(garden, NodeKind.Lab) == 0 && !Forming(garden, NodeKind.Lab) && FreeLinks(garden) > 1)
             Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth);
         Seedlings(garden);
+        Hub(garden);
         while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
         while (Spare(garden) >= -NodeSpecs.All[NodeKind.Lab].PowerPerSecond + Reserve && FreeLinks(garden) > 1
             && Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth)) { }
@@ -48,6 +51,29 @@ public static class SmartPlayer
     }
 
     static int GrovesWanted(Garden garden) => 1 + Count(garden, NodeKind.Stem) / GroveEvery;
+
+    // The Hub (Nov 4): grown as soon as it's bought, on the free link nearest the core (off the core itself, which grows
+    // only stems), where the gene motes on their way in pass it; labs may then grow on its links too. Its points go on
+    // the first path in HubOrder whose next level they cover, again and again (no saving for a dearer level).
+    static void Hub(Garden garden)
+    {
+        if (garden.CanPlantHub && !Forming(garden, NodeKind.Hub)) Bud(garden, NodeKind.Hub, nearFirst: true);
+        while (HubOrder(garden).FirstOrDefault(garden.CanBuyHubLevel) is { } kind && garden.CanBuyHubLevel(kind))
+            garden.BuyHubLevel(kind);
+    }
+
+    // What the player raises first: genes, power, stems, the Hub's own links, then the wildflowers it has the most of,
+    // groves, and the rest in the panel's order.
+    static IEnumerable<NodeKind> HubOrder(Garden garden)
+    {
+        NodeKind[] first = [NodeKind.Lab, NodeKind.Generator, NodeKind.Stem, NodeKind.Hub];
+        var wild = garden.Nodes.Where(n => n.Spec.IsWild).GroupBy(n => n.Spec.Kind).OrderByDescending(g => g.Count())
+            .Select(g => g.Key);
+        return first.Concat(wild).Append(NodeKind.Grove).Concat(Hubs.Paths.Select(p => p.Kind)).Distinct();
+    }
+
+    // For tests: one check-in's Hub care alone.
+    internal static void TendHub(Garden garden) => Hub(garden);
 
     // Spends the gene balance. While the garden is short of power (it couldn't keep another lab full) and every
     // generator it may have is grown, the next generator comes first: bought if the balance covers it, saved for if

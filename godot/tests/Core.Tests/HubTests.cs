@@ -293,3 +293,29 @@ public class HubTests
         Assert.Equal(Tuning.HubLichenGen, Garden.TransferPerSecond(lichen), 3);
     }
 }
+
+// The pacing runs' player and the Hub (Nov 4): it grows the Hub once bought, and spends its points on labs first.
+public class SmartPlayerHubTests
+{
+    [Fact]
+    public void ItGrowsTheHubOnceBoughtAndSpendsItsPointsLabsFirst()
+    {
+        var garden = Garden.New(Layout.Radial, seed: 7);
+        garden.PassiveGrowth = false;
+        var stem = garden.GrowBranch(garden.Core, NodeKind.Stem)!;
+        garden.GrowBranch(stem, NodeKind.Lab);
+        SmartPlayer.TendHub(garden);
+        Assert.DoesNotContain(garden.Nodes, n => n.Forming == NodeKind.Hub); // not bought yet
+
+        garden.Capacity = garden.Capacity with { Hubs = 1 };
+        SmartPlayer.TendHub(garden);
+        Assert.Equal(NodeKind.Hub, stem.Forming); // the free link nearest the core (the core grows only stems)
+
+        stem.Forming = null;
+        garden.PlantHub();
+        garden.HubPoints = 5;
+        SmartPlayer.TendHub(garden);
+        Assert.Equal(4, garden.HubLevel(NodeKind.Lab)); // 1 + 1 + 2 + 1 points
+        Assert.Equal(0, garden.HubPoints);
+    }
+}
