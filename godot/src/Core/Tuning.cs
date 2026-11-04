@@ -177,7 +177,7 @@ public static class Tuning
     public const float PlantedWildChance = 0.25f;
 
     // Amplifier: a gene or growth blob passing it has its value doubled AmplifyChance of the time, once a blob at most.
-    public const float AmplifyChance = 0.5f;
+    public const float AmplifyChance = 0.25f; // (Jeremy, Nov 4: was 0.5; on a core link it added a quarter to the whole garden)
     // Pulsar: makes power up to PulsarBurstFill of its store, sending nothing, then sends PulsarBurst of its store at
     // once (Jeremy, Nov 3: half its store, at 150%).
     public const float PulsarBurst = 0.5f, PulsarBurstFill = 1.5f;
@@ -189,15 +189,15 @@ public static class Tuning
     public const float TendrilLink = 2.5f;
     public const int TendrilSplits = 2;
     // Wood (the Lumber Grove's fruit) and Glow: glow, a white fruit, sends GlowBlobs buff blobs an hour (one a minute).
-    // Buffer: BufferBlobs an hour (one every 5 s); each wanders BufferReach links (BufferAmplifiedReach more once it
+    // Buffer: BufferBlobs an hour (one every 4 s; Jeremy, Nov 4: was 5 s, and its reach 5 links); each wanders BufferReach links (BufferAmplifiedReach more once it
     // passes an Amplifier), and every part it passes that uses a buff makes BuffBonus more (power and blobs) for the
     // next BuffSeconds (Jeremy, Nov 3: 150% of its output, +50%, for 30 s; was a minute). A second buff only starts the
     // time again.
-    public const float BufferBlobs = 720, GlowBlobs = 60, BuffBonus = 0.5f, BuffSeconds = 30;
+    public const float BufferBlobs = 900, GlowBlobs = 60, BuffBonus = 0.5f, BuffSeconds = 30;
     // A buff blob is used up by the first part on its way that uses a buff and has none, or less than this many seconds
     // of one left; the rest pass it on (Jeremy, Nov 4: it was spent on every part it passed, and never used up).
     public const float BuffRefreshSeconds = 5;
-    public const int BufferReach = 5, BufferAmplifiedReach = 3;
+    public const int BufferReach = 6, BufferAmplifiedReach = 3;
     // Comet Bloom (Jeremy, Nov 3): active for CometActiveSeconds, then dormant, fading for CometFadeSeconds, then it
     // withers. While any is active, every gene and growth blob is worth CometBlobValue times as much, and buffs last
     // CometBuffTime times as long.

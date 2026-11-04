@@ -136,7 +136,13 @@ public class BalanceTests
     }
 
     static bool Overloads(Part core, Stage stage) =>
-        Build(core, stage, 0).FullPowerBalance() is var (production, upkeep) && upkeep > production;
+        Build(core, stage, 0) is var garden && garden.FullPowerBalance() is var (production, upkeep)
+        && upkeep > production * (garden.Nodes.Any(n => n.Spec.Sends == BlobKind.Buff) ? BuffSlack : 1);
+
+    // A garden with something sending buff motes (a Buffer, or glow fruit) may lean on its buffed generators to keep
+    // up, so it isn't turned away before it's run unless it's over by more than a buff could make up; once run, it
+    // overloads if what it would cost full is more than it would make full on average over the hour, buffs and all.
+    const float BuffSlack = 1.3f;
 
     static Measure Run(Part core, Stage stage, int seed)
     {
@@ -146,15 +152,20 @@ public class BalanceTests
         int stems = main.Count(n => Garden.SlotOf(n.Spec.Kind) == NodeKind.Stem);
         int generators = main.Count(n => Garden.SlotOf(n.Spec.Kind) == NodeKind.Generator);
         var labs = main.Where(n => n.Spec.Sends == BlobKind.Genes).ToList();
-        if (upkeep > production) return new(0, production, upkeep, stems, generators, labs.Count, 0);
+        bool buffs = garden.Nodes.Any(n => n.Spec.Sends == BlobKind.Buff);
+        if (upkeep > production * (buffs ? BuffSlack : 1)) return new(0, production, upkeep, stems, generators, labs.Count, 0);
         garden.Grow(Hour);
         double before = garden.Genes, fill = 0;
-        for (int i = 0; i < 6; i++)
+        float made = 0;
+        const int Samples = 60;
+        for (int i = 0; i < Samples; i++)
         {
-            garden.Grow(Hour / 6);
-            fill += labs.Count == 0 ? 0 : labs.Average(n => Math.Min(1, n.Fill)) / 6;
+            garden.Grow(Hour / Samples);
+            fill += labs.Count == 0 ? 0 : labs.Average(n => Math.Min(1, n.Fill)) / Samples;
+            made += garden.FullPowerBalance().Production / Samples;
         }
-        return new(garden.Genes - before, production, upkeep, stems, generators, labs.Count, fill);
+        if (upkeep > made) return new(0, made, upkeep, stems, generators, labs.Count, fill);
+        return new(garden.Genes - before, made, upkeep, stems, generators, labs.Count, fill);
     }
 
     // ==== THE SEARCH ==== \\

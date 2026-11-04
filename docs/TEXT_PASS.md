@@ -275,7 +275,7 @@ Nothing.
 | `WildFlowers.cs:21` | Wood · Raises output by 10%. | |
 | `WildFlowers.cs:27` | Glow · Sends 1 buff mote every 60s. | |
 | `WildFlowers.cs:59` | Amplifier | |
-| `WildFlowers.cs:60` | Gene and growth motes passing through have a 50% chance to double in value, buff motes move +3 steps. · Chance to double motes. | |
+| `WildFlowers.cs:60` | Gene and growth motes passing through have a 25% chance to double in value, buff motes move +3 steps. · Chance to double motes. | |
 | `WildFlowers.cs:67` | Resistor | |
 | `WildFlowers.cs:68` | Motes bounce off it from both sides. · Motes can't go through. | |
 | `WildFlowers.cs:75` | Tendril | |
@@ -298,7 +298,7 @@ Nothing.
 | `WildFlowers.cs:133` | Lichen | |
 | `WildFlowers.cs:134` | Slightly higher output than a lab, and its 4 leaves bring its drain to 0. · Leaves reduce its drain to 0. | |
 | `WildFlowers.cs:141` | Buffer | |
-| `WildFlowers.cs:142` | Buffed flowers have 50% increased output for 30s. Sends one buff mote every 5s. · Buffs nearby flowers. | |
+| `WildFlowers.cs:142` | Buffed flowers have 50% increased output for 30s. Sends one buff mote every 4s. · Buffs nearby flowers. | |
 | `WildFlowers.cs:146` | Comet Bloom | |
 | `WildFlowers.cs:147` | 10 minutes of double-value gene and growth motes, and buffs last twice as long. | |
 | `WildFlowers.cs:148` | Doubles all motes for 10m. | |

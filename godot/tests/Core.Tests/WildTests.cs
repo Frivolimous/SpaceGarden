@@ -276,7 +276,8 @@ public class WildTests
         double before = garden.Genes;
         garden.Grow(600); // about 120 blobs, all reaching the core (core - stem - amplifier - lab: the only way)
         double perBlob = (garden.Genes - before) / (Garden.BlobsPerHour(lab) * 600 / 3600);
-        Assert.InRange(perBlob, 1.3, 1.7); // 1.5 on average
+        double mean = 1 + Tuning.AmplifyChance;
+        Assert.InRange(perBlob, mean - 0.2, mean + 0.2); // (1.25 on average)
     }
 
     // A Tendril sends its clump in two halves a step, picking afresh for the second.

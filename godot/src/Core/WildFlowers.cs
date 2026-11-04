@@ -57,7 +57,7 @@ static class WildFlowers
         // The stem kinds. The Amplifier and the Resistor take only a wild flower slot, and are white, the specialists'
         // hue (Jeremy, Oct 30).
         var amplifier = Wild(stem, NodeKind.Amplifier, "Amplifier", Shape.Plus, 0xF2F2F2, WildUnlock.Start,
-            "Gene and growth motes passing through have a 50% chance to double in value, buff motes move +3 steps.", "Chance to double motes.");
+            "Gene and growth motes passing through have a 25% chance to double in value, buff motes move +3 steps.", "Chance to double motes.");
         yield return amplifier with
         {
             Radius = 11, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, DoublesBlobs = true,
@@ -90,9 +90,9 @@ static class WildFlowers
         yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Start,
             "About twice a generator's power gen, released in bursts. Takes a wildflower and a generator slot.", "Power released in bursts.") with
         {
-            // (21, not the table's 24, Jeremy, Nov 3: it works at full output all the way to 150%, past full, so 24
-            // made it more than twice a generator.)
-            PowerStore = 200, PowerPerSecond = 21, PowerWeight = 0.9f,
+            // (19, not the table's 24, Jeremy, Nov 3-4: it works at full output all the way to 150%, past full, so it
+            // beats a generator, which slows as it fills, by more than the numbers say.)
+            PowerStore = 200, PowerPerSecond = 19, PowerWeight = 0.9f,
             BurstShare = Tuning.PulsarBurst, BurstFill = Tuning.PulsarBurstFill,
         };
         yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Start,
@@ -139,9 +139,9 @@ static class WildFlowers
 
         // The passive-only kinds.
         yield return Wild(passive, NodeKind.Buffer, "Buffer", Shape.Burst8, 0xF2F2F2, WildUnlock.Start,
-            "Buffed flowers have 50% increased output for 30s. Sends one buff mote every 5s.", "Buffs nearby flowers.") with
+            "Buffed flowers have 50% increased output for 30s. Sends one buff mote every 4s.", "Buffs nearby flowers.") with
         {
-            Sends = BlobKind.Buff, BlobsPerHour = Tuning.BufferBlobs, MaxFruits = 2, PowerPerSecond = -10,
+            Sends = BlobKind.Buff, BlobsPerHour = Tuning.BufferBlobs, MaxFruits = 2, PowerPerSecond = -5, // (Jeremy, Nov 4: was -10)
         };
         yield return Wild(passive, NodeKind.CometBloom, "Comet Bloom", Shape.Gear, 0xFFFFFF, WildUnlock.Start,
             "10 minutes of double-value gene and growth motes, and buffs last twice as long.",
