@@ -46,17 +46,17 @@ public class ResearchTests
         var stems = BuyAll(garden, Track.Stems);
         Assert.Equal(43, stems.Count);
         Assert.Equal([100, 150, 250, 450, 750], stems.Take(5).Select(u => u.Cost));
-        Assert.Equal(508_050, stems[^1].Cost);
-        Assert.Equal(5_353_050, stems.Sum(u => u.Cost));
+        Assert.Equal(681_950, stems[^1].Cost);
+        Assert.Equal(6_970_000, stems.Sum(u => u.Cost));
         Assert.All(stems, u => Assert.Equal(UpgradeKind.Stem, u.Kind));
         Assert.Equal(47, garden.Capacity.Stems);
 
         var generators = BuyAll(garden, Track.Generators);
         Assert.Equal(43, generators.Count);
-        Assert.Equal([1_000, 2_000, 4_000, 6_000, 10_000, 16_000, 26_000, 44_000, 64_000, 95_000],
+        Assert.Equal([1_000, 2_000, 4_000, 7_000, 12_000, 20_000, 31_000, 55_000, 90_000, 138_000],
             generators.Take(10).Select(u => u.Cost));
-        Assert.Equal(2_575_000, generators[^1].Cost);
-        Assert.Equal(41_313_000, generators.Sum(u => u.Cost));
+        Assert.Equal(2_912_000, generators[^1].Cost);
+        Assert.Equal(51_726_000, generators.Sum(u => u.Cost));
         Assert.Equal(44, garden.Capacity.Generators);
     }
 
@@ -66,10 +66,10 @@ public class ResearchTests
         var garden = NewGarden();
         var core = BuyAll(garden, Track.Core);
         Assert.Equal([(UpgradeKind.WildFlower, 1_500.0), (UpgradeKind.CoreLink, 2_500), (UpgradeKind.Seedling, 3_500),
-                (UpgradeKind.WildFlower, 6_000), (UpgradeKind.Seedling, 12_000), (UpgradeKind.WildFlower, 21_000),
-                (UpgradeKind.Seedling, 32_000), (UpgradeKind.WildFlower, 43_000), (UpgradeKind.Hub, 54_000)],
+                (UpgradeKind.WildFlower, 6_000), (UpgradeKind.Seedling, 10_000), (UpgradeKind.WildFlower, 16_000),
+                (UpgradeKind.Seedling, 31_000), (UpgradeKind.WildFlower, 46_000), (UpgradeKind.Hub, 66_000)],
             core.Take(9).Select(u => (u.Kind, u.Cost)));
-        Assert.Equal(175_500, core.Take(9).Sum(u => u.Cost)); // the core to the Hub
+        Assert.Equal(182_500, core.Take(9).Sum(u => u.Cost)); // the core to the Hub
         // After the core link, seedling slots and the wild flower limit by turns (the Hub in among them), each dearer
         // than the last.
         var rest = core.Skip(2).Where(u => u.Kind != UpgradeKind.Hub).ToList();

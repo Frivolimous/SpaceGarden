@@ -336,8 +336,8 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 
 **Genes are spent.** Labs' gene blobs still end at the core, which adds them to the garden's gene balance. (5a: `Garden.GeneBalance`, beside `Garden.Genes`, the genes earned over the garden's life, which never drop; spending takes from the balance alone. 5b replaced the old unlock track, which counted genes earned.) The core menu's **Research** slot opens a panel with three columns (Stems, Generators, Core), each showing **only its next upgrade and its cost**. An affordable upgrade rings the core and dots the Research slot (see Alerts, under Information display). A new garden starts with the core at 1 link, 4 stems, 1 generator, no seedling slot and 1 Gravity Pot (the starting slot dropped in the balance pass, Nov 1: a holdover from testing).
 
-- **Stems (+1 cap each):** 100, 150, 250, 450, 750, 1,150, 1,650, 2,300, 3,150, 4,250, 5,650, 7,400, 9,550, 12,150, 15,250, 18,900, 23,150, 28,050, 33,650, 40,000, 47,150, 55,150, 64,050, 73,900, 84,750, 96,650, 109,650, 123,800, 139,150, 155,750, 173,650, 192,900, 213,550, 235,650, 259,250, 284,400, 311,150, 339,550, 369,650, 401,500, 435,150, 470,650, 508,050 (43 upgrades, to 47 stems; Jeremy's balance pass, Nov 1, second set: dearer overall, the early steps most).
-- **Generators (+1 cap each):** 1,000, 2,000, 4,000, 6,000, 10,000, 16,000, 26,000, 44,000, 64,000, 95,000, 125,000, 175,000, 245,000, 295,000, 345,000, 400,000, 460,000, 525,000, 595,000, 666,000, then each 1,000 dearer than the last step, to 2,575,000 (43 upgrades, to 44 generators; Jeremy, Nov 3, was Nov 1's 1,000, 2,000, 3,000, 5,000, 9,000… to 2,515,000). The full lists are in `Tuning` (Research).
+- **Stems (+1 cap each):** 100, 150, 250, 450, 750, 1,150, 1,650, 2,300, 3,150, 4,250, 5,650, 7,400, 9,550, 12,350, 15,850, 20,100, 25,200, 31,200, 38,200, 46,250, 55,400, 65,750, 77,350, 90,300, 104,650, 120,450, 137,800, 156,750, 177,400, 199,800, 224,000, 250,100, 278,150, 308,250, 340,450, 374,800, 411,400, 450,300, 491,600, 535,350, 581,600, 630,450, 681,950 (43 upgrades, to 47 stems; Jeremy, Nov 4: the first 13 as Nov 1's, then dearer, to 681,950 from 508,050).
+- **Generators (+1 cap each):** 1,000, 2,000, 4,000, 7,000, 12,000, 20,000, 31,000, 55,000, 90,000, 138,000, 200,000, 278,000, 375,000, 535,000, 682,000, 737,000, 797,000, 862,000, 932,000, 1,003,000, then each 1,000 dearer than the last step, to 2,912,000 (43 upgrades, to 44 generators; Jeremy, Nov 4, was Nov 1's 1,000, 2,000, 3,000, 5,000, 9,000… to 2,515,000). The full lists are in `Tuning` (Research).
 - **Core**, in order:
 
 | Upgrade | Cost |
@@ -346,14 +346,14 @@ Nothing resets: every upgrade applies immediately and permanently. Step 5 (Oct 3
 | Core link +1 | 2,500 |
 | Seedling slot +1 | 3,500 |
 | Wild flower limit +1 | 6,000 |
-| Seedling slot +1 | 12,000 |
-| Wild flower limit +1 | 21,000 |
-| Seedling slot +1 | 32,000 |
-| Wild flower limit +1 | 43,000 |
-| Hub | 54,000 |
-| Seedling slot +1, then wild flower limit +1, by turns | 165,000, 286,000, 417,000, 558,000, 709,000, 870,000, 1,041,000, 1,222,000, 1,413,000, 1,614,000, 1,825,000, then each step about 10,000 wider than the last, to 9,438,000 |
+| Seedling slot +1 | 10,000 |
+| Wild flower limit +1 | 16,000 |
+| Seedling slot +1 | 31,000 |
+| Wild flower limit +1 | 46,000 |
+| Hub | 66,000 |
+| Seedling slot +1, then wild flower limit +1, by turns | 138,000, 250,000, 682,000, 823,000, 974,000, 1,135,000, 1,306,000, 1,487,000, 1,678,000, 1,879,000, 2,090,000, then each step about 10,000 wider than the last, to 9,703,000 |
 
-Jeremy's balance pass (Nov 1) set these: the core link and the first seedling slot early, the Hub ninth (175,500 genes to it), then 34 seedling slots and wild flower limits by turns (43 upgrades in all). Third and later core links come only from evolutions (Second Path). Groves and labs stay uncapped, limited by free links and power upkeep.
+Jeremy's balance pass (Nov 1) set these: the core link and the first seedling slot early, the Hub ninth (182,500 genes to it since Jeremy's Nov 4 costs; 175,500 before), then 34 seedling slots and wild flower limits by turns (43 upgrades in all). Third and later core links come only from evolutions (Second Path). Groves and labs stay uncapped, limited by free links and power upkeep.
 
 **Built in 5b** (`Garden.Buy`, `Garden.Next`; the costs are data in `Tuning`, Research). Buying spends the balance and raises the cap at once; the core ripples in the genes' purple. The wild flower limit, seedling slots and the Hub were counters in `Capacity` until 5c, 5d and the Hub's step give them mechanics (5d gave the wild flower limit its, 5c the seedling slots theirs, the Hub's step the Hub its). The levels bought go in the save, still version 9 (5a's v9 shipped on master, and the new field is optional): a 5a save, which has none, keeps its caps and reads them as the stem and generator upgrades bought (a second core link as the core track bought up to it). The Research panel is a window like the Almanac's (its header dragged, ✕ or the slot to close): the balance in its header ("1,600 genes"), then a card per track in its role's hue (stems green, generators yellow, the core a light neutral grey, Jeremy's pick), each with a glyph of its part (a stem's node and links, a generator's pentagon, the ringed core) and only the next upgrade ("+1 stem", "+1 wild flower", "+1 core link", "+1 seedling slot", "Hub"), its cost beside a gene dot, and **Buy**, filled with the hue. While the balance falls short the button is dim and says how many more genes it needs ("300 more"), over a fill in the hue that grows left to right as the balance nears the cost; beside each title an (i) shows, the moment the pointer is on it (no tooltip delay), a hint of what the next upgrade does ("Increases the total number of stems you can add to your garden", "Lets special, rare wild flowers grow instead of normal stems or flowers": `Upgrade.Does`); a card the balance covers glows softly, breathing. A finished track reads "All bought", its glyph ticked. No caps or counts show (Jeremy, Oct 30: the garden card has those). An affordable upgrade's alert came after (see Alerts, under Information display).
 
