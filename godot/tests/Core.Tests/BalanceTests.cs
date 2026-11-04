@@ -488,10 +488,6 @@ public class BalanceTests
         Assert.Skip(text.ToString());
     }
 
-    // The best garden at 12 stems, 4 generators, 2 core links and a grove, hand-built (Nov 4: 5,731 genes an hour; no
-    // search from scratch came near it).
-    const string BestGrove = "C(s(s(s(G L) s(L g)) s(s(L g) L)) s(s(s(L L) s(L g)) s(s(L g) L)))";
-
     // Every way to put one wildflower into a layout: in place of any part (with what grows beyond it, if it has the
     // links), in before any part (if it has a link onward), or on a free link; those that fit the caps.
     static IEnumerable<Part> Placements(Part layout, Stage stage, NodeKind wild)
@@ -527,9 +523,69 @@ public class BalanceTests
         }
     }
 
-    // Each wildflower built into the best hand-built garden (BALANCE_LAYOUTS's first, or BestGrove): every placement
-    // measured on two seeds, the search run from the best three (BALANCE_STEPS a climb, 1500 by default), the winner
-    // judged on six; against the garden alone, climbed as much.
+    const string BestGrove = "C(s(s(s(G L) s(L g)) s(s(L g) L)) s(s(s(L L) s(L g)) s(s(L g) L)))";
+
+    // A garden built by rule (Nov 4): the core's two links each lead to a balanced tree of stems (so many on each side),
+    // the groves at the deepest tips, the generators one to a stem, the deepest stems first, alternating sides, then as
+    // many labs as the power allows, nearest the core first; any link left over stays free.
+    static Part Template(Stage stage, int left, int right, int generators)
+    {
+        var core = new Part(NodeKind.Core);
+        var sides = new List<List<Part>>();
+        foreach (int n in new[] { left, right }.Where(n => n > 0))
+        {
+            var root = new Part(NodeKind.Stem);
+            core.Attach(root);
+            var stems = new List<Part> { root };
+            var queue = new Queue<Part>(stems);
+            while (stems.Count < n)
+            {
+                var at = queue.Peek();
+                if (at.Kids.Count >= Links(at, stage)) { queue.Dequeue(); continue; }
+                var stem = new Part(NodeKind.Stem);
+                at.Attach(stem);
+                stems.Add(stem);
+                queue.Enqueue(stem);
+            }
+            sides.Add(stems);
+        }
+        int Depth(Part p) { int d = 0; for (var at = p; at.Up != null; at = at.Up) d++; return d; }
+        bool Free(Part p) => p.Kids.Count < Links(p, stage);
+        // (The deepest free stem on a side, preferring one with no generator yet.)
+        Part? Deepest(List<Part> side, bool noGenerator) => side.Where(p => Free(p)
+            && (!noGenerator || p.Kids.All(k => k.Kind != NodeKind.Generator))).OrderByDescending(Depth).FirstOrDefault();
+        for (int i = 0; i < stage.Groves && sides.Count > 0; i++) Deepest(sides[0], false)?.Attach(new Part(NodeKind.Grove));
+        for (int i = 0; i < generators; i++)
+        {
+            var side = sides[i % sides.Count];
+            (Deepest(side, true) ?? Deepest(side, false) ?? sides.SelectMany(x => x).FirstOrDefault(Free))?.Attach(new Part(NodeKind.Generator));
+        }
+        while (core.All().Where(Free).Where(p => p.Kind == NodeKind.Stem).OrderBy(Depth).FirstOrDefault() is { } spot)
+        {
+            var lab = new Part(NodeKind.Lab);
+            spot.Attach(lab);
+            if (Overloads(core, stage)) { lab.Detach(); break; }
+        }
+        return core;
+    }
+
+    // The starting gardens for a stage: 0 to 2 stems and 0 to 2 generators fewer than the caps, the stems split evenly or
+    // up to 6 more on one side.
+    static List<Part> Templates(Stage stage)
+    {
+        var all = new List<Part>();
+        for (int stems = stage.Stems; stems >= Math.Max(2, stage.Stems - 2); stems--)
+            for (int generators = stage.Generators; generators >= Math.Max(0, stage.Generators - 2); generators--)
+                for (int lean = stems % 2; lean <= Math.Min(6, stems - 2); lean += 2)
+                {
+                    var layout = Template(stage, (stems + lean) / 2, (stems - lean) / 2, generators);
+                    if (Fits(layout, stage, null)) all.Add(layout);
+                }
+        return all;
+    }
+
+    // Each wildflower (and none) built into each starting garden (Templates), in every placement (each measured on two
+    // seeds), the search run from the best three (BALANCE_STEPS a climb, 1500 by default), the winner judged on six.
     [Fact]
     public void HandBuiltWild()
     {
@@ -537,35 +593,49 @@ public class BalanceTests
         var caps = (Environment.GetEnvironmentVariable("BALANCE_STAGE") ?? "12,4,2,1").Split(',').Select(int.Parse).ToArray();
         var stage = new Stage("custom", caps[0], caps[1], caps[2], caps.Length > 3 ? caps[3] : 0);
         int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 1500;
-        var layout = Parse((Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? BestGrove).Split(';')[0].Trim());
-        Assert.True(Fits(layout, stage, null), "the garden doesn't fit the stage");
+        // (With any hand-built gardens given, and at 12/4/2/1 the best found by hand, Nov 4: 5,731 genes an hour.)
+        var templates = Templates(stage);
+        var extra = (Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? (caps.SequenceEqual([12, 4, 2, 1]) ? BestGrove : ""))
+            .Split(';', StringSplitOptions.RemoveEmptyEntries).Select(t => Parse(t.Trim())).Where(t => Fits(t, stage, null));
+        templates.AddRange(extra);
         var started = DateTime.Now;
-        var baseline = new[] { layout, Climb(layout, stage, null, steps, 77).Layout }.Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
-        var results = new ConcurrentDictionary<NodeKind, ((Part Layout, double Genes, double Spread, Measure Measure) Best, int Spots, double Placed)>();
-        Parallel.ForEach(Tested, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, w =>
+        var results = new ConcurrentDictionary<NodeKind, ((Part Layout, double Genes, double Spread, Measure Measure) Best, int Spots)>();
+        NodeKind None = NodeKind.Core; // (the key for no wildflower)
+        Parallel.ForEach(Tested.Prepend(None), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, w =>
         {
-            var spots = Placements(layout, stage, w).ToList();
+            NodeKind? wild = w == None ? null : w;
+            var spots = wild is { } k ? templates.SelectMany(t => Placements(t, stage, k)).ToList() : templates;
             var ranked = spots.Select(p => (Layout: p, Genes: (Run(p, stage, 1).Score + Run(p, stage, 2).Score) / 2))
                 .OrderByDescending(r => r.Genes).ToList();
-            var climbed = ranked.Take(3).Select((r, i) => Climb(r.Layout, stage, w, steps, 300 + i).Layout)
+            var best = ranked.Take(3).Select((r, i) => Climb(r.Layout, stage, wild, steps, 300 + i).Layout)
                 .Append(ranked[0].Layout).Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
-            results[w] = (climbed, spots.Count, ranked[0].Genes);
+            results[w] = (best, spots.Count);
         });
-        var text = new StringBuilder($"Each wildflower built into the best hand-built garden ({stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links, {stage.Groves} grove), every placement tried, then {steps} search steps from the best three:\n");
-        text.AppendLine($"  {"",-11} {"genes/h",7} {"±",4} {"vs none",7} {"placed",7}  {"stems",5} {"gens",4} {"labs",4} {"fill",5} {"power",9}  layout");
-        void Row(string name, (Part Layout, double Genes, double Spread, Measure Measure) r, string placed)
-        {
-            var m = r.Measure;
-            string delta = name == "none" ? "" : $"{(r.Genes / baseline.Genes - 1) * 100:+0;-0}%";
-            text.AppendLine($"  {name,-11} {r.Genes,7:0} {r.Spread,4:0} {delta,7} {placed,7}  {m.Stems,5} {m.Generators,4} {m.Labs,4} {m.LabFill,5:0%} {m.Production,4:0}/{m.Upkeep,-4:0}  {r.Layout.Show()}");
-        }
-        Row("none", baseline, "");
+        var baseline = results[None].Best;
+        var text = new StringBuilder($"Each wildflower in its best garden ({stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links, {stage.Groves} grove): {templates.Count} starting gardens, every placement, then {steps} search steps from the best three:\n");
+        text.AppendLine($"  {"",-11} {"genes/h",7} {"±",4} {"vs none",7}  {"stems",5} {"gens",4} {"labs",4} {"fill",5} {"power",9}  layout");
         foreach (var (w, r) in results.OrderByDescending(r => r.Value.Best.Genes))
-            Row(NodeSpecs.All[w].Name, r.Best, $"{(r.Placed / baseline.Genes - 1) * 100:+0;-0}%");
-        text.AppendLine("  (placed: the best placement alone, before the search; each tried among "
-            + string.Join(", ", results.OrderBy(r => r.Key).Select(r => $"{NodeSpecs.All[r.Key].Name} {r.Value.Spots}")) + " spots)");
-        text.AppendLine($"  ({(DateTime.Now - started).TotalMinutes:0.#} minutes)");
+        {
+            var m = r.Best.Measure;
+            string name = w == None ? "none" : NodeSpecs.All[w].Name;
+            string delta = w == None ? "" : $"{(r.Best.Genes / baseline.Genes - 1) * 100:+0;-0}%";
+            text.AppendLine($"  {name,-11} {r.Best.Genes,7:0} {r.Best.Spread,4:0} {delta,7}  {m.Stems,5} {m.Generators,4} {m.Labs,4} {m.LabFill,5:0%} {m.Production,4:0}/{m.Upkeep,-4:0}  {r.Best.Layout.Show()}");
+        }
+        text.AppendLine($"  ({(DateTime.Now - started).TotalMinutes:0.#} minutes; placements tried: "
+            + string.Join(", ", results.OrderBy(r => r.Key).Select(r => $"{(r.Key == None ? "none" : NodeSpecs.All[r.Key].Name)} {r.Value.Spots}")) + ")");
         if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
+        Assert.Skip(text.ToString());
+    }
+
+    // For checking the starting gardens: each one, measured.
+    [Fact]
+    public void BalanceTemplates()
+    {
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
+        var stage = new Stage("custom", 12, 4, 2, 1);
+        var text = new StringBuilder();
+        foreach (var t in Templates(stage).AsParallel().AsOrdered().Select(t => (t, Run(t, stage, 1))))
+            text.AppendLine($"{t.Item2.Score,6:0} {t.Item2.Stems}s {t.Item2.Generators}g {t.Item2.Labs}L {t.Item2.Production:0}/{t.Item2.Upkeep:0}  {t.t.Show()}");
         Assert.Skip(text.ToString());
     }
 
