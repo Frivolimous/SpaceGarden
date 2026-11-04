@@ -146,7 +146,8 @@ public class BalanceTests
     // overloads if what it would cost full is more than it would make full on average over the hour, buffs and all.
     const float BuffSlack = 1.3f;
 
-    static Measure Run(Part core, Stage stage, int seed)
+    // (minutes: the time to settle and the time measured, an hour each unless screening, the genes counted an hour.)
+    static Measure Run(Part core, Stage stage, int seed, double minutes = 60)
     {
         var garden = Build(core, stage, seed);
         var (production, upkeep) = garden.FullPowerBalance();
@@ -156,18 +157,19 @@ public class BalanceTests
         var labs = main.Where(n => n.Spec.Sends == BlobKind.Genes).ToList();
         bool buffs = garden.Nodes.Any(n => n.Spec.Sends == BlobKind.Buff);
         if (upkeep > production * (buffs ? BuffSlack : 1)) return new(0, production, upkeep, stems, generators, labs.Count, 0);
-        garden.Grow(Hour);
+        double span = minutes * 60;
+        garden.Grow(span);
         double before = garden.Genes, fill = 0;
         float made = 0;
-        const int Samples = 60;
+        int Samples = (int)Math.Max(10, minutes);
         for (int i = 0; i < Samples; i++)
         {
-            garden.Grow(Hour / Samples);
+            garden.Grow(span / Samples);
             fill += labs.Count == 0 ? 0 : labs.Average(n => Math.Min(1, n.Fill)) / Samples;
             made += garden.FullPowerBalance().Production / Samples;
         }
         if (upkeep > made) return new(0, made, upkeep, stems, generators, labs.Count, fill);
-        return new(garden.Genes - before, made, upkeep, stems, generators, labs.Count, fill);
+        return new((garden.Genes - before) * Hour / span, made, upkeep, stems, generators, labs.Count, fill);
     }
 
     // ==== THE SEARCH ==== \\
@@ -295,16 +297,16 @@ public class BalanceTests
     }
 
     // Annealed climb: a change is kept if it scores better, or a little worse early on; the best seen is returned.
-    static (Part Layout, Measure Measure) Climb(Part start, Stage stage, NodeKind? wild, int steps, int seed)
+    static (Part Layout, Measure Measure) Climb(Part start, Stage stage, NodeKind? wild, int steps, int seed, double minutes = 60)
     {
         var rng = new Random(seed);
         var at = start;
-        var atMeasure = Run(at, stage, seed);
+        var atMeasure = Run(at, stage, seed, minutes);
         var (best, bestMeasure) = (at, atMeasure);
         for (int i = 0; i < steps; i++)
         {
             if (Change(at, stage, wild, rng) is not { } next) continue;
-            var m = Run(next, stage, seed);
+            var m = Run(next, stage, seed, minutes);
             double temperature = 0.02 * (1 - (double)i / steps); // (share of the score a step may lose)
             double scale = Math.Max(1, Math.Abs(atMeasure.Score));
             if (m.Score >= atMeasure.Score || rng.NextDouble() < Math.Exp((m.Score - atMeasure.Score) / (temperature * scale + 1e-9)))
@@ -584,46 +586,114 @@ public class BalanceTests
         return all;
     }
 
-    // Each wildflower (and none) built into each starting garden (Templates), in every placement (each measured on two
-    // seeds), the search run from the best three (BALANCE_STEPS a climb, 1500 by default), the winner judged on six.
+    // A layout's shape, the same for mirror images (a part's branches in any order): to measure each garden once.
+    static string Key(Part p) => p.Kids.Count == 0 ? Short(p.Kind) : $"{Short(p.Kind)}({string.Join(" ", p.Kids.Select(Key).Order())})";
+
+    const NodeKind None = NodeKind.Core; // (the key for no wildflower)
+    public sealed record WildResult(Part Layout, double Genes, double Spread, Measure Measure, int Spots);
+
+    // Each wildflower (and none) built into each starting garden (Templates, and those given), in every placement, each
+    // garden once (mirror images aside), screened on two seeds over a short time (BALANCE_SCREEN minutes to settle and
+    // as many measured, 20 by default), the search run from the best three (BALANCE_STEPS a climb, 1000 by default, also
+    // screened), the winner judged on six seeds over the full hour and hour. A wildflower's own earlier gardens (from
+    // another stage) go in as they are.
+    static Dictionary<NodeKind, WildResult> WildAt(Stage stage, IEnumerable<Part> gardens, IReadOnlyDictionary<NodeKind, List<Part>> earlier)
+    {
+        int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 1000;
+        double screen = double.TryParse(Environment.GetEnvironmentVariable("BALANCE_SCREEN"), out double sc) ? sc : 20;
+        var templates = Templates(stage).Concat(gardens.Where(t => Fits(t, stage, null))).ToList();
+        var results = new ConcurrentDictionary<NodeKind, WildResult>();
+        Parallel.ForEach(Tested.Prepend(None), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, w =>
+        {
+            NodeKind? wild = w == None ? null : w;
+            var spots = (wild is { } k ? templates.SelectMany(t => Placements(t, stage, k)) : templates)
+                .Concat(earlier.GetValueOrDefault(w, []).Where(l => Fits(l, stage, wild)))
+                .DistinctBy(Key).ToList();
+            var ranked = spots.Select(p => (Layout: p, Genes: (Run(p, stage, 1, screen).Score + Run(p, stage, 2, screen).Score) / 2))
+                .OrderByDescending(r => r.Genes).ToList();
+            var climbed = ranked.Take(3).Select((r, i) => Climb(r.Layout, stage, wild, steps, 300 + i, screen).Layout);
+            var best = climbed.Append(ranked[0].Layout).Concat(earlier.GetValueOrDefault(w, []).Where(l => Fits(l, stage, wild)))
+                .DistinctBy(Key).Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
+            results[w] = new(best.Layout, best.Genes, best.Spread, best.Measure, spots.Count);
+        });
+        return new(results);
+    }
+
+    static string Name(NodeKind w) => w == None ? "none" : NodeSpecs.All[w].Name;
+
+    static void Table(StringBuilder text, Stage stage, Dictionary<NodeKind, WildResult> results, TimeSpan took)
+    {
+        var baseline = results[None];
+        text.AppendLine($"{stage.Name}: {stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links, {stage.Groves} grove ({took.TotalMinutes:0.#} minutes)");
+        text.AppendLine($"  {"",-11} {"genes/h",7} {"±",4} {"vs none",7}  {"stems",5} {"gens",4} {"labs",4} {"fill",5} {"power",9}  layout");
+        foreach (var (w, r) in results.OrderByDescending(r => r.Value.Genes))
+        {
+            var m = r.Measure;
+            string delta = w == None ? "" : $"{(r.Genes / baseline.Genes - 1) * 100:+0;-0}%";
+            text.AppendLine($"  {Name(w),-11} {r.Genes,7:0} {r.Spread,4:0} {delta,7}  {m.Stems,5} {m.Generators,4} {m.Labs,4} {m.LabFill,5:0%} {m.Production,4:0}/{m.Upkeep,-4:0}  {r.Layout.Show()}");
+        }
+    }
+
+    // One stage (BALANCE_STAGE "stems,generators,core links,groves", 12,4,2,1 by default), with any hand-built gardens
+    // (BALANCE_LAYOUTS, split by ';'; else the best found by hand at 12/4/2/1, wherever it fits).
     [Fact]
     public void HandBuiltWild()
     {
         Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
         var caps = (Environment.GetEnvironmentVariable("BALANCE_STAGE") ?? "12,4,2,1").Split(',').Select(int.Parse).ToArray();
         var stage = new Stage("custom", caps[0], caps[1], caps[2], caps.Length > 3 ? caps[3] : 0);
-        int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 1500;
-        // (With any hand-built gardens given, or else the best found by hand at 12/4/2/1 wherever it fits, Nov 4: 5,731 genes
-        // an hour; a stage with more room is never worse than one with less.)
-        var templates = Templates(stage);
-        var extra = (Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? BestGrove)
-            .Split(';', StringSplitOptions.RemoveEmptyEntries).Select(t => Parse(t.Trim())).Where(t => Fits(t, stage, null));
-        templates.AddRange(extra);
         var started = DateTime.Now;
-        var results = new ConcurrentDictionary<NodeKind, ((Part Layout, double Genes, double Spread, Measure Measure) Best, int Spots)>();
-        NodeKind None = NodeKind.Core; // (the key for no wildflower)
-        Parallel.ForEach(Tested.Prepend(None), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, w =>
+        var results = WildAt(stage, HandGardens(), new Dictionary<NodeKind, List<Part>>());
+        var text = new StringBuilder();
+        Table(text, stage, results, DateTime.Now - started);
+        if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
+        Assert.Skip(text.ToString());
+    }
+
+    static IEnumerable<Part> HandGardens() => (Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? BestGrove)
+        .Split(';', StringSplitOptions.RemoveEmptyEntries).Select(t => Parse(t.Trim()));
+
+    // Several stages in order (BALANCE_SWEEP: "stems,generators" pairs split by ';', 2 core links and a grove each;
+    // by default day 2's 16/6 and day 3's 19/8, each with a stem more, a generator more, and both), each wildflower's
+    // (and the baseline's) best gardens so far starting the search at every later stage they fit. A stage's results are
+    // then never below those of a stage that fits inside it (its gardens fit too). Then each wildflower against none at
+    // each stage, and on average, for each group of four (a day and its three with more room).
+    [Fact]
+    public void HandBuiltSweep()
+    {
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
+        var stages = (Environment.GetEnvironmentVariable("BALANCE_SWEEP") ?? "16,6;17,6;16,7;17,7;19,8;20,8;19,9;20,9")
+            .Split(';').Select(t => t.Split(',').Select(int.Parse).ToArray())
+            .Select(c => new Stage($"{c[0]}/{c[1]}", c[0], c[1], 2, 1)).ToList();
+        var earlier = Tested.Prepend(None).ToDictionary(w => w, _ => new List<Part>());
+        var all = new List<(Stage Stage, Dictionary<NodeKind, WildResult> Results)>();
+        var text = new StringBuilder();
+        var started = DateTime.Now;
+        foreach (var stage in stages)
         {
-            NodeKind? wild = w == None ? null : w;
-            var spots = wild is { } k ? templates.SelectMany(t => Placements(t, stage, k)).ToList() : templates;
-            var ranked = spots.Select(p => (Layout: p, Genes: (Run(p, stage, 1).Score + Run(p, stage, 2).Score) / 2))
-                .OrderByDescending(r => r.Genes).ToList();
-            var best = ranked.Take(3).Select((r, i) => Climb(r.Layout, stage, wild, steps, 300 + i).Layout)
-                .Append(ranked[0].Layout).Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
-            results[w] = (best, spots.Count);
-        });
-        var baseline = results[None].Best;
-        var text = new StringBuilder($"Each wildflower in its best garden ({stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links, {stage.Groves} grove): {templates.Count} starting gardens, every placement, then {steps} search steps from the best three:\n");
-        text.AppendLine($"  {"",-11} {"genes/h",7} {"±",4} {"vs none",7}  {"stems",5} {"gens",4} {"labs",4} {"fill",5} {"power",9}  layout");
-        foreach (var (w, r) in results.OrderByDescending(r => r.Value.Best.Genes))
-        {
-            var m = r.Best.Measure;
-            string name = w == None ? "none" : NodeSpecs.All[w].Name;
-            string delta = w == None ? "" : $"{(r.Best.Genes / baseline.Genes - 1) * 100:+0;-0}%";
-            text.AppendLine($"  {name,-11} {r.Best.Genes,7:0} {r.Best.Spread,4:0} {delta,7}  {m.Stems,5} {m.Generators,4} {m.Labs,4} {m.LabFill,5:0%} {m.Production,4:0}/{m.Upkeep,-4:0}  {r.Best.Layout.Show()}");
+            var at = DateTime.Now;
+            var results = WildAt(stage, HandGardens().Concat(earlier[None]), earlier);
+            // (No worse than a stage that fits inside this one.)
+            foreach (var (s, r) in all.Where(a => a.Stage.Stems <= stage.Stems && a.Stage.Generators <= stage.Generators))
+                foreach (var w in results.Keys.ToList())
+                    if (r[w].Genes > results[w].Genes) results[w] = r[w];
+            foreach (var (w, r) in results) earlier[w].Add(r.Layout);
+            all.Add((stage, results));
+            Table(text, stage, results, DateTime.Now - at);
+            text.AppendLine();
+            if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } partial) File.WriteAllText(partial, text.ToString());
         }
-        text.AppendLine($"  ({(DateTime.Now - started).TotalMinutes:0.#} minutes; placements tried: "
-            + string.Join(", ", results.OrderBy(r => r.Key).Select(r => $"{(r.Key == None ? "none" : NodeSpecs.All[r.Key].Name)} {r.Value.Spots}")) + ")");
+        foreach (var group in all.Chunk(4))
+        {
+            text.AppendLine($"Against none, {string.Join(", ", group.Select(g => g.Stage.Name))}, and on average:");
+            foreach (var w in Tested.OrderByDescending(w => group.Average(g => g.Results[w].Genes / g.Results[None].Genes)))
+            {
+                var deltas = group.Select(g => (g.Results[w].Genes / g.Results[None].Genes - 1) * 100).ToList();
+                text.AppendLine($"  {Name(w),-11} {string.Join(" ", deltas.Select(d => $"{d,4:+0;-0}%"))}   {deltas.Average(),4:+0;-0}%");
+            }
+            text.AppendLine($"  {"none",-11} {string.Join(" ", group.Select(g => $"{g.Results[None].Genes,5:0}"))}  genes/h");
+        }
+        text.AppendLine($"({(DateTime.Now - started).TotalMinutes:0.#} minutes)");
         if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
         Assert.Skip(text.ToString());
     }
