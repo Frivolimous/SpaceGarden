@@ -227,22 +227,26 @@ public static class Tuning
     // ==== THE HUB ==== \\
     // Placeholders (DESIGN.md, The Hub; Jeremy's step 5 addendum). Gene blobs it catches fill its pool, which turns into
     // hub points: the first at HubFirstPoint genes, each after HubPointGrowth times the last and HubPointStep more
-    // (HubPointCost: 3,000, 3,300, 3,630 ...). Not const: the pacing run tries others
+    // (HubPointCost: 3,000, 4,000, 6,000 ...). Not const: the pacing run tries others
     // (HUB_FIRST, HUB_STEP, HUB_GROWTH). The paths, their costs and effects are data in Hubs.Paths. The Hub's upkeep is HubUpkeep a second,
     // plus HubUpkeepPerLevel for every level bought (HubUpkeepCut of that once its own path reaches level 3). The
     // milestones read where they act: the stem's (HubStemCap more stems), the Amplifier's (a doubling blob tripled
     // HubTripleChance of the time), the Buffer's (buffs last HubBuffSeconds longer), the Moonflower's (its
     // reach HubMoonflowerReach links) and the Nebula Bloom's (power to its seedlings counts HubNebulaFill times).
-    // (Jeremy, Nov 4: the first point cheap, 3,000, and about half the 92 points by day 14, so each point 10% dearer
-    // than the last; the pacing run's median is 45 by day 14. Steep after that: past day 14 crawlers bring another
-    // economy. Was 3,000, then 400 more each.)
-    public static double HubFirstPoint = 3_000, HubPointStep = 0, HubPointGrowth = 1.10;
+    // (Jeremy, Nov 4: the first point cheap, 3,000, and about half the 92 points by day 14: the Lth point
+    // 3,000 * 1.033^(L-1) * L^0.5, rounded to the nearest thousand so it reads well (3,000, 4,000, 6,000 ... point 46
+    // 88,000, point 92 552,000; all 92 13.7 million). Was 3,000, then 400 more each.)
+    public static double HubFirstPoint = 3_000, HubPointStep = 0, HubPointGrowth = 1.033;
 
     // The genes the point after this many earned takes.
-    // (HubPointPower: the point's number, from 1, to this power, multiplies it too: 0 leaves it out.)
-    public static double HubPointPower = 0;
-    public static double HubPointCost(int earned) =>
-        HubFirstPoint * Math.Pow(HubPointGrowth, earned) * Math.Pow(earned + 1, HubPointPower) + HubPointStep * earned;
+    // (HubPointPower: the point's number, from 1, to this power, multiplies it too: 0 leaves it out. HubPointRound:
+    // each cost rounded to the nearest so many genes, never below one.)
+    public static double HubPointPower = 0.5, HubPointRound = 1_000;
+    public static double HubPointCost(int earned)
+    {
+        double cost = HubFirstPoint * Math.Pow(HubPointGrowth, earned) * Math.Pow(earned + 1, HubPointPower) + HubPointStep * earned;
+        return Math.Max(HubPointRound, Math.Round(cost / HubPointRound) * HubPointRound);
+    }
     public const float HubUpkeep = 3, HubUpkeepPerLevel = 0.5f, HubUpkeepCut = 0.8f;
     // How fast the Hub sends power on, a second (a stem 30; Jeremy, Nov 3: was 15).
     public const float HubTransfer = 20;

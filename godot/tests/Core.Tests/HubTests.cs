@@ -78,7 +78,7 @@ public class HubTests
         Assert.Equal(0, garden.Genes); // none reached the core's balance
         Assert.True(garden.HubGenes > 50);
         garden.CatchAtHub(10_000);
-        // 3,000 for the first point, 3,300 for the second, 3,630 ...
+        // 3,000 for the first point, 4,000 for the second, 6,000 ... (each a round thousand)
         double spent = 0;
         for (int i = 0; i < garden.HubPointsEarned; i++) spent += Tuning.HubPointCost(i);
         Assert.Equal(garden.HubGenes, spent + garden.HubPool, 6);
