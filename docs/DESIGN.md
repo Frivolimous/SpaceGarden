@@ -473,6 +473,22 @@ All three tracks share one gene income, and the stem and generator tracks will p
 - **Save:** still version 9, with optional fields: the evolutions chosen (kind, level, target, bloomed and when) and each seedling's offers and evolution (its power is saved as any part's). A loaded garden works its multipliers out again; its caps are in the saved capacity.
 - **Dev aids:** `--evolve=NAME[,NAME]` (chosen and bloomed at once, the flower on the deepest free link), `--seedling`, `--seedfill=N` (its power), `--choose=N` (each waiting seedling takes its Nth offer), `--bloom` (each chosen seedling filled, so it blooms and its burst shows) and `--tap=seedling` (the choice menu open, its first card showing). Shots: `--fresh --grove --seedfill=200 --tap=seedling` for the menu, `--seedfill=200 --choose=0 --bloom --at=12,40,90` for the burst, `--evolve=` with some and `--almanac=evolutions` for the Almanac's list.
 
+**Balance test (Nov 4).** `EvolutionSweep` (`BALANCE=1 dotnet test -c Release --filter-method "*EvolutionSweep*"`; `BALANCE_CASES` for a few) runs the wildflower test's search for each evolution's effect alone at level I, at day 2 (16/6, 17/6, 16/7, 17/7: 2 core links, a grove, no Hub, no wildflower slot), its flower left out but the base slot it would take granted, and one stem's slot tradeable for a generator's or back (about the same cost at day 2). Wild Bloom gets two Lichens; Resonant Frequency a Buffer, against a Buffer alone. Average against no evolution:
+
+| Evolution | vs none |
+|---|---|
+| Second Path | +30% |
+| Rapid Evolution (×1.5 genes, ×1.5 drain) | +28% (+86% at ×2 genes, ×1.2 drain: changed) |
+| Smart Motes | +27% |
+| Wild Bloom (two Lichens) | +23% |
+| Resonant Frequency + Buffer | +22% (its own share +13%; the Buffer alone +8%) |
+| Best Generation | +17% |
+| Long Stemmed | +4% |
+| Core Growth | +4% |
+| More Power | 0% |
+
+The genes reaching the core are limited by delivery (gene motes wandering to two core links), not power or links: a lab added to a day-2 garden is worth about a quarter of an average one, so evolutions that improve delivery or each mote's worth win, and those that add power (to run more labs) are weak; moving day 2's unlocks from 16/6 to 17/5 changed nothing. Jeremy, Nov 4: **good enough**; the power evolutions stay weaker (their worth is also filling seedlings and regrowing, which this test doesn't see), and with Rapid Evolution's drain, one makes sense as a second pick.
+
 
 ### The Hub
 
