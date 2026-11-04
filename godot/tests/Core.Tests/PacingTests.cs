@@ -420,7 +420,7 @@ public class PacingTests
             }
             var waits = LongestWaits(boughtAt, days);
             for (int d = 0; d < days; d++) run.LongestWait[s, d] = waits[d];
-            // The evolutions the player chose (at random), when, and when each bloomed.
+            // The evolutions the player chose (at random, or by its ranking: see SmartPlayer.Style), when, and when each bloomed.
             lines[s].Add("  evolutions: " + (garden.Evolved.Count == 0 ? "none" : string.Join("; ", garden.Evolved.Select(e =>
                 $"{e.Name} chosen {Hours(e.ChosenAt / Hour)}" + (e.Bloomed ? $", bloomed {Hours(e.BloomedAt / Hour)}" : ", growing")))));
             lock (chosen) chosen.AddRange(garden.Evolved.Select(e => e.Name));

@@ -150,7 +150,7 @@ public class WildTests
         var lab = Add(garden, Add(garden, garden.Core, NodeKind.Amplifier), NodeKind.Lab);
         lab.Blob = 1;
         garden.Grow(Tuning.EconomyStepSeconds);
-        Assert.InRange(garden.Genes, 1, 2 * Tuning.BlobGenes); // doubled half the time
+        Assert.InRange(garden.Genes, 1, 2 * Tuning.BlobGenes); // doubled AmplifyChance of the time
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public class WildTests
         Assert.Equal(0, genes % 2, 6); // whole pairs
     }
 
-    // An Amplifier doubles a passing blob's value (once), half the time: one blob, worth 2.
+    // An Amplifier doubles a passing blob's value (once), AmplifyChance of the time (a quarter since Nov 4): one blob, worth 2.
     [Fact]
     public void AnAmplifierDoublesABlobsValue()
     {
