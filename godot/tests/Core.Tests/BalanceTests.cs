@@ -616,7 +616,96 @@ public class BalanceTests
                 .DistinctBy(Key).Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
             results[w] = new(best.Layout, best.Genes, best.Spread, best.Measure, spots.Count);
         });
+        results[None] = BetterBaseline(stage, results[None], Tested.Select(w => (w, results[w].Layout)), steps, screen);
         return new(results);
+    }
+
+    // A wildflower's garden without it, every way: its spot taken by its base kind, a lab, a generator or a stem (what
+    // grew beyond it kept, if that fits), or it pruned (with what grew beyond it, or that moved to its parent); those
+    // that fit and don't overload.
+    static IEnumerable<Part> Unwild(Part layout, Stage stage, NodeKind wild)
+    {
+        var kinds = new[] { NodeSpecs.All[wild].Wild?.Base, NodeKind.Lab, NodeKind.Generator, NodeKind.Stem }
+            .OfType<NodeKind>().Distinct();
+        var made = new List<Part>();
+        foreach (var kind in kinds)
+        {
+            var copy = layout.Copy();
+            copy.All().First(p => p.Kind == wild).Kind = kind;
+            made.Add(copy);
+        }
+        var pruned = layout.Copy();
+        pruned.All().First(p => p.Kind == wild).Detach();
+        made.Add(pruned);
+        var lifted = layout.Copy();
+        var flower = lifted.All().First(p => p.Kind == wild);
+        var up = flower.Up!;
+        flower.Detach();
+        foreach (var kid in flower.Kids.ToList()) up.Attach(kid);
+        made.Add(lifted);
+        return made.Where(p => Fits(p, stage, null) && !Overloads(p, stage)).DistinctBy(Key);
+    }
+
+    // The baseline given the same chances as the wildflowers (Nov 4: with only the starting gardens it trailed, as each
+    // wildflower had a thousand placements to pick from): every wildflower's garden without it (Unwild), screened, the
+    // search run from the best three, the winner judged; kept if it beats the baseline found.
+    static WildResult BetterBaseline(Stage stage, WildResult current, IEnumerable<(NodeKind Wild, Part Layout)> wilds,
+        int steps, double screen)
+    {
+        var spots = wilds.SelectMany(x => Unwild(x.Layout, stage, x.Wild)).Append(current.Layout).DistinctBy(Key).ToList();
+        var ranked = spots.AsParallel().Select(p => (Layout: p, Genes: (Run(p, stage, 1, screen).Score + Run(p, stage, 2, screen).Score) / 2))
+            .OrderByDescending(r => r.Genes).ToList();
+        var best = ranked.Take(3).AsParallel().Select((r, i) => Climb(r.Layout, stage, null, steps, 700 + i, screen).Layout)
+            .Append(ranked[0].Layout).DistinctBy(Key).AsParallel().Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
+        return best.Genes > current.Genes ? new(best.Layout, best.Genes, best.Spread, best.Measure, current.Spots + spots.Count) : current;
+    }
+
+    // The baselines of an earlier sweep's results (BALANCE_FROM, its output) given the same chances (BetterBaseline),
+    // each no worse than one at a stage that fits inside it; the tables again against them.
+    [Fact]
+    public void SweepBaselines()
+    {
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
+        var lines = File.ReadAllLines(Environment.GetEnvironmentVariable("BALANCE_FROM")!);
+        int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 1000;
+        double screen = double.TryParse(Environment.GetEnvironmentVariable("BALANCE_SCREEN"), out double sc) ? sc : 20;
+        var names = Tested.Prepend(None).ToDictionary(Name);
+        var all = new List<(Stage Stage, Dictionary<NodeKind, WildResult> Results)>();
+        var text = new StringBuilder();
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Length == 0 || char.IsWhiteSpace(lines[i][0]) || !lines[i].Contains(" stems, ") || lines[i].StartsWith("Against")) continue;
+            var caps = lines[i][..lines[i].IndexOf(':')].Split('/').Select(int.Parse).ToArray();
+            var stage = new Stage(lines[i][..lines[i].IndexOf(':')], caps[0], caps[1], 2, 1);
+            var results = new Dictionary<NodeKind, WildResult>();
+            for (int j = i + 2; j < lines.Length && lines[j].StartsWith("  "); j++)
+            {
+                var name = lines[j][2..13].Trim();
+                var layout = Parse(lines[j][(lines[j].IndexOf(" C(") + 1)..].Trim());
+                double genes = double.Parse(lines[j][13..].Trim().Split(' ')[0]);
+                results[names[name]] = new(layout, genes, 0, Run(layout, stage, 1000), 0);
+            }
+            var at = DateTime.Now;
+            results[None] = BetterBaseline(stage, results[None], Tested.Select(w => (w, results[w].Layout)), steps, screen);
+            foreach (var (s, r) in all.Where(a => a.Stage.Stems <= stage.Stems && a.Stage.Generators <= stage.Generators))
+                foreach (var w in results.Keys.ToList())
+                    if (r[w].Genes > results[w].Genes) results[w] = r[w];
+            all.Add((stage, results));
+            Table(text, stage, results, DateTime.Now - at);
+            text.AppendLine();
+        }
+        foreach (var group in all.Chunk(4))
+        {
+            text.AppendLine($"Against none, {string.Join(", ", group.Select(g => g.Stage.Name))}, and on average:");
+            foreach (var w in Tested.OrderByDescending(w => group.Average(g => g.Results[w].Genes / g.Results[None].Genes)))
+            {
+                var deltas = group.Select(g => (g.Results[w].Genes / g.Results[None].Genes - 1) * 100).ToList();
+                text.AppendLine($"  {Name(w),-11} {string.Join(" ", deltas.Select(d => $"{d,4:+0;-0}%"))}   {deltas.Average(),4:+0;-0}%");
+            }
+            text.AppendLine($"  {"none",-11} {string.Join(" ", group.Select(g => $"{g.Results[None].Genes,5:0}"))}  genes/h");
+        }
+        if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
+        Assert.Skip(text.ToString());
     }
 
     static string Name(NodeKind w) => w == None ? "none" : NodeSpecs.All[w].Name;
