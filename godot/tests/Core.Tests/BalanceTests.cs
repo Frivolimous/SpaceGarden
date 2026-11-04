@@ -825,12 +825,18 @@ public class BalanceTests
 
     // The evolution test's cases (Jeremy, Nov 4): each evolution's effect alone at level 1, its flower left out but the
     // base slot it would take granted; Wild Bloom with two Lichens in its two slots (the steadiest wildflower);
-    // Resonant Frequency with its Buffer too, as alone it has nothing to strengthen.
+    // Resonant Frequency with a Buffer for free, as alone it has nothing to strengthen, and a Buffer with no evolution
+    // to take out what the Buffer itself adds.
+    const string BufferOnly = "Buffer (no evolution)";
+
     static List<EvoCase> EvoCases() =>
-        new List<EvoCase> { new("none", null) }
-        .Concat(Evolutions.All.Values.Where(e => !e.Retired).Select(e => e.Kind == EvolutionKind.WildBloom
-            ? new EvoCase(e.Name, e.Kind, NodeKind.Lichen, 2) : new EvoCase(e.Name, e.Kind)))
-        .Append(new("Resonant + Buffer", EvolutionKind.ResonantFrequency, NodeKind.Buffer))
+        new List<EvoCase> { new("none", null), new(BufferOnly, null, NodeKind.Buffer) }
+        .Concat(Evolutions.All.Values.Where(e => !e.Retired).Select(e => e.Kind switch
+        {
+            EvolutionKind.WildBloom => new EvoCase(e.Name, e.Kind, NodeKind.Lichen, 2),
+            EvolutionKind.ResonantFrequency => new EvoCase(e.Name + " + Buffer", e.Kind, NodeKind.Buffer),
+            _ => new EvoCase(e.Name, e.Kind),
+        }))
         .ToList();
 
     // A stage with an evolution bloomed: its caps raised as a bloom raises them (a core link, generators), less the
@@ -921,7 +927,7 @@ public class BalanceTests
             {
                 var r = res[c.Name];
                 var m = r.Measure;
-                string delta = c.Evolution == null ? "" : $"{(r.Genes / none.Genes - 1) * 100:+0;-0}%";
+                string delta = c.Name == "none" ? "" : $"{(r.Genes / none.Genes - 1) * 100:+0;-0}%";
                 var cap = capsOf[c.Name];
                 string unused = $"{cap.Stems - m.Stems}s {cap.Generators - m.Generators}g";
                 text.AppendLine($"  {c.Name,-20} {r.Genes,7:0} {r.Spread,4:0} {delta,7}  {$"{m.Stems}/{cap.Stems}",6} {$"{m.Generators}/{cap.Generators}",5} {unused,7} {m.Labs,4} {r.Layout.Kids.Count,5} {m.LabFill,5:0%} {m.Production,4:0}/{m.Upkeep,-4:0}  {r.Layout.Show()}");
@@ -930,13 +936,19 @@ public class BalanceTests
             if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } partial) File.WriteAllText(partial, text.ToString());
         }
         text.AppendLine($"Against none, {string.Join(", ", all.Select(g => g.Stage.Name))}, and on average:");
-        foreach (var c in cases.Where(c => c.Evolution != null).OrderByDescending(c => all.Average(g => g.Results[c.Name].Genes / g.Results["none"].Genes)))
+        foreach (var c in cases.Where(c => c.Name != "none").OrderByDescending(c => all.Average(g => g.Results[c.Name].Genes / g.Results["none"].Genes)))
         {
             var deltas = all.Select(g => (g.Results[c.Name].Genes / g.Results["none"].Genes - 1) * 100).ToList();
             string unused = string.Join(" ", all.Select(g => $"{WithEvolution(g.Stage, c).Stems - g.Results[c.Name].Measure.Stems}s{WithEvolution(g.Stage, c).Generators - g.Results[c.Name].Measure.Generators}g"));
             text.AppendLine($"  {c.Name,-20} {string.Join(" ", deltas.Select(d => $"{d,5:+0;-0}%"))}   {deltas.Average(),5:+0;-0}%   unused {unused}");
         }
         text.AppendLine($"  {"none",-20} {string.Join(" ", all.Select(g => $"{g.Results["none"].Genes,6:0}"))}  genes/h");
+        // (Resonant Frequency's own share: with its Buffer, against the Buffer with no evolution.)
+        if (cases.FirstOrDefault(c => c.Evolution == EvolutionKind.ResonantFrequency) is { } rf)
+        {
+            var own = all.Select(g => (g.Results[rf.Name].Genes / g.Results[BufferOnly].Genes - 1) * 100).ToList();
+            text.AppendLine($"  {"Resonant's own",-20} {string.Join(" ", own.Select(d => $"{d,5:+0;-0}%"))}   {own.Average(),5:+0;-0}%   (with its Buffer, against a Buffer alone)");
+        }
         text.AppendLine($"({(DateTime.Now - started).TotalMinutes:0.#} minutes)");
         if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
         Assert.Skip(text.ToString());
