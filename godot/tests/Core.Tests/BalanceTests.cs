@@ -195,7 +195,7 @@ public class BalanceTests
         NodeKind AnyKind() => kinds[rng.Next(kinds.Length)];
         var open = parts.Where(p => p.Kids.Count < Links(p, stage)).ToList();
         var others = parts.Where(p => p.Kind != NodeKind.Core).ToList();
-        switch (rng.Next(9))
+        switch (rng.Next(10))
         {
             case 0: // a new part on a free link
                 if (open.Count == 0) return null;
@@ -240,6 +240,15 @@ public class BalanceTests
                 stem.Attach(new Part(NodeKind.Lab));
                 stem.Attach(new Part(rng.Next(2) == 0 ? NodeKind.Generator : NodeKind.Lab));
                 open[rng.Next(open.Count)].Attach(stem);
+                break;
+            }
+            case 9: // a branch's end extended: a part becomes a stem holding it and a generator and a lab (on a stem of
+                    // their own), a generator, or a lab (Nov 4: one part at a time, the search never filled a full garden's
+                    // spare stems and generators: a stem or generator alone only costs)
+            {
+                var leaves = others.Where(p => p.Kids.Count == 0).ToList();
+                if (leaves.Count == 0) return null;
+                foreach (var _ in Extend(leaves[rng.Next(leaves.Count)], rng.Next(3))) { }
                 break;
             }
             case 6: // the wildflower moved: what grew beyond it goes to its parent, and it goes in before another part
@@ -305,6 +314,71 @@ public class BalanceTests
             else misses++;
         }
         return core;
+    }
+
+    // A part at a branch's end extended in place (see Change, case 9): it moves down onto a new stem, which also holds
+    // a stem with a generator and a lab (variant 0), a generator (1) or a lab (2). (An iterator only so a caller can
+    // do it as a statement; it's done at once.)
+    static IEnumerable<int> Extend(Part leaf, int variant)
+    {
+        var up = leaf.Up!;
+        leaf.Detach();
+        var stem = new Part(NodeKind.Stem);
+        up.Attach(stem);
+        stem.Attach(leaf);
+        if (variant == 0)
+        {
+            var pair = new Part(NodeKind.Stem);
+            pair.Attach(new Part(NodeKind.Generator));
+            pair.Attach(new Part(NodeKind.Lab));
+            stem.Attach(pair);
+        }
+        else stem.Attach(new Part(variant == 1 ? NodeKind.Generator : NodeKind.Lab));
+        yield break;
+    }
+
+    // The finishing pass (Nov 4): while the caps have room, the best of every way to add to the garden (each end part
+    // extended, see Extend, or a generator, a lab, or a stem with both on a free link), kept while it sends more genes
+    // (screened), so no spare stem and generator is left that would pay.
+    static Part Fill(Part layout, Stage stage, NodeKind? wild, double screen)
+    {
+        double Screen(Part p) => (Run(p, stage, 1, screen).Score + Run(p, stage, 2, screen).Score) / 2;
+        double score = Screen(layout);
+        for (int round = 0; round < 12; round++)
+        {
+            var tries = new List<Part>();
+            int count = layout.All().Count();
+            for (int i = 1; i < count; i++)
+                for (int v = 0; v < 3; v++)
+                {
+                    var copy = layout.Copy();
+                    var p = copy.All().ElementAt(i);
+                    if (p.Kids.Count > 0) continue;
+                    foreach (var _ in Extend(p, v)) { }
+                    tries.Add(copy);
+                }
+            for (int i = 0; i < count; i++)
+                for (int v = 0; v < 3; v++)
+                {
+                    var copy = layout.Copy();
+                    var p = copy.All().ElementAt(i);
+                    if (p.Kids.Count >= Links(p, stage)) continue;
+                    if (v < 2) p.Attach(new Part(v == 0 ? NodeKind.Generator : NodeKind.Lab));
+                    else
+                    {
+                        var pair = new Part(NodeKind.Stem);
+                        pair.Attach(new Part(NodeKind.Generator));
+                        pair.Attach(new Part(NodeKind.Lab));
+                        p.Attach(pair);
+                    }
+                    tries.Add(copy);
+                }
+            var best = tries.Where(t => Fits(t, stage, wild) && !Overloads(t, stage)).DistinctBy(Key).AsParallel()
+                .Select(t => (t, g: Screen(t))).OrderByDescending(x => x.g).FirstOrDefault();
+            if (best.t == null || best.g <= score * 1.002) break;
+            (layout, score) = (best.t, best.g);
+        }
+        return layout;
     }
 
     // Annealed climb: a change is kept if it scores better, or a little worse early on; the best seen is returned.
@@ -871,8 +945,8 @@ public class BalanceTests
             spots = spots.Concat(given).DistinctBy(Key).ToList();
         }
         var ranked = spots.AsParallel().Select(p => (Layout: p, Genes: Screen(p))).OrderByDescending(r => r.Genes).ToList();
-        var climbed = ranked.Take(3).AsParallel().Select((r, i) => Climb(r.Layout, stage, wild, steps, 300 + i, screen).Layout).ToList();
-        var best = climbed.Append(ranked[0].Layout).Concat(given).DistinctBy(Key).AsParallel().Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
+        var climbed = ranked.Take(3).AsParallel().Select((r, i) => Fill(Climb(r.Layout, stage, wild, steps, 300 + i, screen).Layout, stage, wild, screen)).ToList();
+        var best = climbed.Append(Fill(ranked[0].Layout, stage, wild, screen)).Concat(given).DistinctBy(Key).AsParallel().Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
         return new(best.Layout, best.Genes, best.Spread, best.Measure, spots.Count);
     }
 
