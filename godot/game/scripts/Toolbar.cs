@@ -97,8 +97,8 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, tip) in new[]
         {
             (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
-            (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Plant a seedling (it uses a seedling slot)"),
-            (Tool.Hub, "Plant the Hub (one at a time)"),
+            (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Grow a seedling (it uses a seedling slot)"),
+            (Tool.Hub, "Grow the Hub (one at a time)"),
             (Tool.HubPanel, "Hub upgrades"), (Tool.Unhook, "Take it off its pot or trellis"),
             (Tool.Prune, "Prune"), (Tool.Remove, "Take this away"),
         })

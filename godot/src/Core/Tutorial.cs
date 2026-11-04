@@ -50,7 +50,7 @@ public static class Tutorial
         TutorialStep.Grove or TutorialStep.GroveWait => "Groves send growth {Growth} that helps your garden grow faster.",
         TutorialStep.Stem or TutorialStep.StemWait => "Stems give you more space to grow flowers, and carry power between them.",
         TutorialStep.Lab => "Labs send genes {Genes} to the core, which are used to buy upgrades.",
-        TutorialStep.Pot => "While you wait, let's arrange your garden! Open tending mode from the core's menu and plant your core in a Gravity Pot.",
+        TutorialStep.Pot => "While you wait, let's arrange your garden! Open tending mode from the core's menu and set your core in a Gravity Pot.",
         TutorialStep.Tools => "Tending tools are just used to arrange your garden and don't have any other in-game effect. You'll unlock more tools as your garden grows.",
         TutorialStep.Genes => "Labs send genes {Genes} that are absorbed by the core. When you have enough, you can start upgrading your garden.",
         TutorialStep.Wait => "Explore your options and keep growing your garden while your genes accumulate!",

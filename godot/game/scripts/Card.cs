@@ -212,7 +212,7 @@ public partial class Card : PanelContainer
             Line(ref used, ("Genes: ", Ink),
                 ($"{Math.Floor(stats.GeneBalance):0}", GeneInk.Lerp(Ink, (float)Math.Clamp(stats.GeneBalance / next.Cost, 0, 1))));
             string when = stats.SecondsToNext is { } eta ? eta <= 0 ? " (in Expansions)" : $" (ETA {Eta(eta / speed)})"
-                : stats.Labs == 0 ? " (plant a lab)" : "";
+                : stats.Labs == 0 ? " (grow a lab)" : "";
             Line(ref used, $"Next: {next.Name}, {next.Cost:#,0}{when}");
         }
         else

@@ -59,7 +59,7 @@ public sealed class Tracking
         {
             if (found) Log(JournalKind.Discovery, $"Wildflower discovered: {spec.Name}");
         }
-        else if (spec.Kind == NodeKind.Hub) First("grew:Hub", "First Hub planted");
+        else if (spec.Kind == NodeKind.Hub) First("grew:Hub", "First Hub grown");
         else if (!spec.IsFruit) First($"grew:{spec.Kind}", $"First {spec.Name.ToLowerInvariant()} emerged");
         if (parts <= MostParts) return;
         foreach (var milestone in PartMilestones)

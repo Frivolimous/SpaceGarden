@@ -236,7 +236,7 @@ public partial class Almanac : FloatingWindow
             foreach (var (spec, age) in kinds)
                 grid.AddChild(EntryCard(spec.Name, spec.Shape, GardenView.Rgb(spec.Rgb),
                     spec.Wild is { } wild ? $"{spec.Description} {wild.Quirk}" : spec.Description,
-                    spec.Kind == NodeKind.Core ? "At the planting" : $"Found day {Tracking.DayOf(age)}, {Tracking.ClockOf(age)}"));
+                    spec.Kind == NodeKind.Core ? "From the start" : $"Found day {Tracking.DayOf(age)}, {Tracking.ClockOf(age)}"));
             codex.AddChild(grid);
         }
         Section("Parts", s => !s.IsFruit && !s.IsWild);
@@ -263,7 +263,7 @@ public partial class Almanac : FloatingWindow
         {
             evolutions.AddChild(new Label
             {
-                Text = "None yet. Plant a seedling, fill it with power, and choose its evolution.",
+                Text = "None yet. Grow a seedling, fill it with power, and choose its evolution.",
                 AutowrapMode = TextServer.AutowrapMode.WordSmart,
                 MouseFilter = MouseFilterEnum.Pass,
                 LabelSettings = new LabelSettings { FontSize = 13, FontColor = Dim },

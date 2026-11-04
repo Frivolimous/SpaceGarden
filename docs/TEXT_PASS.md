@@ -10,13 +10,14 @@ All the words a player sees, grouped by where they appear. Write your version in
 
 ## Terms (Jeremy, Nov 4; applied)
 
-Expansions (was Research), tending mode (was build mode), tending tools, motes (was blobs), drain (was upkeep), max power (was store), links (was connections), power gen ("Gen" for short on the cards), wildflower (one word), genes, notes (the lab's fruit, was research). Sentence case for every label, title and heading; names keep their capitals (Gravity Pot, Lumber Grove, the evolutions). American spelling (minimize).
+Expansions (was Research), tending mode (was build mode), tending tools, motes (was blobs), drain (was upkeep), max power (was store), links (was connections), power gen ("Gen" for short on the cards), wildflower (one word), genes, notes (the lab's fruit, was research), grow (was plant: grow a seedling, grow the Hub), the garden (was the plant, for the whole structure). Sentence case for every label, title and heading; names keep their capitals (Gravity Pot, Lumber Grove, the evolutions). American spelling (minimize).
 
 ## Still open
 
 - `WildFlowers.cs:21`: the Wood fruit says "Crawlers will use it later". Crawlers aren't in the game.
 - `Toolbar.cs:103`: the Remove button on a tool says "Take this away"; "Remove this tool" would be plainer.
 - The evolution names are written as names ("Second Path", "Smart Motes"), but "Build your Core" mixes the two styles.
+
 
 
 ## Tutorial
@@ -37,7 +38,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Tutorial.cs:50` | Groves send growth {Growth} that helps your garden grow faster. | |
 | `Tutorial.cs:51` | Stems give you more space to grow flowers, and carry power between them. | |
 | `Tutorial.cs:52` | Labs send genes {Genes} to the core, which are used to buy upgrades. | |
-| `Tutorial.cs:53` | While you wait, let's arrange your garden! Open tending mode from the core's menu and plant your core in a Gravity Pot. | |
+| `Tutorial.cs:53` | While you wait, let's arrange your garden! Open tending mode from the core's menu and set your core in a Gravity Pot. | |
 | `Tutorial.cs:54` | Tending tools are just used to arrange your garden and don't have any other in-game effect. You'll unlock more tools as your garden grows. | |
 | `Tutorial.cs:55` | Labs send genes {Genes} that are absorbed by the core. When you have enough, you can start upgrading your garden. | |
 | `Tutorial.cs:56` | Explore your options and keep growing your garden while your genes accumulate! | |
@@ -82,8 +83,8 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | Where | Text | New text |
 |---|---|---|
 | `Toolbar.cs:99` | Grow a stem · Grow a generator · Grow a lab | |
-| `Toolbar.cs:100` | Grow a grove · Plant a seedling (it uses a seedling slot) | |
-| `Toolbar.cs:101` | Plant the Hub (one at a time) | |
+| `Toolbar.cs:100` | Grow a grove · Grow a seedling (it uses a seedling slot) | |
+| `Toolbar.cs:101` | Grow the Hub (one at a time) | |
 | `Toolbar.cs:102` | Hub upgrades · Take it off its pot or trellis | |
 | `Toolbar.cs:103` | Prune · Take this away | |
 | `Toolbar.cs:177` | Cancel the {kind} bud (its growth is lost) | |
@@ -113,9 +114,9 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `ShapingLook.cs:19` | Gravity Well | |
 | `ShapingLook.cs:24` | Drop a part on it: the part is held there, and its branch grows the way the pot faces. | |
 | `ShapingLook.cs:25` | Drop parts on it: they're held along its line. | |
-| `ShapingLook.cs:26` | Place it anywhere and turn its knob: left calms the plant's sway (to none), right stirs it (up to  | |
+| `ShapingLook.cs:26` | Place it anywhere and turn its knob: left calms the garden's sway (to none), right stirs it (up to  | |
 | `ShapingLook.cs:27` | {SwayMax}×). Straight up is the usual. | |
-| `ShapingLook.cs:28` | Pulls the whole plant towards it, core and all. Pot the core to keep the plant where it is. | |
+| `ShapingLook.cs:28` | Pulls the whole garden towards it, core and all. Pot the core to keep the garden where it is. | |
 | `Garden.cs:2122` | Gravity Pot | |
 | `Garden.cs:2123` | Trellis | |
 | `Garden.cs:2124` | Sway Controller | |
@@ -150,7 +151,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Card.cs:207` | , Drain: {Upkeep}/s | |
 | `Card.cs:212` | Genes:  | |
 | `Card.cs:214` |  (in Expansions) ·  (ETA {eta}) | |
-| `Card.cs:215` |  (plant a lab) | |
+| `Card.cs:215` |  (grow a lab) | |
 | `Card.cs:216` | Next: {next}, {Cost}{when} | |
 | `Card.cs:220` | Genes: {GeneBalance} | |
 | `Card.cs:221` | Next: every upgrade bought | |
@@ -192,8 +193,8 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Garden.cs:2717` | Increases the total number of generators you can add to your garden. | |
 | `Garden.cs:2718` | One more wildflower slot: while one is free, a new bud may grow into any wildflower instead. | |
 | `Garden.cs:2719` | Lets one more branch grow straight from the core. | |
-| `Garden.cs:2720` | Lets you plant one more seedling, and so choose one more evolution. | |
-| `Garden.cs:2721` | Unlocks the Hub: plant it by hand, and it catches genes to boost each kind of part. | |
+| `Garden.cs:2720` | Lets you grow one more seedling, and so choose one more evolution. | |
+| `Garden.cs:2721` | Unlocks the Hub: grow it by hand, and it catches genes to boost each kind of part. | |
 
 ## Hub panel and paths
 
@@ -360,11 +361,11 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Almanac.cs:48` | Evolutions | |
 | `Almanac.cs:158` | Day {day}, {time} | |
 | `Almanac.cs:182` | Day {day} | |
-| `Almanac.cs:239` | At the planting · Found day {day}, {time} | |
+| `Almanac.cs:239` | From the start · Found day {age}, {age} | |
 | `Almanac.cs:242` | Parts | |
 | `Almanac.cs:243` | Wildflowers | |
 | `Almanac.cs:244` | Fruit | |
-| `Almanac.cs:266` | None yet. Plant a seedling, fill it with power, and choose its evolution. | |
+| `Almanac.cs:266` | None yet. Grow a seedling, fill it with power, and choose its evolution. | |
 | `Almanac.cs:279` | Chosen day {day}, {time} | |
 | `Almanac.cs:282` | Delete? | |
 | `Almanac.cs:283` | Take this evolution back: its effect and caps go (its flower stays), and its seedling slot is free for a new seedling | |
@@ -373,7 +374,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 
 | Where | Text | New text |
 |---|---|---|
-| `Garden.cs:148` | A new garden was planted | |
+| `Garden.cs:148` | A new garden began to grow | |
 | `Garden.cs:1527` | First passive bud started | |
 | `Garden.cs:1684` | Evolution chosen: {evolution} | |
 | `Garden.cs:1707` | {evolution} bloomed into {flower} {flower} | |
@@ -384,7 +385,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Garden.cs:2064` | Hub bought | |
 | `Garden.cs:2098` | {name} gained at garden size {size} | |
 | `Tracking.cs:60` | Wildflower discovered: {Name} | |
-| `Tracking.cs:62` | First Hub planted | |
+| `Tracking.cs:62` | First Hub grown | |
 | `Tracking.cs:63` | First {Name} emerged | |
 | `Tracking.cs:66` | The garden reached {milestone} parts | |
 | `Tracking.cs:317` | {Name}, now {Becomes} {Becomes} | |

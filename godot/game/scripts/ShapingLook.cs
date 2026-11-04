@@ -23,9 +23,9 @@ public static class ShapingLook
     {
         ShapingKind.Pot => "Drop a part on it: the part is held there, and its branch grows the way the pot faces.",
         ShapingKind.Trellis => "Drop parts on it: they're held along its line.",
-        ShapingKind.Sway => "Place it anywhere and turn its knob: left calms the plant's sway (to none), right stirs it (up to "
+        ShapingKind.Sway => "Place it anywhere and turn its knob: left calms the garden's sway (to none), right stirs it (up to "
             + $"{Tuning.SwayMax:0}×). Straight up is the usual.",
-        _ => "Pulls the whole plant towards it, core and all. Pot the core to keep the plant where it is.",
+        _ => "Pulls the whole garden towards it, core and all. Pot the core to keep the garden where it is.",
     };
 
     // A flower pot holding a part of radius r centred at `at`, opening the way u points: a rim straight across the

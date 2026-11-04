@@ -145,7 +145,7 @@ public sealed class Garden
         core.Age = 10;
         core.Power = core.Store;
         core.FillLook = 1;
-        garden.Tracking.Log(JournalKind.Planted, "A new garden was planted");
+        garden.Tracking.Log(JournalKind.Planted, "A new garden began to grow");
         garden.Tracking.Discovered[NodeKind.Core] = 0;
         return garden;
     }
@@ -2717,8 +2717,8 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
         UpgradeKind.Generator => "Increases the total number of generators you can add to your garden.",
         UpgradeKind.WildFlower => "One more wildflower slot: while one is free, a new bud may grow into any wildflower instead.",
         UpgradeKind.CoreLink => "Lets one more branch grow straight from the core.",
-        UpgradeKind.Seedling => "Lets you plant one more seedling, and so choose one more evolution.",
-        _ => "Unlocks the Hub: plant it by hand, and it catches genes to boost each kind of part.",
+        UpgradeKind.Seedling => "Lets you grow one more seedling, and so choose one more evolution.",
+        _ => "Unlocks the Hub: grow it by hand, and it catches genes to boost each kind of part.",
     };
 }
 

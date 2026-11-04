@@ -73,7 +73,7 @@ public class HubTests
         garden.Capacity = new Capacity(10, 4, 1, Hubs: 1);
         var hub = Add(garden, garden.Core, NodeKind.Hub);
         Add(garden, hub, NodeKind.Lab);
-        Assert.Contains(garden.Tracking.Journal, e => e.Text == "First Hub planted");
+        Assert.Contains(garden.Tracking.Journal, e => e.Text == "First Hub grown");
         GrowFull(garden, 600);
         Assert.Equal(0, garden.Genes); // none reached the core's balance
         Assert.True(garden.HubGenes > 50);
