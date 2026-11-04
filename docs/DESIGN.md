@@ -286,7 +286,7 @@ A new bud can turn into a special kind. That is **wild growth**, and the results
 | Seed Pod | 20 growth blobs of 0.2 every minute | 1 wild | Grove | Start | 3 berry |
 | Wild Lab | A 2-gene blob every 6 s (a lab: 1 every 5 s) | 1 wild | Lab | Start | 6 research |
 | Lichen | A 2-gene blob every 6 s; 4 leaves bring its upkeep to 0; sends no power on | 1 wild | Lab | Start | 4 leaf |
-| Buffer | A buff blob every 5 s: the parts it passes that use a buff (the core, generators, labs, groves and their wild kinds) make 50% more (150% of their output) for 30 s; reaches 5 links | 1 wild | Passive only | Start | 2 glow |
+| Buffer | A buff blob every 5 s: the first part on its way that uses a buff (the core, generators, labs, groves and their wild kinds) and has none, or under 5 s of one left, is buffed and uses it up (Jeremy, Nov 4; it used to buff every such part it passed): 50% more (150% of its output) for 30 s; reaches 5 links | 1 wild | Passive only | Start | 2 glow |
 | Comet Bloom | Active 10 minutes: every gene and growth blob is worth double and buffs last twice as long; then dormant, fading over 6 h, and withers | 1 wild | Passive only | Start | 2 glow |
 | Moonflower | Buds within 5 links twice as likely to grow wild; wild flowers within 5 links that use a boost (as a buff: the generator, grove and lab kinds) make 25% more (their card shows its mark) | 1 wild | Passive only | Start | 3 glow |
 | ~~Nebula Bloom~~ | Retired Nov 3: no longer grows (one in an older garden keeps working) | | | | |

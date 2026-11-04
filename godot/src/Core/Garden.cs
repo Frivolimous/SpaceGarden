@@ -1312,7 +1312,7 @@ public sealed class Garden
         {
             BlobKind.Genes => CatchesGenes(to),
             BlobKind.Growth => to.Forming != null || CanStartFruit(to) || (PassiveGrowth && !TutorialHoldsBuds && to.CanBranch),
-            _ => to.Spec.TakesBuffs && to.Buff <= 0, // (a dead end worth a buff)
+            _ => to.Spec.TakesBuffs && to.Buff < Tuning.BuffRefreshSeconds, // (a dead end that would take it)
         };
     }
 
@@ -1443,45 +1443,58 @@ public sealed class Garden
         return grown != null ? 1 : 0;
     }
 
-    // A buff blob leaves a Buffer, or a glow fruit (DESIGN.md, Wild flowers). It wanders as the others do, but nothing
-    // absorbs it: every part it passes, for BufferReach links (BufferAmplifiedReach more once it passes an Amplifier),
-    // makes BuffBonus more for BuffSeconds. A glow's starts on the part it hangs from. Settled now, as the others are;
-    // shown fading where it ends.
+    // A buff blob leaves a Buffer, or a glow fruit (DESIGN.md, Wild flowers). It wanders as the others do, for up to
+    // BufferReach links (BufferAmplifiedReach more once it passes an Amplifier), and the first part on its way that
+    // takes it is buffed and uses it up (Jeremy, Nov 4): a part that uses a buff and has none, or less than
+    // BuffRefreshSeconds of one left. Parts that don't use a buff, or are buffed for longer, pass it on. A glow's
+    // starts on the part it hangs from. Settled now, as the others are; shown flashing the part it buffed, or fading
+    // where it ends unused.
     void SendBuff(PlantNode from)
     {
         var route = RouteIfShown();
         route?.Add(from);
         PlantNode? cameFrom = null;
         var at = from;
+        bool used = false;
         if (from.Spec.IsFruit && from.Parent is { } parent)
         {
             at = parent;
             route?.Add(at);
-            Buffs(at);
+            used = TakesBuff(at);
         }
         int reach = Tuning.BufferReach;
         bool amplified = false;
-        for (int hop = 0; hop < reach; hop++)
+        for (int hop = 0; hop < reach && !used; hop++)
         {
             if (StepFrom(at, cameFrom, BlobKind.Buff) is not { } next) break;
             cameFrom = at;
             at = next;
             route?.Add(at);
             if (TrackTraffic) CountTraffic(cameFrom, at, BlobKind.Buff);
-            Buffs(at);
+            used = TakesBuff(at);
             if (!amplified && at.Spec.DoublesBlobs)
             {
                 amplified = true;
                 reach += Tuning.BufferAmplifiedReach;
             }
         }
-        Show(route, from);
+        if (Show(route, from) is { } mote) mote.Absorbed = used;
+    }
+
+    // Whether a buff blob here is used up: a part that uses a buff, with none or less than BuffRefreshSeconds of one
+    // left, is buffed by it.
+    bool TakesBuff(PlantNode part)
+    {
+        if (!part.Spec.TakesBuffs || part.Buff >= Tuning.BuffRefreshSeconds) return false;
+        Buffs(part);
+        return true;
     }
 
     // A buff blob passes a part that uses it: for BuffSeconds (HubBuffSeconds more with the Buffer's milestone) it
     // makes BuffBonus more, plus Resonant Frequency's and the Buffer's Hub path's, all added (Jeremy, Nov 3).
-    // For tests: as if a buff blob passed this part.
+    // For tests: as if a buff blob were used up on this part; and whether one arriving here would be.
     internal void BuffForTest(PlantNode part) => Buffs(part);
+    internal bool BuffMoteForTest(PlantNode part) => TakesBuff(part);
 
     void Buffs(PlantNode part)
     {

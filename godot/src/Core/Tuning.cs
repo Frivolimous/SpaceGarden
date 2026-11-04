@@ -194,6 +194,9 @@ public static class Tuning
     // next BuffSeconds (Jeremy, Nov 3: 150% of its output, +50%, for 30 s; was a minute). A second buff only starts the
     // time again.
     public const float BufferBlobs = 720, GlowBlobs = 60, BuffBonus = 0.5f, BuffSeconds = 30;
+    // A buff blob is used up by the first part on its way that uses a buff and has none, or less than this many seconds
+    // of one left; the rest pass it on (Jeremy, Nov 4: it was spent on every part it passed, and never used up).
+    public const float BuffRefreshSeconds = 5;
     public const int BufferReach = 5, BufferAmplifiedReach = 3;
     // Comet Bloom (Jeremy, Nov 3): active for CometActiveSeconds, then dormant, fading for CometFadeSeconds, then it
     // withers. While any is active, every gene and growth blob is worth CometBlobValue times as much, and buffs last

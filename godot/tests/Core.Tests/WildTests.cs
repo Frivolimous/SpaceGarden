@@ -170,6 +170,26 @@ public class WildTests
     }
 
     [Fact]
+    public void ABuffMoteIsUsedUpByTheFirstPartThatNeedsIt()
+    {
+        var (garden, stem) = Make(wildLimit: 1);
+        var generator = Add(garden, stem, NodeKind.Generator);
+        // A stem doesn't use a buff: the mote passes on.
+        Assert.False(garden.BuffMoteForTest(stem));
+        // No buff: it's used up, and the generator buffed.
+        Assert.True(garden.BuffMoteForTest(generator));
+        Assert.Equal(Tuning.BuffSeconds, generator.Buff, 3);
+        // Buffed for longer than BuffRefreshSeconds: passed on, the buff untouched.
+        generator.Buff = 20;
+        Assert.False(garden.BuffMoteForTest(generator));
+        Assert.Equal(20, generator.Buff, 3);
+        // Less than that left: used up, the buff back to full.
+        generator.Buff = Tuning.BuffRefreshSeconds - 1;
+        Assert.True(garden.BuffMoteForTest(generator));
+        Assert.Equal(Tuning.BuffSeconds, generator.Buff, 3);
+    }
+
+    [Fact]
     public void APulsarSendsHalfItsPowerAtOnceWhenFull()
     {
         var (garden, stem) = Make(wildLimit: 1);
