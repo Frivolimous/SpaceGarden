@@ -252,13 +252,15 @@ public class PacingTests
         ("40 stems", g => g.StemsBought >= 36),
         ("third seedling slot", g => g.CoreBought > CoreAt(UpgradeKind.Seedling, 2)),
         ("455,150 genes earned", g => g.Genes >= 455_150),
+        // The Hub's progress counted in points earned (Jeremy, Nov 4: 46 of its 92 by day 14), not levels (a wildflower's
+        // path waits for its kind to be found).
         ("Hub grown", g => g.HubPlanted),
-        ("first Hub level", g => g.HubLevelsBought >= 1),
-        ("10 Hub levels", g => g.HubLevelsBought >= 10),
-        ("20 Hub levels", g => g.HubLevelsBought >= 20),
-        ("33 Hub levels (half)", g => g.HubLevelsBought >= 33),
-        ("50 Hub levels", g => g.HubLevelsBought >= 50),
-        ("all 65 Hub levels", g => g.HubLevelsBought >= Hubs.Paths.Sum(p => p.MaxLevel)),
+        ("first Hub point", g => g.HubPointsEarned >= 1),
+        ("10 Hub points", g => g.HubPointsEarned >= 10),
+        ("23 Hub points (25%)", g => g.HubPointsEarned >= 23),
+        ("46 Hub points (50%)", g => g.HubPointsEarned >= 46),
+        ("69 Hub points (75%)", g => g.HubPointsEarned >= 69),
+        ("92 Hub points (all)", g => g.HubPointsEarned >= Hubs.TotalPoints),
     ];
 
     static string Describe(Garden garden)
@@ -406,7 +408,7 @@ public class PacingTests
                 }
                 run.GenesByDay[s, day - 1] = garden.Genes;
                 run.HubGenesByDay[s, day - 1] = garden.HubGenes;
-                run.HubLevelsByDay[s, day - 1] = garden.HubLevelsBought;
+                run.HubLevelsByDay[s, day - 1] = garden.HubPointsEarned; // (points, Nov 4: progress is counted in them)
                 run.StemsBought[s, day - 1] = garden.StemsBought;
                 run.GeneratorsBought[s, day - 1] = garden.GeneratorsBought;
                 run.Expansions[s, day - 1] = garden.Bought;
@@ -519,7 +521,7 @@ public class PacingTests
                     + $"{Enumerable.Range(0, run.AfterSleep.GetLength(0)).Min(s => run.AfterSleep[s, day - 1]):0}-"
                     + $"{Enumerable.Range(0, run.AfterSleep.GetLength(0)).Max(s => run.AfterSleep[s, day - 1]):0}" : "")
                 + (Median(run.HubGenesByDay, day - 1) > 0 || Median(run.HubLevelsByDay, day - 1) > 0
-                    ? $"; the Hub's genes caught median {Median(run.HubGenesByDay, day - 1):#,0}, levels median {Median(run.HubLevelsByDay, day - 1):0}"
+                    ? $"; the Hub's genes caught median {Median(run.HubGenesByDay, day - 1):#,0}, points earned median {Median(run.HubLevelsByDay, day - 1):0}"
                     : ""));
             // The day's own: stems and generators bought (all gardens together), Expansions, the Hub's share of the
             // genes, its unspent points, its drain against the power gen, and the hours overloaded and short of caps.
