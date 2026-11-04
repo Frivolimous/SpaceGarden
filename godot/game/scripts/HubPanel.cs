@@ -66,14 +66,14 @@ public partial class HubPanel : FloatingWindow
         Column.AddChild(columns);
         var left = PathColumn(columns);
         var right = PathColumn(columns);
-        left.AddChild(Heading("PARTS"));
+        left.AddChild(Heading("Parts"));
         int i = 0;
         foreach (var path in Hubs.Paths)
         {
             var into = i < LeftRows ? left : right;
             bool firstWild = NodeSpecs.All[path.Kind].IsWild && (i == 0 || !NodeSpecs.All[Hubs.Paths[i - 1].Kind].IsWild);
-            if (firstWild) into.AddChild(Heading("WILD FLOWERS"));
-            else if (path.Kind == NodeKind.Hub) into.AddChild(Heading("HUB"));
+            if (firstWild) into.AddChild(Heading("Wildflowers"));
+            else if (path.Kind == NodeKind.Hub) into.AddChild(Heading("Hub"));
             else if (i == LeftRows) into.AddChild(Heading("")); // level with the left column's first row
             into.AddChild(Row(path));
             i++;

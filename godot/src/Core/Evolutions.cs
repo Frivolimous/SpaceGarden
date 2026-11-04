@@ -57,7 +57,7 @@ public sealed record EvolutionLevel
         };
     }
 
-    // What it does, for the choice menu and the Almanac: "Core power x2, core transfer x2, core store x1.5".
+    // What it does, for the choice menu and the Almanac: "Core power gen x2, core transfer x2, core max power x1.5".
     public string Text
     {
         get
@@ -71,22 +71,22 @@ public sealed record EvolutionLevel
             {
                 if (by != 0) parts.Add($"{what} +{by}");
             }
-            Times("Core power", CoreGen);
+            Times("Core power gen", CoreGen);
             Plus("Core link", CoreLinks);
             Times("core transfer", CoreTransfer);
-            Times("core store", CoreStore);
+            Times("core max power", CoreStore);
             Times("Stem, Big Stem and Tendril transfer", StemTransfer);
-            Times("their store", StemStore);
+            Times("their max power", StemStore);
             if (StemFruits != 0) parts.Add($"Stems hold +{StemFruits} leaf");
-            if (SmartChance >= 1) parts.Add("Blobs always avoid dead ends");
-            else if (SmartChance > 0) parts.Add($"Blobs avoid dead ends {SmartChance * 100:0}% of the time");
-            Times("Lab, Wild Lab and Lichen gene blobs' size", LabBlobSize);
-            Times("their upkeep", LabUpkeep);
+            if (SmartChance >= 1) parts.Add("Motes always avoid dead ends");
+            else if (SmartChance > 0) parts.Add($"Motes avoid dead ends {SmartChance * 100:0}% of the time");
+            Times("Lab, Wild Lab and Lichen gene motes' size", LabBlobSize);
+            Times("their drain", LabUpkeep);
             Plus("Generator cap", Generators);
-            Times("Every generator kind's power", GeneratorGen);
+            Times("Every generator kind's power gen", GeneratorGen);
             Times("Generator, Twin Star and Ember transfer", GeneratorTransfer);
             Times("Generator transfer", AllGeneratorTransfer);
-            Plus("Wild flower limit", WildFlowers);
+            Plus("Wildflower limit", WildFlowers);
             if (WildEffect != 1) parts.Add($"Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen and Buffer +{(WildEffect - 1) * 100:0}%");
             if (BuffBonus > 0) parts.Add($"Buffs {(1 + Tuning.BuffBonus + BuffBonus) * 100:0}% of the output");
             if (parts.Count == 0) return "";
@@ -121,7 +121,7 @@ public static class Evolutions
             new() { CoreLinks = 1, CoreTransfer = 2 }, MaxLevel: 3),
         [EvolutionKind.LongStemmed] = new(EvolutionKind.LongStemmed, "Long Stemmed", NodeKind.Tendril, Structure,
             new() { StemTransfer = 2, StemStore = 2 }, MaxLevel: 2, Late: true),
-        [EvolutionKind.SmartParticles] = new(EvolutionKind.SmartParticles, "Smart Particles", NodeKind.Resistor, Specialist,
+        [EvolutionKind.SmartParticles] = new(EvolutionKind.SmartParticles, "Smart Motes", NodeKind.Resistor, Specialist,
             new() { SmartChance = 0.5f }, MaxLevel: 2),
         [EvolutionKind.RapidEvolution] = new(EvolutionKind.RapidEvolution, "Rapid Evolution", NodeKind.WildLab, Genes,
             new() { LabBlobSize = 1.5f, LabUpkeep = 1.2f }, MaxLevel: 3), // (Jeremy, Nov 3: x2 upkeep starved the plant)
@@ -187,7 +187,7 @@ public sealed record Boost(float Gen = 1, float Upkeep = 1, float Transfer = 1, 
     public float Reach { get; init; } = 1;
     public float LeafBonus { get; init; }
     public float BudGrow { get; init; } = 1;
-    // What each blob it sends carries, times its spec's BlobValue (Rapid Evolution: a lab's gene blobs' size).
+    // What each blob it sends carries, times its spec's BlobValue (Rapid Evolution: a lab's gene motes' size).
     public float Value { get; init; } = 1;
     // Seconds added to its active time (a Comet Bloom's, with its Hub path).
     public float Active { get; init; }

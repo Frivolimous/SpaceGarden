@@ -51,7 +51,7 @@ public partial class Toolbar : PanelContainer
     };
 
     readonly Dictionary<Tool, ToolButton> buttons = new();
-    // Over the bud buttons when every link of the part is taken: "3/3 Connections Used", covering them.
+    // Over the bud buttons when every link of the part is taken: "3/3 links used", covering them.
     readonly PanelContainer full;
     readonly Label fullText;
     Tween? fade;
@@ -182,7 +182,7 @@ public partial class Toolbar : PanelContainer
         buttons[Tool.Prune].Enabled = Allows(TutorialAction.Prune, null);
         // Every link taken (a bud forming holds one, but then its button shows it growing instead).
         full.Visible = buds && Target.Links >= Target.MaxLinks && !Target.FormingBud;
-        if (full.Visible) fullText.Text = $"{Target.Links}/{Target.MaxLinks} Connections Used";
+        if (full.Visible) fullText.Text = $"{Target.Links}/{Target.MaxLinks} links used";
     }
 
     public void HideAway()
@@ -436,8 +436,8 @@ public partial class ShapingBar : PanelContainer
         column.AddChild(views);
         foreach (var (view, text, tip) in new[]
         {
-            (HeatView.Power, "Power", "Show each part's power as heat: blue empty, green half, red full"),
-            (HeatView.Blobs, "Blob paths", "Show where gene and growth blobs have been going lately (counted from now)"),
+            (HeatView.Power, "Power", "Show each part's power as heat: red empty, yellow at 75%, green full, teal over full"),
+            (HeatView.Blobs, "Mote paths", "Show where gene and growth motes have been going lately (counted from now)"),
         })
         {
             var toggle = new Button

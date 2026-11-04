@@ -389,7 +389,7 @@ public partial class Main : Node2D
         var gained = journal.Skip(journalShown).Where(e => e.Kind == JournalKind.Tool).Select(e => e.Text).ToList();
         journalShown = journal.Count;
         if (gained.Count == 0) return;
-        Toast($"{string.Join(". ", gained)}. Place {(gained.Count == 1 ? "it" : "them")} in build mode.", ShapingLook.Tint);
+        Toast($"{string.Join(". ", gained)}. Place {(gained.Count == 1 ? "it" : "them")} in tending mode.", ShapingLook.Tint);
     }
 
     // What changed in a catch-up (DESIGN.md, Step 4: While you were away), in a small panel above the plant where the

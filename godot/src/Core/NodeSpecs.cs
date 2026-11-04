@@ -163,7 +163,7 @@ public static class NodeSpecs
             },
             [NodeKind.Stem] = new(NodeKind.Stem)
             {
-                Name = "Stem", Description = "Structure: carries power and blobs. Cheap upkeep, less with leaves.",
+                Name = "Stem", Description = "Structure: carries power and motes. Low drain, less with leaves.",
                 Radius = 10, Mass = 1, Force = 1, MaxLinks = 3, Shape = Shape.Circle, Rgb = 0x07E000,
                 Fruit = NodeKind.Leaf, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore * 3/4, PowerPerSecond = NodeBase.StemDrain, PowerWeight = 1.1f,
@@ -179,7 +179,7 @@ public static class NodeSpecs
             },
             [NodeKind.Lab] = new(NodeKind.Lab)
             {
-                Name = "Lab", Description = "Sends gene blobs; only those that find the core count.",
+                Name = "Lab", Description = "Sends gene motes; only those that find the core count.",
                 Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Hexagon, Rgb = 0x9370E0,
                 Fruit = NodeKind.Research, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain * 1.5f,
@@ -188,7 +188,7 @@ public static class NodeSpecs
             },
             [NodeKind.Grove] = new(NodeKind.Grove)
             {
-                Name = "Grove", Description = "Sends growth blobs that grow fruit and new parts.",
+                Name = "Grove", Description = "Sends growth motes that grow fruit and new parts.",
                 Radius = 15, Mass = 2, Force = 1.5f, MaxLinks = 1, Shape = Shape.Square, Rgb = 0xE07000,
                 Fruit = NodeKind.Berry, MaxFruits = 3, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.PowerDrain,
@@ -197,19 +197,19 @@ public static class NodeSpecs
             },
             [NodeKind.Leaf] = new(NodeKind.Leaf)
             {
-                Name = "Leaf", Description = "Cuts its stem's upkeep by a quarter.",
+                Name = "Leaf", Description = "Cuts its stem's drain by a quarter.",
                 Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Triangle, Rgb = 0x03AA03,
                 PowerStore = NodeBase.FruitStore, FlowerPowerFactor = -0.25f,
             },
             [NodeKind.Burr] = new(NodeKind.Burr)
             {
-                Name = "Burr", Description = "Raises its generator's output a little.",
+                Name = "Burr", Description = "Raises its generator's power gen a little.",
                 Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Triangle, Rgb = 0xE02323,
                 PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
             },
             [NodeKind.Research] = new(NodeKind.Research)
             {
-                Name = "Research", Description = "Raises its lab's gene output a little.",
+                Name = "Note", Description = "Raises its lab's gene output a little.",
                 Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Pentagon, Rgb = 0x9370E0,
                 PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
             },
@@ -226,7 +226,7 @@ public static class NodeSpecs
         // is the choice's; once an evolution is chosen, the evolution's target (see PlantNode.Store).
         all[NodeKind.Seedling] = new(NodeKind.Seedling)
         {
-            Name = "Seedling", Description = "Takes in power, then blooms into its chosen evolution's wild flower.",
+            Name = "Seedling", Description = "Takes in power, then blooms into its chosen evolution's wildflower.",
             Radius = 11, Mass = 1.5f, Force = 1.5f, MaxLinks = 1, Shape = Shape.Sprout, Rgb = 0xB4F08C,
             PowerStore = NodeBase.PowerStore, PowerPerSecond = 0, PowerWeight = 1.5f,
             PowerTransferPerSecond = 0,
@@ -235,7 +235,7 @@ public static class NodeSpecs
         // the core does, into a pool of its own. Its upkeep rises with every level bought on it (see Garden.UpdateBoosts).
         all[NodeKind.Hub] = new(NodeKind.Hub)
         {
-            Name = "Hub", Description = "Catches gene blobs for points of its own, which boost each kind of part.",
+            Name = "Hub", Description = "Catches gene motes for points of its own, which boost each kind of part.",
             Radius = 25, Mass = 20, Force = 20, MaxLinks = 3, Shape = Shape.Wheel, Rgb = 0x2ED89A,
             PowerStore = NodeBase.PowerStore * 10f, PowerPerSecond = -Tuning.HubUpkeep, PowerWeight = 1.1f,
             PowerTransferPerSecond = Tuning.HubTransfer,

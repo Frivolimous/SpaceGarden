@@ -423,7 +423,7 @@ public partial class Widget : Node
         toolbarLayer.AddChild(tutorialPanel);
 
         tray.Icon = TrayIcon();
-        tray.Tooltip = $"Space Garden: click to show or hide, right-click for settings. {Hotkey.Name} to tend.";
+        tray.Tooltip = $"Space Garden: click to show or hide, right-click for settings. {Hotkey.Name} to wake the garden.";
         tray.Pressed += (button, position) =>
         {
             if (button == (long)MouseButton.Left) SetMode(Mode == DisplayMode.Minimised ? DisplayMode.Active : DisplayMode.Minimised);

@@ -804,4 +804,5 @@ Design layers still to work through:
 - [ ] Identity: what makes each garden uniquely yours after months
 - [ ] Events and surprises: rare blooms, seasons, day and night
 - [ ] Audio: likely silent by default
-- [ ] Final name for genes
+- [x] Final name for genes: genes (Jeremy, Nov 4).
+- [x] Player-facing terms (Jeremy, Nov 4; in the game's text, not the code's names or this doc): Expansions for Research, tending mode for build mode, tending tools for the shaping tools, motes for blobs, drain for upkeep, max power for a part's store, links for connections, power gen ("Gen" on the cards) for power made, wildflower as one word, notes for the lab's fruit (was research). Sentence case for labels, titles and headings, names keeping their capitals; American spelling. The full list of the game's text is `docs/TEXT_PASS.md`.

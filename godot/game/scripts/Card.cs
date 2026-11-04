@@ -147,7 +147,7 @@ public partial class Card : PanelContainer
         Line(ref used, ("Power: ", Ink), ($"{stats.Power:0}", PowerInk(stats.Power, stats.Store)), ($" / {stats.Store:0}", Ink));
         // How fast it can send power on, beside its Gen or Drain: on every power maker, and on every part that can have 2
         // or more links (one that passes power along a branch). A Pulsar sends in bursts: the share of its power, when full.
-        string sends = spec.BurstShare > 0 ? $" (sends {spec.BurstShare:0%} of its store at {spec.BurstFill:0%})"
+        string sends = spec.BurstShare > 0 ? $" (sends {spec.BurstShare:0%} of its max power at {spec.BurstFill:0%})"
             : spec.PowerPerSecond > 0 || stats.Makes > 0 || stats.MaxLinks >= 2 ? $" (sends {stats.Sends * speed:0}/s)" : "";
         if (spec.PowerPerSecond > 0 || stats.Makes > 0) // by kind (or a Lichen making power), so the lines stay put
             Line(ref used, $"Gen: {stats.Makes * speed:0}/s{sends}");
@@ -155,14 +155,14 @@ public partial class Card : PanelContainer
         else if (sends != "") Line(ref used, $"Sends: {stats.Sends * speed:0}/s");
         if (spec.Sends == BlobKind.Growth) Line(ref used, $"Growth: {stats.GrowthBlobsPerHour / 60 * speed:0}/min");
         if (spec.Sends == BlobKind.Genes) Line(ref used, $"Genes: {stats.GenesPerHour / 60 * speed:0}/min");
-        if (stats.Links >= 2) Line(ref used, $"Connections: {stats.Links} / {stats.MaxLinks}");
+        if (stats.Links >= 2) Line(ref used, $"Links: {stats.Links} / {stats.MaxLinks}");
         // A seedling's evolution, once chosen (its Power line is its progress: its store is the evolution's target).
         if (stats.Evolution is { } evolution)
             Line(ref used, ("Evolution: ", Ink), (evolution.Name, GardenView.Rgb(evolution.Spec.Rgb).Lightened(0.3f)));
         // A wild flower that ends itself: how long it has left (an Ember burns out, a Comet Bloom withers).
         // (A Comet Bloom says how long it stays active first.)
         if (Garden.IsActive(node))
-            Line(ref used, $"Active for: {Eta((Garden.ActiveOf(node) - node.Life) / speed)} (blobs worth double)");
+            Line(ref used, $"Active for: {Eta((Garden.ActiveOf(node) - node.Life) / speed)} (motes worth double)");
         if (spec.LifeSeconds > 0)
             Line(ref used, $"{(spec.Kind == NodeKind.Ember ? "Burns out" : "Withers")} in: {Eta(Math.Max(0, Garden.LifeOf(node) - node.Life) / speed)}");
         // The Hub: its points to spend, the genes in its pool and those its next point still needs (its toolbar's
@@ -211,7 +211,7 @@ public partial class Card : PanelContainer
         {
             Line(ref used, ("Genes: ", Ink),
                 ($"{Math.Floor(stats.GeneBalance):0}", GeneInk.Lerp(Ink, (float)Math.Clamp(stats.GeneBalance / next.Cost, 0, 1))));
-            string when = stats.SecondsToNext is { } eta ? eta <= 0 ? " (in Research)" : $" (ETA {Eta(eta / speed)})"
+            string when = stats.SecondsToNext is { } eta ? eta <= 0 ? " (in Expansions)" : $" (ETA {Eta(eta / speed)})"
                 : stats.Labs == 0 ? " (plant a lab)" : "";
             Line(ref used, $"Next: {next.Name}, {next.Cost:#,0}{when}");
         }
@@ -229,7 +229,7 @@ public partial class Card : PanelContainer
             ($" / {caps.CoreLinks}", Ink));
         // The wild flower limit, once there is one (step 5d).
         if (caps.WildFlowers > 0)
-            Line(ref used, ("Wild flowers: ", Ink), ($"{stats.WildFlowers}", RoomInk(stats.WildFlowers, caps.WildFlowers)),
+            Line(ref used, ("Wildflowers: ", Ink), ($"{stats.WildFlowers}", RoomInk(stats.WildFlowers, caps.WildFlowers)),
                 ($" / {caps.WildFlowers}", Ink));
         Line(ref used, $"Groves: {stats.Groves}, Labs: {stats.Labs}");
     }

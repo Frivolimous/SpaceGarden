@@ -240,7 +240,7 @@ public partial class Almanac : FloatingWindow
             codex.AddChild(grid);
         }
         Section("Parts", s => !s.IsFruit && !s.IsWild);
-        Section("Wild flowers", s => s.IsWild);
+        Section("Wildflowers", s => s.IsWild);
         Section("Fruit", s => s.IsFruit);
     }
 

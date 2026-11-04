@@ -2704,7 +2704,7 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
     {
         UpgradeKind.Stem => "+1 stem",
         UpgradeKind.Generator => "+1 generator",
-        UpgradeKind.WildFlower => "+1 wild flower slot",
+        UpgradeKind.WildFlower => "+1 wildflower slot",
         UpgradeKind.CoreLink => "+1 core link",
         UpgradeKind.Seedling => "+1 seedling slot",
         _ => "Hub",
@@ -2715,7 +2715,7 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
     {
         UpgradeKind.Stem => "Increases the total number of stems you can add to your garden.",
         UpgradeKind.Generator => "Increases the total number of generators you can add to your garden.",
-        UpgradeKind.WildFlower => "One more wild flower slot: while one is free, a new bud may grow into any wild flower instead.",
+        UpgradeKind.WildFlower => "One more wildflower slot: while one is free, a new bud may grow into any wildflower instead.",
         UpgradeKind.CoreLink => "Lets one more branch grow straight from the core.",
         UpgradeKind.Seedling => "Lets you plant one more seedling, and so choose one more evolution.",
         _ => "Unlocks the Hub: plant it by hand, and it catches genes to boost each kind of part.",

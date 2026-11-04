@@ -57,7 +57,7 @@ public sealed class Tracking
         bool found = Discovered.TryAdd(spec.Kind, Age);
         if (spec.IsWild)
         {
-            if (found) Log(JournalKind.Discovery, $"Wild flower discovered: {spec.Name}");
+            if (found) Log(JournalKind.Discovery, $"Wildflower discovered: {spec.Name}");
         }
         else if (spec.Kind == NodeKind.Hub) First("grew:Hub", "First Hub planted");
         else if (!spec.IsFruit) First($"grew:{spec.Kind}", $"First {spec.Name.ToLowerInvariant()} emerged");
@@ -339,7 +339,7 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
         {
             var names = wild.Select(g => g.Count == 1 ? $"{Article(g.Kind).ToLowerInvariant()} {Name(g.Kind)}"
                 : $"{g.Count} {Name(g.Kind)}s").ToList();
-            lines.Add($"Wild flowers grew: {List(names)}.");
+            lines.Add($"Wildflowers grew: {List(names)}.");
         }
         foreach (var entry in tracking.Journal.Skip(mark.JournalCount).Where(e => e.Kind == JournalKind.Discovery))
         {
@@ -389,7 +389,6 @@ public sealed record AwayNote(double Seconds, IReadOnlyList<string> Lines, IRead
 
     static string Plural(string name) => name switch
     {
-        "research" => "research",
         "leaf" => "leaves",
         "berry" => "berries",
         _ => name + "s",

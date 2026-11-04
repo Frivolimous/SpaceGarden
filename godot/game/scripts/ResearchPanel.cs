@@ -37,7 +37,7 @@ public partial class ResearchPanel : FloatingWindow
     double refreshTimer;
     float time;
 
-    public ResearchPanel() : base("Research", "Close Research")
+    public ResearchPanel() : base("Expansions", "Close Expansions")
     {
         Note.LabelSettings.FontColor = GeneInk;
         Note.LabelSettings.FontSize = 14;
@@ -87,7 +87,7 @@ public partial class ResearchPanel : FloatingWindow
         compact.AddChild(SmallBuy(Track.Generators, generatorHue));
         compact.AddChild(SmallBuy(Track.Core, CoreGrey));
         Column.AddChild(compact);
-        minimise = HeaderButton("–", "Minimise");
+        minimise = HeaderButton("–", "Minimize");
         minimise.Pressed += () => SetMinimised(!Minimised);
     }
 
@@ -105,7 +105,7 @@ public partial class ResearchPanel : FloatingWindow
         full.Visible = !value;
         compact.Visible = value;
         minimise.Text = value ? "□" : "–";
-        minimise.TooltipText = value ? "Show the cards" : "Minimise";
+        minimise.TooltipText = value ? "Show the cards" : "Minimize";
         ShowHint(null);
         refreshTimer = 0;
         Size = Vector2.Zero; // shrinks to fit
