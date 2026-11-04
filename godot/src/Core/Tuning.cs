@@ -239,7 +239,10 @@ public static class Tuning
     public static double HubFirstPoint = 3_000, HubPointStep = 0, HubPointGrowth = 1.10;
 
     // The genes the point after this many earned takes.
-    public static double HubPointCost(int earned) => HubFirstPoint * Math.Pow(HubPointGrowth, earned) + HubPointStep * earned;
+    // (HubPointPower: the point's number, from 1, to this power, multiplies it too: 0 leaves it out.)
+    public static double HubPointPower = 0;
+    public static double HubPointCost(int earned) =>
+        HubFirstPoint * Math.Pow(HubPointGrowth, earned) * Math.Pow(earned + 1, HubPointPower) + HubPointStep * earned;
     public const float HubUpkeep = 3, HubUpkeepPerLevel = 0.5f, HubUpkeepCut = 0.8f;
     // How fast the Hub sends power on, a second (a stem 30; Jeremy, Nov 3: was 15).
     public const float HubTransfer = 20;
