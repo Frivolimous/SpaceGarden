@@ -75,19 +75,19 @@ public sealed record EvolutionLevel
             Plus("Core link", CoreLinks);
             Times("core transfer", CoreTransfer);
             Times("core max power", CoreStore);
-            Times("Stem, Big Stem and Tendril transfer", StemTransfer);
+            Times("All stem transfer", StemTransfer);
             Times("their max power", StemStore);
             if (StemFruits != 0) parts.Add($"Stems hold +{StemFruits} leaf");
             if (SmartChance >= 1) parts.Add("Motes always avoid dead ends");
             else if (SmartChance > 0) parts.Add($"Motes avoid dead ends {SmartChance * 100:0}% of the time");
-            Times("Lab, Wild Lab and Lichen gene motes' size", LabBlobSize);
+            Times("All gene motes' size", LabBlobSize);
             Times("their drain", LabUpkeep);
             Plus("Generator cap", Generators);
             Times("Every generator kind's power gen", GeneratorGen);
-            Times("Generator, Twin Star and Ember transfer", GeneratorTransfer);
+            Times("All generator transfer", GeneratorTransfer);
             Times("Generator transfer", AllGeneratorTransfer);
             Plus("Wildflower limit", WildFlowers);
-            if (WildEffect != 1) parts.Add($"Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen and Buffer +{(WildEffect - 1) * 100:0}%");
+            if (WildEffect != 1) parts.Add($"Wildflower output +{(WildEffect - 1) * 100:0}%");
             if (BuffBonus > 0) parts.Add($"Buffs {(1 + Tuning.BuffBonus + BuffBonus) * 100:0}% of the output");
             if (parts.Count == 0) return "";
             parts[0] = char.ToUpperInvariant(parts[0][0]) + parts[0][1..];
@@ -127,7 +127,7 @@ public static class Evolutions
             new() { LabBlobSize = 1.5f, LabUpkeep = 1.2f }, MaxLevel: 3), // (Jeremy, Nov 3: x2 upkeep starved the plant)
         [EvolutionKind.MorePower] = new(EvolutionKind.MorePower, "More Power", NodeKind.Lichen, Power,
             new() { Generators = 2, GeneratorTransfer = 2 }, MaxLevel: 3),
-        [EvolutionKind.PulsarPower] = new(EvolutionKind.PulsarPower, "Pulsar Power", NodeKind.Pulsar, Power,
+        [EvolutionKind.PulsarPower] = new(EvolutionKind.PulsarPower, "Best Generation", NodeKind.Pulsar, Power,
             new() { GeneratorGen = 2 }, MaxLevel: 3),
         [EvolutionKind.TwinStars] = new(EvolutionKind.TwinStars, "Twin Stars", NodeKind.TwinStar, Power,
             new() { AllGeneratorTransfer = 1.5f }, MaxLevel: 2, Retired: true),

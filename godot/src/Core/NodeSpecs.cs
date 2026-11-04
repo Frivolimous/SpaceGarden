@@ -156,7 +156,7 @@ public static class NodeSpecs
         {
             [NodeKind.Core] = new(NodeKind.Core)
             {
-                Name = "Core", Description = "The heart: makes the most power, and takes in genes.",
+                Name = "Core", Description = "The heart: makes power, and takes in genes.",
                 Radius = 30, Mass = 30, Force = 30, MaxLinks = Tuning.StartCoreLinks, Shape = Shape.Circle, Rgb = 0xE5E570,
                 PowerStore = NodeBase.PowerStore * 4, PowerPerSecond = NodeBase.CoreGen, PowerWeight = 1.5f,
                 PowerTransferPerSecond = NodeBase.CoreGen * 1.8f, TakesBuffs = true,
@@ -171,7 +171,7 @@ public static class NodeSpecs
             },
             [NodeKind.Generator] = new(NodeKind.Generator)
             {
-                Name = "Generator", Description = "Makes power for its branch, at half the core's rate.",
+                Name = "Generator", Description = "Makes power for its branch.",
                 Radius = 15, Mass = 3, Force = 3, MaxLinks = 1, Shape = Shape.Pentagon, Rgb = 0xE5E570,
                 Fruit = NodeKind.Burr, MaxFruits = 2, PowerToFruitPerSecond = NodeBase.PowerToFruit,
                 PowerStore = NodeBase.PowerStore, PowerPerSecond = NodeBase.SmallGen,
@@ -203,19 +203,19 @@ public static class NodeSpecs
             },
             [NodeKind.Burr] = new(NodeKind.Burr)
             {
-                Name = "Burr", Description = "Raises its generator's power gen a little.",
+                Name = "Burr", Description = "Raises output by 10%.",
                 Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Triangle, Rgb = 0xE02323,
                 PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
             },
             [NodeKind.Research] = new(NodeKind.Research)
             {
-                Name = "Note", Description = "Raises its lab's gene output a little.",
+                Name = "Note", Description = "Raises output by 10%.",
                 Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Pentagon, Rgb = 0x9370E0,
                 PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
             },
             [NodeKind.Berry] = new(NodeKind.Berry)
             {
-                Name = "Berry", Description = "Raises its grove's growth output a little.",
+                Name = "Berry", Description = "Raises output by 10%.",
                 Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Circle, Rgb = 0xF0A040,
                 PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
             },
@@ -235,7 +235,7 @@ public static class NodeSpecs
         // the core does, into a pool of its own. Its upkeep rises with every level bought on it (see Garden.UpdateBoosts).
         all[NodeKind.Hub] = new(NodeKind.Hub)
         {
-            Name = "Hub", Description = "Catches gene motes for points of its own, which boost each kind of part.",
+            Name = "Hub", Description = "Catches gene motes for points of its own, which boost each kind of part. Each boost increases the Hub's drain.",
             Radius = 25, Mass = 20, Force = 20, MaxLinks = 3, Shape = Shape.Wheel, Rgb = 0x2ED89A,
             PowerStore = NodeBase.PowerStore * 10f, PowerPerSecond = -Tuning.HubUpkeep, PowerWeight = 1.1f,
             PowerTransferPerSecond = Tuning.HubTransfer,

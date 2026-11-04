@@ -145,7 +145,7 @@ public sealed class Garden
         core.Age = 10;
         core.Power = core.Store;
         core.FillLook = 1;
-        garden.Tracking.Log(JournalKind.Planted, "A new garden began to grow");
+        garden.Tracking.Log(JournalKind.Planted, "A new garden began");
         garden.Tracking.Discovered[NodeKind.Core] = 0;
         return garden;
     }
@@ -2726,12 +2726,12 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
     // What it gives, the hint behind the Research panel's (i) (Jeremy's wording for the first three, Oct 30).
     public string Does => Kind switch
     {
-        UpgradeKind.Stem => "Increases the total number of stems you can add to your garden.",
-        UpgradeKind.Generator => "Increases the total number of generators you can add to your garden.",
-        UpgradeKind.WildFlower => "One more wildflower slot: while one is free, a new bud may grow into any wildflower instead.",
+        UpgradeKind.Stem => "Increases the total number of stems.",
+        UpgradeKind.Generator => "Increases the total number of generators.",
+        UpgradeKind.WildFlower => "Wildflowers are rare, stronger kinds of flower. With a slot free, any new bud may grow into one instead.",
         UpgradeKind.CoreLink => "Lets one more branch grow straight from the core.",
-        UpgradeKind.Seedling => "Lets you grow one more seedling, and so choose one more evolution.",
-        _ => "Unlocks the Hub: grow it by hand, and it catches genes to boost each kind of part.",
+        UpgradeKind.Seedling => "Each seedling unlocks a single powerful evolution.",
+        _ => "The Hub takes in genes for a different unlock path.",
     };
 }
 

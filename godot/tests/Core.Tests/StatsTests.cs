@@ -26,7 +26,8 @@ public class StatsTests
             Assert.False(string.IsNullOrWhiteSpace(info.Name), $"{kind} has no name");
             Assert.False(string.IsNullOrWhiteSpace(info.Description), $"{kind} has no description");
             Assert.DoesNotContain('\n', info.Description);
-            Assert.True(info.Description.Length <= 80, $"{kind}'s description is too long for one line");
+            // (The Codex's text, which wraps on its card: kept short, not to one line. Jeremy's text pass, Nov 4.)
+            Assert.True(info.Description.Length <= 120, $"{kind}'s description is too long for the Codex");
         }
     }
 

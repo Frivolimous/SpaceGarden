@@ -21,11 +21,10 @@ public static class ShapingLook
 
     public static string Does(ShapingKind kind) => kind switch
     {
-        ShapingKind.Pot => "Drop a part on it: the part is held there, and its branch grows the way the pot faces.",
+        ShapingKind.Pot => "Drop a part on it: the part is held there.",
         ShapingKind.Trellis => "Drop parts on it: they're held along its line.",
-        ShapingKind.Sway => "Place it anywhere and turn its knob: left calms the garden's sway (to none), right stirs it (up to "
-            + $"{Tuning.SwayMax:0}×). Straight up is the usual.",
-        _ => "Pulls the whole garden towards it, core and all. Pot the core to keep the garden where it is.",
+        ShapingKind.Sway => "Place it anywhere and turn its knob to adjust the garden's sway.",
+        _ => "Pulls the whole garden towards it. Pot the core to keep the garden where it is.",
     };
 
     // A flower pot holding a part of radius r centred at `at`, opening the way u points: a rim straight across the

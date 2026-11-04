@@ -280,7 +280,7 @@ public partial class Almanac : FloatingWindow
             if (evolution.Bloomed)
             {
                 var delete = new ConfirmButton("", "Delete?",
-                    "Take this evolution back: its effect and caps go (its flower stays), and its seedling slot is free for a new seedling")
+                    "Take this evolution back: grow a new seedling to choose a different evolution")
                 { SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
                 delete.Confirmed += () => RespecPressed?.Invoke(evolution);
                 card.GetChild(0).AddChild(delete);

@@ -81,8 +81,8 @@ public static class Hubs
                 new HubMilestone(3, "Power transfer ×1.5") { Transfer = 1.5f },
                 new HubMilestone(5, "Power gen 50-100% with stored power, instead of 0-100%") { OutputFloor = 0.5f }),
             Path(grove, Basic, "+20% growth", [new(grove, HubAxis.Blobs, 0.2f)],
-                new HubMilestone(3, "+1 berry slot") { Fruits = 1 },
-                new HubMilestone(5, "+2 berry slots") { Fruits = 2 }),
+                new HubMilestone(3, "+1 fruit slot") { Fruits = 1 },
+                new HubMilestone(5, "+2 fruit slots") { Fruits = 2 }),
             Path(lab, Basic, "+20% genes", [new(lab, HubAxis.Blobs, 0.2f)],
                 new HubMilestone(3, $"Gene motes that fade give {Tuning.HubFadedGenes3:0%} of their genes to the core"),
                 new HubMilestone(5, $"Gene motes that fade give {Tuning.HubFadedGenes5:0%} of their genes to the core")),
@@ -118,9 +118,9 @@ public static class Hubs
                 new HubMilestone(3, $"Max power +{Tuning.HubWildLabStore:0}: steadier") { StoreAdd = Tuning.HubWildLabStore }),
             Path(NodeKind.Lichen, Short, "+30% genes; labs +10% genes",
                 Own(NodeKind.Lichen, HubAxis.Blobs, 0.3f, lab, HubAxis.Blobs, 0.1f),
-                new HubMilestone(3, $"With all 4 leaves, makes {Tuning.HubLichenGen:0} power gen a second and sends at {Tuning.HubLichenGen:0}")
+                new HubMilestone(3, $"With all 4 leaves, makes {Tuning.HubLichenGen:0} power gen a second and transfers at {Tuning.HubLichenGen:0}")
                     { LeafGen = Tuning.HubLichenGen }),
-            Path(NodeKind.Buffer, Short, "All buffs +10% (150% to 160%)", [new(NodeKind.Buffer, HubAxis.BuffStrength, 0.1f)],
+            Path(NodeKind.Buffer, Short, "All buffs +10%", [new(NodeKind.Buffer, HubAxis.BuffStrength, 0.1f)],
                 new HubMilestone(3, $"Buffs last +{Tuning.HubBuffSeconds:0} s")),
             Path(NodeKind.CometBloom, Short, "Active 2 minutes longer; core +20% power gen",
                 CorePower(NodeKind.CometBloom, HubAxis.Active, 120),

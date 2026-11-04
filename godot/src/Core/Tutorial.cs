@@ -55,7 +55,7 @@ public static class Tutorial
         TutorialStep.Genes => "Labs send genes {Genes} that are absorbed by the core. When you have enough, you can start upgrading your garden.",
         TutorialStep.Wait => "Explore your options and keep growing your garden while your genes accumulate!",
         TutorialStep.Research => "This is how your garden grows!",
-        _ => "You're doing great! Keep growing your garden, expanding it, and soon you'll unlock the next layer.",
+        _ => "You're doing great! Keep growing your garden and soon you'll unlock the next layer.",
     };
 
     // The kind of part a step is about (its title's mark, and the bud it asks for), if any.

@@ -14,10 +14,8 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 
 ## Still open
 
-- `WildFlowers.cs:21`: the Wood fruit says "Crawlers will use it later". Crawlers aren't in the game.
-- `Toolbar.cs:103`: the Remove button on a tool says "Take this away"; "Remove this tool" would be plainer.
 - The evolution names are written as names ("Second Path", "Smart Motes"), but "Build your Core" mixes the two styles.
-
+- `Toolbar.cs:103`: the Remove button on a tool says "Take this away".
 
 
 ## Tutorial
@@ -43,7 +41,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Tutorial.cs:55` | Labs send genes {Genes} that are absorbed by the core. When you have enough, you can start upgrading your garden. | |
 | `Tutorial.cs:56` | Explore your options and keep growing your garden while your genes accumulate! | |
 | `Tutorial.cs:57` | This is how your garden grows! | |
-| `Tutorial.cs:58` | You're doing great! Keep growing your garden, expanding it, and soon you'll unlock the next layer. | |
+| `Tutorial.cs:58` | You're doing great! Keep growing your garden and soon you'll unlock the next layer. | |
 | `Widget.cs:124` | Continue | |
 | `Widget.cs:380` | Getting started | |
 
@@ -83,8 +81,8 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | Where | Text | New text |
 |---|---|---|
 | `Toolbar.cs:99` | Grow a stem · Grow a generator · Grow a lab | |
-| `Toolbar.cs:100` | Grow a grove · Grow a seedling (it uses a seedling slot) | |
-| `Toolbar.cs:101` | Grow the Hub (one at a time) | |
+| `Toolbar.cs:100` | Grow a grove · Grow a seedling | |
+| `Toolbar.cs:101` | Grow the Hub | |
 | `Toolbar.cs:102` | Hub upgrades · Take it off its pot or trellis | |
 | `Toolbar.cs:103` | Prune · Take this away | |
 | `Toolbar.cs:177` | Cancel the {kind} bud (its growth is lost) | |
@@ -99,10 +97,10 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 
 | Where | Text | New text |
 |---|---|---|
-| `Toolbar.cs:425` | Drag to move the whole garden at once | |
-| `Toolbar.cs:439` | Power · Show each part's power as heat: red empty, yellow at 75%, green full, teal over full | |
-| `Toolbar.cs:440` | Mote paths · Show where gene and growth motes have been going lately (counted from now) | |
-| `Toolbar.cs:470` | Done arranging | |
+| `Toolbar.cs:425` | Drag to move the garden | |
+| `Toolbar.cs:439` | Power · Show each part's power on a heat map | |
+| `Toolbar.cs:440` | Mote paths · Show where gene, growth and buff motes have been going | |
+| `Toolbar.cs:470` | Done tending | |
 | `Toolbar.cs:494` |  Another at garden size {at}. | |
 | `Toolbar.cs:495` | {name}: comes at garden size {size} (now {size}:  | |
 | `Toolbar.cs:496` | the most stems and flowers it has had, the core too). {kind} | |
@@ -112,15 +110,10 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `ShapingLook.cs:17` | Trellis | |
 | `ShapingLook.cs:18` | Sway Controller | |
 | `ShapingLook.cs:19` | Gravity Well | |
-| `ShapingLook.cs:24` | Drop a part on it: the part is held there, and its branch grows the way the pot faces. | |
+| `ShapingLook.cs:24` | Drop a part on it: the part is held there. | |
 | `ShapingLook.cs:25` | Drop parts on it: they're held along its line. | |
-| `ShapingLook.cs:26` | Place it anywhere and turn its knob: left calms the garden's sway (to none), right stirs it (up to  | |
-| `ShapingLook.cs:27` | {SwayMax}×). Straight up is the usual. | |
-| `ShapingLook.cs:28` | Pulls the whole garden towards it, core and all. Pot the core to keep the garden where it is. | |
-| `Garden.cs:2122` | Gravity Pot | |
-| `Garden.cs:2123` | Trellis | |
-| `Garden.cs:2124` | Sway Controller | |
-| `Garden.cs:2125` | Gravity Well | |
+| `ShapingLook.cs:26` | Place it anywhere and turn its knob to adjust the garden's sway. | |
+| `ShapingLook.cs:27` | Pulls the whole garden towards it. Pot the core to keep the garden where it is. | |
 
 ## Info cards (part and garden)
 
@@ -183,18 +176,18 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `ResearchPanel.cs:341` | {name}: done · {name}: Buy | |
 | `ResearchPanel.cs:342` | {name}: in {time} · {name}: no genes coming | |
 | `ResearchPanel.cs:343` | {name}: {lacking} more | |
-| `Garden.cs:2705` | +1 stem | |
-| `Garden.cs:2706` | +1 generator | |
-| `Garden.cs:2707` | +1 wildflower slot | |
-| `Garden.cs:2708` | +1 core link | |
-| `Garden.cs:2709` | +1 seedling slot | |
-| `Garden.cs:2710` | Hub | |
-| `Garden.cs:2716` | Increases the total number of stems you can add to your garden. | |
-| `Garden.cs:2717` | Increases the total number of generators you can add to your garden. | |
-| `Garden.cs:2718` | One more wildflower slot: while one is free, a new bud may grow into any wildflower instead. | |
-| `Garden.cs:2719` | Lets one more branch grow straight from the core. | |
-| `Garden.cs:2720` | Lets you grow one more seedling, and so choose one more evolution. | |
-| `Garden.cs:2721` | Unlocks the Hub: grow it by hand, and it catches genes to boost each kind of part. | |
+| `Garden.cs:2718` | +1 stem | |
+| `Garden.cs:2719` | +1 generator | |
+| `Garden.cs:2720` | +1 wildflower slot | |
+| `Garden.cs:2721` | +1 core link | |
+| `Garden.cs:2722` | +1 seedling slot | |
+| `Garden.cs:2723` | Hub | |
+| `Garden.cs:2729` | Increases the total number of stems. | |
+| `Garden.cs:2730` | Increases the total number of generators. | |
+| `Garden.cs:2731` | Wildflowers are rare, stronger kinds of flower. With a slot free, any new bud may grow into one instead. | |
+| `Garden.cs:2732` | Lets one more branch grow straight from the core. | |
+| `Garden.cs:2733` | Each seedling unlocks a single powerful evolution. | |
+| `Garden.cs:2734` | The Hub takes in genes for a different unlock path. | |
 
 ## Hub panel and paths
 
@@ -211,8 +204,8 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `HubPanel.cs:166` | Level {Level} ({Level} points): {Text}. | |
 | `HubPanel.cs:183` | 1 point · {HubPoints} points | |
 | `HubPanel.cs:186` | {HubPool} / {NextPointCost} genes to the next point | |
-| `HubPanel.cs:200` | Not found in the garden yet | |
-| `HubPanel.cs:207` | Not found in the garden yet | |
+| `HubPanel.cs:200` | Not discovered | |
+| `HubPanel.cs:207` | Not discovered | |
 | `HubPanel.cs:212` | Complete: {…} | |
 | `HubPanel.cs:213` | Next: {Text} · Next: {PerLevel} | |
 | `HubPanel.cs:216` | Max | |
@@ -224,8 +217,8 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Hubs.cs:81` | Power transfer ×1.5 | |
 | `Hubs.cs:82` | Power gen 50-100% with stored power, instead of 0-100% | |
 | `Hubs.cs:83` | +20% growth | |
-| `Hubs.cs:84` | +1 berry slot | |
-| `Hubs.cs:85` | +2 berry slots | |
+| `Hubs.cs:84` | +1 fruit slot | |
+| `Hubs.cs:85` | +2 fruit slots | |
 | `Hubs.cs:86` | +20% genes | |
 | `Hubs.cs:87` | Gene motes that fade give {HubFadedGenes3} of their genes to the core | |
 | `Hubs.cs:88` | Gene motes that fade give {HubFadedGenes5} of their genes to the core | |
@@ -250,8 +243,8 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Hubs.cs:116` | +30% genes; labs +10% genes | |
 | `Hubs.cs:118` | Max power +{HubWildLabStore}: steadier | |
 | `Hubs.cs:119` | +30% genes; labs +10% genes | |
-| `Hubs.cs:121` | With all 4 leaves, makes {HubLichenGen} power gen a second and sends at {HubLichenGen} | |
-| `Hubs.cs:123` | All buffs +10% (150% to 160%) | |
+| `Hubs.cs:121` | With all 4 leaves, makes {HubLichenGen} power gen a second and transfers at {HubLichenGen} | |
+| `Hubs.cs:123` | All buffs +10% | |
 | `Hubs.cs:124` | Buffs last +{HubBuffSeconds} s | |
 | `Hubs.cs:125` | Active 2 minutes longer; core +20% power gen | |
 | `Hubs.cs:127` | Lingers half as long once dormant | |
@@ -264,54 +257,54 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 
 | Where | Text | New text |
 |---|---|---|
-| `NodeSpecs.cs:159` | Core · The heart: makes the most power, and takes in genes. | |
+| `NodeSpecs.cs:159` | Core · The heart: makes power, and takes in genes. | |
 | `NodeSpecs.cs:166` | Stem · Structure: carries power and motes. Low drain, less with leaves. | |
-| `NodeSpecs.cs:174` | Generator · Makes power for its branch, at half the core's rate. | |
+| `NodeSpecs.cs:174` | Generator · Makes power for its branch. | |
 | `NodeSpecs.cs:182` | Lab · Sends gene motes; only those that find the core count. | |
 | `NodeSpecs.cs:191` | Grove · Sends growth motes that grow fruit and new parts. | |
 | `NodeSpecs.cs:200` | Leaf · Cuts its stem's drain by a quarter. | |
-| `NodeSpecs.cs:206` | Burr · Raises its generator's power gen a little. | |
-| `NodeSpecs.cs:212` | Note · Raises its lab's gene output a little. | |
-| `NodeSpecs.cs:218` | Berry · Raises its grove's growth output a little. | |
+| `NodeSpecs.cs:206` | Burr · Raises output by 10%. | |
+| `NodeSpecs.cs:212` | Note · Raises output by 10%. | |
+| `NodeSpecs.cs:218` | Berry · Raises output by 10%. | |
 | `NodeSpecs.cs:229` | Seedling · Takes in power, then blooms into its chosen evolution's wildflower. | |
-| `NodeSpecs.cs:238` | Hub · Catches gene motes for points of its own, which boost each kind of part. | |
+| `NodeSpecs.cs:238` | Hub · Catches gene motes for points of its own, which boost each kind of part. Each boost increases the Hub's drain. | |
 
 ## Wildflowers (names, Codex: what it does / its catch)
 
 | Where | Text | New text |
 |---|---|---|
-| `WildFlowers.cs:21` | Wood · Raises its Lumber Grove's growth output a little. Crawlers will use it later. | |
-| `WildFlowers.cs:27` | Glow · Sends buff motes, as a small Buffer. | |
+| `WildFlowers.cs:21` | Wood · Raises output by 10%. | |
+| `WildFlowers.cs:27` | Glow · Sends 1 buff mote every 60s. | |
 | `WildFlowers.cs:59` | Amplifier | |
-| `WildFlowers.cs:60` | Gene and growth motes passing through have a 50% chance to double in value. · 2 links: it can't fork. High drain. | |
+| `WildFlowers.cs:60` | Gene and growth motes passing through have a 50% chance to double in value, buff motes move +3 steps. · Chance to double motes. | |
 | `WildFlowers.cs:67` | Resistor | |
-| `WildFlowers.cs:68` | Motes bounce off it from both sides. · Low transfer: slows power beyond it. | |
+| `WildFlowers.cs:68` | Motes bounce off it from both sides. · Motes can't go through. | |
 | `WildFlowers.cs:75` | Tendril | |
-| `WildFlowers.cs:76` | A long, springy link, a high max power and a fast, steady transfer. · Takes a stem slot too. | |
+| `WildFlowers.cs:76` | High max power and a fast, steady transfer. Takes a wildflower and a stem slot. · Fast, steady transfer. | |
 | `WildFlowers.cs:82` | Big Stem | |
-| `WildFlowers.cs:83` | 4 links. · Slower transfer; takes a stem slot too. | |
+| `WildFlowers.cs:83` | Biggest stem with 4 links but slow transfer. Takes a wildflower and a stem slot. · 4 links. | |
 | `WildFlowers.cs:90` | Pulsar | |
-| `WildFlowers.cs:91` | About twice a generator's power gen, released in bursts. · Uneven supply; takes a generator slot too. | |
+| `WildFlowers.cs:91` | About twice a generator's power gen, released in bursts. Takes a wildflower and a generator slot. · Power released in bursts. | |
 | `WildFlowers.cs:98` | Twin Star | |
-| `WildFlowers.cs:99` | A generator that continues the branch: 2 links. · Takes a generator slot too. | |
+| `WildFlowers.cs:99` | A generator that continues the branch: 2 links. Takes a wildflower and a generator slot. · Generator with 2 links. | |
 | `WildFlowers.cs:104` | Ember | |
-| `WildFlowers.cs:105` | Starts at 2.5 times a generator's power gen, fading as it goes. | |
-| `WildFlowers.cs:106` | Fades over a day, then burns out unless pruned first; takes a generator slot too. | |
+| `WildFlowers.cs:105` | Starts with a high power gen that fades over 24h. Takes a wildflower and a generator slot. | |
+| `WildFlowers.cs:106` | Powerful, but burns out after 24h. | |
 | `WildFlowers.cs:113` | Lumber Grove | |
-| `WildFlowers.cs:114` | Growth motes twice a grove's size, a little less often. · Higher drain. | |
+| `WildFlowers.cs:114` | Growth motes twice a grove's size. · Double growth motes. | |
 | `WildFlowers.cs:119` | Seed Pod | |
-| `WildFlowers.cs:120` | 20 growth motes, each twice a grove's size, every minute. · Silent in between. | |
+| `WildFlowers.cs:120` | A big burst of growth motes every 60s. · Big bursts of growth every minute. | |
 | `WildFlowers.cs:127` | Wild Lab | |
-| `WildFlowers.cs:128` | 2 genes a mote every 6 s, and room for 6 notes. · High drain. | |
+| `WildFlowers.cs:128` | Has up to 6 fruit reaching twice the gene output of a lab. · More fruit gives more genes. | |
 | `WildFlowers.cs:133` | Lichen | |
-| `WildFlowers.cs:134` | 2 genes a mote every 6 s; its 4 leaves bring its drain to 0. · Sends no power on. | |
+| `WildFlowers.cs:134` | Slightly higher output than a lab, and its 4 leaves bring its drain to 0. · Leaves reduce its drain to 0. | |
 | `WildFlowers.cs:141` | Buffer | |
-| `WildFlowers.cs:142` | Buff motes give the parts they pass 50% more for 30 s. · Local only: 5 links (8 past an Amplifier). | |
+| `WildFlowers.cs:142` | Buffed flowers have 50% increased output for 30s. Sends one buff mote every 5s. · Buffs nearby flowers. | |
 | `WildFlowers.cs:146` | Comet Bloom | |
-| `WildFlowers.cs:147` | 10 minutes of double-value gene and growth motes, and buffs twice as long. | |
-| `WildFlowers.cs:148` | Then dormant, fading over 6 hours, and withers. | |
+| `WildFlowers.cs:147` | 10 minutes of double-value gene and growth motes, and buffs last twice as long. | |
+| `WildFlowers.cs:148` | Doubles all motes for 10m. | |
 | `WildFlowers.cs:153` | Moonflower | |
-| `WildFlowers.cs:154` | Buds nearby grow wild twice as often; wildflowers near it make 25% more. · Takes a slot. | |
+| `WildFlowers.cs:154` | Buds nearby grow wild twice as often; wildflowers near it have a 25% higher output. · Boosts wildflowers nearby. | |
 | `WildFlowers.cs:159` | Nebula Bloom | |
 | `WildFlowers.cs:160` | Power reaching a seedling within 5 links counts double. · Retired: no longer grows. | |
 
@@ -323,19 +316,19 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Evolutions.cs:75` | Core link | |
 | `Evolutions.cs:76` | core transfer | |
 | `Evolutions.cs:77` | core max power | |
-| `Evolutions.cs:78` | Stem, Big Stem and Tendril transfer | |
+| `Evolutions.cs:78` | All stem transfer | |
 | `Evolutions.cs:79` | their max power | |
 | `Evolutions.cs:80` | Stems hold +{StemFruits} leaf | |
 | `Evolutions.cs:81` | Motes always avoid dead ends | |
 | `Evolutions.cs:82` | Motes avoid dead ends {SmartChance}% of the time | |
-| `Evolutions.cs:83` | Lab, Wild Lab and Lichen gene motes' size | |
+| `Evolutions.cs:83` | All gene motes' size | |
 | `Evolutions.cs:84` | their drain | |
 | `Evolutions.cs:85` | Generator cap | |
 | `Evolutions.cs:86` | Every generator kind's power gen | |
-| `Evolutions.cs:87` | Generator, Twin Star and Ember transfer | |
+| `Evolutions.cs:87` | All generator transfer | |
 | `Evolutions.cs:88` | Generator transfer | |
 | `Evolutions.cs:89` | Wildflower limit | |
-| `Evolutions.cs:90` | Pulsar, Twin Star, Ember, Lumber Grove, Seed Pod, Wild Lab, Lichen and Buffer +{WildEffect}% | |
+| `Evolutions.cs:90` | Wildflower output +{WildEffect}% | |
 | `Evolutions.cs:91` | Buffs {BuffBonus}% of the output | |
 | `Evolutions.cs:118` | Build your Core | |
 | `Evolutions.cs:120` | Second Path | |
@@ -343,7 +336,7 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Evolutions.cs:124` | Smart Motes | |
 | `Evolutions.cs:126` | Rapid Evolution | |
 | `Evolutions.cs:128` | More Power | |
-| `Evolutions.cs:130` | Pulsar Power | |
+| `Evolutions.cs:130` | Best Generation | |
 | `Evolutions.cs:132` | Twin Stars | |
 | `Evolutions.cs:134` | Big Stem | |
 | `Evolutions.cs:136` | Wild Bloom | |
@@ -368,22 +361,21 @@ Expansions (was Research), tending mode (was build mode), tending tools, motes (
 | `Almanac.cs:266` | None yet. Grow a seedling, fill it with power, and choose its evolution. | |
 | `Almanac.cs:279` | Chosen day {day}, {time} | |
 | `Almanac.cs:282` | Delete? | |
-| `Almanac.cs:283` | Take this evolution back: its effect and caps go (its flower stays), and its seedling slot is free for a new seedling | |
+| `Almanac.cs:283` | Take this evolution back: grow a new seedling to choose a different evolution | |
 
 ## Journal and the away note
 
 | Where | Text | New text |
 |---|---|---|
-| `Garden.cs:148` | A new garden began to grow | |
-| `Garden.cs:1527` | First passive bud started | |
-| `Garden.cs:1684` | Evolution chosen: {evolution} | |
-| `Garden.cs:1707` | {evolution} bloomed into {flower} {flower} | |
-| `Garden.cs:1763` | Evolution taken back: {evolution} | |
-| `Garden.cs:1909` | Evolution chosen: {evolution} | |
-| `Garden.cs:2001` | The Hub's levels were reset | |
-| `Garden.cs:2063` | {Second/Third…} core link bought | |
-| `Garden.cs:2064` | Hub bought | |
-| `Garden.cs:2098` | {name} gained at garden size {size} | |
+| `Garden.cs:148` | A new garden began | |
+| `Garden.cs:1540` | First passive bud started | |
+| `Garden.cs:1697` | Evolution chosen: {evolution} | |
+| `Garden.cs:1720` | {evolution} bloomed into {flower} {flower} | |
+| `Garden.cs:1776` | Evolution taken back: {evolution} | |
+| `Garden.cs:1922` | Evolution chosen: {evolution} | |
+| `Garden.cs:2014` | The Hub's levels were reset | |
+| `Garden.cs:2076` | {CoreLinks} core link bought | |
+| `Garden.cs:2077` | Hub bought | |
 | `Tracking.cs:60` | Wildflower discovered: {Name} | |
 | `Tracking.cs:62` | First Hub grown | |
 | `Tracking.cs:63` | First {Name} emerged | |

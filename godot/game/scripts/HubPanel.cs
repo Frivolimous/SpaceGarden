@@ -197,14 +197,14 @@ public partial class HubPanel : FloatingWindow
             row.Style.BgColor = Back.Lerp(tint, found ? 0.05f : 0.02f);
             row.Style.BorderColor = tint with { A = found ? 0.16f : 0.08f };
             row.Name.Text = found ? spec.Name : "???";
-            row.Row.TooltipText = found ? row.Milestones : "Not found in the garden yet";
+            row.Row.TooltipText = found ? row.Milestones : "Not discovered";
             row.Name.LabelSettings.FontColor = found ? GardenView.Rgb(spec.Rgb).Lightened(0.3f) : Dim;
             row.Pips.Level = level;
             row.Pips.Visible = found;
             row.Buy.Visible = found;
             if (!found)
             {
-                row.Detail.Text = "Not found in the garden yet";
+                row.Detail.Text = "Not discovered";
                 continue;
             }
             // What the next level gives: its milestone, or each level's share; complete, the last milestone.

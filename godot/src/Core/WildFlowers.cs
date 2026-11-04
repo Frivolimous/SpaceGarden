@@ -18,13 +18,13 @@ static class WildFlowers
 
         yield return new NodeSpec(NodeKind.Wood)
         {
-            Name = "Wood", Description = "Raises its Lumber Grove's growth output a little. Crawlers will use it later.",
+            Name = "Wood", Description = "Raises output by 10%.",
             Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Square, Rgb = 0x9A6232,
             PowerStore = NodeBase.FruitStore, FlowerBonus = 0.1f,
         };
         yield return new NodeSpec(NodeKind.Glow)
         {
-            Name = "Glow", Description = "Sends buff motes, as a small Buffer.",
+            Name = "Glow", Description = "Sends 1 buff mote every 60s.",
             Radius = 5, Mass = 0.5f, Force = 0.2f, MaxLinks = 0, Shape = Shape.Burst8, Rgb = 0xF6F6F0,
             PowerStore = NodeBase.FruitStore, Sends = BlobKind.Buff, BlobsPerHour = Tuning.GlowBlobs,
         };
@@ -57,7 +57,7 @@ static class WildFlowers
         // The stem kinds. The Amplifier and the Resistor take only a wild flower slot, and are white, the specialists'
         // hue (Jeremy, Oct 30).
         var amplifier = Wild(stem, NodeKind.Amplifier, "Amplifier", Shape.Plus, 0xF2F2F2, WildUnlock.Start,
-            "Gene and growth motes passing through have a 50% chance to double in value.", "2 links: it can't fork. High drain.");
+            "Gene and growth motes passing through have a 50% chance to double in value, buff motes move +3 steps.", "Chance to double motes.");
         yield return amplifier with
         {
             Radius = 11, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, DoublesBlobs = true,
@@ -65,7 +65,7 @@ static class WildFlowers
             Wild = amplifier.Wild! with { BaseSlot = false },
         };
         var resistor = Wild(stem, NodeKind.Resistor, "Resistor", Shape.Minus, 0xF2F2F2, WildUnlock.Start,
-            "Motes bounce off it from both sides.", "Low transfer: slows power beyond it.");
+            "Motes bounce off it from both sides.", "Motes can't go through.");
         yield return resistor with
         {
             Radius = 7, MaxLinks = 2, Fruit = NodeKind.Glow, MaxFruits = 1, BlocksBlobs = true,
@@ -73,14 +73,14 @@ static class WildFlowers
             Wild = resistor.Wild! with { BaseSlot = false },
         };
         yield return Wild(stem, NodeKind.Tendril, "Tendril", Shape.Trefoil, 0x78E010, WildUnlock.Start,
-            "A long, springy link, a high max power and a fast, steady transfer.", "Takes a stem slot too.") with
+            "High max power and a fast, steady transfer. Takes a wildflower and a stem slot.", "Fast, steady transfer.") with
         {
             Radius = 8, LinkScale = Tuning.TendrilLink, MaxFruits = 3,
             PowerStore = 300, PowerPerSecond = -6, PowerWeight = 1.1f, PowerTransferPerSecond = 60,
             TransferSplits = Tuning.TendrilSplits,
         };
         yield return Wild(stem, NodeKind.BigStem, "Big Stem", Shape.Quatrefoil, 0x10C838, WildUnlock.Start,
-            "4 links.", "Slower transfer; takes a stem slot too.") with
+            "Biggest stem with 4 links but slow transfer. Takes a wildflower and a stem slot.", "4 links.") with
         {
             Radius = 13, Mass = 1.5f, MaxLinks = 4,
             PowerStore = 250, PowerPerSecond = -6, PowerWeight = 1.1f, PowerTransferPerSecond = 25,
@@ -88,7 +88,7 @@ static class WildFlowers
 
         // The generator kinds, each taking a generator slot too.
         yield return Wild(generator, NodeKind.Pulsar, "Pulsar", Shape.Star5, 0xF2D84A, WildUnlock.Start,
-            "About twice a generator's power gen, released in bursts.", "Uneven supply; takes a generator slot too.") with
+            "About twice a generator's power gen, released in bursts. Takes a wildflower and a generator slot.", "Power released in bursts.") with
         {
             // (21, not the table's 24, Jeremy, Nov 3: it works at full output all the way to 150%, past full, so 24
             // made it more than twice a generator.)
@@ -96,14 +96,14 @@ static class WildFlowers
             BurstShare = Tuning.PulsarBurst, BurstFill = Tuning.PulsarBurstFill,
         };
         yield return Wild(generator, NodeKind.TwinStar, "Twin Star", Shape.Star10, 0xE8EE8C, WildUnlock.Start,
-            "A generator that continues the branch: 2 links.", "Takes a generator slot too.") with
+            "A generator that continues the branch: 2 links. Takes a wildflower and a generator slot.", "Generator with 2 links.") with
         {
             MaxLinks = 2, Fruit = NodeKind.Berry,
             PowerStore = 200, PowerPerSecond = 12, PowerWeight = 1.1f, PowerTransferPerSecond = 42,
         };
         yield return Wild(generator, NodeKind.Ember, "Ember", Shape.Flame, 0xF0BE50, WildUnlock.Start,
-            "Starts at 2.5 times a generator's power gen, fading as it goes.",
-            "Fades over a day, then burns out unless pruned first; takes a generator slot too.") with
+            "Starts with a high power gen that fades over 24h. Takes a wildflower and a generator slot.",
+            "Powerful, but burns out after 24h.") with
         {
             LifeSeconds = Tuning.EmberLifeSeconds, Dims = true, Fruit = null, MaxFruits = 0,
             PowerStore = 200, PowerPerSecond = 30, PowerWeight = 1, PowerTransferPerSecond = 54,
@@ -111,13 +111,13 @@ static class WildFlowers
 
         // The grove kinds. A growth blob of BlobValue 2 carries 0.2 growth, twice a grove's.
         yield return Wild(grove, NodeKind.LumberGrove, "Lumber Grove", Shape.Star8, 0xC8661E, WildUnlock.Start,
-            "Growth motes twice a grove's size, a little less often.", "Higher drain.") with
+            "Growth motes twice a grove's size.", "Double growth motes.") with
         {
             Fruit = NodeKind.Wood, MaxFruits = 5, BlobsPerHour = 3600 / 3.5f, BlobValue = 2,
             PowerStore = 300, PowerPerSecond = -7, PowerTransferPerSecond = 15,
         };
         yield return Wild(grove, NodeKind.SeedPod, "Seed Pod", Shape.Oval, 0xEA8A34, WildUnlock.Start,
-            "20 growth motes, each twice a grove's size, every minute.", "Silent in between.") with
+            "A big burst of growth motes every 60s.", "Big bursts of growth every minute.") with
         {
             BlobsPerHour = 1200, BlobBurst = 20, BlobValue = 2,
             PowerStore = 400, PowerPerSecond = -5, PowerTransferPerSecond = 15,
@@ -125,13 +125,13 @@ static class WildFlowers
 
         // The lab kinds. A gene blob of BlobValue 2 carries 2 genes.
         yield return Wild(lab, NodeKind.WildLab, "Wild Lab", Shape.Star6, 0xA478F0, WildUnlock.Start,
-            "2 genes a mote every 6 s, and room for 6 notes.", "High drain.") with
+            "Has up to 6 fruit reaching twice the gene output of a lab.", "More fruit gives more genes.") with
         {
             MaxFruits = 6, BlobsPerHour = 600, BlobValue = 2,
             PowerStore = 300, PowerPerSecond = -12, PowerTransferPerSecond = 15,
         };
         yield return Wild(lab, NodeKind.Lichen, "Lichen", Shape.Lobes6, 0x8C84D4, WildUnlock.Start,
-            "2 genes a mote every 6 s; its 4 leaves bring its drain to 0.", "Sends no power on.") with
+            "Slightly higher output than a lab, and its 4 leaves bring its drain to 0.", "Leaves reduce its drain to 0.") with
         {
             Radius = stem.Radius, Fruit = NodeKind.Leaf, MaxFruits = 4, BlobsPerHour = 600, BlobValue = 2,
             PowerStore = 150, PowerPerSecond = -6, PowerTransferPerSecond = 0,
@@ -139,19 +139,19 @@ static class WildFlowers
 
         // The passive-only kinds.
         yield return Wild(passive, NodeKind.Buffer, "Buffer", Shape.Burst8, 0xF2F2F2, WildUnlock.Start,
-            "Buff motes give the parts they pass 50% more for 30 s.", "Local only: 5 links (8 past an Amplifier).") with
+            "Buffed flowers have 50% increased output for 30s. Sends one buff mote every 5s.", "Buffs nearby flowers.") with
         {
             Sends = BlobKind.Buff, BlobsPerHour = Tuning.BufferBlobs, MaxFruits = 2, PowerPerSecond = -10,
         };
         yield return Wild(passive, NodeKind.CometBloom, "Comet Bloom", Shape.Gear, 0xFFFFFF, WildUnlock.Start,
-            "10 minutes of double-value gene and growth motes, and buffs twice as long.",
-            "Then dormant, fading over 6 hours, and withers.") with
+            "10 minutes of double-value gene and growth motes, and buffs last twice as long.",
+            "Doubles all motes for 10m.") with
         {
             MaxFruits = 2, PowerStore = 200, Dims = true,
             LifeSeconds = Tuning.CometActiveSeconds + Tuning.CometFadeSeconds, ActiveSeconds = Tuning.CometActiveSeconds,
         };
         yield return Wild(passive, NodeKind.Moonflower, "Moonflower", Shape.Rose, 0xE6ECFA, WildUnlock.Start,
-            "Buds nearby grow wild twice as often; wildflowers near it make 25% more.", "Takes a slot.") with
+            "Buds nearby grow wild twice as often; wildflowers near it have a 25% higher output.", "Boosts wildflowers nearby.") with
         {
             WildBoost = Tuning.MoonflowerBoost, MaxFruits = 3, PowerStore = 400, PowerPerSecond = -10,
         };

@@ -97,8 +97,8 @@ public partial class Toolbar : PanelContainer
         foreach (var (tool, tip) in new[]
         {
             (Tool.Stem, "Grow a stem"), (Tool.Generator, "Grow a generator"), (Tool.Lab, "Grow a lab"),
-            (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Grow a seedling (it uses a seedling slot)"),
-            (Tool.Hub, "Grow the Hub (one at a time)"),
+            (Tool.Grove, "Grow a grove"), (Tool.Seedling, "Grow a seedling"),
+            (Tool.Hub, "Grow the Hub"),
             (Tool.HubPanel, "Hub upgrades"), (Tool.Unhook, "Take it off its pot or trellis"),
             (Tool.Prune, "Prune"), (Tool.Remove, "Take this away"),
         })
@@ -422,7 +422,7 @@ public partial class ShapingBar : PanelContainer
         var outer = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         outer.AddThemeConstantOverride("separation", 4);
         AddChild(outer);
-        handle = new MoveHandle { TooltipText = "Drag to move the whole garden at once" };
+        handle = new MoveHandle { TooltipText = "Drag to move the garden" };
         handle.Grabbed += () => MoveStarted?.Invoke();
         outer.AddChild(handle);
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass };
@@ -436,8 +436,8 @@ public partial class ShapingBar : PanelContainer
         column.AddChild(views);
         foreach (var (view, text, tip) in new[]
         {
-            (HeatView.Power, "Power", "Show each part's power as heat: red empty, yellow at 75%, green full, teal over full"),
-            (HeatView.Blobs, "Mote paths", "Show where gene and growth motes have been going lately (counted from now)"),
+            (HeatView.Power, "Power", "Show each part's power on a heat map"),
+            (HeatView.Blobs, "Mote paths", "Show where gene, growth and buff motes have been going"),
         })
         {
             var toggle = new Button
@@ -467,7 +467,7 @@ public partial class ShapingBar : PanelContainer
             buttons[kind] = button;
             row.AddChild(button);
         }
-        done = new ToolButton(Tool.Done) { TooltipText = "Done arranging" };
+        done = new ToolButton(Tool.Done) { TooltipText = "Done tending" };
         done.Pressed += () => Done?.Invoke();
         row.AddChild(done);
     }

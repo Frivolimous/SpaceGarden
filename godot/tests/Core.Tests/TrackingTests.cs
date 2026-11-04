@@ -180,7 +180,7 @@ public class TrackingTests
         var second = Add(garden, stem, NodeKind.Stem);
         Add(garden, second, NodeKind.Leaf);
         var texts = garden.Tracking.Journal.Select(e => e.Text).ToList();
-        Assert.Equal(["A new garden began to grow", "First stem emerged", "First grove emerged"], texts); // (not fruit's)
+        Assert.Equal(["A new garden began", "First stem emerged", "First grove emerged"], texts); // (not fruit's)
         Assert.Equal(JournalKind.Planted, garden.Tracking.Journal[0].Kind);
     }
 
@@ -190,7 +190,7 @@ public class TrackingTests
         // Genes are spent now: only what they buy (a core link, the Hub) is a moment (see ResearchTests).
         var garden = NewGarden();
         garden.Deliver(400_000);
-        Assert.Equal(["A new garden began to grow"], garden.Tracking.Journal.Select(e => e.Text));
+        Assert.Equal(["A new garden began"], garden.Tracking.Journal.Select(e => e.Text));
     }
 
     [Fact]
@@ -276,7 +276,7 @@ public class TrackingTests
         var totals = garden.Tracking.TotalsCsv(garden);
         Assert.Contains("age_hours,25\n", totals);
         Assert.Contains($"parts_grown,{garden.Tracking.PartsGrown}\n", totals);
-        Assert.StartsWith("age_hours,day,time,kind,text\n0,1,00:00,Planted,\"A new garden began to grow\"", garden.Tracking.JournalCsv());
+        Assert.StartsWith("age_hours,day,time,kind,text\n0,1,00:00,Planted,\"A new garden began\"", garden.Tracking.JournalCsv());
     }
 
     // The Almanac's calendar: Day 1 is the first 24 hours of growth, and the time is the time on that day.
