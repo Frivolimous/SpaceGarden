@@ -2728,7 +2728,7 @@ public sealed record Upgrade(Track Track, UpgradeKind Kind, double Cost)
     {
         UpgradeKind.Stem => "Increases the total number of stems.",
         UpgradeKind.Generator => "Increases the total number of generators.",
-        UpgradeKind.WildFlower => "Wildflowers are rare, stronger kinds of flower. With a slot free, any new bud may grow into one instead.",
+        UpgradeKind.WildFlower => "Wildflowers are rare, stronger kinds of flower. Any new bud may grow into one instead if available.",
         UpgradeKind.CoreLink => "Lets one more branch grow straight from the core.",
         UpgradeKind.Seedling => "Each seedling unlocks a single powerful evolution.",
         _ => "The Hub takes in genes for a different unlock path.",

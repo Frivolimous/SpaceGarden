@@ -183,7 +183,7 @@ Nothing.
 | `Garden.cs:2723` | Hub | |
 | `Garden.cs:2729` | Increases the total number of stems. | |
 | `Garden.cs:2730` | Increases the total number of generators. | |
-| `Garden.cs:2731` | Wildflowers are rare, stronger kinds of flower. With a slot free, any new bud may grow into one instead. | |
+| `Garden.cs:2731` | Wildflowers are rare, stronger kinds of flower. Any new bud may grow into one instead if available. | |
 | `Garden.cs:2732` | Lets one more branch grow straight from the core. | |
 | `Garden.cs:2733` | Each seedling unlocks a single powerful evolution. | |
 | `Garden.cs:2734` | The Hub takes in genes for a different unlock path. | |
