@@ -318,6 +318,24 @@ Ember and Comet Bloom end themselves, the one exception to "never destroys anyth
 - **Away note:** the basic parts grown as before (fruit apart since Nov 3: "12 new parts grew: 8 stems and 4 groves.", then "30 fruits grew."), then "Wild flowers grew: an Ember and 2 Tendrils.", each discovery on a line of its own in the pale gold ("Wild flower discovered: Ember (see the Codex)."), then "An Ember burned out." These moments aren't repeated among the three listed.
 - **Looks** (revised after Jeremy's review of the first sheet): Amplifier a white plus, Resistor a white minus, Tendril a Big Stem's lobed disc with three bumps, Big Stem four lobes, Pulsar a five-pointed star, Twin Star two pentagons, Ember five flame petals, Lumber Grove two squares (an eight-pointed star; "ok, not the best"), Seed Pod a plain oval, Wild Lab two triangles, Lichen a scalloped hexagon at a stem's size, Buffer a solid eight-pointed burst (its glow fruit too), Comet Bloom a white six-toothed gear (the Resistor's first shape, kept as an idea), Moonflower six petals, Nebula Bloom three curling arms (the Tendril's first shape). They come from one atlas texture, drawn in a batch of its own per layer, so every wild flower together costs one draw call for the parts and one for their buds. Hues are the base's, shifted a little; the passive-only kinds are white. Glow is a small white burst, wood a brown diamond.
 - **Save:** still version 9 (not shipped to players), with optional fields: each part's life and charge, the Evolution kinds unlocked, any per-kind caps, the discoveries and the endings.
+### Balance test (Nov 4)
+
+`BalanceTests` (run by hand: `BALANCE=1 dotnet test -c Release --filter-method "*HandBuiltSweep*"`, or `*HandBuiltWild*` with `BALANCE_STAGE=stems,generators,core links,groves` for one stage) puts each wildflower into the best garden it can find at a stage, against the best with none: no seedlings, no Hub, a grove kept, every part's fruit out. Each garden settles an hour and is measured an hour (genes reaching the core); none may overload (buffed generators count). The search: 30-odd starting gardens built by rule (10-12 stems, 2-4 generators, even or lopsided), the wildflower tried in every placement, the search run from the best three; the baseline gets every wildflower's garden without it too. A stage is the pacing run's typical unlocks for the day with a stem more, a generator more and both, averaged (one stage alone is knife-edge: a link or a few power short of a lab).
+
+| Average vs none | Day 1 (12/4) | Day 2 (16/6) | Day 3 (19/8) |
+|---|---|---|---|
+| Lichen | +9% | +9% | +6% |
+| Buffer | +8% | +9% | +6% |
+| Amplifier | +6% | +8% | +7% |
+| Wild Lab | +5% | +8% | +6% |
+| Pulsar | +5% | +6% | +4% |
+| Ember | +6% | +5% | +4% |
+| Twin Star | +2% | +5% | +3% |
+| Big Stem | +2% | +5% | +2% |
+| Tendril | +1% | +1% | 0% |
+
+Before the last changes (Pulsar 20, Ember 36, Twin Star 14, all a little higher now). Jeremy, Nov 4: **balanced enough.** Big Stem is left as is: its extra link pays only with spare power, which real gardens have more often than these tight ones; Tendril is a utility pick. Findings along the way: the best garden is a balanced tree (each core link a side of stems forking evenly, generators one to a small branch beside a lab, the grove at a far tip); a lab on a core link costs about 30% (it halves the way in); and genes grow slowly with unlocks before the Hub (day 1 to 3: stems +58%, generators ×2, genes +12%), as gene motes wander and only two core links take them in.
+
 
 ## Progression
 
