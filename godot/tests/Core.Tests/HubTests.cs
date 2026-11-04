@@ -80,7 +80,7 @@ public class HubTests
         garden.CatchAtHub(10_000);
         // 3,000 for the first point, 3,400 for the second, 3,800 ...
         double spent = 0;
-        for (int i = 0; i < garden.HubPointsEarned; i++) spent += Tuning.HubFirstPoint + Tuning.HubPointStep * i;
+        for (int i = 0; i < garden.HubPointsEarned; i++) spent += Tuning.HubPointCost(i);
         Assert.Equal(garden.HubGenes, spent + garden.HubPool, 6);
         Assert.True(garden.HubPool < garden.NextPointCost);
         Assert.True(garden.HubPointsEarned >= 2);

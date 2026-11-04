@@ -1966,8 +1966,8 @@ public sealed class Garden
     // The caps as they work now (the stem cap with its Hub milestone), for the garden card.
     public Capacity Caps => Capacity with { Stems = StemCap };
 
-    // The genes the next point takes: HubFirstPoint, then HubPointStep more for each point earned before.
-    public double NextPointCost => Tuning.HubFirstPoint + Tuning.HubPointStep * HubPointsEarned;
+    // The genes the next point takes (see Tuning.HubPointCost).
+    public double NextPointCost => Tuning.HubPointCost(HubPointsEarned);
 
     // Gene blobs the Hub caught: into its pool, and a point for each NextPointCost the pool holds.
     internal void CatchAtHub(double genes)

@@ -256,7 +256,9 @@ public class PacingTests
         ("first Hub level", g => g.HubLevelsBought >= 1),
         ("10 Hub levels", g => g.HubLevelsBought >= 10),
         ("20 Hub levels", g => g.HubLevelsBought >= 20),
-        ("40 Hub levels", g => g.HubLevelsBought >= 40),
+        ("33 Hub levels (half)", g => g.HubLevelsBought >= 33),
+        ("50 Hub levels", g => g.HubLevelsBought >= 50),
+        ("all 65 Hub levels", g => g.HubLevelsBought >= Hubs.Paths.Sum(p => p.MaxLevel)),
     ];
 
     static string Describe(Garden garden)
@@ -460,7 +462,7 @@ public class PacingTests
         int toEarn = Hubs.TotalPoints - spent - garden.HubPoints;
         if (toEarn <= 0) return "every level affordable";
         double genes = -garden.HubPool;
-        for (int i = 0; i < toEarn; i++) genes += Tuning.HubFirstPoint + Tuning.HubPointStep * (garden.HubPointsEarned + i);
+        for (int i = 0; i < toEarn; i++) genes += Tuning.HubPointCost(garden.HubPointsEarned + i);
         double perDay = days > 1 ? hubGenesByDay[s, days - 1] - hubGenesByDay[s, days - 2] : hubGenesByDay[s, 0];
         return perDay <= 0 ? "never complete at its rate" : $"complete in about {genes / perDay:0} more days at its last day's rate";
     }
@@ -483,17 +485,24 @@ public class PacingTests
     {
         Assert.SkipUnless(Environment.GetEnvironmentVariable("PACING") == "1", "a tuning aid, run by hand (PACING=1)");
         int days = int.TryParse(Environment.GetEnvironmentVariable("PACING_DAYS"), out int d) ? d : 14;
+        // Trying other Hub point costs (see Tuning.HubPointCost): HUB_FIRST, HUB_STEP, HUB_GROWTH.
+        if (double.TryParse(Environment.GetEnvironmentVariable("HUB_FIRST"), out double first)) Tuning.HubFirstPoint = first;
+        if (double.TryParse(Environment.GetEnvironmentVariable("HUB_STEP"), out double step)) Tuning.HubPointStep = step;
+        if (double.TryParse(Environment.GetEnvironmentVariable("HUB_GROWTH"), out double growth)) Tuning.HubPointGrowth = growth;
         var text = new System.Text.StringBuilder();
         void Log(string line)
         {
             TestContext.Current.TestOutputHelper?.WriteLine(line);
             text.AppendLine(line);
         }
+        Log($"Hub points: first {Tuning.HubFirstPoint:#,0} genes, each {Tuning.HubPointGrowth}x the last and {Tuning.HubPointStep:#,0} more "
+            + $"(point 10 {Tuning.HubPointCost(9):#,0}, 46 {Tuning.HubPointCost(45):#,0}, 92 {Tuning.HubPointCost(91):#,0}; all 92 "
+            + $"{Enumerable.Range(0, Hubs.TotalPoints).Sum(Tuning.HubPointCost):#,0})");
         var run = Days(Log, days);
         for (int m = 0; m < Milestones.Length; m++)
         {
             var hours = Enumerable.Range(0, run.Reached.GetLength(0)).Select(s => run.Reached[s, m]).Order().ToList();
-            Log($"{Milestones[m].Name,-22} median {Hours(Median(run.Reached, m)),-10} range {Hours(hours[0])} to {Hours(hours[^1])}");
+            Log($"{Milestones[m].Name,-24} median {Hours(Median(run.Reached, m)),-10} range {Hours(hours[0])} to {Hours(hours[^1])}");
         }
         // The Hub's mean (Jeremy, Nov 1: after day 5, so at least 120 h), over the gardens that reached it.
         int hub = Array.FindIndex(Milestones, m => m.Name == "Hub");

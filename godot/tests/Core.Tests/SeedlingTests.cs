@@ -172,7 +172,7 @@ public class SeedlingTests
         garden.EvolveNow(EvolutionKind.PulsarPower);
         garden.EvolveNow(EvolutionKind.MorePower);
         Assert.Equal(blobs, Garden.FullBlobsPerHour(lichen), 3);
-        Assert.Equal(1.5f * NodeSpecs.All[NodeKind.Lichen].BlobValue, Garden.ValueOf(lichen), 3);
+        Assert.Equal(2f * NodeSpecs.All[NodeKind.Lichen].BlobValue, Garden.ValueOf(lichen), 3);
         Assert.Equal(power * 2, Garden.FullProductionPerSecond(pulsar), 3);
         Assert.Equal(emberTransfer * 2, Garden.TransferPerSecond(ember), 3);
         Assert.Equal(pulsarTransfer, Garden.TransferPerSecond(pulsar), 3);

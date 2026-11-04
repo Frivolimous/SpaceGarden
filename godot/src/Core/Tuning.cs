@@ -226,13 +226,17 @@ public static class Tuning
 
     // ==== THE HUB ==== \\
     // Placeholders (DESIGN.md, The Hub; Jeremy's step 5 addendum). Gene blobs it catches fill its pool, which turns into
-    // hub points, linearly: the first at HubFirstPoint genes, each after HubPointStep more than the last (3,000, 3,400,
-    // 3,800 ...). The paths, their costs and effects are data in Hubs.Paths. The Hub's upkeep is HubUpkeep a second,
+    // hub points: the first at HubFirstPoint genes, each after HubPointGrowth times the last and HubPointStep more
+    // (HubPointCost; linear, 3,000, 3,400, 3,800 ..., while the growth is 1). Not const: the pacing run tries others
+    // (HUB_FIRST, HUB_STEP, HUB_GROWTH). The paths, their costs and effects are data in Hubs.Paths. The Hub's upkeep is HubUpkeep a second,
     // plus HubUpkeepPerLevel for every level bought (HubUpkeepCut of that once its own path reaches level 3). The
     // milestones read where they act: the stem's (HubStemCap more stems), the Amplifier's (a doubling blob tripled
     // HubTripleChance of the time), the Buffer's (buffs last HubBuffSeconds longer), the Moonflower's (its
     // reach HubMoonflowerReach links) and the Nebula Bloom's (power to its seedlings counts HubNebulaFill times).
-    public const double HubFirstPoint = 3_000, HubPointStep = 400;
+    public static double HubFirstPoint = 3_000, HubPointStep = 400, HubPointGrowth = 1;
+
+    // The genes the point after this many earned takes.
+    public static double HubPointCost(int earned) => HubFirstPoint * Math.Pow(HubPointGrowth, earned) + HubPointStep * earned;
     public const float HubUpkeep = 3, HubUpkeepPerLevel = 0.5f, HubUpkeepCut = 0.8f;
     // How fast the Hub sends power on, a second (a stem 30; Jeremy, Nov 3: was 15).
     public const float HubTransfer = 20;
