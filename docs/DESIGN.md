@@ -430,7 +430,7 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | Second Path | Core link +1, core transfer ×2 | Amplifier |
 | Long Stemmed | Stem, Big Stem and Tendril transfer ×2 and store ×2; only offered once repeats unlock (after 5 evolutions) | Tendril |
 | Smart Particles | Blobs avoid dead ends: 50% of the time at level I, always at level II (max level II) | Resistor |
-| Rapid Evolution | Lab, Wild Lab and Lichen gene blobs' size ×1.5, their upkeep ×1.2 (Nov 3; ×2 upkeep starved the plant) | Wild Lab |
+| Rapid Evolution | Lab, Wild Lab and Lichen gene blobs' size ×1.5, their upkeep ×1.5 (Nov 3: ×2 upkeep starved the plant; Nov 4: ×2 genes at ×1.2 was +86% in the balance test, ×1.5 at ×1.5 is +28%, with the drain making it trade a stem for a generator) | Wild Lab |
 | More Power | Generator cap +2; generator, Twin Star and Ember transfer ×2 | Lichen |
 | Pulsar Power | Every generator kind's power ×2 (generators, Pulsars, Twin Stars, Embers) | Pulsar |
 | ~~Twin Stars~~ | Retired Nov 3 (never offered; one already taken keeps its effect) | Twin Star |
@@ -456,7 +456,7 @@ All three tracks share one gene income, and the stem and generator tracks will p
 | Second Path | Core link +1, core transfer ×2 (+2 and ×3; +3 and ×4) | III |
 | Long Stemmed | Stem kinds' transfer and store ×2 (×3) (offered from 5 evolutions) | II |
 | Smart Particles | Blobs avoid dead ends 50% of the time (always at II) | II |
-| Rapid Evolution | Lab kinds' gene blob size ×1.5 at ×1.2 upkeep (×2 at ×1.4, ×2.5 at ×1.6) | III |
+| Rapid Evolution | Lab kinds' gene blob size ×1.5 at ×1.5 upkeep (×2 at ×2, ×2.5 at ×2.5) | III |
 | More Power | Generator cap +2, transfer ×2 but the Pulsar's (+4 and ×3; +6 and ×4) | III |
 | Pulsar Power | Every generator kind's power ×2 (×3, ×4) | III |
 | Twin Stars | Retired | — |

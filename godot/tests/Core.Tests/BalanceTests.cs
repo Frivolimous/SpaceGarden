@@ -983,7 +983,9 @@ public class BalanceTests
         var stages = (Environment.GetEnvironmentVariable("BALANCE_SWEEP") ?? "16,6;17,6;16,7;17,7")
             .Split(';').Select(t => t.Split(',').Select(int.Parse).ToArray())
             .Select(c => new Stage($"{c[0]}/{c[1]}", c[0], c[1], 2, 1, Exchange: true)).ToList();
-        var cases = EvoCases();
+        // (BALANCE_CASES: only these, split by ';', with none and the Buffer alone.)
+        var only = Environment.GetEnvironmentVariable("BALANCE_CASES")?.Split(';').Select(n => n.Trim()).ToHashSet();
+        var cases = EvoCases().Where(c => only == null || c.Evolution == null || only.Contains(c.Name)).ToList();
         var found = new List<Part>(); // (every case's best garden so far)
         var all = new List<(Stage Stage, Dictionary<string, WildResult> Results)>();
         var text = new StringBuilder();
