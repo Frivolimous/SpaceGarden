@@ -47,16 +47,16 @@ public class ResearchTests
         Assert.Equal(43, stems.Count);
         Assert.Equal([100, 150, 250, 450, 750], stems.Take(5).Select(u => u.Cost));
         Assert.Equal(681_950, stems[^1].Cost);
-        Assert.Equal(6_970_000, stems.Sum(u => u.Cost));
+        Assert.Equal(6_970_000 + 20_550, stems.Sum(u => u.Cost)); // (Nov 4: stems 7-14 dearer, so day 1 ends at 10)
         Assert.All(stems, u => Assert.Equal(UpgradeKind.Stem, u.Kind));
         Assert.Equal(47, garden.Capacity.Stems);
 
         var generators = BuyAll(garden, Track.Generators);
         Assert.Equal(43, generators.Count);
-        Assert.Equal([1_000, 2_000, 4_000, 7_000, 12_000, 20_000, 31_000, 55_000, 90_000, 138_000],
+        Assert.Equal([1_000, 2_000, 8_000, 11_000, 15_000, 20_000, 31_000, 55_000, 90_000, 138_000],
             generators.Take(10).Select(u => u.Cost));
         Assert.Equal(2_912_000, generators[^1].Cost);
-        Assert.Equal(51_726_000, generators.Sum(u => u.Cost));
+        Assert.Equal(51_726_000 + 11_000, generators.Sum(u => u.Cost));
         Assert.Equal(44, garden.Capacity.Generators);
     }
 
@@ -67,9 +67,9 @@ public class ResearchTests
         var core = BuyAll(garden, Track.Core);
         Assert.Equal([(UpgradeKind.WildFlower, 1_500.0), (UpgradeKind.CoreLink, 2_500), (UpgradeKind.Seedling, 3_500),
                 (UpgradeKind.WildFlower, 6_000), (UpgradeKind.Seedling, 10_000), (UpgradeKind.WildFlower, 16_000),
-                (UpgradeKind.Seedling, 31_000), (UpgradeKind.WildFlower, 46_000), (UpgradeKind.Hub, 66_000)],
+                (UpgradeKind.Seedling, 31_000), (UpgradeKind.WildFlower, 46_000), (UpgradeKind.Hub, 56_000)],
             core.Take(9).Select(u => (u.Kind, u.Cost)));
-        Assert.Equal(182_500, core.Take(9).Sum(u => u.Cost)); // the core to the Hub
+        Assert.Equal(172_500, core.Take(9).Sum(u => u.Cost)); // the core to the Hub
         // After the core link, seedling slots and the wild flower limit by turns (the Hub in among them), each dearer
         // than the last.
         var rest = core.Skip(2).Where(u => u.Kind != UpgradeKind.Hub).ToList();
