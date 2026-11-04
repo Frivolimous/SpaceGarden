@@ -3,7 +3,7 @@ namespace SpaceGarden.Core;
 // The wild flowers (DESIGN.md, Wild flowers): a new bud, planted or passive, may grow into one of these instead of
 // its basic kind. Each is its base kind's spec with its own name, look, fruit and quirk; the passive-only kinds have no
 // base and are white (so are the Amplifier and the Resistor). A stem or generator kind (but the Amplifier and the Resistor) takes its base kind's slot as
-// well as a wild flower slot. Description is the table's Effect, the Codex's line; WildSpec.Quirk is the card's. Their
+// well as a wild flower slot. Description is the table's Effect, the Codex's line alone; WildSpec.Quirk is the card's alone (Jeremy, Nov 4: each worded for its place). Their
 // numbers are Jeremy's table of Nov 3, here; their quirks' are in Tuning (Wild flowers). Their fruit: every fruit adds a
 // tenth to its flower's main effect (wood, from the Lumber Grove, too: crawlers will use it later), but leaves (a
 // quarter off its upkeep) and glow, a white fruit that sends buff blobs, one a minute.

@@ -235,7 +235,7 @@ public partial class Almanac : FloatingWindow
             var grid = Cards();
             foreach (var (spec, age) in kinds)
                 grid.AddChild(EntryCard(spec.Name, spec.Shape, GardenView.Rgb(spec.Rgb),
-                    spec.Wild is { } wild ? $"{spec.Description} {wild.Quirk}" : spec.Description,
+                    spec.Description, // (a wildflower's quirk is its card's alone: Jeremy, Nov 4)
                     spec.Kind == NodeKind.Core ? "From the start" : $"Found day {Tracking.DayOf(age)}, {Tracking.ClockOf(age)}"));
             codex.AddChild(grid);
         }
