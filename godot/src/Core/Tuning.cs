@@ -227,13 +227,16 @@ public static class Tuning
     // ==== THE HUB ==== \\
     // Placeholders (DESIGN.md, The Hub; Jeremy's step 5 addendum). Gene blobs it catches fill its pool, which turns into
     // hub points: the first at HubFirstPoint genes, each after HubPointGrowth times the last and HubPointStep more
-    // (HubPointCost; linear, 3,000, 3,400, 3,800 ..., while the growth is 1). Not const: the pacing run tries others
+    // (HubPointCost: 3,000, 3,300, 3,630 ...). Not const: the pacing run tries others
     // (HUB_FIRST, HUB_STEP, HUB_GROWTH). The paths, their costs and effects are data in Hubs.Paths. The Hub's upkeep is HubUpkeep a second,
     // plus HubUpkeepPerLevel for every level bought (HubUpkeepCut of that once its own path reaches level 3). The
     // milestones read where they act: the stem's (HubStemCap more stems), the Amplifier's (a doubling blob tripled
     // HubTripleChance of the time), the Buffer's (buffs last HubBuffSeconds longer), the Moonflower's (its
     // reach HubMoonflowerReach links) and the Nebula Bloom's (power to its seedlings counts HubNebulaFill times).
-    public static double HubFirstPoint = 3_000, HubPointStep = 400, HubPointGrowth = 1;
+    // (Jeremy, Nov 4: the first point cheap, 3,000, and about half the 92 points by day 14, so each point 10% dearer
+    // than the last; the pacing run's median is 45 by day 14. Steep after that: past day 14 crawlers bring another
+    // economy. Was 3,000, then 400 more each.)
+    public static double HubFirstPoint = 3_000, HubPointStep = 0, HubPointGrowth = 1.10;
 
     // The genes the point after this many earned takes.
     public static double HubPointCost(int earned) => HubFirstPoint * Math.Pow(HubPointGrowth, earned) + HubPointStep * earned;
