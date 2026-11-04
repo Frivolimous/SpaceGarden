@@ -418,6 +418,67 @@ public class BalanceTests
         Assert.Skip(text.ToString());
     }
 
+    // A layout written as Show writes it ("C(s(L g) s(L L))"): C core, s stem, g generator, L lab, a wildflower by its
+    // name in capitals.
+    static Part Parse(string text)
+    {
+        int at = 0;
+        Part Read()
+        {
+            int start = at;
+            while (at < text.Length && char.IsLetter(text[at])) at++;
+            string name = text[start..at];
+            var kind = name switch
+            {
+                "C" => NodeKind.Core, "s" => NodeKind.Stem, "g" => NodeKind.Generator, "L" => NodeKind.Lab,
+                _ => NodeSpecs.All.Values.First(spec => spec.Name.Replace(" ", "").ToUpperInvariant() == name).Kind,
+            };
+            var part = new Part(kind);
+            if (at < text.Length && text[at] == '(')
+            {
+                at++;
+                while (text[at] != ')')
+                {
+                    if (text[at] == ' ') { at++; continue; }
+                    part.Attach(Read());
+                }
+                at++;
+            }
+            return part;
+        }
+        return Read();
+    }
+
+    // Hand-built layouts (BALANCE_LAYOUTS, split by ';') at one stage (BALANCE_STAGE "stems,generators,core links",
+    // 12,4,2 by default), each measured over six seeds, against a long search from scratch (BALANCE_STEPS a climb,
+    // BALANCE_CLIMBS climbs: 3000 and 8 by default) and from each hand-built one.
+    [Fact]
+    public void HandBuilt()
+    {
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
+        var caps = (Environment.GetEnvironmentVariable("BALANCE_STAGE") ?? "12,4,2").Split(',').Select(int.Parse).ToArray();
+        var stage = new Stage("custom", caps[0], caps[1], caps[2]);
+        int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 3000;
+        int climbs = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_CLIMBS"), out int c) ? c : 8;
+        var hand = (Environment.GetEnvironmentVariable("BALANCE_LAYOUTS") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => Parse(t.Trim())).ToList();
+        var text = new StringBuilder($"Hand-built against searched, {stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links:\n");
+        void Row(string name, (Part Layout, double Genes, double Spread, Measure Measure) r) => text.AppendLine(
+            $"  {name,-14} {r.Genes,6:0} ±{r.Spread,-4:0} {r.Measure.Stems,2}s {r.Measure.Generators,2}g {r.Measure.Labs,2}L fill {r.Measure.LabFill:0%} power {r.Measure.Production:0}/{r.Measure.Upkeep:0}{(r.Measure.Overloaded ? " OVERLOADED" : "")}  {r.Layout.Show()}");
+        foreach (var (h, i) in hand.Select((h, i) => (h, i)))
+        {
+            if (!Fits(h, stage, null)) { text.AppendLine($"  hand {i + 1}: doesn't fit the caps: {h.Show()}"); continue; }
+            Row($"hand {i + 1}", Judge(h, stage));
+        }
+        var rng = new Random(5);
+        var starts = Enumerable.Range(0, climbs).Select(_ => Seed(stage, null, rng)).Concat(hand.Where(h => Fits(h, stage, null))).ToList();
+        var found = starts.AsParallel().Select((p, i) => (From: i < climbs ? "search" : $"from hand {i - climbs + 1}",
+            Result: Judge(Climb(p, stage, null, steps, 900 + i).Layout, stage))).ToList();
+        foreach (var f in found.OrderByDescending(f => f.Result.Genes)) Row(f.From, f.Result);
+        if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
+        Assert.Skip(text.ToString());
+    }
+
     // For a feel of the search's cost: one short climb.
     [Fact]
     public void BalanceRunTime()
