@@ -272,10 +272,10 @@ public class BalanceTests
     // The best layout found for a stage and wildflower: a few climbs from fresh starts and from the given layouts (the
     // baseline's best, for a wildflower), the winner judged again over more seeds.
     static (Part Layout, double Genes, double Spread, Measure Measure) Best(Stage stage, NodeKind? wild, int steps,
-        IEnumerable<Part> from, int seed)
+        IEnumerable<Part> from, int seed, int fresh = 2)
     {
         var rng = new Random(seed);
-        var starts = new List<Part> { Seed(stage, wild, rng), Seed(stage, wild, rng) };
+        var starts = Enumerable.Range(0, fresh).Select(_ => Seed(stage, wild, rng)).ToList();
         foreach (var f in from)
         {
             var s = f.Copy();
@@ -303,11 +303,30 @@ public class BalanceTests
             starts.Add(s);
         }
         var climbs = starts.AsParallel().Select((s, i) => Climb(s, stage, wild, steps, seed * 31 + i)).ToList();
-        var (layout, _) = climbs.MaxBy(c => c.Measure.Score);
+        return Judge(climbs.MaxBy(c => c.Measure.Score).Layout, stage);
+    }
+
+    // A layout's genes over six more seeds: their mean and spread, and the first one's measure.
+    static (Part Layout, double Genes, double Spread, Measure Measure) Judge(Part layout, Stage stage)
+    {
         var judged = Enumerable.Range(0, 6).Select(i => Run(layout, stage, 1000 + i)).ToList();
         double mean = judged.Average(m => m.GenesPerHour);
         double spread = Math.Sqrt(judged.Average(m => Math.Pow(m.GenesPerHour - mean, 2)));
         return (layout, mean, spread, judged[0]);
+    }
+
+    // A wildflower's layout without it, if that leaves a garden that doesn't overload.
+    static Part? Strip(Part layout, Stage stage, NodeKind wild)
+    {
+        var copy = layout.Copy();
+        var w = copy.All().First(p => p.Kind == wild);
+        if (w.Kids.Count == 0) w.Detach();
+        else
+        {
+            w.Kind = NodeKind.Stem;
+            if (!Fits(copy, stage, null)) w.Detach();
+        }
+        return Fits(copy, stage, null) && !Overloads(copy, stage) ? copy : null;
     }
 
     [Fact]
@@ -321,13 +340,22 @@ public class BalanceTests
         var results = new ConcurrentDictionary<(int Stage, NodeKind? Wild), (Part Layout, double Genes, double Spread, Measure Measure)>();
         // Stage by stage, each search starting from the stage before's best too (its caps are less); the baseline first
         // (the wildflowers' searches start from it too), then the wildflowers side by side.
+        int master = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_SEED"), out int ms) ? ms : 0;
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
         for (int i = 0; i < Stages.Length; i++)
         {
             int at = i;
             var before = (NodeKind? w) => at == 0 ? Enumerable.Empty<Part>() : [results[(at - 1, w)].Layout];
-            results[(i, null)] = Best(Stages[i], null, steps, before(null), 11 + i);
-            Parallel.ForEach(Tested, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, w =>
-                results[(at, w)] = Best(Stages[at], w, steps, before(w).Append(results[(at, null)].Layout), 101 + at * 17 + (int)w));
+            results[(i, null)] = Best(Stages[i], null, steps, before(null), master + 11 + i, fresh: 6);
+            Parallel.ForEach(Tested, options, w =>
+                results[(at, w)] = Best(Stages[at], w, steps, before(w).Append(results[(at, null)].Layout),
+                    master + 101 + at * 17 + (int)w));
+            // The baseline is at least as good as any wildflower's garden with the wildflower taken out (a stem in its
+            // place if it held a branch and a stem fits, else it goes with what grew beyond it), climbed a little more.
+            var stripped = Tested.Select(w => Strip(results[(at, w)].Layout, Stages[at], w)).Where(p => p != null).ToList();
+            var better = stripped.AsParallel().Select((p, k) => Climb(p!, Stages[at], null, steps / 5, master + 500 + k))
+                .Select(c => Judge(c.Layout, Stages[at])).MaxBy(r => r.Genes);
+            if (better.Genes > results[(i, null)].Genes) results[(i, null)] = better;
         }
         for (int i = 0; i < Stages.Length; i++)
         {
