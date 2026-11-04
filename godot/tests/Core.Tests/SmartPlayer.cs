@@ -15,10 +15,11 @@ namespace SpaceGarden.Core.Tests;
 //     a free link for the plant to grow on;
 //   - fills the generator cap with generators where the plant is hungriest (lowest on power);
 //   - keeps a grove for every GroveEvery stems, planted mid-plant;
-//   - grows the Hub once it's bought, on the free link nearest the core, and spends its points at every check-in, on
-//     the first path in HubOrder whose next level they cover (Hub);
-//   - once the Hub is out, keeps the genes about half to the Hub and half to the core (Jeremy, Nov 4): each new lab
-//     goes on whichever side is short, and when one side is well ahead, one of its labs moves to the other (BalanceGenes).
+//   - grows the Hub once it's bought, on the free link nearest the core; once it's out, prunes about half the garden
+//     and grows it back half on the Hub's side, then keeps the genes about half to the Hub and half to the core
+//     (Jeremy, Nov 4): new stems and labs go on the side that's short, and when one side's genes are well ahead, one of
+//     its labs moves to the other; spends the Hub's points at every check-in on whichever level adds the most per point
+//     (Hub).
 public static class SmartPlayer
 {
     const int GroveEvery = 15;
@@ -42,12 +43,14 @@ public static class SmartPlayer
             Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth);
         Seedlings(garden);
         Hub(garden);
-        while (Bud(garden, NodeKind.Stem, nearFirst: true)) { }
+        while (BudSided(garden, NodeKind.Stem)) { }
         BalanceGenes(garden);
         while (Spare(garden) >= -NodeSpecs.All[NodeKind.Lab].PowerPerSecond + Reserve && FreeLinks(garden) > 1
-            && BudLab(garden)) { }
+            && BudSided(garden, NodeKind.Lab)) { }
         while (Bud(garden, NodeKind.Generator, nearFirst: false, hungriest: true)) { }
-        while (garden.Nodes.Count(IsGrove) < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
+        // (Grove buds forming count: they come out within minutes, and the player doesn't start one on every free link.)
+        while (garden.Nodes.Count(n => IsGrove(n) || n.FormingBud && Garden.IsBudOf(n.Forming!.Value, NodeKind.Grove))
+                < GrovesWanted(garden) && Bud(garden, NodeKind.Grove, nearFirst: false, middle: true)) { }
         // The player doesn't undo, and the 30 s undo window passes (counted in physics ticks, which a pacing run
         // doesn't run; left open, it would hold off passive buds for good).
         garden.ForgetPrune();
@@ -55,82 +58,158 @@ public static class SmartPlayer
 
     static int GrovesWanted(Garden garden) => 1 + Count(garden, NodeKind.Stem) / GroveEvery;
 
-    // The Hub (Nov 4): grown as soon as it's bought, on the free link nearest the core (off the core itself, which grows
-    // only stems), where the gene motes on their way in pass it; labs may then grow on its links too. Its points go on
-    // the first path in HubOrder whose next level they cover, again and again (no saving for a dearer level).
+    // ==== THE HUB (Nov 4) ==== \\
+
+    // What the player has done with the Hub, a garden's own (the runs go side by side): its recent share of the genes,
+    // the rebuild once it was out, the labs it moved to keep the split, and the levels it bought, in order, with when.
+    public sealed class HubCare
+    {
+        internal double Genes, HubGenes, ToHub, ToCore;
+        public double? Share { get; internal set; }
+        public bool Rebuilt { get; internal set; }
+        public double RebuiltAt { get; internal set; } = double.PositiveInfinity; // hours
+        public int RebuildPruned { get; internal set; } // main parts pruned to rebuild
+        public int LabsMoved { get; internal set; }
+        public List<(NodeKind Kind, int Level, double Hours)> Bought { get; } = new();
+    }
+
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Garden, HubCare> cares = new();
+    public static HubCare CareOf(Garden garden) =>
+        cares.GetValue(garden, g => new HubCare { Genes = g.Genes, HubGenes = g.HubGenes });
+
+    const double SplitSmoothing = 0.3, HubShare = 0.5, ShareSlack = 0.15;
+    static double HoursOf(Garden garden) => garden.Tracking.Age / 3600;
+
+    // Grown as soon as it's bought, on the free link nearest the core (off the core itself, which grows only stems).
+    // Once it's out, the player prunes about half the garden, from the core's side, and grows it back half on the Hub's
+    // side (stems and labs go to the side that's short: see BudSided), so about half the genes go to the Hub (Jeremy,
+    // Nov 4). Its points go on whichever next level adds the most per point (HubValue), again and again.
     static void Hub(Garden garden)
     {
         if (garden.CanPlantHub && !Forming(garden, NodeKind.Hub)) Bud(garden, NodeKind.Hub, nearFirst: true);
-        while (HubOrder(garden).FirstOrDefault(garden.CanBuyHubLevel) is { } kind && garden.CanBuyHubLevel(kind))
-            garden.BuyHubLevel(kind);
+        if (garden.Hub is not { } hub) return;
+        var care = CareOf(garden);
+        if (!care.Rebuilt) Rebuild(garden, hub, care);
+        while (Hubs.Paths.Where(p => garden.CanBuyHubLevel(p.Kind))
+            .OrderByDescending(p => HubValue(garden, p) / p.Cost(garden.HubLevel(p.Kind) + 1))
+            .ThenBy(p => ToMilestone(garden, p)).FirstOrDefault() is { } path)
+        {
+            garden.BuyHubLevel(path.Kind);
+            care.Bought.Add((path.Kind, garden.HubLevel(path.Kind), HoursOf(garden)));
+        }
     }
 
-    // What the player raises first: genes, power, stems, the Hub's own links, then the wildflowers it has the most of,
-    // groves, and the rest in the panel's order.
-    static IEnumerable<NodeKind> HubOrder(Garden garden)
+    // Prunes the core's side, the farthest parts first (each with what grew beyond it), until about half the garden's
+    // main parts are gone; never the Hub or the way to it.
+    static void Rebuild(Garden garden, PlantNode hub, HubCare care)
     {
-        NodeKind[] first = [NodeKind.Lab, NodeKind.Generator, NodeKind.Stem, NodeKind.Hub];
-        var wild = garden.Nodes.Where(n => n.Spec.IsWild).GroupBy(n => n.Spec.Kind).OrderByDescending(g => g.Count())
-            .Select(g => g.Key);
-        return first.Concat(wild).Append(NodeKind.Grove).Concat(Hubs.Paths.Select(p => p.Kind)).Distinct();
+        var way = new HashSet<PlantNode>();
+        for (var at = hub; at != null; at = at.Parent) way.Add(at);
+        int main = garden.Nodes.Count(n => !n.Spec.IsFruit && n != garden.Core && !n.IsHub), pruned = 0;
+        while (pruned < main / 2 && garden.Nodes.Where(n => !n.Spec.IsFruit && n.Parent != null && !way.Contains(n)
+                && !HubSide(n)).MaxBy(n => n.Depth) is { } far)
+            pruned += garden.Prune(far).Count(n => !n.Spec.IsFruit);
+        care.Rebuilt = true;
+        care.RebuiltAt = HoursOf(garden);
+        care.RebuildPruned = pruned;
     }
 
-    // The share of the genes the Hub has caught lately (each check-in's, smoothed), of all that arrived at the Hub or the
-    // core; null before the Hub is out or before any arrive.
-    sealed class Split { public double Genes, HubGenes, ToHub, ToCore; public double? Share; }
-    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Garden, Split> splits = new();
-    const double SplitSmoothing = 0.3, HubShare = 0.5, ShareSlack = 0.15;
-
-    internal static double? HubShareOf(Garden garden)
+    // What a path's next level is worth, in genes an hour across the garden: a share more of a kind's genes is that
+    // share of what its parts send; of power made, or less drain, that much power, at what a lab turns its drain into
+    // genes; the rest (transfer, fruit slots, links, buffs and the like) a small part of the garden's genes, while it
+    // has that kind. A level with a milestone counts a tenth of the garden's genes more.
+    static double HubValue(Garden garden, HubPath path)
     {
-        if (!garden.HubPlanted) return null;
-        var split = splits.GetValue(garden, g => new Split { Genes = g.Genes, HubGenes = g.HubGenes });
-        double toHub = garden.HubGenes - split.HubGenes, toCore = garden.Genes - split.Genes;
-        (split.Genes, split.HubGenes) = (garden.Genes, garden.HubGenes);
-        split.ToHub += SplitSmoothing * (toHub - split.ToHub);
-        split.ToCore += SplitSmoothing * (toCore - split.ToCore);
-        double all = split.ToHub + split.ToCore;
-        return split.Share = all > 0 ? split.ToHub / all : null;
+        var lab = NodeSpecs.All[NodeKind.Lab];
+        double genesPerPower = lab.BlobsPerHour * Tuning.BlobGenes / -lab.PowerPerSecond;
+        double all = garden.Nodes.Where(n => n.Spec.Sends == BlobKind.Genes)
+            .Sum(n => Garden.FullBlobsPerHour(n) * Garden.ValueOf(n));
+        double value = 0;
+        foreach (var effect in path.Each)
+        {
+            var parts = garden.Nodes.Where(n => n.Spec.Kind == effect.Kind).ToList();
+            if (parts.Count == 0) continue;
+            value += effect.Axis switch
+            {
+                HubAxis.Gen => effect.Share * parts.Sum(Garden.FullProductionPerSecond) * genesPerPower,
+                HubAxis.Upkeep => -effect.Share * parts.Sum(Garden.FullUpkeepPerSecond) * genesPerPower,
+                HubAxis.Blobs => parts[0].Spec.Sends == BlobKind.Genes
+                    ? effect.Share * parts.Sum(n => Garden.FullBlobsPerHour(n) * Garden.ValueOf(n))
+                    : effect.Share * 0.1 * all,
+                _ => Math.Min(1, Math.Abs(effect.Share)) * 0.05 * all,
+            };
+        }
+        if (path.MilestoneAt(garden.HubLevel(path.Kind) + 1) != null) value += 0.1 * all;
+        return value;
+    }
+
+    // Levels from a path's next one to its next milestone (the tie-break: the nearer first).
+    static int ToMilestone(Garden garden, HubPath path) =>
+        path.Milestones.Select(m => m.Level - garden.HubLevel(path.Kind)).Where(d => d > 0).DefaultIfEmpty(99).Min();
+
+    // The Hub's recent share of the genes (each check-in's, smoothed), of all that arrived at it or the core.
+    static double? UpdateShare(Garden garden)
+    {
+        var care = CareOf(garden);
+        double toHub = garden.HubGenes - care.HubGenes, toCore = garden.Genes - care.Genes;
+        (care.Genes, care.HubGenes) = (garden.Genes, garden.HubGenes);
+        care.ToHub += SplitSmoothing * (toHub - care.ToHub);
+        care.ToCore += SplitSmoothing * (toCore - care.ToCore);
+        double sum = care.ToHub + care.ToCore;
+        return care.Share = sum > 0 ? care.ToHub / sum : null;
     }
 
     // Whether a part is the Hub or grows beyond it: a lab there sends its genes mostly to the Hub.
-    static bool HubSide(Garden garden, PlantNode n)
+    static bool HubSide(PlantNode n)
     {
         for (var at = n; at != null; at = at.Parent) if (at.IsHub) return true;
         return false;
     }
 
-    // A lab bud: with the Hub out, on the side whose share is short (the Hub's, within MaxLabDepth of it; or the core's,
-    // within MaxLabDepth of the core), else wherever there's room near the core.
-    static bool BudLab(Garden garden)
+    // Whether the Hub's side is the one to grow on: for a lab, by the genes' share once they're arriving; else by the
+    // count of the kind on each side.
+    static bool GrowHubSide(Garden garden, NodeKind kind)
     {
-        if (garden.Hub is not { } hub || !splits.TryGetValue(garden, out var split) || split.Share is not { } s)
-            return Bud(garden, NodeKind.Lab, nearFirst: true, maxDepth: MaxLabDepth);
-        bool toHub = s < HubShare;
-        return BudLabOn(garden, toHub, hub) || BudLabOn(garden, !toHub, hub);
+        if (kind == NodeKind.Lab && CareOf(garden).Share is { } share) return share < HubShare;
+        var parts = garden.Nodes.Where(n => n.Spec.Kind == kind || n.Forming == kind).ToList();
+        return parts.Count(HubSide) * 2 < parts.Count;
     }
 
-    static bool BudLabOn(Garden garden, bool hubSide, PlantNode hub)
+    // A stem or lab bud: once the Hub is out and the garden rebuilt, on the side that's short (a lab within MaxLabDepth
+    // of the Hub, or of the core), the other if that side has no room; before, as ever.
+    static bool BudSided(Garden garden, NodeKind kind)
+    {
+        int depth = kind == NodeKind.Lab ? MaxLabDepth : int.MaxValue;
+        if (garden.Hub is not { } hub || !CareOf(garden).Rebuilt) return Bud(garden, kind, nearFirst: true, maxDepth: depth);
+        bool toHub = GrowHubSide(garden, kind);
+        return BudOn(garden, kind, toHub, hub, depth) || BudOn(garden, kind, !toHub, hub, depth);
+    }
+
+    static bool BudOn(Garden garden, NodeKind kind, bool hubSide, PlantNode hub, int depth)
     {
         var spot = garden.Nodes
-            .Where(n => !n.Spec.IsFruit && n.Parent != null && garden.CanSproutFrom(n, NodeKind.Lab)
-                && HubSide(garden, n) == hubSide
-                && (hubSide ? n.Depth - hub.Depth < MaxLabDepth : n.Depth < MaxLabDepth))
+            .Where(n => !n.Spec.IsFruit && (n.Parent != null || kind == NodeKind.Stem) && garden.CanSproutFrom(n, kind)
+                && HubSide(n) == hubSide && (hubSide ? n.Depth - hub.Depth : n.Depth) < depth)
             .OrderBy(n => n.Depth).ThenBy(n => n.Id).FirstOrDefault();
-        return spot != null && garden.SproutFrom(spot, NodeKind.Lab);
+        return spot != null && garden.SproutFrom(spot, kind);
     }
 
     // At each check-in, the Hub's recent share of the genes; when it's more than ShareSlack off a half, the farthest lab
     // on the side that's ahead goes, if the other side has a link for one (the lab loop then grows it there).
     static void BalanceGenes(Garden garden)
     {
-        if (garden.Hub is null || HubShareOf(garden) is not { } s || Math.Abs(s - HubShare) <= ShareSlack) return;
+        if (garden.Hub is null) return;
+        var care = CareOf(garden);
+        if (UpdateShare(garden) is not { } s || !care.Rebuilt || Math.Abs(s - HubShare) <= ShareSlack) return;
         bool hubAhead = s > HubShare;
-        bool roomOtherSide = garden.Nodes.Any(n => !n.Spec.IsFruit && n.Parent != null && garden.CanSproutFrom(n, NodeKind.Lab)
-            && HubSide(garden, n) != hubAhead);
+        bool roomOtherSide = garden.Nodes.Any(n => !n.Spec.IsFruit && n.Parent != null
+            && garden.CanSproutFrom(n, NodeKind.Lab) && HubSide(n) != hubAhead);
         if (!roomOtherSide) return;
-        if (garden.Nodes.Where(n => IsLab(n) && HubSide(garden, n) == hubAhead).MaxBy(n => n.Depth) is { } lab)
+        if (garden.Nodes.Where(n => IsLab(n) && HubSide(n) == hubAhead).MaxBy(n => n.Depth) is { } lab)
+        {
             garden.Prune(lab);
+            care.LabsMoved++;
+        }
     }
 
     // For tests: one check-in's Hub care alone.
@@ -205,7 +284,11 @@ public static class SmartPlayer
 
     // What the garden would make at full power, less what all its parts would cost: below 0 it's overloaded, and
     // settles lower, its far labs lowest and slowest.
-    static float Spare(Garden garden) => garden.FullPowerBalance() is var (made, used) ? made - used : 0;
+    // Buds forming count at their drain: they'll cost it within minutes (Nov 4: left out, the lab loop started a lab on
+    // every free link at once).
+    static float Spare(Garden garden) => garden.FullPowerBalance() is var (made, used)
+        ? made - used + garden.Nodes.Where(n => n.FormingBud).Sum(n => Math.Min(0, NodeSpecs.All[n.Forming!.Value].PowerPerSecond))
+        : 0;
 
     static void PruneDrains(Garden garden)
     {

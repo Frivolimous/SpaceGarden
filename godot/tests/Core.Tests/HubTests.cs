@@ -313,9 +313,35 @@ public class SmartPlayerHubTests
 
         stem.Forming = null;
         garden.PlantHub();
+        SmartPlayer.CareOf(garden).Rebuilt = true; // (the rebuild has its own test)
         garden.HubPoints = 5;
         SmartPlayer.TendHub(garden);
-        Assert.Equal(4, garden.HubLevel(NodeKind.Lab)); // 1 + 1 + 2 + 1 points
+        Assert.Equal(4, garden.HubLevel(NodeKind.Lab)); // 1 + 1 + 2 + 1 points, the lab's genes worth most a point
         Assert.Equal(0, garden.HubPoints);
+        Assert.Equal([(NodeKind.Lab, 1), (NodeKind.Lab, 2), (NodeKind.Lab, 3), (NodeKind.Lab, 4)],
+            SmartPlayer.CareOf(garden).Bought.Select(b => (b.Kind, b.Level)));
+    }
+
+    [Fact]
+    public void OnceTheHubIsOutItPrunesAboutHalfTheGardenFromTheCoresSide()
+    {
+        var garden = Garden.New(Layout.Radial, seed: 7);
+        garden.PassiveGrowth = false;
+        garden.Capacity = new Capacity(12, 2, 3, Hubs: 1);
+        var hubStem = garden.GrowBranch(garden.Core, NodeKind.Stem)!;
+        var hub = garden.GrowBranch(hubStem, NodeKind.Hub)!;
+        for (int b = 0; b < 2; b++)
+        {
+            var tip = garden.GrowBranch(garden.Core, NodeKind.Stem)!;
+            for (int i = 0; i < 3; i++) tip = garden.GrowBranch(tip, NodeKind.Stem)!;
+            garden.GrowBranch(tip, NodeKind.Lab);
+        }
+        int main = garden.Nodes.Count(n => !n.Spec.IsFruit && n != garden.Core && !n.IsHub);
+        SmartPlayer.TendHub(garden);
+        var care = SmartPlayer.CareOf(garden);
+        Assert.True(care.Rebuilt);
+        Assert.InRange(care.RebuildPruned, main / 2, main / 2 + 4); // (a branch goes whole)
+        Assert.Contains(hub, garden.Nodes);
+        Assert.Contains(hubStem, garden.Nodes); // never the way to the Hub
     }
 }

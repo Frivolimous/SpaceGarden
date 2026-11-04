@@ -286,7 +286,38 @@ public class PacingTests
     // longest wait between upgrades each day (awake hours) and the upgrades bought at each day's first check-in, after
     // the night.
     sealed record Run(double[,] Reached, double[,] GenesByDay, double[,] LongestWait, double[,] AfterSleep,
-        double[,] HubGenesByDay, double[,] HubLevelsByDay);
+        double[,] HubGenesByDay, double[,] HubLevelsByDay)
+    {
+        // At each day's end (cumulative): stems and generators bought, Expansions bought, Hub points unspent; and the
+        // Hub's drain and the garden's power gen, at full power.
+        public required double[,] StemsBought, GeneratorsBought, Expansions, HubUnspent, HubDrain, PowerGen;
+        // Hours in each day the garden was overloaded (it would cost more full than it makes full), or had fewer stems
+        // or generators (grown or forming) than its caps allow.
+        public required double[,] Overloaded, UnderStems, UnderGenerators;
+    }
+
+    // A stretch of time something held, for a garden's own line: how many stretches, the hours in all, the longest, the
+    // first's start.
+    sealed class Stretches
+    {
+        double? since;
+        public int Count;
+        public double Total, Longest, First = double.PositiveInfinity;
+        public void At(bool on, double hours)
+        {
+            if (on && since == null) { since = hours; Count++; First = Math.Min(First, hours); }
+            if (!on && since is { } start) End(hours - start);
+        }
+        public void Close(double hours) { if (since is { } start) End(hours - start); }
+        void End(double length) { since = null; Total += length; Longest = Math.Max(Longest, length); }
+        public override string ToString() => Count == 0 ? "never"
+            : $"{Count} times, {Total:0.#} h in all, longest {Longest:0.#} h, first at {Hours(First)}";
+    }
+
+    // Stems or generators, grown or forming (a wild stand-in too), against the cap.
+    static int Grown(Garden garden, NodeKind kind) =>
+        garden.Nodes.Count(n => Garden.IsBudOf(n.Spec.Kind, kind))
+        + garden.Nodes.Count(n => n.FormingBud && Garden.IsBudOf(n.Forming!.Value, kind));
 
     // Awake hours from planting to this many hours in (the player sleeps the last 8 of each day: see SmartPlayer.Awake).
     static double AwakeHours(double hours) => Math.Floor(hours / 24) * 16 + Math.Min(hours % 24, 16);
@@ -314,19 +345,28 @@ public class PacingTests
     {
         var seeds = new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         var shownDays = new[] { 1, 3, 7, 10, 14, 21, 30 }.Where(d => d <= days).Append(days).ToHashSet();
-        var run = new Run(new double[seeds.Length, Milestones.Length], new double[seeds.Length, days],
-            new double[seeds.Length, days], new double[seeds.Length, days], new double[seeds.Length, days],
-            new double[seeds.Length, days]);
+        double[,] PerDay() => new double[seeds.Length, days];
+        var run = new Run(new double[seeds.Length, Milestones.Length], PerDay(), PerDay(), PerDay(), PerDay(), PerDay())
+        {
+            StemsBought = PerDay(), GeneratorsBought = PerDay(), Expansions = PerDay(), HubUnspent = PerDay(),
+            HubDrain = PerDay(), PowerGen = PerDay(), Overloaded = PerDay(), UnderStems = PerDay(), UnderGenerators = PerDay(),
+        };
         for (int s = 0; s < seeds.Length; s++)
             for (int m = 0; m < Milestones.Length; m++) run.Reached[s, m] = double.PositiveInfinity;
         const double step = 600;
         // The seeds run side by side (each garden is its own), their lines kept in seed order.
         var lines = seeds.Select(_ => new List<string>()).ToArray();
         var chosen = new List<string>();
+        var kept = new List<string>();
+        var hubLevels = new List<string>();
         Parallel.For(0, seeds.Length, s =>
         {
             var garden = Planted(seeds[s]);
             var boughtAt = new List<double>();
+            var overload = new Stretches();
+            var underStems = new Stretches();
+            var underGenerators = new Stretches();
+            var producedAt = new Dictionary<int, (double Core, double Hub)>();
             double t = 0;
             lines[s].Add($"seed {seeds[s]}:");
             void Check(double hours)
@@ -350,10 +390,28 @@ public class PacingTests
                     }
                     garden.Grow(dt);
                     Check((t + dt) / Hour); // genes earned as they arrive
+                    // How the garden stands after this stretch, as if for all of it.
+                    var (made, used) = garden.FullPowerBalance();
+                    bool over = made < used;
+                    bool shortStems = Grown(garden, NodeKind.Stem) < garden.StemCap;
+                    bool shortGenerators = Grown(garden, NodeKind.Generator) < garden.Capacity.Generators;
+                    overload.At(over, (t + dt) / Hour);
+                    underStems.At(shortStems, (t + dt) / Hour);
+                    underGenerators.At(shortGenerators, (t + dt) / Hour);
+                    if (over) run.Overloaded[s, day - 1] += dt / Hour;
+                    if (shortStems) run.UnderStems[s, day - 1] += dt / Hour;
+                    if (shortGenerators) run.UnderGenerators[s, day - 1] += dt / Hour;
                 }
                 run.GenesByDay[s, day - 1] = garden.Genes;
                 run.HubGenesByDay[s, day - 1] = garden.HubGenes;
                 run.HubLevelsByDay[s, day - 1] = garden.HubLevelsBought;
+                run.StemsBought[s, day - 1] = garden.StemsBought;
+                run.GeneratorsBought[s, day - 1] = garden.GeneratorsBought;
+                run.Expansions[s, day - 1] = garden.Bought;
+                run.HubUnspent[s, day - 1] = garden.HubPoints;
+                run.HubDrain[s, day - 1] = garden.Hub is { } hub ? Garden.FullUpkeepPerSecond(hub) : 0;
+                run.PowerGen[s, day - 1] = garden.FullPowerBalance().Production;
+                producedAt[day] = (garden.Genes, garden.HubGenes);
                 if (shownDays.Contains(day)) lines[s].Add($"  day {day,2}: {Describe(garden)}");
             }
             var waits = LongestWaits(boughtAt, days);
@@ -362,11 +420,49 @@ public class PacingTests
             lines[s].Add("  evolutions: " + (garden.Evolved.Count == 0 ? "none" : string.Join("; ", garden.Evolved.Select(e =>
                 $"{e.Name} chosen {Hours(e.ChosenAt / Hour)}" + (e.Bloomed ? $", bloomed {Hours(e.BloomedAt / Hour)}" : ", growing")))));
             lock (chosen) chosen.AddRange(garden.Evolved.Select(e => e.Name));
+            // The Hub: when it came, the rebuild, the labs moved to keep the split, and the levels bought, in order.
+            var care = SmartPlayer.CareOf(garden);
+            lines[s].Add("  Hub: " + (care.Rebuilt
+                ? $"rebuilt at {Hours(care.RebuiltAt)} ({care.RebuildPruned} parts pruned), {care.LabsMoved} labs moved since, "
+                    + $"{garden.HubPointsEarned} points earned ({garden.HubPoints} unspent), "
+                    + $"{Projected(garden, run.HubGenesByDay, s, days)}"
+                : "not out"));
+            lines[s].Add("  Hub levels: " + (care.Bought.Count == 0 ? "none" : string.Join(", ", care.Bought.Select(b =>
+                $"{NodeSpecs.All[b.Kind].Name} {b.Level}" + (Hubs.Path(b.Kind).MilestoneAt(b.Level) != null ? $" ({Hours(b.Hours)})" : "")))));
+            lock (hubLevels) hubLevels.AddRange(care.Bought.Select(b => NodeSpecs.All[b.Kind].Name));
+            // Genes made (to the core, and to the Hub) by the ends of days 3, 7 and 14.
+            lines[s].Add("  genes made: " + string.Join("; ", new[] { 3, 7, 14 }.Where(producedAt.ContainsKey).Select(d =>
+                $"day {d} {producedAt[d].Core + producedAt[d].Hub:#,0} ({producedAt[d].Core:#,0} core, {producedAt[d].Hub:#,0} Hub)")));
+            // The wildflowers kept at the end.
+            var wild = garden.Nodes.Where(n => n.Spec.IsWild).GroupBy(n => n.Spec.Name).OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}").ToList();
+            lines[s].Add("  wildflowers kept: " + (wild.Count == 0 ? "none" : string.Join(", ", wild)));
+            lock (kept) kept.AddRange(garden.Nodes.Where(n => n.Spec.IsWild).Select(n => n.Spec.Name));
+            // Overloaded, and short of the caps.
+            foreach (var stretch in new[] { overload, underStems, underGenerators }) stretch.Close(days * 24);
+            lines[s].Add($"  overloaded: {overload}");
+            lines[s].Add($"  fewer stems than the cap: {underStems}");
+            lines[s].Add($"  fewer generators than the cap: {underGenerators}");
         });
         foreach (var line in lines.SelectMany(l => l)) log?.Invoke(line);
-        log?.Invoke("evolutions chosen, all seeds: " + string.Join(", ", chosen.GroupBy(n => n).OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}")));
+        string Tally(List<string> names) => names.Count == 0 ? "none" : string.Join(", ", names.GroupBy(n => n)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}"));
+        log?.Invoke("evolutions chosen, all seeds: " + Tally(chosen));
+        log?.Invoke("Hub levels bought, all seeds: " + Tally(hubLevels));
+        log?.Invoke("wildflowers kept at the end, all seeds: " + Tally(kept));
         return run;
+    }
+
+    // When the Hub would have every level, at its last day's rate of genes caught: the points still to earn, each dearer.
+    static string Projected(Garden garden, double[,] hubGenesByDay, int s, int days)
+    {
+        int spent = Hubs.Paths.Sum(p => Enumerable.Range(1, garden.HubLevel(p.Kind)).Sum(p.Cost));
+        int toEarn = Hubs.TotalPoints - spent - garden.HubPoints;
+        if (toEarn <= 0) return "every level affordable";
+        double genes = -garden.HubPool;
+        for (int i = 0; i < toEarn; i++) genes += Tuning.HubFirstPoint + Tuning.HubPointStep * (garden.HubPointsEarned + i);
+        double perDay = days > 1 ? hubGenesByDay[s, days - 1] - hubGenesByDay[s, days - 2] : hubGenesByDay[s, 0];
+        return perDay <= 0 ? "never complete at its rate" : $"complete in about {genes / perDay:0} more days at its last day's rate";
     }
 
     static double Median(double[,] values, int column)
@@ -416,6 +512,23 @@ public class PacingTests
                 + (Median(run.HubGenesByDay, day - 1) > 0 || Median(run.HubLevelsByDay, day - 1) > 0
                     ? $"; the Hub's genes caught median {Median(run.HubGenesByDay, day - 1):#,0}, levels median {Median(run.HubLevelsByDay, day - 1):0}"
                     : ""));
+            // The day's own: stems and generators bought (all gardens together), Expansions, the Hub's share of the
+            // genes, its unspent points, its drain against the power gen, and the hours overloaded and short of caps.
+            double OnDay(double[,] v, int seed) => v[seed, day - 1] - (day > 1 ? v[seed, day - 2] : 0);
+            var seedsAll = Enumerable.Range(0, run.Reached.GetLength(0)).ToList();
+            double stems = seedsAll.Sum(x => OnDay(run.StemsBought, x)), generators = seedsAll.Sum(x => OnDay(run.GeneratorsBought, x));
+            var shares = seedsAll.Select(x => (Hub: OnDay(run.HubGenesByDay, x), Core: OnDay(run.GenesByDay, x)))
+                .Where(x => x.Hub > 0).Select(x => x.Hub / (x.Hub + x.Core)).Order().ToList();
+            double MedianOf(Func<int, double> f) => seedsAll.Select(f).Order().ElementAt(seedsAll.Count / 2);
+            Log($"        stems:generators bought {stems:0}:{generators:0}"
+                + (generators > 0 ? $" ({stems / generators:0.#}:1)" : "")
+                + $"; Expansions bought median {MedianOf(x => OnDay(run.Expansions, x)):0}"
+                + (shares.Count > 0 ? $"; Hub's share of genes median {shares[shares.Count / 2]:0%}" : "")
+                + (MedianOf(x => run.HubDrain[x, day - 1]) > 0
+                    ? $"; Hub points unspent median {MedianOf(x => run.HubUnspent[x, day - 1]):0}, Hub drain median "
+                        + $"{MedianOf(x => run.HubDrain[x, day - 1]):0.#}/s of {MedianOf(x => run.PowerGen[x, day - 1]):0}/s gen" : "")
+                + $"; hours overloaded median {MedianOf(x => run.Overloaded[x, day - 1]):0.#} (worst {seedsAll.Max(x => run.Overloaded[x, day - 1]):0.#}), "
+                + $"short of stems {MedianOf(x => run.UnderStems[x, day - 1]):0.#}, of generators {MedianOf(x => run.UnderGenerators[x, day - 1]):0.#}");
         }
         for (int s = 0; s < run.Reached.GetLength(0); s++)
             Assert.True(run.Reached[s, 0] <= 1, $"seed {s + 1} bought its first stem at {run.Reached[s, 0]:0.#} h\n{text}");
