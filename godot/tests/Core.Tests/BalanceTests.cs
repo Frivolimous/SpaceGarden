@@ -15,8 +15,11 @@ public class BalanceTests
 
     // The stages: the unlocks of the pacing run's typical garden at about day 1, 2 and 3 (Nov 4: its stems and
     // generators bought each day), with no seedling's evolutions (so the core keeps its 2 links).
-    // Groves: how many groves a layout must have (a real garden keeps one to grow; Jeremy, Nov 4).
-    public sealed record Stage(string Name, int Stems, int Generators, int CoreLinks, int Groves = 0);
+    // Groves: how many groves a layout must have (a real garden keeps one to grow; Jeremy, Nov 4). Evolution: one bloomed
+    // (its effect only: its caps are the stage's own, raised already). WildCount: how many of the wildflower a layout must
+    // hold (Wild Bloom's two Lichens).
+    public sealed record Stage(string Name, int Stems, int Generators, int CoreLinks, int Groves = 0,
+        EvolutionKind? Evolution = null, int WildCount = 1);
     static readonly Stage[] Stages =
     [
         new("day 1", 12, 4, 2),
@@ -103,7 +106,7 @@ public class BalanceTests
             if (slot == NodeKind.Generator) generators++;
             if (NodeSpecs.All[p.Kind].IsWild) wilds++;
         }
-        return stems <= stage.Stems && generators <= stage.Generators && wilds == (wild == null ? 0 : 1) && groves == stage.Groves;
+        return stems <= stage.Stems && generators <= stage.Generators && wilds == (wild == null ? 0 : stage.WildCount) && groves == stage.Groves;
     }
 
     // ==== MEASURING ==== \\
@@ -121,7 +124,14 @@ public class BalanceTests
     static Garden Build(Part core, Stage stage, int seed)
     {
         var garden = Garden.New(Layout.Radial, seed);
-        garden.Capacity = new Capacity(stage.Stems, stage.Generators, stage.CoreLinks, WildFlowers: 1);
+        if (stage.Evolution is { } evolution)
+        {
+            // (Its effect; the flower it grows goes, and its caps are the stage's.)
+            garden.EvolveNow(evolution);
+            foreach (var n in garden.Nodes.Where(n => n.Parent == garden.Core).ToList()) garden.Prune(n);
+            garden.Cut.Clear();
+        }
+        garden.Capacity = new Capacity(stage.Stems, stage.Generators, stage.CoreLinks, WildFlowers: Math.Max(1, stage.WildCount));
         garden.PassiveGrowth = false;
         garden.ShowBlobs = false;
         void Grow(Part part, PlantNode node)
@@ -275,7 +285,8 @@ public class BalanceTests
     static Part Seed(Stage stage, NodeKind? wild, Random rng)
     {
         var core = new Part(NodeKind.Core);
-        if (wild is { } w) core.Attach(new Part(w)); // (the one wildflower the search must keep)
+        if (wild is { } w)
+            for (int i = 0; i < stage.WildCount; i++) core.Attach(new Part(w)); // (the wildflowers the search must keep)
         if (stage.Groves > 0)
         {
             // (and the groves, on a stem of their own)
@@ -530,11 +541,13 @@ public class BalanceTests
     // A garden built by rule (Nov 4): the core's two links each lead to a balanced tree of stems (so many on each side),
     // the groves at the deepest tips, the generators one to a stem, the deepest stems first, alternating sides, then as
     // many labs as the power allows, nearest the core first; any link left over stays free.
-    static Part Template(Stage stage, int left, int right, int generators)
+    static Part Template(Stage stage, int left, int right, int generators) => Template(stage, [left, right], generators);
+
+    static Part Template(Stage stage, int[] split, int generators)
     {
         var core = new Part(NodeKind.Core);
         var sides = new List<List<Part>>();
-        foreach (int n in new[] { left, right }.Where(n => n > 0))
+        foreach (int n in split.Where(n => n > 0))
         {
             var root = new Part(NodeKind.Stem);
             core.Attach(root);
@@ -571,19 +584,36 @@ public class BalanceTests
         return core;
     }
 
-    // The starting gardens for a stage: 0 to 2 stems and 0 to 2 generators fewer than the caps, the stems split evenly or
+    // The starting gardens for a stage: 0 to 2 stems and 0 to 5 generators fewer than the caps (an evolution that doubles
+    // the power made wants far fewer), the stems split evenly or
     // up to 6 more on one side.
     static List<Part> Templates(Stage stage)
     {
         var all = new List<Part>();
         for (int stems = stage.Stems; stems >= Math.Max(2, stage.Stems - 2); stems--)
-            for (int generators = stage.Generators; generators >= Math.Max(0, stage.Generators - 2); generators--)
-                for (int lean = stems % 2; lean <= Math.Min(6, stems - 2); lean += 2)
+            for (int generators = stage.Generators; generators >= Math.Max(0, stage.Generators - 5); generators--)
+                foreach (var split in Splits(stems, stage.CoreLinks))
                 {
-                    var layout = Template(stage, (stems + lean) / 2, (stems - lean) / 2, generators);
+                    var layout = Template(stage, split, generators);
                     if (Fits(layout, stage, null)) all.Add(layout);
                 }
         return all;
+    }
+
+    // Ways to share stems among the core's links: as evenly as can be, then 2, 4 or 6 moved from the last side to the
+    // first.
+    static IEnumerable<int[]> Splits(int stems, int links)
+    {
+        links = Math.Max(1, links);
+        for (int lean = 0; lean <= 6; lean += 2)
+        {
+            var split = Enumerable.Range(0, links).Select(i => stems / links + (i < stems % links ? 1 : 0)).ToArray();
+            int move = Math.Min(lean, split[^1] - 1);
+            if (lean > 0 && move < lean) yield break;
+            split[0] += move;
+            split[^1] -= move;
+            yield return split;
+        }
     }
 
     // A layout's shape, the same for mirror images (a part's branches in any order): to measure each garden once.
@@ -623,7 +653,7 @@ public class BalanceTests
     // A wildflower's garden without it, every way: its spot taken by its base kind, a lab, a generator or a stem (what
     // grew beyond it kept, if that fits), or it pruned (with what grew beyond it, or that moved to its parent); those
     // that fit and don't overload.
-    static IEnumerable<Part> Unwild(Part layout, Stage stage, NodeKind wild)
+    static IEnumerable<Part> Unwild(Part layout, Stage stage, NodeKind wild, NodeKind? left = null)
     {
         var kinds = new[] { NodeSpecs.All[wild].Wild?.Base, NodeKind.Lab, NodeKind.Generator, NodeKind.Stem }
             .OfType<NodeKind>().Distinct();
@@ -643,7 +673,8 @@ public class BalanceTests
         flower.Detach();
         foreach (var kid in flower.Kids.ToList()) up.Attach(kid);
         made.Add(lifted);
-        return made.Where(p => Fits(p, stage, null) && !Overloads(p, stage)).DistinctBy(Key);
+        // (left: the wildflower kind still in it, when there were more than one.)
+        return made.Where(p => Fits(p, stage, left) && !Overloads(p, stage)).DistinctBy(Key);
     }
 
     // The baseline given the same chances as the wildflowers (Nov 4: with only the starting gardens it trailed, as each
@@ -782,6 +813,130 @@ public class BalanceTests
             }
             text.AppendLine($"  {"none",-11} {string.Join(" ", group.Select(g => $"{g.Results[None].Genes,5:0}"))}  genes/h");
         }
+        text.AppendLine($"({(DateTime.Now - started).TotalMinutes:0.#} minutes)");
+        if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
+        Assert.Skip(text.ToString());
+    }
+
+    // ==== EVOLUTIONS ==== \\
+
+    // One case of the evolution test: an evolution (or none), and the wildflower its gardens must hold, if any.
+    public sealed record EvoCase(string Name, EvolutionKind? Evolution, NodeKind? Wild = null, int WildCount = 1);
+
+    // The evolution test's cases (Jeremy, Nov 4): each evolution's effect alone at level 1, its flower left out but the
+    // base slot it would take granted; Wild Bloom with two Lichens in its two slots (the steadiest wildflower);
+    // Resonant Frequency with its Buffer too, as alone it has nothing to strengthen.
+    static List<EvoCase> EvoCases() =>
+        new List<EvoCase> { new("none", null) }
+        .Concat(Evolutions.All.Values.Where(e => !e.Retired).Select(e => e.Kind == EvolutionKind.WildBloom
+            ? new EvoCase(e.Name, e.Kind, NodeKind.Lichen, 2) : new EvoCase(e.Name, e.Kind)))
+        .Append(new("Resonant + Buffer", EvolutionKind.ResonantFrequency, NodeKind.Buffer))
+        .ToList();
+
+    // A stage with an evolution bloomed: its caps raised as a bloom raises them (a core link, generators), less the
+    // wildflower slot, plus the base slot its flower would take (a stem for a Tendril, a generator for a Pulsar).
+    static Stage WithEvolution(Stage stage, EvoCase c)
+    {
+        var at = stage with { Name = $"{stage.Name} {c.Name}", Evolution = c.Evolution, WildCount = c.Wild == null ? 1 : c.WildCount };
+        if (c.Evolution is not { } kind) return at;
+        var garden = Garden.New(Layout.Radial, 1);
+        garden.Capacity = new Capacity(0, 0, 0, WildFlowers: 0);
+        garden.EvolveNow(kind);
+        var caps = garden.Capacity;
+        return at with { Stems = stage.Stems + caps.Stems, Generators = stage.Generators + caps.Generators, CoreLinks = stage.CoreLinks + caps.CoreLinks };
+    }
+
+    // The best garden for a stage and wildflower (or none): the starting gardens, and with a wildflower every placement
+    // of it in them (WildCount of them: the best few after each), each garden once, screened on two seeds over a short
+    // time, the search run from the best three, the winner judged on six seeds over the full hour and hour.
+    static WildResult Solve(Stage stage, NodeKind? wild, IEnumerable<Part> starts, int steps, double screen)
+    {
+        double Screen(Part p) => (Run(p, stage, 1, screen).Score + Run(p, stage, 2, screen).Score) / 2;
+        var bases = starts.Where(t => Fits(t, stage, null)).DistinctBy(Key).ToList();
+        var given = starts.Where(t => wild != null && Fits(t, stage, wild)).ToList();
+        List<Part> spots = bases;
+        if (wild is { } k)
+        {
+            for (int n = 1; n <= stage.WildCount; n++)
+            {
+                var placed = spots.SelectMany(t => Placements(t, stage with { WildCount = n }, k)).DistinctBy(Key).ToList();
+                spots = n == stage.WildCount ? placed : placed.AsParallel().Select(p => (p, g: Screen(p))).OrderByDescending(x => x.g).Take(6).Select(x => x.p).ToList();
+            }
+            spots = spots.Concat(given).DistinctBy(Key).ToList();
+        }
+        var ranked = spots.AsParallel().Select(p => (Layout: p, Genes: Screen(p))).OrderByDescending(r => r.Genes).ToList();
+        var climbed = ranked.Take(3).AsParallel().Select((r, i) => Climb(r.Layout, stage, wild, steps, 300 + i, screen).Layout).ToList();
+        var best = climbed.Append(ranked[0].Layout).Concat(given).DistinctBy(Key).AsParallel().Select(l => Judge(l, stage)).MaxBy(r => r.Genes);
+        return new(best.Layout, best.Genes, best.Spread, best.Measure, spots.Count);
+    }
+
+    // Evolutions at day 2 (Jeremy, Nov 4: BALANCE_SWEEP, by default 16/6 with a stem more, a generator more and both;
+    // 2 core links and a grove): each case's best garden (Solve) against the best with none, the starting gardens shared
+    // where they fit (the rule-built ones, the hand-built best, every case's best so far, wildflowers taken out for the
+    // baseline), each stage no worse than one that fits inside it; then each evolution against none on average.
+    [Fact]
+    public void EvolutionSweep()
+    {
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("BALANCE") == "1", "a tuning aid, run by hand (BALANCE=1)");
+        int steps = int.TryParse(Environment.GetEnvironmentVariable("BALANCE_STEPS"), out int st) ? st : 1000;
+        double screen = double.TryParse(Environment.GetEnvironmentVariable("BALANCE_SCREEN"), out double sc) ? sc : 20;
+        var stages = (Environment.GetEnvironmentVariable("BALANCE_SWEEP") ?? "16,6;17,6;16,7;17,7")
+            .Split(';').Select(t => t.Split(',').Select(int.Parse).ToArray())
+            .Select(c => new Stage($"{c[0]}/{c[1]}", c[0], c[1], 2, 1)).ToList();
+        var cases = EvoCases();
+        var found = new List<Part>(); // (every case's best garden so far)
+        var all = new List<(Stage Stage, Dictionary<string, WildResult> Results)>();
+        var text = new StringBuilder();
+        var started = DateTime.Now;
+        foreach (var stage in stages)
+        {
+            var at = DateTime.Now;
+            var results = new ConcurrentDictionary<string, WildResult>();
+            var capsOf = new Dictionary<string, Stage>();
+            foreach (var c in cases)
+            {
+                var cs = WithEvolution(stage, c);
+                capsOf[c.Name] = cs;
+                var starts = Templates(cs).Concat(HandGardens()).Concat(found).ToList();
+                results[c.Name] = Solve(cs, c.Wild, starts, steps, screen);
+            }
+            // (The baseline once more, with every case's garden, its wildflowers taken out, to start from.)
+            var stripped = cases.Where(c => c.Wild != null).SelectMany(c => c.WildCount > 1
+                ? Unwild(results[c.Name].Layout, stage with { WildCount = c.WildCount - 1 }, c.Wild!.Value, c.Wild).SelectMany(p => Unwild(p, stage, c.Wild!.Value))
+                : Unwild(results[c.Name].Layout, stage, c.Wild!.Value));
+            var again = Solve(stage, null, results.Values.Select(r => r.Layout).Concat(stripped).Append(results["none"].Layout), steps, screen);
+            if (again.Genes > results["none"].Genes) results["none"] = again;
+            var res = new Dictionary<string, WildResult>(results);
+            foreach (var (s2, r) in all.Where(a => a.Stage.Stems <= stage.Stems && a.Stage.Generators <= stage.Generators))
+                foreach (var name in res.Keys.ToList())
+                    if (r[name].Genes > res[name].Genes) res[name] = r[name];
+            found.AddRange(res.Values.Select(r => r.Layout));
+            all.Add((stage, res));
+            var none = res["none"];
+            text.AppendLine($"{stage.Name}: {stage.Stems} stems, {stage.Generators} generators, {stage.CoreLinks} core links, {stage.Groves} grove; each evolution's effect alone ({(DateTime.Now - at).TotalMinutes:0.#} minutes)");
+            // (Stems and generators used of the caps, and how many go unused: an evolution may shift what power the
+            // garden can use, Jeremy, Nov 4.)
+            text.AppendLine($"  {"",-20} {"genes/h",7} {"±",4} {"vs none",7}  {"stems",6} {"gens",5} {"unused",7} {"labs",4} {"links",5} {"fill",5} {"power",9}  layout");
+            foreach (var c in cases.OrderByDescending(c => res[c.Name].Genes))
+            {
+                var r = res[c.Name];
+                var m = r.Measure;
+                string delta = c.Evolution == null ? "" : $"{(r.Genes / none.Genes - 1) * 100:+0;-0}%";
+                var cap = capsOf[c.Name];
+                string unused = $"{cap.Stems - m.Stems}s {cap.Generators - m.Generators}g";
+                text.AppendLine($"  {c.Name,-20} {r.Genes,7:0} {r.Spread,4:0} {delta,7}  {$"{m.Stems}/{cap.Stems}",6} {$"{m.Generators}/{cap.Generators}",5} {unused,7} {m.Labs,4} {r.Layout.Kids.Count,5} {m.LabFill,5:0%} {m.Production,4:0}/{m.Upkeep,-4:0}  {r.Layout.Show()}");
+            }
+            text.AppendLine();
+            if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } partial) File.WriteAllText(partial, text.ToString());
+        }
+        text.AppendLine($"Against none, {string.Join(", ", all.Select(g => g.Stage.Name))}, and on average:");
+        foreach (var c in cases.Where(c => c.Evolution != null).OrderByDescending(c => all.Average(g => g.Results[c.Name].Genes / g.Results["none"].Genes)))
+        {
+            var deltas = all.Select(g => (g.Results[c.Name].Genes / g.Results["none"].Genes - 1) * 100).ToList();
+            string unused = string.Join(" ", all.Select(g => $"{WithEvolution(g.Stage, c).Stems - g.Results[c.Name].Measure.Stems}s{WithEvolution(g.Stage, c).Generators - g.Results[c.Name].Measure.Generators}g"));
+            text.AppendLine($"  {c.Name,-20} {string.Join(" ", deltas.Select(d => $"{d,5:+0;-0}%"))}   {deltas.Average(),5:+0;-0}%   unused {unused}");
+        }
+        text.AppendLine($"  {"none",-20} {string.Join(" ", all.Select(g => $"{g.Results["none"].Genes,6:0}"))}  genes/h");
         text.AppendLine($"({(DateTime.Now - started).TotalMinutes:0.#} minutes)");
         if (Environment.GetEnvironmentVariable("BALANCE_OUT") is { Length: > 0 } path) File.WriteAllText(path, text.ToString());
         Assert.Skip(text.ToString());
